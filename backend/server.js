@@ -87,7 +87,7 @@ app.get('/api/debug', async (req, res) => {
             hasContents: !!workSample.contents
           } : null
         },
-        filed: {
+        workshop: {
           count: filedCount,
           sample: filedSample ? {
             id: filedSample._id,
