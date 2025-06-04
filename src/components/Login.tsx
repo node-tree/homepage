@@ -30,7 +30,7 @@ const Login: React.FC = () => {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/login', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api')}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -77,7 +77,7 @@ const Login: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/register', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api')}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

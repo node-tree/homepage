@@ -46,7 +46,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // 토큰 검증
   const verifyToken = useCallback(async (token: string) => {
     try {
-      const response = await fetch('http://localhost:8000/api/auth/verify', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api')}/auth/verify`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
