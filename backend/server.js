@@ -43,6 +43,27 @@ app.get('/', (req, res) => {
   });
 });
 
+// 디버그 라우트 - MongoDB 연결 상태 확인
+app.get('/api/debug', (req, res) => {
+  res.json({
+    environment: process.env.NODE_ENV || 'development',
+    mongoUri: process.env.MONGODB_URI ? 'SET' : 'NOT_SET',
+    mongoUriLength: process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0,
+    mongoConnectionState: mongoose.connection.readyState,
+    mongoConnectionStates: {
+      0: 'disconnected',
+      1: 'connected', 
+      2: 'connecting',
+      3: 'disconnecting'
+    },
+    databaseName: mongoose.connection.name,
+    host: mongoose.connection.host,
+    allEnvVars: Object.keys(process.env).filter(key => 
+      key.includes('MONGO') || key.includes('JWT') || key.includes('PORT')
+    )
+  });
+});
+
 // 서버 시작
 app.listen(PORT, () => {
   console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
