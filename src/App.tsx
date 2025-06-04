@@ -14,6 +14,7 @@ function App() {
   const [currentStep, setCurrentStep] = useState(0); // 0: 초기, 1: 메뉴 펼침, 2: 페이지 표시
   const [currentPage, setCurrentPage] = useState<string | null>(null); // 현재 페이지
   const [showLabels, setShowLabels] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [hoveredCircle, setHoveredCircle] = useState<number | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true); // 초기 로드 추적
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768); // 모바일 감지

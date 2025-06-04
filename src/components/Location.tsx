@@ -6,6 +6,7 @@ const Location: React.FC = () => {
   const svgRef = useRef<SVGSVGElement>(null);
 
   // 뷰포트 크기를 추적하는 상태
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
 
   // GPS 좌표를 SVG 좌표로 변환하는 함수
@@ -87,6 +88,7 @@ const Location: React.FC = () => {
   ];
 
   // 각 원의 현재 위치를 추적하는 상태
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentPositions, setCurrentPositions] = useState(
     cities.map(city => ({ x: city.x, y: city.y }))
   );
