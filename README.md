@@ -55,12 +55,6 @@ npm start
 
 백엔드 디렉토리에 `.env` 파일을 생성하고 다음 내용을 추가하세요:
 
-```
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority
-PORT=8000
-JWT_SECRET=강력한-비밀키-여기에-입력하세요
-```
-
 ⚠️ **주의사항:**
 - MongoDB 연결 문자열에는 실제 사용자명과 비밀번호를 입력하세요
 - JWT_SECRET은 강력하고 예측하기 어려운 값으로 설정하세요
