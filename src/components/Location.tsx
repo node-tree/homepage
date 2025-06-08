@@ -9,6 +9,9 @@ const Location: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
 
+  // 모바일 여부를 확인하는 상태
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
   // GPS 좌표를 SVG 좌표로 변환하는 함수
   const convertCoordinates = (lat: number, lng: number, region: string) => {
     // SVG 화면 크기 (페이지 전체 공간 활용)
@@ -106,6 +109,7 @@ const Location: React.FC = () => {
         const rect = svgRef.current.getBoundingClientRect();
         setViewport({ width: rect.width, height: rect.height });
       }
+      setIsMobile(window.innerWidth <= 768);
     };
 
     updateViewport();
@@ -326,12 +330,22 @@ const Location: React.FC = () => {
             onMouseEnter={() => setHoveredCity(city.name)}
             onMouseLeave={() => setHoveredCity(null)}
             onClick={() => handleCityClick(city.name)}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={isMobile ? {} : { scale: 1.1 }} // 모바일에서는 확대 효과 제거
+            whileTap={isMobile ? {} : { scale: 0.95 }} // 모바일에서는 축소 효과 제거
+            animate={isMobile && hoveredCity === city.name ? {
+              opacity: [1, 0.3, 1, 0.3, 1] // 모바일에서는 깜박이 효과만
+            } : {}}
+            transition={isMobile && hoveredCity === city.name ? {
+              duration: 0.5,
+              repeat: Infinity,
+              ease: "easeInOut"
+            } : {}}
             style={{
               backgroundColor: selectedCity === city.name ? '#000000' : '#ffffff',
               color: selectedCity === city.name ? '#ffffff' : '#000000',
-              border: hoveredCity === city.name ? '3px solid #000000' : '2px solid #cccccc'
+              border: hoveredCity === city.name ? '3px solid #000000' : '2px solid #cccccc',
+              fontSize: '9px',
+              letterSpacing: city.name === 'node tree' ? '-3px' : '-2px'
             }}
           >
             {index + 1}
