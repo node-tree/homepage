@@ -134,7 +134,7 @@
 /* 원 텍스트 */
 .circle-text-motion {
   font-weight: 500;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.05em; /* 글자 간격을 줄여서 원 안에 맞도록 조정 */
   z-index: 1;
   position: absolute;
   top: 50%;
@@ -189,15 +189,15 @@
 
 /* 일반 모드 (첫 번째 페이지) */
 .circle-text-motion:not(.small-text):not(.label-mode).small-mobile {
-  font-size: 0.7rem;
+  font-size: 0.6rem; /* 소형 모바일에서 폰트 크기 축소 */
 }
 
 .circle-text-motion:not(.small-text):not(.label-mode).mobile {
-  font-size: 0.8rem;
+  font-size: 0.7rem; /* 모바일에서 폰트 크기 축소 */
 }
 
 .circle-text-motion:not(.small-text):not(.label-mode).desktop {
-  font-size: 0.9rem;
+  font-size: 0.8rem; /* 데스크탑에서 폰트 크기 축소 */
 }
 
 /* 페이지 콘텐츠 */
@@ -1162,7 +1162,8 @@
   }
   
   .circle-text-motion {
-    font-size: 1rem !important; /* 모바일에서 네비게이션 텍스트 크기를 1.2rem에서 1rem으로 줄임 */
+    font-size: 0.9rem !important; /* 모바일에서 네비게이션 텍스트 크기를 더 줄임 */
+    letter-spacing: -0.01em !important; /* 모바일에서 글자 간격을 더욱 줄임 */
     opacity: 1 !important;
     visibility: visible !important;
   }
@@ -1608,6 +1609,22 @@
     transition: all 0.3s ease;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     user-select: none;
+  }
+
+  /* 모바일에서는 호버 시 확대 효과 제거하고 깜박이 효과만 */
+  .location-button:hover {
+    transform: none !important; /* 확대 효과 제거 */
+    animation: blink-mobile 0.5s infinite alternate; /* 깜박이 효과 추가 */
+  }
+
+  .location-button:active {
+    transform: none !important; /* 클릭 시에도 확대 효과 제거 */
+    animation: blink-mobile 0.2s infinite alternate; /* 클릭 시 빠른 깜박이 */
+  }
+
+  @keyframes blink-mobile {
+    0% { opacity: 1; }
+    100% { opacity: 0.3; }
   }
   
   /* Location 이동하기 버튼 소형 모바일 */
