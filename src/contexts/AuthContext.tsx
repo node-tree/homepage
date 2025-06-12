@@ -43,31 +43,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem('auth_user');
   }, []);
 
-  // 토큰 검증
-  const verifyToken = useCallback(async (token: string) => {
-    try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api')}/auth/verify`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('토큰이 유효하지 않습니다.');
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        setUser(data.user);
-      } else {
-        throw new Error('토큰 검증 실패');
-      }
-    } catch (error) {
-      console.error('토큰 검증 오류:', error);
-      logout();
-    }
-  }, [logout]);
-
   // 로컬 스토리지에서 토큰 로드
   useEffect(() => {
     const loadAuth = async () => {
@@ -78,8 +53,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (savedToken && savedUser) {
           setToken(savedToken);
           setUser(JSON.parse(savedUser));
-          // 백엔드 없이도 작동하도록 토큰 검증 건너뛰기
-          // await verifyToken(savedToken);
         }
       } catch (error) {
         console.error('인증 정보 로드 오류:', error);
@@ -90,7 +63,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     loadAuth();
-  }, [logout]); // verifyToken 의존성 제거
+  }, [logout]);
 
   // 로그인
   const login = (token: string, user: User) => {
