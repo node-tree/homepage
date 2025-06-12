@@ -3,7 +3,7 @@
   "builds": [
     {
       "src": "backend/server.js",
-      "use": "@vercel/node@18.x"
+      "use": "@vercel/node"
     },
     {
       "src": "package.json",
@@ -38,5 +38,10 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "backend/server.js": {
+      "runtime": "nodejs18.x"
+    }
+  }
 } 
