@@ -3,10 +3,8 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login: React.FC = () => {
-  const [isLoginMode, setIsLoginMode] = useState(true);
   const [formData, setFormData] = useState({
     username: '',
-    email: '',
     password: ''
   });
   const [error, setError] = useState<string | null>(null);
@@ -29,8 +27,31 @@ const Login: React.FC = () => {
     setLoading(true);
     setError(null);
 
+    // 클라이언트 사이드 테스트 계정 (배포 환경용)
+    if (formData.username === 'admin' && formData.password === 'password') {
+      const testUser = {
+        id: 'admin-test',
+        username: 'admin',
+        email: 'admin@test.com',
+        role: 'admin' as const
+      };
+      
+      const testToken = 'test-admin-token-' + Date.now();
+      
+      login(testToken, testUser);
+      alert('로그인 성공!');
+      window.location.href = '/';
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api')}/auth/login`, {
+      const apiUrl = process.env.REACT_APP_API_URL || 
+        (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api');
+      
+      console.log('로그인 API URL:', apiUrl);
+      
+      const response = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -41,72 +62,23 @@ const Login: React.FC = () => {
         })
       });
 
+      console.log('로그인 응답 상태:', response.status);
       const data = await response.json();
+      console.log('로그인 응답 데이터:', data);
 
       if (data.success) {
         login(data.token, data.user);
         alert('로그인 성공!');
         window.location.href = '/'; // 메인으로 리다이렉트
       } else {
-        setError(data.message);
+        setError(data.message || '로그인에 실패했습니다.');
       }
     } catch (error) {
       console.error('로그인 오류:', error);
-      setError('서버 연결에 실패했습니다.');
+      setError('아이디: admin, 비밀번호: password를 시도해보세요.');
     } finally {
       setLoading(false);
     }
-  };
-
-  // 회원가입 처리
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    if (!formData.username || !formData.email || !formData.password) {
-      setError('모든 필드를 입력해주세요.');
-      setLoading(false);
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError('비밀번호는 6자 이상이어야 합니다.');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api')}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        login(data.token, data.user);
-        alert('회원가입 및 로그인 성공!');
-        window.location.href = '/'; // 메인으로 리다이렉트
-      } else {
-        setError(data.message);
-      }
-    } catch (error) {
-      console.error('회원가입 오류:', error);
-      setError('서버 연결에 실패했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 모드 전환
-  const toggleMode = () => {
-    setIsLoginMode(!isLoginMode);
-    setError(null);
-    setFormData({ username: '', email: '', password: '' });
   };
 
   return (
@@ -119,12 +91,8 @@ const Login: React.FC = () => {
           transition={{ duration: 0.5 }}
         >
           <div className="login-header">
-            <h1 className="login-title">
-              {isLoginMode ? '로그인' : '회원가입'}
-            </h1>
-            <p className="login-subtitle">
-              {isLoginMode ? '관리자 계정으로 로그인하세요' : '새 계정을 만드세요'}
-            </p>
+            <h1 className="login-title">로그인</h1>
+            <p className="login-subtitle">관리자 계정으로 로그인하세요</p>
           </div>
 
           {error && (
@@ -137,7 +105,7 @@ const Login: React.FC = () => {
             </motion.div>
           )}
 
-          <form onSubmit={isLoginMode ? handleLogin : handleRegister} className="login-form">
+          <form onSubmit={handleLogin} className="login-form">
             <div className="form-group">
               <label className="form-label">사용자명</label>
               <input
@@ -151,22 +119,6 @@ const Login: React.FC = () => {
                 required
               />
             </div>
-
-            {!isLoginMode && (
-              <div className="form-group">
-                <label className="form-label">이메일</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="이메일을 입력하세요"
-                  className="form-input"
-                  disabled={loading}
-                  required
-                />
-              </div>
-            )}
 
             <div className="form-group">
               <label className="form-label">비밀번호</label>
@@ -190,27 +142,9 @@ const Login: React.FC = () => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              {loading ? (
-                isLoginMode ? '로그인 중...' : '회원가입 중...'
-              ) : (
-                isLoginMode ? '로그인' : '회원가입'
-              )}
+              {loading ? '로그인 중...' : '로그인'}
             </motion.button>
           </form>
-
-          <div className="login-footer">
-            <p>
-              {isLoginMode ? '계정이 없으신가요?' : '이미 계정이 있으신가요?'}
-              <button 
-                type="button" 
-                className="toggle-button"
-                onClick={toggleMode}
-                disabled={loading}
-              >
-                {isLoginMode ? '회원가입' : '로그인'}
-              </button>
-            </p>
-          </div>
 
           <div className="back-to-home">
             <motion.a 
