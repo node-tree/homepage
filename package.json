@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "homepage": "/",
+  "engines": {
+    "node": "18.x"
+  },
   "dependencies": {
     "@types/node": "^16.18.126",
     "@types/react": "^19.1.6",
