@@ -28,22 +28,33 @@ const Login: React.FC = () => {
     setError(null);
 
     try {
-      // 테스트 로그인 먼저 시도 (백엔드 없을 때)
-      if (formData.username === 'admin' && formData.password === 'password') {
+      // 테스트 계정들 (백엔드 없을 때)
+      const testAccounts = [
+        { username: 'admin', password: 'password', role: 'admin' as const },
+        { username: 'user', password: '123456', role: 'user' as const },
+        { username: 'nodetree', password: 'nodetree2024', role: 'admin' as const }
+      ];
+
+      const matchedAccount = testAccounts.find(account => 
+        account.username === formData.username && account.password === formData.password
+      );
+
+      if (matchedAccount) {
         const testUser = {
-          id: 'test-admin-1',
-          username: 'admin',
-          email: 'admin@nodetree.com',
-          role: 'admin' as const
+          id: `test-${matchedAccount.username}-${Date.now()}`,
+          username: matchedAccount.username,
+          email: `${matchedAccount.username}@nodetree.com`,
+          role: matchedAccount.role
         };
         
         const testToken = 'test-jwt-token-' + Date.now();
         login(testToken, testUser);
-        alert('로그인 성공! (테스트 모드)');
+        alert(`로그인 성공! (${matchedAccount.role === 'admin' ? '관리자' : '사용자'} 모드)`);
         window.location.href = '/';
         return;
       }
 
+      // 백엔드 API 시도 (나중에 백엔드 배포 시 사용)
       const apiUrl = process.env.REACT_APP_API_URL || 
         (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api');
       
@@ -66,14 +77,14 @@ const Login: React.FC = () => {
 
       if (data.success) {
         login(data.token, data.user);
-        alert('로그인 성공!');
+        alert('로그인 성공! (실제 DB)');
         window.location.href = '/'; // 메인으로 리다이렉트
       } else {
-        setError(data.message || '로그인에 실패했습니다.');
+        setError('로그인 정보가 올바르지 않습니다. 테스트 계정: admin/password, user/123456, nodetree/nodetree2024');
       }
     } catch (error) {
       console.error('로그인 오류:', error);
-      setError('서버 연결에 실패했습니다. 테스트 계정 (admin/password)을 사용해보세요.');
+      setError('로그인 정보가 올바르지 않습니다. 테스트 계정: admin/password, user/123456, nodetree/nodetree2024');
     } finally {
       setLoading(false);
     }
