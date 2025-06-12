@@ -10,7 +10,7 @@ import Work from './components/Work';
 import Filed from './components/Filed';
 import Popup from './components/Popup';
 
-function App() {
+function AppContent() {
   // 모든 상태를 최상위에서 선언
   const [currentStep, setCurrentStep] = useState(0); // 0: 초기, 1: 메뉴 펼침, 2: 페이지 표시
   const [currentPage, setCurrentPage] = useState<string | null>(null); // 현재 페이지
@@ -20,7 +20,6 @@ function App() {
   const [isInitialLoad, setIsInitialLoad] = useState(true); // 초기 로드 추적
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768); // 모바일 감지
   const [isSmallMobile, setIsSmallMobile] = useState(window.innerWidth <= 480); // 소형 모바일 감지
-  // 팝업 상태
   const { isAuthenticated, isLoading } = useAuth();
 
   // 안정적인 핸들러 함수들 - 컴포넌트 최상위에서 선언
@@ -104,11 +103,7 @@ function App() {
 
   // 로그인 페이지일 때는 별도 렌더링
   if (currentPath === '/login') {
-    return (
-      <AuthProvider>
-        <Login />
-      </AuthProvider>
-    );
+    return <Login />;
   }
 
   const handleCenterClick = () => {
@@ -180,141 +175,137 @@ function App() {
   };
 
   return (
-    <AuthProvider>
-      <div className={`App ${currentStep === 2 ? 'page-mode' : ''}`}>
-        <div className={`main-container ${currentStep === 2 ? 'page-mode' : ''}`}>
-          {/* 홈페이지 리뉴얼중 팝업: 로그인 안 된 경우만 */}
-          {!isLoading && !isAuthenticated && (
-            <Popup 
-              open={true}
-              message="NODE TREE
-              홈페이지 리뉴얼중입니다. 곧 새로운 모습으로 찾아뵙겠습니다!"
-            />
-          )}
-          <div 
-            className="circle-container-motion"
-            style={currentStep === 2 ? {
-              position: 'absolute',
-              top: '80px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: '100%',
-              zIndex: 1000
-            } : currentStep === 0 ? {
-              // 첫 페이지: 모든 기기에서 강력한 중앙 정렬
-              position: 'fixed',
-              top: '0',
-              left: '0',
-              width: '100vw',
-              height: '100vh',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              margin: '0',
-              padding: '0',
-              zIndex: 2000
-            } : {
-              position: 'relative',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              width: '100%',
-              height: '100vh',
-              margin: '0 auto'
-            }}
-          >
-            {circles.map((circle, index) => {
-              const position = getCirclePosition(index);
-              return (
-                <motion.div
-                  key={circle.id}
-                  layoutId={`circle-${circle.id}`}
-                  layout
-                  className="circle-motion"
-                  data-step={currentStep.toString()}
-                  initial={isInitialLoad ? { opacity: 0, scale: 0 } : false}
-                  animate={currentStep === 0 ? {
-                    // 첫 페이지에서는 CSS가 위치를 완전히 제어하므로 Framer Motion 변환 최소화
-                    opacity: 1,
-                    scale: 1,
-                    x: 0,
-                    y: 0
-                  } : {
-                    // 다른 페이지에서는 Framer Motion이 위치 제어
-                    opacity: 1,
-                    scale: position.scale,
-                    x: position.x,
-                    y: position.y
-                  }}
-                  transition={{
-                    ...springTransition,
-                    delay: currentStep === 2 ? 0 : circle.delay,
-                    layout: {
-                      type: "spring",
-                      damping: 25,
-                      stiffness: 120
-                    }
-                  }}
-                  style={{
-                    // 모바일에서 첫 페이지에서 NODE TREE가 아닌 원들은 완전히 숨김
-                    display: currentStep === 0 && (isMobile || isSmallMobile) && index !== 2 ? 'none' : 'block'
-                  }}
-                  onClick={
-                    currentStep === 0 && index === 2 
-                      ? handleCenterClick 
-                      : () => handleCircleClickStable(circle.page)
-                  }
-                  whileHover={{
-                    scale: currentStep === 2 ? position.scale * 1.05 : position.scale * 1.1,
-                    transition: { type: "spring", damping: 20, stiffness: 150 }
-                  }}
-                  whileTap={{ scale: position.scale * 0.95 }}
-                  onMouseEnter={() => handleMouseEnter(index)}
-                  onMouseLeave={() => handleMouseLeave(index)}
-                >
-                  <span 
-                    className={`circle-text-motion ${currentStep === 2 && showLabels ? 'label-mode' : ''} ${currentStep === 1 ? 'small-text' : ''} ${isSmallMobile ? 'small-mobile' : isMobile ? 'mobile' : 'desktop'}`}
-                  >
-                    {circle.text}
-                  </span>
-                </motion.div>
-              );
-            })}
-          </div>
-          
-          <AnimatePresence mode="wait" initial={false}>
-            {currentStep === 2 && currentPage && (
-              <motion.div 
-                key={currentPage}
-                className="page-content-wrapper"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{
-                  type: "tween",
-                  ease: "easeInOut",
-                  duration: 0.6,
-                  delay: 0.3
+    <div className={`App ${currentStep === 2 ? 'page-mode' : ''}`}>
+      <div className={`main-container ${currentStep === 2 ? 'page-mode' : ''}`}>
+        {/* 홈페이지 리뉴얼중 팝업: 로그인 안 된 경우만 */}
+        {!isLoading && !isAuthenticated && (
+          <Popup 
+            open={true}
+            message="NODE TREE
+            홈페이지 리뉴얼중입니다. 곧 새로운 모습으로 찾아뵙겠습니다!"
+          />
+        )}
+        <div 
+          className="circle-container-motion"
+          style={currentStep === 2 ? {
+            position: 'absolute',
+            top: '80px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '100%',
+            zIndex: 1000
+          } : currentStep === 0 ? {
+            // 첫 페이지: 모든 기기에서 강력한 중앙 정렬
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            width: '100vw',
+            height: '100vh',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            margin: '0',
+            padding: '0',
+            zIndex: 2000
+          } : {
+            position: 'relative',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: '100%',
+            height: '100vh',
+            margin: '0 auto'
+          }}
+        >
+          {circles.map((circle, index) => {
+            const position = getCirclePosition(index);
+            return (
+              <motion.div
+                key={circle.id}
+                layoutId={`circle-${circle.id}`}
+                layout
+                className="circle-motion"
+                data-step={currentStep.toString()}
+                initial={isInitialLoad ? { opacity: 0, scale: 0 } : false}
+                animate={currentStep === 0 ? {
+                  // 첫 페이지에서는 CSS가 위치를 완전히 제어하므로 Framer Motion 변환 최소화
+                  opacity: 1,
+                  scale: 1,
+                  x: 0,
+                  y: 0
+                } : {
+                  // 다른 페이지에서는 Framer Motion이 위치 제어
+                  opacity: 1,
+                  scale: position.scale,
+                  x: position.x,
+                  y: position.y
                 }}
+                transition={{
+                  ...springTransition,
+                  delay: currentStep === 2 ? 0 : circle.delay,
+                  layout: {
+                    type: "spring",
+                    damping: 25,
+                    stiffness: 120
+                  }
+                }}
+                style={{
+                  // 모바일에서 첫 페이지에서 NODE TREE가 아닌 원들은 완전히 숨김
+                  display: currentStep === 0 && (isMobile || isSmallMobile) && index !== 2 ? 'none' : 'block'
+                }}
+                onClick={
+                  currentStep === 0 && index === 2 
+                    ? handleCenterClick 
+                    : () => handleCircleClickStable(circle.page)
+                }
+                whileHover={{
+                  scale: currentStep === 2 ? position.scale * 1.05 : position.scale * 1.1,
+                  transition: { type: "spring", damping: 20, stiffness: 150 }
+                }}
+                whileTap={{ scale: position.scale * 0.95 }}
+                onMouseEnter={() => handleMouseEnter(index)}
+                onMouseLeave={() => handleMouseLeave(index)}
               >
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{
-                    type: "tween",
-                    ease: "easeInOut",
-                    duration: 0.4,
-                    delay: 0.5
-                  }}
+                <span 
+                  className={`circle-text-motion ${currentStep === 2 && showLabels ? 'label-mode' : ''} ${currentStep === 1 ? 'small-text' : ''} ${isSmallMobile ? 'small-mobile' : isMobile ? 'mobile' : 'desktop'}`}
                 >
-                  {renderPageContent()}
-                </motion.div>
+                  {circle.text}
+                </span>
               </motion.div>
-            )}
-          </AnimatePresence>
+            );
+          })}
         </div>
+        
+        <AnimatePresence mode="wait" initial={false}>
+          {currentStep === 2 && currentPage && (
+            <motion.div 
+              key={currentPage}
+              className="page-content-wrapper"
+              style={{
+                paddingTop: isSmallMobile ? '260px' : isMobile ? '250px' : '200px'
+              }}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -30 }}
+              transition={{ 
+                duration: 0.4,
+                delay: 0.2,
+                ease: "easeOut"
+              }}
+            >
+              {renderPageContent()}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
     </AuthProvider>
   );
 }
