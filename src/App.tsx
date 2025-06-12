@@ -20,7 +20,7 @@ function AppContent() {
   const [isInitialLoad, setIsInitialLoad] = useState(true); // 초기 로드 추적
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768); // 모바일 감지
   const [isSmallMobile, setIsSmallMobile] = useState(window.innerWidth <= 480); // 소형 모바일 감지
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   // 안정적인 핸들러 함수들 - 컴포넌트 최상위에서 선언
   const handleMouseEnter = useCallback((index: number) => {
