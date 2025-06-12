@@ -178,7 +178,7 @@ function AppContent() {
     <div className={`App ${currentStep === 2 ? 'page-mode' : ''}`}>
       <div className={`main-container ${currentStep === 2 ? 'page-mode' : ''}`}>
         {/* 홈페이지 리뉴얼중 팝업: 로그인 안 된 경우만 */}
-        {!isLoading && !isAuthenticated && (
+        {!isAuthenticated && (
           <Popup 
             open={true}
             message="NODE TREE
