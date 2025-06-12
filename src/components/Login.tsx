@@ -27,24 +27,6 @@ const Login: React.FC = () => {
     setLoading(true);
     setError(null);
 
-    // 클라이언트 사이드 테스트 계정 (배포 환경용)
-    if (formData.username === 'admin' && formData.password === 'password') {
-      const testUser = {
-        id: 'admin-test',
-        username: 'admin',
-        email: 'admin@test.com',
-        role: 'admin' as const
-      };
-      
-      const testToken = 'test-admin-token-' + Date.now();
-      
-      login(testToken, testUser);
-      alert('로그인 성공!');
-      window.location.href = '/';
-      setLoading(false);
-      return;
-    }
-
     try {
       const apiUrl = process.env.REACT_APP_API_URL || 
         (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api');
@@ -75,7 +57,7 @@ const Login: React.FC = () => {
       }
     } catch (error) {
       console.error('로그인 오류:', error);
-      setError('아이디: admin, 비밀번호: password를 시도해보세요.');
+      setError('서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setLoading(false);
     }
