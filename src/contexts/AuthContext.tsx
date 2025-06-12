@@ -78,9 +78,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (savedToken && savedUser) {
           setToken(savedToken);
           setUser(JSON.parse(savedUser));
-          
-          // 토큰 유효성 검증
-          await verifyToken(savedToken);
+          // 백엔드 없이도 작동하도록 토큰 검증 건너뛰기
+          // await verifyToken(savedToken);
         }
       } catch (error) {
         console.error('인증 정보 로드 오류:', error);
@@ -91,7 +90,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     loadAuth();
-  }, [verifyToken, logout]);
+  }, [logout]); // verifyToken 의존성 제거
 
   // 로그인
   const login = (token: string, user: User) => {
