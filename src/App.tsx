@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './App.css';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import Location from './components/Location';
 import Human from './components/Human';
 import About from './components/About';
 import Work from './components/Work';
 import Filed from './components/Filed';
+import Popup from './components/Popup';
 
 function App() {
   // 모든 상태를 최상위에서 선언
@@ -19,6 +20,9 @@ function App() {
   const [isInitialLoad, setIsInitialLoad] = useState(true); // 초기 로드 추적
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768); // 모바일 감지
   const [isSmallMobile, setIsSmallMobile] = useState(window.innerWidth <= 480); // 소형 모바일 감지
+  // 팝업 상태
+  const [showRenewalPopup, setShowRenewalPopup] = useState(true);
+  const { isAuthenticated, isLoading } = useAuth();
 
   // 안정적인 핸들러 함수들 - 컴포넌트 최상위에서 선언
   const handleMouseEnter = useCallback((index: number) => {
@@ -180,6 +184,14 @@ function App() {
     <AuthProvider>
       <div className={`App ${currentStep === 2 ? 'page-mode' : ''}`}>
         <div className={`main-container ${currentStep === 2 ? 'page-mode' : ''}`}>
+          {/* 홈페이지 리뉴얼중 팝업: 로그인 안 된 경우만 */}
+          {!isLoading && !isAuthenticated && (
+            <Popup 
+              open={true}
+              message="NODE TREE
+              홈페이지 리뉴얼중입니다. 곧 새로운 모습으로 찾아뵙겠습니다!"
+            />
+          )}
           <div 
             className="circle-container-motion"
             style={currentStep === 2 ? {
