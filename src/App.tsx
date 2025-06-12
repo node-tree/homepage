@@ -21,7 +21,6 @@ function App() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768); // 모바일 감지
   const [isSmallMobile, setIsSmallMobile] = useState(window.innerWidth <= 480); // 소형 모바일 감지
   // 팝업 상태
-  const [showRenewalPopup, setShowRenewalPopup] = useState(true);
   const { isAuthenticated, isLoading } = useAuth();
 
   // 안정적인 핸들러 함수들 - 컴포넌트 최상위에서 선언
