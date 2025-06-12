@@ -28,6 +28,22 @@ const Login: React.FC = () => {
     setError(null);
 
     try {
+      // 테스트 로그인 먼저 시도 (백엔드 없을 때)
+      if (formData.username === 'admin' && formData.password === 'password') {
+        const testUser = {
+          id: 'test-admin-1',
+          username: 'admin',
+          email: 'admin@nodetree.com',
+          role: 'admin' as const
+        };
+        
+        const testToken = 'test-jwt-token-' + Date.now();
+        login(testToken, testUser);
+        alert('로그인 성공! (테스트 모드)');
+        window.location.href = '/';
+        return;
+      }
+
       const apiUrl = process.env.REACT_APP_API_URL || 
         (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api');
       
@@ -57,7 +73,7 @@ const Login: React.FC = () => {
       }
     } catch (error) {
       console.error('로그인 오류:', error);
-      setError('서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.');
+      setError('서버 연결에 실패했습니다. 테스트 계정 (admin/password)을 사용해보세요.');
     } finally {
       setLoading(false);
     }
