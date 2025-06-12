@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "노드트리 홈페이지 백엔드",
   "main": "server.js",
+  "engines": {
+    "node": "18.x"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
