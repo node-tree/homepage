@@ -28,7 +28,6 @@ const ensureDBConnection = async () => {
       maxPoolSize: 1,
       minPoolSize: 0,
       maxIdleTimeMS: 10000,
-      bufferMaxEntries: 0,
       bufferCommands: false,
       family: 4,
       heartbeatFrequencyMS: 30000,
