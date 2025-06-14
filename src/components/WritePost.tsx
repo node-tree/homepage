@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import api from '../services/api';
 
@@ -21,19 +21,511 @@ interface Post {
   date: string;
   images?: string[];
   thumbnail?: string | null;
+  htmlContent?: string;
 }
 
 const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postType = 'work', editPost = null }) => {
   const [title, setTitle] = useState(editPost?.title || '');
   const [content, setContent] = useState(editPost?.content || '');
+  const [htmlContent, setHtmlContent] = useState(editPost?.htmlContent || '');
   const [thumbnailUrl, setThumbnailUrl] = useState(editPost?.thumbnail || '');
   const [images, setImages] = useState<ImageData[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [useRichEditor, setUseRichEditor] = useState(!!editPost?.htmlContent);
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  // 편집 모드에서 데이터 초기화
+  useEffect(() => {
+    if (editPost) {
+      setTitle(editPost.title || '');
+      setContent(editPost.content || '');
+      setHtmlContent(editPost.htmlContent || '');
+      setThumbnailUrl(editPost.thumbnail || '');
+      
+      // htmlContent가 있으면 리치에디터 모드로, 없으면 일반 모드로
+      const shouldUseRichEditor = !!(editPost.htmlContent && editPost.htmlContent.trim());
+      setUseRichEditor(shouldUseRichEditor);
+      
+      // 이미지 데이터 초기화
+      if (editPost.images && editPost.images.length > 0) {
+        const imageData = editPost.images.map(url => ({ url, caption: '' }));
+        setImages(imageData);
+      } else {
+        setImages([]);
+      }
+    } else {
+      // 새 글 작성 모드일 때 초기화
+      setTitle('');
+      setContent('');
+      setHtmlContent('');
+      setThumbnailUrl('');
+      setUseRichEditor(false);
+      setImages([]);
+    }
+  }, [editPost]);
 
   const isEditMode = !!editPost;
 
-  // 이미지 추가
+  // 에디터 모드 변경 시 데이터 동기화
+  useEffect(() => {
+    if (useRichEditor) {
+      // 일반 텍스트에서 리치 에디터로 전환
+      if (content && !htmlContent) {
+        const lines = content.split('\n').filter(line => line.trim());
+        const convertedHtml = lines.length > 0 
+          ? lines.map(line => `<p>${line.replace(/\n/g, '<br>')}</p>`).join('')
+          : '<p><br></p>';
+        setHtmlContent(convertedHtml);
+      }
+    } else {
+      // 리치 에디터에서 일반 텍스트로 전환
+      if (htmlContent && !content) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlContent;
+        const textContent = tempDiv.textContent || tempDiv.innerText || '';
+        setContent(textContent);
+      }
+    }
+  }, [useRichEditor, content, htmlContent]);
+
+  // 리치 에디터 초기화
+  useEffect(() => {
+    if (useRichEditor && editorRef.current) {
+      const currentElement = editorRef.current;
+      
+      // 편집 모드에서 htmlContent 결정
+      let initialContent = '<p>내용을 입력하세요...</p>';
+      
+      if (isEditMode && editPost?.htmlContent) {
+        // 편집 모드에서 기존 htmlContent가 있는 경우
+        initialContent = editPost.htmlContent;
+      } else if (htmlContent && htmlContent !== '<p>내용을 입력하세요...</p>') {
+        // 현재 htmlContent가 있는 경우
+        initialContent = htmlContent;
+      }
+      
+      // DOM 업데이트
+      if (initialContent !== currentElement.innerHTML) {
+        currentElement.innerHTML = initialContent;
+        // htmlContent 상태 동기화
+        if (initialContent !== htmlContent) {
+          setHtmlContent(initialContent);
+        }
+      }
+      
+      // 플레이스홀더 스타일 적용
+      const updatePlaceholder = () => {
+        if (currentElement) {
+          const isEmpty = !currentElement.textContent?.trim() || currentElement.innerHTML === '<p><br></p>';
+          const hasRealContent = htmlContent && htmlContent !== '<p>내용을 입력하세요...</p>' && htmlContent.trim();
+          
+          if (isEmpty && !hasRealContent) {
+            currentElement.innerHTML = '<p style="color: #999; font-style: italic;">내용을 입력하세요...</p>';
+          }
+        }
+      };
+
+      // 포커스 이벤트 처리
+      const handleFocus = () => {
+        if (currentElement && currentElement.innerHTML.includes('내용을 입력하세요...')) {
+          currentElement.innerHTML = '<p><br></p>';
+          // 커서를 첫 번째 p 태그 안으로 이동
+          const range = document.createRange();
+          const selection = window.getSelection();
+          range.setStart(currentElement.firstChild!, 0);
+          range.collapse(true);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+        }
+      };
+
+      const handleBlur = () => {
+        updatePlaceholder();
+      };
+
+      // 엔터키 처리
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          
+          const selection = window.getSelection();
+          if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            
+            // 새로운 p 태그 생성
+            const newP = document.createElement('p');
+            newP.innerHTML = '<br>';
+            
+            // 현재 위치에 새 p 태그 삽입
+            range.deleteContents();
+            range.insertNode(newP);
+            
+            // 커서를 새 p 태그의 끝으로 이동
+            const newRange = document.createRange();
+            newRange.setStartAfter(newP.firstChild || newP);
+            newRange.collapse(true);
+            
+            // 선택 영역 업데이트
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+            
+            // HTML 콘텐츠 업데이트
+            setHtmlContent(currentElement.innerHTML);
+          }
+        } else if (e.key === 'Backspace' || e.key === 'Delete') {
+          const selection = window.getSelection();
+          if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            
+            // 먼저 선택된 이미지가 있는지 확인
+            let selectedImg = currentElement.querySelector('img[data-selected="true"]') as HTMLImageElement;
+            
+            if (selectedImg) {
+              // 선택된 이미지가 있으면 삭제
+              e.preventDefault();
+              const imgContainer = selectedImg.closest('p');
+              if (imgContainer) {
+                imgContainer.remove();
+                setHtmlContent(currentElement.innerHTML);
+                
+                // 포커스 유지
+                setTimeout(() => {
+                  if (currentElement) {
+                    currentElement.focus();
+                  }
+                }, 0);
+              }
+              return;
+            }
+            
+            // 선택된 이미지가 없으면 커서 근처의 이미지 확인
+            const selectedElement = range.commonAncestorContainer;
+            let imgElement: HTMLImageElement | null = null;
+            
+            if (selectedElement.nodeType === Node.ELEMENT_NODE) {
+              const element = selectedElement as Element;
+              imgElement = element.querySelector('img') || (element.tagName === 'IMG' ? element as HTMLImageElement : null);
+            } else if (selectedElement.parentElement) {
+              imgElement = selectedElement.parentElement.querySelector('img');
+              
+              // 부모 요소에서도 찾지 못하면 더 상위로 올라가서 찾기
+              if (!imgElement && selectedElement.parentElement.parentElement) {
+                imgElement = selectedElement.parentElement.parentElement.querySelector('img');
+              }
+            }
+            
+            // 이미지가 발견되면 삭제
+            if (imgElement) {
+              e.preventDefault();
+              
+              // 이미지를 포함한 p 태그 찾기
+              let imgContainer = imgElement.closest('p');
+              if (imgContainer) {
+                imgContainer.remove();
+                
+                // HTML 콘텐츠 업데이트
+                setHtmlContent(currentElement.innerHTML);
+                
+                // 포커스 유지
+                setTimeout(() => {
+                  if (currentElement) {
+                    currentElement.focus();
+                  }
+                }, 0);
+              }
+            }
+          }
+        }
+      };
+
+      currentElement.addEventListener('focus', handleFocus);
+      currentElement.addEventListener('blur', handleBlur);
+      currentElement.addEventListener('keydown', handleKeyDown);
+      
+      updatePlaceholder();
+
+      return () => {
+        const element = currentElement; // 클린업 함수에서 사용할 변수로 복사
+        element.removeEventListener('focus', handleFocus);
+        element.removeEventListener('blur', handleBlur);
+        element.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [useRichEditor, htmlContent, isEditMode, editPost?.htmlContent]);
+
+  // 커서 위치 저장 및 복원
+  const saveCursorPosition = () => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0 && editorRef.current) {
+      const range = selection.getRangeAt(0);
+      const preCaretRange = range.cloneRange();
+      preCaretRange.selectNodeContents(editorRef.current);
+      preCaretRange.setEnd(range.startContainer, range.startOffset);
+      return preCaretRange.toString().length;
+    }
+    return 0;
+  };
+
+  const restoreCursorPosition = (position: number) => {
+    if (!editorRef.current) return;
+    
+    const selection = window.getSelection();
+    const range = document.createRange();
+    let charIndex = 0;
+    let nodeStack: Node[] = [editorRef.current];
+    let node: Node | undefined;
+    let foundStart = false;
+
+    while (!foundStart && (node = nodeStack.pop())) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const nextCharIndex = charIndex + (node.textContent?.length || 0);
+        if (position >= charIndex && position <= nextCharIndex) {
+          range.setStart(node, position - charIndex);
+          range.setEnd(node, position - charIndex);
+          foundStart = true;
+        }
+        charIndex = nextCharIndex;
+      } else {
+        for (let i = node.childNodes.length - 1; i >= 0; i--) {
+          nodeStack.push(node.childNodes[i]);
+        }
+      }
+    }
+
+    if (foundStart) {
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
+  };
+
+  // 텍스트 포맷팅 함수들
+  const formatText = (command: string, value?: string) => {
+    if (!editorRef.current) return;
+    
+    const cursorPosition = saveCursorPosition();
+    document.execCommand(command, false, value);
+    setHtmlContent(editorRef.current.innerHTML);
+    
+    setTimeout(() => {
+      restoreCursorPosition(cursorPosition);
+      editorRef.current?.focus();
+    }, 0);
+  };
+
+  // 이미지 삽입
+  const insertImage = () => {
+    const url = prompt('이미지 URL을 입력하세요:');
+    if (url && url.trim() && editorRef.current) {
+      const trimmedUrl = url.trim();
+      
+      // 현재 선택 영역 가져오기
+      const selection = window.getSelection();
+      let range;
+      
+      if (selection && selection.rangeCount > 0) {
+        range = selection.getRangeAt(0);
+      } else {
+        // 선택 영역이 없으면 에디터 끝에 삽입
+        range = document.createRange();
+        range.selectNodeContents(editorRef.current);
+        range.collapse(false);
+      }
+      
+      // 이미지 요소 생성
+      const img = document.createElement('img');
+      img.src = trimmedUrl;
+      img.alt = '삽입된 이미지';
+      img.style.cssText = 'max-width: 100%; height: auto; margin: 10px auto; border-radius: 8px; display: block; cursor: pointer;';
+      img.contentEditable = 'false'; // 이미지 자체는 편집 불가
+      
+      // 이미지 클릭 시 선택 처리
+      img.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // 기존 선택 해제
+        const prevSelected = editorRef.current?.querySelector('img[data-selected="true"]');
+        if (prevSelected) {
+          prevSelected.removeAttribute('data-selected');
+          (prevSelected as HTMLImageElement).style.outline = '';
+        }
+        
+        // 현재 이미지 선택
+        img.setAttribute('data-selected', 'true');
+        img.style.outline = '2px solid #007bff';
+        
+        // 이미지를 선택 영역으로 설정
+        const range = document.createRange();
+        const selection = window.getSelection();
+        range.selectNode(img);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      });
+      
+      // 이미지를 중앙정렬하는 p 태그로 감싸기
+      const imgContainer = document.createElement('p');
+      imgContainer.style.textAlign = 'center';
+      imgContainer.appendChild(img);
+      
+      // 이미지 다음에 올 새로운 p 태그 생성
+      const newP = document.createElement('p');
+      newP.innerHTML = '<br>';
+      
+      // 현재 위치에 이미지 컨테이너와 새 p 태그 삽입
+      range.deleteContents();
+      range.insertNode(newP);
+      range.insertNode(imgContainer);
+      
+      // 커서를 새 p 태그 안으로 이동
+      range.setStart(newP, 0);
+      range.setEnd(newP, 0);
+      
+      // 선택 영역 업데이트
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      
+      // HTML 콘텐츠 업데이트
+      setHtmlContent(editorRef.current.innerHTML);
+      
+      // onInput 이벤트를 수동으로 트리거하여 상태 업데이트 보장
+      const inputEvent = new Event('input', { bubbles: true });
+      editorRef.current.dispatchEvent(inputEvent);
+      
+      // 포커스 유지 및 커서 위치 재설정
+      setTimeout(() => {
+        if (editorRef.current) {
+          editorRef.current.focus();
+          // 커서를 새 p 태그로 다시 이동
+          const newRange = document.createRange();
+          const newSelection = window.getSelection();
+          newRange.setStart(newP, 0);
+          newRange.setEnd(newP, 0);
+          newSelection?.removeAllRanges();
+          newSelection?.addRange(newRange);
+          
+          // HTML 콘텐츠 다시 업데이트
+          setHtmlContent(editorRef.current.innerHTML);
+        }
+      }, 50);
+      
+    } else if (url !== null) {
+      alert('올바른 이미지 URL을 입력해주세요.');
+    }
+  };
+
+  // 이미지 갤러리 삽입 (같은 행에 여러 이미지)
+  const insertImageGallery = () => {
+    const urls = prompt('이미지 URL들을 쉼표로 구분하여 입력하세요:');
+    if (urls && urls.trim() && editorRef.current) {
+      const urlArray = urls.split(',').map(url => url.trim()).filter(url => url);
+      
+      if (urlArray.length === 0) {
+        alert('올바른 이미지 URL을 입력해주세요.');
+        return;
+      }
+      
+      // 현재 선택 영역 가져오기
+      const selection = window.getSelection();
+      let range;
+      
+      if (selection && selection.rangeCount > 0) {
+        range = selection.getRangeAt(0);
+      } else {
+        // 선택 영역이 없으면 에디터 끝에 삽입
+        range = document.createRange();
+        range.selectNodeContents(editorRef.current);
+        range.collapse(false);
+      }
+      
+      // 갤러리 컨테이너 생성
+      const galleryDiv = document.createElement('div');
+      galleryDiv.style.cssText = 'display: flex; flex-wrap: wrap; gap: 10px; margin: 20px auto; justify-content: center; max-width: 100%;';
+      
+      // 각 이미지 추가
+      urlArray.forEach(url => {
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = '갤러리 이미지';
+        img.style.cssText = 'flex: 1; min-width: 200px; max-width: 300px; height: auto; border-radius: 8px; object-fit: cover; cursor: pointer;';
+        img.contentEditable = 'false'; // 이미지 자체는 편집 불가
+        img.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // 기존 선택 해제
+          const prevSelected = editorRef.current?.querySelector('img[data-selected="true"]');
+          if (prevSelected) {
+            prevSelected.removeAttribute('data-selected');
+            (prevSelected as HTMLImageElement).style.outline = '';
+          }
+          
+          // 현재 이미지 선택
+          img.setAttribute('data-selected', 'true');
+          img.style.outline = '2px solid #007bff';
+          
+          // 이미지를 선택 영역으로 설정
+          const range = document.createRange();
+          const selection = window.getSelection();
+          range.selectNode(img);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+        });
+        galleryDiv.appendChild(img);
+      });
+      
+      // 갤러리를 중앙정렬하는 p 태그로 감싸기
+      const galleryContainer = document.createElement('p');
+      galleryContainer.style.textAlign = 'center';
+      galleryContainer.appendChild(galleryDiv);
+      
+      // 갤러리 다음에 올 새로운 p 태그 생성
+      const newP = document.createElement('p');
+      newP.innerHTML = '<br>';
+      
+      // 현재 위치에 갤러리 컨테이너와 새 p 태그 삽입
+      range.deleteContents();
+      range.insertNode(newP);
+      range.insertNode(galleryContainer);
+      
+      // 커서를 새 p 태그 안으로 이동
+      range.setStart(newP, 0);
+      range.setEnd(newP, 0);
+      
+      // 선택 영역 업데이트
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      
+      // HTML 콘텐츠 업데이트
+      setHtmlContent(editorRef.current.innerHTML);
+      
+      // onInput 이벤트를 수동으로 트리거하여 상태 업데이트 보장
+      const inputEvent = new Event('input', { bubbles: true });
+      editorRef.current.dispatchEvent(inputEvent);
+      
+      // 포커스 유지 및 커서 위치 재설정
+      setTimeout(() => {
+        if (editorRef.current) {
+          editorRef.current.focus();
+          // 커서를 새 p 태그로 다시 이동
+          const newRange = document.createRange();
+          const newSelection = window.getSelection();
+          newRange.setStart(newP, 0);
+          newRange.setEnd(newP, 0);
+          newSelection?.removeAllRanges();
+          newSelection?.addRange(newRange);
+          
+          // HTML 콘텐츠 다시 업데이트
+          setHtmlContent(editorRef.current.innerHTML);
+        }
+      }, 50);
+      
+    } else if (urls !== null) {
+      alert('올바른 이미지 URL들을 입력해주세요.');
+    }
+  };
+
+  // 이미지 추가 (기존 방식)
   const addImage = () => {
     setImages([...images, { url: '', caption: '' }]);
   };
@@ -83,7 +575,30 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
   };
 
   const handleSubmit = async () => {
-    if (!title.trim() || !content.trim()) {
+    // 저장 전 데이터 동기화
+    let finalContent = '';
+    let finalHtmlContent = '';
+    
+    if (useRichEditor) {
+      finalHtmlContent = htmlContent;
+      // 리치 에디터 내용을 일반 텍스트로 변환
+      if (htmlContent) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlContent;
+        finalContent = tempDiv.textContent || tempDiv.innerText || '';
+      }
+    } else {
+      finalContent = content;
+      // 일반 텍스트를 HTML로 변환
+      if (content) {
+        const lines = content.split('\n').filter(line => line.trim());
+        finalHtmlContent = lines.length > 0 
+          ? lines.map(line => `<p>${line}</p>`).join('')
+          : '';
+      }
+    }
+
+    if (!title.trim() || (!finalContent.trim() && !finalHtmlContent.trim())) {
       setError('제목과 내용을 모두 입력해주세요.');
       return;
     }
@@ -94,7 +609,8 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     try {
       const postData = {
         title: title.trim(),
-        content: content.trim(),
+        content: finalContent.trim(),
+        htmlContent: finalHtmlContent,
         thumbnail: thumbnailUrl.trim() || undefined
       };
 
@@ -116,6 +632,10 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
       console.log('API 응답:', response);
 
       if (response.success) {
+        // 저장된 데이터로 상태 업데이트
+        setContent(finalContent);
+        setHtmlContent(finalHtmlContent);
+        
         // 성공 시 부모 컴포넌트에 알림
         onSavePost({
           title: response.data.title,
@@ -132,6 +652,7 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
         if (!isEditMode) {
           setTitle('');
           setContent('');
+          setHtmlContent('');
           setThumbnailUrl('');
           setImages([]);
         }
@@ -197,101 +718,283 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
           />
           {thumbnailUrl && (
             <div className="thumbnail-preview">
-              <img src={thumbnailUrl} alt="썸네일 미리보기" onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }} />
+              <img 
+                src={thumbnailUrl} 
+                alt="썸네일 미리보기" 
+                style={{ maxWidth: '200px', maxHeight: '150px', objectFit: 'cover', borderRadius: '8px' }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
             </div>
           )}
         </div>
 
+        {/* 에디터 모드 선택 */}
         <div className="form-group">
-          <label className="form-label">내용</label>
-          <textarea
-            id="content"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="내용을 입력하세요. 이미지는 ![이미지](URL) 형식으로 삽입할 수 있습니다."
-            className="form-textarea"
-            disabled={saving}
-          />
+          <label className="form-label">편집 모드</label>
+          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <input
+                type="radio"
+                checked={!useRichEditor}
+                onChange={() => setUseRichEditor(false)}
+                disabled={saving}
+              />
+              일반 텍스트
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <input
+                type="radio"
+                checked={useRichEditor}
+                onChange={() => setUseRichEditor(true)}
+                disabled={saving}
+              />
+              리치 에디터
+            </label>
+          </div>
         </div>
 
+        {/* 내용 입력 */}
         <div className="form-group">
-          <div className="images-header">
-            <label className="form-label">이미지</label>
-            <button 
-              type="button" 
-              onClick={addImage}
-              className="add-image-button"
-              disabled={saving}
-            >
-              + 이미지 추가
-            </button>
-          </div>
+          <label className="form-label">내용</label>
           
-          <div className="images-container">
+          {useRichEditor ? (
+            <div>
+              {/* 리치 에디터 도구 모음 */}
+              <div style={{
+                backgroundColor: '#f5f5f5',
+                padding: '1rem',
+                borderRadius: '8px 8px 0 0',
+                border: '1px solid #ddd',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '0.5rem',
+                alignItems: 'center'
+              }}>
+                {/* 텍스트 포맷팅 */}
+                <button type="button" onClick={() => formatText('bold')} style={toolbarButtonStyle}>
+                  <strong>B</strong>
+                </button>
+                <button type="button" onClick={() => formatText('italic')} style={toolbarButtonStyle}>
+                  <em>I</em>
+                </button>
+                <button type="button" onClick={() => formatText('underline')} style={toolbarButtonStyle}>
+                  <u>U</u>
+                </button>
+                
+                <div style={{ width: '1px', height: '20px', backgroundColor: '#ccc', margin: '0 0.5rem' }} />
+                
+                {/* 정렬 */}
+                <button type="button" onClick={() => formatText('justifyLeft')} style={toolbarButtonStyle}>
+                  왼쪽
+                </button>
+                <button type="button" onClick={() => formatText('justifyCenter')} style={toolbarButtonStyle}>
+                  중앙
+                </button>
+                <button type="button" onClick={() => formatText('justifyRight')} style={toolbarButtonStyle}>
+                  오른쪽
+                </button>
+                
+                <div style={{ width: '1px', height: '20px', backgroundColor: '#ccc', margin: '0 0.5rem' }} />
+                
+                {/* 제목 크기 */}
+                <select 
+                  onChange={(e) => formatText('formatBlock', e.target.value)}
+                  style={{ padding: '0.25rem', borderRadius: '4px', border: '1px solid #ccc' }}
+                >
+                  <option value="">텍스트 크기</option>
+                  <option value="h1">제목 1</option>
+                  <option value="h2">제목 2</option>
+                  <option value="h3">제목 3</option>
+                  <option value="p">본문</option>
+                </select>
+                
+                {/* 글꼴 크기 */}
+                <select 
+                  onChange={(e) => formatText('fontSize', e.target.value)}
+                  style={{ padding: '0.25rem', borderRadius: '4px', border: '1px solid #ccc' }}
+                >
+                  <option value="">글꼴 크기</option>
+                  <option value="1">매우 작게</option>
+                  <option value="2">작게</option>
+                  <option value="3">보통</option>
+                  <option value="4">크게</option>
+                  <option value="5">매우 크게</option>
+                  <option value="6">거대하게</option>
+                  <option value="7">최대</option>
+                </select>
+                
+                <div style={{ width: '1px', height: '20px', backgroundColor: '#ccc', margin: '0 0.5rem' }} />
+                
+                {/* 이미지 */}
+                <button type="button" onClick={insertImage} style={toolbarButtonStyle}>
+                  🖼️ 이미지
+                </button>
+                <button type="button" onClick={insertImageGallery} style={toolbarButtonStyle}>
+                  🖼️ 갤러리
+                </button>
+              </div>
+              
+              {/* 리치 에디터 영역 */}
+              <div
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                onClick={(e) => {
+                  // 이미지가 아닌 곳을 클릭했을 때 이미지 선택 해제
+                  const target = e.target as HTMLElement;
+                  if (target.tagName !== 'IMG' && editorRef.current) {
+                    const selectedImg = editorRef.current.querySelector('img[data-selected="true"]') as HTMLImageElement;
+                    if (selectedImg) {
+                      selectedImg.removeAttribute('data-selected');
+                      selectedImg.style.outline = '';
+                    }
+                  }
+                }}
+                onInput={(e) => {
+                  const target = e.target as HTMLDivElement;
+                  const content = target.innerHTML;
+                  
+                  console.log('onInput 이벤트 발생:', content); // 디버깅용
+                  
+                  // 플레이스홀더 감지
+                  const isPlaceholder = content.includes('내용을 입력하세요...') && content.includes('font-style: italic');
+                  const isEmpty = content === '<p><br></p>' || content === '<br>' || content.trim() === '';
+                  
+                  // 이미지나 실제 콘텐츠가 있는지 확인
+                  const hasImage = content.includes('<img');
+                  const hasRealContent = !isEmpty && !isPlaceholder;
+                  
+                  // 이미지가 있거나 실제 콘텐츠가 있으면 업데이트
+                  if (hasImage || hasRealContent) {
+                    console.log('HTML 콘텐츠 업데이트:', content); // 디버깅용
+                    setHtmlContent(content);
+                  } else if (isEmpty) {
+                    // 완전히 비어있으면 빈 문자열로 설정
+                    setHtmlContent('');
+                  }
+                }}
+                onBlur={(e) => {
+                  const target = e.target as HTMLDivElement;
+                  const content = target.innerHTML;
+                  
+                  console.log('onBlur 이벤트 발생:', content); // 디버깅용
+                  
+                  // 플레이스홀더 감지
+                  const isPlaceholder = content.includes('내용을 입력하세요...') && content.includes('font-style: italic');
+                  const isEmpty = content === '<p><br></p>' || content === '<br>' || content.trim() === '';
+                  
+                  // 이미지나 실제 콘텐츠가 있는지 확인
+                  const hasImage = content.includes('<img');
+                  const hasRealContent = !isEmpty && !isPlaceholder;
+                  
+                  // 이미지가 있거나 실제 콘텐츠가 있으면 업데이트
+                  if (hasImage || hasRealContent) {
+                    console.log('HTML 콘텐츠 업데이트 (blur):', content); // 디버깅용
+                    setHtmlContent(content);
+                  } else if (isEmpty) {
+                    // 완전히 비어있으면 빈 문자열로 설정
+                    setHtmlContent('');
+                  }
+                }}
+                style={{
+                  minHeight: '300px',
+                  padding: '1rem',
+                  border: '1px solid #ddd',
+                  borderTop: 'none',
+                  borderRadius: '0 0 8px 8px',
+                  backgroundColor: '#fff',
+                  outline: 'none',
+                  lineHeight: '1.6',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+          ) : (
+            /* 일반 텍스트 에디터 */
+            <textarea
+              id="content"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="글 내용을 입력하세요"
+              className="form-textarea"
+              disabled={saving}
+              rows={15}
+            />
+          )}
+        </div>
+
+        {/* 기존 이미지 관리 (일반 모드에서만) */}
+        {!useRichEditor && (
+          <div className="form-group">
+            <div className="images-header">
+              <label className="form-label">이미지 관리</label>
+              <button 
+                type="button"
+                onClick={addImage}
+                className="add-image-button"
+                disabled={saving}
+              >
+                + 이미지 추가
+              </button>
+            </div>
+
             {images.map((image, index) => (
-              <div key={index} className="image-input-group">
-                <div className="image-input-header">
-                  <span className="image-number">이미지 {index + 1}</span>
-                  <div>
-                    <button 
-                      type="button"
-                      onClick={() => insertImageToContent(image.url)}
-                      className="insert-image-button"
-                      disabled={!image.url || saving}
-                    >
-                      내용에 삽입
-                    </button>
-                    <button 
-                      type="button"
-                      onClick={() => copyImageTag(image.url)}
-                      className="copy-tag-button"
-                      disabled={!image.url || saving}
-                    >
-                      태그 복사
-                    </button>
-                    <button 
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="remove-image-button"
-                      disabled={saving}
-                    >
-                      삭제
-                    </button>
-                  </div>
+              <div key={index} className="image-item">
+                <div className="image-inputs">
+                  <input
+                    type="url"
+                    value={image.url}
+                    onChange={(e) => updateImageUrl(index, e.target.value)}
+                    placeholder="이미지 URL"
+                    className="form-input"
+                    disabled={saving}
+                  />
+                  <input
+                    type="text"
+                    value={image.caption}
+                    onChange={(e) => updateImageCaption(index, e.target.value)}
+                    placeholder="이미지 설명 (선택사항)"
+                    className="form-input"
+                    disabled={saving}
+                  />
                 </div>
                 
-                <input
-                  type="url"
-                  value={image.url}
-                  onChange={(e) => updateImageUrl(index, e.target.value)}
-                  placeholder="이미지 URL을 입력하세요"
-                  className="form-input image-url-input"
-                  disabled={saving}
-                />
-                
-                <input
-                  type="text"
-                  value={image.caption}
-                  onChange={(e) => updateImageCaption(index, e.target.value)}
-                  placeholder="이미지 설명 (선택사항)"
-                  className="form-input"
-                  disabled={saving}
-                />
-                
+                <div className="image-actions">
+                  <button 
+                    type="button"
+                    onClick={() => insertImageToContent(image.url)}
+                    className="insert-button"
+                    disabled={!image.url || saving}
+                  >
+                    본문에 삽입
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => copyImageTag(image.url)}
+                    className="copy-button"
+                    disabled={!image.url || saving}
+                  >
+                    태그 복사
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="remove-button"
+                    disabled={saving}
+                  >
+                    삭제
+                  </button>
+                </div>
+
                 {image.url && (
                   <div className="image-preview">
                     <img 
                       src={image.url} 
-                      alt={`이미지 ${index + 1}`}
+                      alt={image.caption || '미리보기'} 
                       onError={(e) => {
-                        const target = e.target as HTMLElement;
-                        target.style.display = 'none';
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'image-error';
-                        errorDiv.textContent = '이미지를 불러올 수 없습니다.';
-                        target.parentNode?.appendChild(errorDiv);
+                        e.currentTarget.style.display = 'none';
                       }}
                     />
                   </div>
@@ -299,10 +1002,21 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
               </div>
             ))}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
+};
+
+// 도구 모음 버튼 스타일
+const toolbarButtonStyle: React.CSSProperties = {
+  padding: '0.5rem 0.75rem',
+  backgroundColor: '#fff',
+  border: '1px solid #ccc',
+  borderRadius: '4px',
+  cursor: 'pointer',
+  fontSize: '0.9rem',
+  minWidth: '40px'
 };
 
 export default WritePost; 

@@ -8,6 +8,7 @@ interface Post {
   images?: string[];
   thumbnail?: string;
   author?: string;
+  htmlContent?: string;
 }
 
 interface PostDetailProps {
@@ -93,10 +94,17 @@ const PostDetail: React.FC<PostDetailProps> = ({
 
         {/* 글 내용 */}
         <div className="cornervery-post-body">
-          <div 
-            className="cornervery-content-section"
-            dangerouslySetInnerHTML={renderSafeContent(post.content)}
-          />
+          {post.htmlContent ? (
+            <div 
+              className="cornervery-content-section"
+              dangerouslySetInnerHTML={{ __html: post.htmlContent }}
+            />
+          ) : (
+            <div 
+              className="cornervery-content-section"
+              dangerouslySetInnerHTML={renderSafeContent(post.content)}
+            />
+          )}
         </div>
 
         {/* 첨부 이미지 (있는 경우) */}

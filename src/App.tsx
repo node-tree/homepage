@@ -9,6 +9,7 @@ import About from './components/About';
 import Work from './components/Work';
 import Filed from './components/Filed';
 import Popup from './components/Popup';
+import LocationVideoSettings from './components/LocationVideoSettings';
 
 function AppContent() {
   // 모든 상태를 최상위에서 선언
@@ -33,10 +34,15 @@ function AppContent() {
 
   const handleCircleClickStable = useCallback((page: string) => {
     setCurrentStep((prevStep) => {
-      if (prevStep === 1) {
+      if (prevStep === 0) {
+        // 첫 번째 클릭: 원들만 펼치기 (y축 이동 없음)
+        return 1;
+      } else if (prevStep === 1) {
+        // 두 번째 클릭: 해당 페이지로 이동 (navbar 위치로 y축 이동)
         setCurrentPage(page);
         return 2;
       } else if (prevStep === 2) {
+        // 이미 페이지 상태에서 다른 원 클릭: 페이지만 변경
         setCurrentPage(page);
         return 2;
       }
@@ -101,6 +107,19 @@ function AppContent() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Location 컴포넌트에서 영상 설정 페이지로 이동하는 커스텀 이벤트 리스너
+  useEffect(() => {
+    const handleNavigateToLocationSettings = () => {
+      handleCircleClickStable('LOCATION_SETTINGS');
+    };
+
+    window.addEventListener('navigateToLocationSettings', handleNavigateToLocationSettings);
+    
+    return () => {
+      window.removeEventListener('navigateToLocationSettings', handleNavigateToLocationSettings);
+    };
+  }, [handleCircleClickStable]);
+
   // 로그인 페이지일 때는 별도 렌더링
   if (currentPath === '/login') {
     return <Login />;
@@ -137,12 +156,12 @@ function AppContent() {
           : [-280, -140, 0, 140, 280]; // 데스크톱에서는 기존 간격
         const mobileScale = isSmallMobile ? 0.45 : isMobile ? 0.35 : 0.23; // 화면 크기별 스케일
         
-        // y축 위치도 화면 크기에 따라 조정
+        // y축 위치도 화면 크기에 따라 조정 - 원들을 아래로 내림
         const yPosition = isSmallMobile 
-          ? -80 // 소형 모바일에서 더 위로 올림
+          ? 0 // 소형 모바일에서 중앙 위치
           : isMobile 
-          ? -100 // 모바일에서 더 위로 올림
-          : -120; // 데스크톱에서 더 위로 올림
+          ? 0 // 모바일에서 중앙 위치
+          : -20; // 데스크톱에서만 위로 올림
         
         return { x: pagePositions[index], y: yPosition, scale: mobileScale };
       default:
@@ -169,6 +188,8 @@ function AppContent() {
         return <Work onPostsLoaded={handlePostsLoaded} />;
       case 'FILED':
         return <Filed onPostsLoaded={handlePostsLoaded} />;
+      case 'LOCATION_SETTINGS':
+        return <LocationVideoSettings />;
       default:
         return null;
     }
@@ -199,6 +220,22 @@ function AppContent() {
           >
             <span className="user-info">{user?.username}님</span>
             <button
+              onClick={() => handleCircleClickStable('LOCATION_SETTINGS')}
+              className="settings-button"
+              style={{
+                marginRight: '10px',
+                padding: '5px 10px',
+                backgroundColor: '#ff4444',
+                color: 'white',
+                border: '1px solid #000',
+                borderRadius: '4px',
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}
+            >
+              🎬 설정
+            </button>
+            <button
               onClick={logout}
               className="logout-button"
             >
@@ -217,15 +254,8 @@ function AppContent() {
         )}
         <div 
           className="circle-container-motion"
-          style={currentStep === 2 ? {
-            position: 'absolute',
-            top: '80px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: '100%',
-            zIndex: 1000
-          } : currentStep === 0 ? {
-            // 첫 페이지: 모든 기기에서 강력한 중앙 정렬
+          style={currentStep === 0 || currentStep === 1 ? {
+            // 첫 페이지와 메뉴 펼침 상태: 모든 기기에서 강력한 중앙 정렬
             position: 'fixed',
             top: '0',
             left: '0',
@@ -236,16 +266,23 @@ function AppContent() {
             alignItems: 'center',
             margin: '0',
             padding: '0',
-            zIndex: 2000
-          } : {
-            position: 'relative',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
+            zIndex: 2000,
+            background: 'transparent',
+            backdropFilter: 'none',
+            border: 'none'
+          } : currentStep === 2 ? {
+            // 페이지 상태: navbar가 잘 보이도록 적절한 위치에 고정
+            position: 'fixed',
+            top: '0px', // 화면 제일 위에 붙임
+            left: '0',
+            right: '0',
             width: '100%',
-            height: '100vh',
-            margin: '0 auto'
-          }}
+            height: '80px',
+            zIndex: 1000,
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(10px)',
+            borderBottom: 'none'
+          } : {}}
         >
           {circles.map((circle, index) => {
             const position = getCirclePosition(index);
@@ -280,14 +317,18 @@ function AppContent() {
                   }
                 }}
                 style={{
-                  // 모바일에서 첫 페이지에서 NODE TREE가 아닌 원들은 완전히 숨김
+                  // 모바일에서 첫 페이지(step 0)에서만 NODE TREE가 아닌 원들을 숨김
                   display: currentStep === 0 && (isMobile || isSmallMobile) && index !== 2 ? 'none' : 'block'
                 }}
-                onClick={
-                  currentStep === 0 && index === 2 
-                    ? handleCenterClick 
-                    : () => handleCircleClickStable(circle.page)
-                }
+                onClick={() => {
+                  if (currentStep === 0) {
+                    // 첫 번째 페이지에서는 어떤 원을 클릭해도 먼저 펼치기만
+                    handleCenterClick();
+                  } else {
+                    // 펼쳐진 상태 이후에는 페이지 이동
+                    handleCircleClickStable(circle.page);
+                  }
+                }}
                 whileHover={{
                   scale: currentStep === 2 ? position.scale * 1.05 : position.scale * 1.1,
                   transition: { type: "spring", damping: 20, stiffness: 150 }
@@ -311,9 +352,6 @@ function AppContent() {
             <motion.div 
               key={currentPage}
               className="page-content-wrapper"
-              style={{
-                paddingTop: isSmallMobile ? '260px' : isMobile ? '250px' : '200px'
-              }}
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -30 }}

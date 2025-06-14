@@ -1,9 +1,30 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// 영상 데이터 타입 정의
+interface LocationVideo {
+  _id: string;
+  cityName: string;
+  videoUrl: string;
+  videoTitle?: string;
+  videoDescription?: string;
+  isActive: boolean;
+}
 
 const Location: React.FC = () => {
+  // 인증 상태 가져오기
+  // useAuth는 더 이상 사용하지 않음 (설정 버튼이 App.tsx로 이동됨)
+  
+
+  
   // SVG 참조를 위한 ref
   const svgRef = useRef<SVGSVGElement>(null);
+  
+  // 영상 영역 참조를 위한 ref
+  const videoSectionRef = useRef<HTMLDivElement>(null);
+
+  // 선택된 도시 정보 영역 참조를 위한 ref
+  const cityInfoRef = useRef<HTMLDivElement>(null);
 
   // 뷰포트 크기를 추적하는 상태
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -11,13 +32,16 @@ const Location: React.FC = () => {
 
   // 모바일 여부를 확인하는 상태
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  
+  // 스크롤 위치를 추적하는 상태
+  const [showScrollToTop, setShowScrollToTop] = useState(false);
 
   // GPS 좌표를 SVG 좌표로 변환하는 함수
   const convertCoordinates = (lat: number, lng: number, region: string) => {
     // SVG 화면 크기 (페이지 전체 공간 활용)
     const svgWidth = 2000;  // 더 넓게 확장
     const svgHeight = 900;  // 더 높게 확장
-    const padding = 100;    // 패딩 늘림
+    const padding = 100;
     
     if (region === 'korea') {
       // 한국 지역만 특별히 확대 처리
@@ -102,7 +126,84 @@ const Location: React.FC = () => {
   // 호버된 도시를 추적하는 상태 (버튼 호버용)
   const [hoveredCity, setHoveredCity] = useState<string | null>(null);
 
-  // 뷰포트 크기 업데이트
+  // 영상 데이터 상태
+  // locationVideos 상태는 더 이상 사용하지 않음
+  const [currentVideo, setCurrentVideo] = useState<LocationVideo | null>(null);
+  const [isVideoLoading, setIsVideoLoading] = useState(false);
+
+  // 영상 데이터 가져오기 함수 (현재는 사용하지 않음)
+  const fetchLocationVideos = async () => {
+    try {
+      const response = await fetch('/api/location-video');
+      const data = await response.json();
+      
+      if (data.success) {
+        // setLocationVideos(data.data); // 더 이상 사용하지 않음
+        console.log('영상 데이터 로드됨:', data.data.length, '개');
+      } else {
+        console.error('영상 데이터 가져오기 실패:', data.message);
+      }
+    } catch (error) {
+      console.error('영상 데이터 가져오기 오류:', error);
+    }
+  };
+
+  // 특정 도시의 영상 가져오기 함수
+  const fetchCityVideo = async (cityName: string) => {
+    setIsVideoLoading(true);
+    try {
+      const response = await fetch(`/api/location-video/${encodeURIComponent(cityName)}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setCurrentVideo(data.data);
+      } else {
+        setCurrentVideo(null);
+        console.log(`${cityName}에 대한 영상이 없습니다.`);
+      }
+    } catch (error) {
+      console.error('영상 가져오기 오류:', error);
+      setCurrentVideo(null);
+    } finally {
+      setIsVideoLoading(false);
+    }
+  };
+
+  // 스크롤 이벤트 핸들러
+  const handleScroll = () => {
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    setShowScrollToTop(scrollTop > 500); // 500px 이상 스크롤하면 버튼 표시
+  };
+
+  // 위로 스크롤하는 함수
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+
+  // 선택된 도시 정보 영역으로 스크롤하는 함수
+  const scrollToCityInfo = () => {
+    if (cityInfoRef.current) {
+      cityInfoRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  };
+
+  // 영상 영역으로 스크롤하는 함수
+  const scrollToVideo = () => {
+    if (videoSectionRef.current) {
+      videoSectionRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  };
+
+  // 뷰포트 크기 업데이트 및 초기 데이터 로드
   useEffect(() => {
     const updateViewport = () => {
       if (svgRef.current) {
@@ -114,8 +215,15 @@ const Location: React.FC = () => {
 
     updateViewport();
     window.addEventListener('resize', updateViewport);
+    window.addEventListener('scroll', handleScroll);
     
-    return () => window.removeEventListener('resize', updateViewport);
+    // 초기 영상 데이터 로드
+    fetchLocationVideos();
+    
+    return () => {
+      window.removeEventListener('resize', updateViewport);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   // 지도 확대 변환 계산 함수 (모바일 대응)
@@ -164,6 +272,43 @@ const Location: React.FC = () => {
   const handleCityClick = (cityName: string) => {
     setSelectedCity(cityName);
     console.log(`${cityName} 클릭됨!`);
+    
+    // 도시 선택 후 선택된 위치 정보로 스크롤
+    setTimeout(() => {
+      scrollToCityInfo();
+    }, 100);
+  };
+
+  // 이동하기 버튼 클릭 핸들러
+  const handleMoveClick = (cityName: string) => {
+    console.log(`${cityName}로 이동하기 클릭됨`);
+    fetchCityVideo(cityName);
+    
+    // 영상이 로드된 후 스크롤하기 위해 약간의 지연 추가
+    setTimeout(() => {
+      scrollToVideo();
+    }, 100);
+  };
+
+  // handleVideoSettings는 더 이상 사용하지 않음 (App.tsx의 설정 버튼으로 이동됨)
+
+  // YouTube URL을 임베드 형식으로 변환하는 함수
+  const convertToEmbedUrl = (url: string): string => {
+    // 이미 임베드 URL인 경우 그대로 반환
+    if (url.includes('youtube.com/embed/')) {
+      return url;
+    }
+    
+    // 일반 YouTube URL을 임베드 형식으로 변환
+    const youtubeRegex = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/;
+    const match = url.match(youtubeRegex);
+    
+    if (match && match[1]) {
+      return `https://www.youtube.com/embed/${match[1]}`;
+    }
+    
+    // YouTube URL이 아닌 경우 원본 URL 반환
+    return url;
   };
 
   // 연결선 그리기 함수
@@ -195,6 +340,8 @@ const Location: React.FC = () => {
         LOCATION
         <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>위치와 공간</div>
       </h1>
+      
+            
       {/* 지도 영역 - 오른쪽으로 이동 */}
       <div className="location-map-container location-map-desktop-offset" style={{ 
         display: 'flex', 
@@ -355,22 +502,133 @@ const Location: React.FC = () => {
 
       {/* 선택된 도시 정보 */}
       {selectedCity && (
-        <div className="location-city-info" style={{ textAlign: 'center', marginTop: '1rem' }}>
+        <div ref={cityInfoRef} className="location-city-info" style={{ textAlign: 'center', marginTop: '1rem' }}>
           <h3 className="page-body-text" style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', fontWeight: '500' }}>선택된 위치</h3>
           <p className="page-body-text" style={{ margin: '0 0 1rem 0' }}>{selectedCity}</p>
           <motion.button
             className="location-move-button"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              console.log(`${selectedCity}로 이동하기 클릭됨`);
-              // 여기에 실제 이동 로직을 추가할 수 있습니다
-            }}
+            onClick={() => handleMoveClick(selectedCity!)}
+            disabled={isVideoLoading}
           >
-            이동하기
+            {isVideoLoading ? '로딩 중...' : '이동하기'}
           </motion.button>
         </div>
       )}
+
+      {/* 영상 표시 영역 */}
+      <div ref={videoSectionRef}>
+        {currentVideo && (
+          <motion.div 
+            className="location-video-container"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            style={{ 
+              marginTop: '2rem', 
+              textAlign: 'center',
+              maxWidth: '800px',
+              margin: '2rem auto 0'
+            }}
+          >
+            <h3 className="page-body-text" style={{ 
+              margin: '0 0 1rem 0', 
+              fontSize: '1.2rem', 
+              fontWeight: '600' 
+            }}>
+              {currentVideo.videoTitle || `${currentVideo.cityName} 영상`}
+            </h3>
+            
+            {currentVideo.videoDescription && (
+              <p className="page-body-text" style={{ 
+                margin: '0 0 1.5rem 0',
+                color: '#666',
+                fontSize: '0.9rem'
+              }}>
+                {currentVideo.videoDescription}
+              </p>
+            )}
+            
+            <div className="video-wrapper" style={{
+              position: 'relative',
+              paddingBottom: '56.25%', // 16:9 비율
+              height: 0,
+              overflow: 'hidden',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+            }}>
+              <iframe
+                src={convertToEmbedUrl(currentVideo.videoUrl)}
+                title={currentVideo.videoTitle || `${currentVideo.cityName} 영상`}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  border: 'none'
+                }}
+                allowFullScreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              />
+            </div>
+            
+            <motion.button
+              className="location-close-video-button"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setCurrentVideo(null)}
+              style={{
+                marginTop: '1rem',
+                padding: '0.5rem 1rem',
+                backgroundColor: '#f5f5f5',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.9rem'
+              }}
+            >
+              영상 닫기
+            </motion.button>
+          </motion.div>
+        )}
+      </div>
+
+      {/* 위로 올라가기 버튼 */}
+      <AnimatePresence>
+        {showScrollToTop && (
+          <motion.button
+            className="scroll-to-top-button"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={scrollToTop}
+            style={{
+              position: 'fixed',
+              right: '30px',
+              bottom: '30px',
+              width: '50px',
+              height: '50px',
+              borderRadius: '50%',
+              backgroundColor: '#000000',
+              color: '#ffffff',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '20px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+              zIndex: 1000
+            }}
+          >
+            ↑
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
