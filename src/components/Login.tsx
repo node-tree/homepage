@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -9,8 +9,16 @@ const Login: React.FC = () => {
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
+
+  // 이미 로그인된 경우 홈으로 리다이렉트
+  useEffect(() => {
+    if (isAuthenticated) {
+      window.location.href = '/';
+    }
+  }, [isAuthenticated]);
 
   // 입력 필드 변경 처리
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,8 +57,15 @@ const Login: React.FC = () => {
         
         const testToken = 'test-jwt-token-' + Date.now();
         login(testToken, testUser);
-        alert(`로그인 성공! (${matchedAccount.role === 'admin' ? '관리자' : '사용자'} 모드)`);
-        window.location.href = '/';
+        
+        // 로그인 성공 상태 표시
+        setError(null);
+        setSuccess(true);
+        
+        // 부드러운 리다이렉트
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 800);
         return;
       }
 
@@ -77,8 +92,15 @@ const Login: React.FC = () => {
 
       if (data.success) {
         login(data.token, data.user);
-        alert('로그인 성공! (실제 DB)');
-        window.location.href = '/'; // 메인으로 리다이렉트
+        
+        // 로그인 성공 상태 표시
+        setError(null);
+        setSuccess(true);
+        
+        // 부드러운 리다이렉트
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 800);
       } else {
         setError('로그인 정보가 올바르지 않습니다. 테스트 계정: admin/password, user/123456, nodetree/nodetree2024');
       }
@@ -146,12 +168,12 @@ const Login: React.FC = () => {
 
             <motion.button
               type="submit"
-              className="login-button"
-              disabled={loading}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              className={`login-button ${success ? 'success' : ''}`}
+              disabled={loading || success}
+              whileHover={{ scale: loading || success ? 1 : 1.02 }}
+              whileTap={{ scale: loading || success ? 1 : 0.98 }}
             >
-              {loading ? '로그인 중...' : '로그인'}
+              {success ? '로그인 성공! 이동 중...' : loading ? '로그인 중...' : '로그인'}
             </motion.button>
           </form>
 

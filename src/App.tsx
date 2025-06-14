@@ -177,6 +177,20 @@ function AppContent() {
   return (
     <div className={`App ${currentStep === 2 ? 'page-mode' : ''}`}>
       <div className={`main-container ${currentStep === 2 ? 'page-mode' : ''}`}>
+        {/* 로그인 링크 - 로그인하지 않은 경우에만 표시 */}
+        {!isAuthenticated && (
+          <motion.a
+            href="/login"
+            className="login-link"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.6 }}
+            whileHover={{ opacity: 1, scale: 1.05 }}
+            transition={{ duration: 0.2 }}
+          >
+            로그인
+          </motion.a>
+        )}
+        
         {/* 홈페이지 리뉴얼중 팝업: 로그인 안 된 경우만 */}
         {!isAuthenticated && (
           <Popup 
