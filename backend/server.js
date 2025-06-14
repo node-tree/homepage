@@ -176,13 +176,40 @@ app.get('/api/debug', async (req, res) => {
   try {
     console.log('디버그 라우트 호출됨');
     
+    // 기본 환경 정보
+    const debugInfo = {
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      vercel: {
+        isVercel: !!process.env.VERCEL,
+        vercelEnv: process.env.VERCEL_ENV || 'NOT_SET',
+        vercelUrl: process.env.VERCEL_URL || 'NOT_SET',
+        region: process.env.VERCEL_REGION || 'NOT_SET'
+      },
+      mongodb: {
+        uriExists: !!process.env.MONGODB_URI,
+        uriLength: process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0,
+        uriStart: process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 30) + '...' : 'NOT_SET',
+        uriContainsAtlas: process.env.MONGODB_URI ? process.env.MONGODB_URI.includes('mongodb+srv') : false,
+        uriContainsHomepage: process.env.MONGODB_URI ? process.env.MONGODB_URI.includes('homepage') : false,
+        connectionState: mongoose.connection.readyState,
+        connectionStates: {
+          0: 'disconnected',
+          1: 'connected', 
+          2: 'connecting',
+          3: 'disconnecting'
+        }
+      },
+      system: {
+        platform: process.platform,
+        nodeVersion: process.version,
+        memoryUsage: process.memoryUsage(),
+        uptime: process.uptime()
+      }
+    };
+
     // MongoDB 연결 시도
-    await connectDB();
-    
-    // 컬렉션 데이터 직접 확인
-    const Work = require('./models/Work');
-    const Filed = require('./models/Filed');
-    
+    let connectionResult = null;
     let workCount = 0;
     let filedCount = 0;
     let workSample = null;
@@ -190,6 +217,14 @@ app.get('/api/debug', async (req, res) => {
     let errorDetails = null;
 
     try {
+      console.log('MongoDB 연결 시도...');
+      await connectDB();
+      connectionResult = '✅ 연결 성공';
+      
+      // 컬렉션 데이터 직접 확인
+      const Work = require('./models/Work');
+      const Filed = require('./models/Filed');
+      
       console.log('데이터베이스 쿼리 시작...');
       workCount = await Work.countDocuments();
       console.log('Work 문서 개수:', workCount);
@@ -206,72 +241,74 @@ app.get('/api/debug', async (req, res) => {
         filedSample = await Filed.findOne().limit(1);
         console.log('Filed 샘플 데이터 조회 완료');
       }
-    } catch (dbError) {
-      console.error('데이터베이스 쿼리 오류:', dbError);
-      errorDetails = dbError.message;
+      
+    } catch (error) {
+      console.error('MongoDB 연결/쿼리 오류:', error);
+      connectionResult = `❌ 연결 실패: ${error.message}`;
+      errorDetails = {
+        name: error.name,
+        message: error.message,
+        code: error.code,
+        codeName: error.codeName,
+        stack: error.stack?.split('\n').slice(0, 5) // 스택 트레이스 일부만
+      };
+      
+      // 특정 에러 타입별 추가 정보
+      if (error.name === 'MongoServerSelectionError') {
+        errorDetails.possibleCauses = [
+          '🔥 MongoDB Atlas IP 화이트리스트 설정 확인 필요',
+          '🔥 Vercel은 동적 IP를 사용하므로 0.0.0.0/0 허용 필요',
+          '🔥 MongoDB Atlas 네트워크 접근 설정에서 "모든 곳에서 접근 허용" 체크',
+          '🔥 MongoDB 연결 문자열 확인',
+          '🔥 데이터베이스 사용자 권한 확인'
+        ];
+        errorDetails.mongoAtlasGuide = 'https://www.mongodb.com/docs/atlas/security-whitelist/';
+      }
     }
 
-    res.json({
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development',
-      platform: process.platform,
-      nodeVersion: process.version,
-      vercelInfo: {
-        isVercel: !!process.env.VERCEL,
-        vercelEnv: process.env.VERCEL_ENV || 'NOT_SET',
-        vercelUrl: process.env.VERCEL_URL || 'NOT_SET'
+    // 응답 데이터 구성
+    const response = {
+      ...debugInfo,
+      connection: {
+        result: connectionResult,
+        host: mongoose.connection.host || 'NOT_CONNECTED',
+        database: mongoose.connection.name || 'NOT_CONNECTED',
+        readyState: mongoose.connection.readyState
       },
-      mongoUri: process.env.MONGODB_URI ? 'SET' : 'NOT_SET',
-      mongoUriLength: process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0,
-      mongoUriPreview: process.env.MONGODB_URI ? 
-        process.env.MONGODB_URI.substring(0, 50) + '...' : 'NOT_SET',
-      mongoConnectionState: mongoose.connection.readyState,
-      mongoConnectionStates: {
-        0: 'disconnected',
-        1: 'connected', 
-        2: 'connecting',
-        3: 'disconnecting'
+      data: {
+        workCount,
+        filedCount,
+        workSample: workSample ? {
+          id: workSample._id?.toString(),
+          title: workSample.title,
+          hasContent: !!workSample.contents
+        } : null,
+        filedSample: filedSample ? {
+          id: filedSample._id?.toString(),
+          title: filedSample.title,
+          hasContent: !!filedSample.contents
+        } : null
       },
-      databaseName: mongoose.connection.name,
-      host: mongoose.connection.host,
-      port: mongoose.connection.port,
-      collections: {
-        work: {
-          count: workCount,
-          sample: workSample ? {
-            id: workSample._id,
-            title: workSample.title,
-            hasContents: !!workSample.contents,
-            createdAt: workSample.createdAt
-          } : null
-        },
-        workshop: {
-          count: filedCount,
-          sample: filedSample ? {
-            id: filedSample._id,
-            title: filedSample.title,
-            hasContents: !!filedSample.contents,
-            createdAt: filedSample.createdAt
-          } : null
-        }
-      },
-      dbError: errorDetails,
-      connectionCache: cachedConnection ? 'CACHED' : 'NOT_CACHED'
-    });
+      error: errorDetails,
+      recommendations: process.env.VERCEL ? [
+        '🔧 MongoDB Atlas에서 Network Access 설정 확인',
+        '🔧 IP Access List에 0.0.0.0/0 추가 (모든 IP 허용)',
+        '🔧 Database User 권한이 readWrite 이상인지 확인',
+        '🔧 Vercel 환경변수 MONGODB_URI 설정 확인',
+        '🔧 MongoDB 연결 문자열에 올바른 데이터베이스명 포함 확인'
+      ] : [
+        '🏠 로컬 환경에서는 MongoDB Atlas IP 화이트리스트에 현재 IP 추가',
+        '🏠 .env.local 파일에 MONGODB_URI 설정 확인'
+      ]
+    };
+
+    res.json(response);
   } catch (error) {
     console.error('디버그 라우트 오류:', error);
     res.status(500).json({
-      error: 'Debug route failed',
+      error: '디버그 정보 수집 중 오류 발생',
       message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-      environment: process.env.NODE_ENV || 'development',
-      mongoConnectionState: mongoose.connection.readyState,
-      timestamp: new Date().toISOString(),
-      vercelInfo: {
-        isVercel: !!process.env.VERCEL,
-        vercelEnv: process.env.VERCEL_ENV || 'NOT_SET'
-      },
-      mongoUri: process.env.MONGODB_URI ? 'SET' : 'NOT_SET'
+      timestamp: new Date().toISOString()
     });
   }
 });
