@@ -4,6 +4,51 @@
   box-sizing: border-box;
 }
 
+/* 로그인 링크 스타일 */
+.login-link {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  font-size: 12px;
+  color: #666;
+  text-decoration: none;
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  z-index: 9999;
+  transition: all 0.2s ease;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+}
+
+.login-link:hover {
+  color: #333;
+  border-color: #999;
+  background: rgba(255, 255, 255, 0.95);
+  text-decoration: none;
+}
+
+/* 모바일에서 로그인 링크 크기 조정 */
+@media (max-width: 768px) {
+  .login-link {
+    top: 15px;
+    right: 15px;
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-link {
+    top: 10px;
+    right: 10px;
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+}
+
 .App {
   width: 100vw;
   min-height: 100vh; /* height를 min-height로 변경 */
@@ -1909,6 +1954,18 @@
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+}
+
+.login-button.success {
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+.login-button.success:disabled {
+  background-color: #28a745;
+  opacity: 0.9;
+  cursor: default;
+  transform: none;
 }
 
 .login-footer {

@@ -2,10 +2,21 @@ const express = require('express');
 const router = express.Router();
 const Work = require('../models/Work');
 const auth = require('../middleware/auth');
+const mongoose = require('mongoose');
+
+// MongoDB 연결 확인 함수
+const ensureDBConnection = async () => {
+  if (mongoose.connection.readyState !== 1) {
+    throw new Error('MongoDB 연결이 끊어져 있습니다.');
+  }
+};
 
 // GET /api/work - 모든 work 데이터 조회
 router.get('/', async (req, res) => {
   try {
+    // DB 연결 상태 확인
+    await ensureDBConnection();
+    
     const works = await Work.find().sort({ _id: -1 });
     
     // 프론트엔드에서 사용하는 형식으로 변환
@@ -39,7 +50,8 @@ router.get('/', async (req, res) => {
     res.json({
       success: true,
       data: formattedWorks,
-      count: formattedWorks.length
+      count: formattedWorks.length,
+      source: 'database'
     });
   } catch (error) {
     console.error('Work 데이터 조회 오류:', error);
@@ -48,24 +60,24 @@ router.get('/', async (req, res) => {
     const testData = [
       {
         id: "sample-1",
-        title: "첫 번째 프로젝트",
-        content: "노드트리 홈페이지 개발 프로젝트입니다. React와 Node.js를 사용하여 개발했습니다.",
+        title: "첫 번째 프로젝트 (테스트 데이터)",
+        content: "노드트리 홈페이지 개발 프로젝트입니다. React와 Node.js를 사용하여 개발했습니다. [DB 연결 실패로 테스트 데이터 표시 중]",
         date: new Date().toLocaleDateString('ko-KR'),
         images: [],
         thumbnail: null
       },
       {
         id: "sample-2", 
-        title: "두 번째 작업",
-        content: "데이터베이스 연동 및 로그인 시스템을 구현했습니다. MongoDB Atlas와 JWT를 활용했습니다.",
+        title: "두 번째 작업 (테스트 데이터)",
+        content: "데이터베이스 연동 및 로그인 시스템을 구현했습니다. MongoDB Atlas와 JWT를 활용했습니다. [DB 연결 실패로 테스트 데이터 표시 중]",
         date: new Date().toLocaleDateString('ko-KR'),
         images: [],
         thumbnail: null
       },
       {
         id: "sample-3",
-        title: "UI/UX 디자인",
-        content: "반응형 웹 디자인과 애니메이션 효과를 구현했습니다. Framer Motion을 사용했습니다.",
+        title: "UI/UX 디자인 (테스트 데이터)",
+        content: "반응형 웹 디자인과 애니메이션 효과를 구현했습니다. Framer Motion을 사용했습니다. [DB 연결 실패로 테스트 데이터 표시 중]",
         date: new Date().toLocaleDateString('ko-KR'),
         images: [],
         thumbnail: null
@@ -76,7 +88,9 @@ router.get('/', async (req, res) => {
       success: true,
       data: testData,
       count: testData.length,
-      note: "MongoDB 연결 실패로 테스트 데이터를 반환합니다."
+      source: 'fallback',
+      error: error.message,
+      note: "MongoDB 연결 실패로 테스트 데이터를 반환합니다. /api/debug에서 상세 정보를 확인하세요."
     });
   }
 });
@@ -84,6 +98,8 @@ router.get('/', async (req, res) => {
 // POST /api/work - 새 글 작성
 router.post('/', auth, async (req, res) => {
   try {
+    await ensureDBConnection();
+    
     const { title, content, thumbnail } = req.body;
     
     if (!title || !content) {
@@ -126,6 +142,8 @@ router.post('/', auth, async (req, res) => {
 // PUT /api/work/:id - 글 수정
 router.put('/:id', auth, async (req, res) => {
   try {
+    await ensureDBConnection();
+    
     const { id } = req.params;
     const { title, content, thumbnail } = req.body;
     
@@ -178,6 +196,8 @@ router.put('/:id', auth, async (req, res) => {
 // DELETE /api/work/:id - 글 삭제
 router.delete('/:id', auth, async (req, res) => {
   try {
+    await ensureDBConnection();
+    
     const { id } = req.params;
 
     const deletedWork = await Work.findByIdAndDelete(id);

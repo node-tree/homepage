@@ -2,10 +2,21 @@ const express = require('express');
 const router = express.Router();
 const Filed = require('../models/Filed');
 const auth = require('../middleware/auth');
+const mongoose = require('mongoose');
+
+// MongoDB 연결 확인 함수
+const ensureDBConnection = async () => {
+  if (mongoose.connection.readyState !== 1) {
+    throw new Error('MongoDB 연결이 끊어져 있습니다.');
+  }
+};
 
 // GET /api/filed - 모든 filed 데이터 조회
 router.get('/', async (req, res) => {
   try {
+    // DB 연결 상태 확인
+    await ensureDBConnection();
+    
     const works = await Filed.find().sort({ _id: -1 });
     
     // 프론트엔드에서 사용하는 형식으로 변환
@@ -39,7 +50,8 @@ router.get('/', async (req, res) => {
     res.json({
       success: true,
       data: formattedWorks,
-      count: formattedWorks.length
+      count: formattedWorks.length,
+      source: 'database'
     });
   } catch (error) {
     console.error('Filed 데이터 조회 오류:', error);
@@ -48,24 +60,24 @@ router.get('/', async (req, res) => {
     const testData = [
       {
         id: "filed-sample-1",
-        title: "연구 기록 1",
-        content: "새로운 기술 스택에 대한 연구 기록입니다. React와 TypeScript를 활용한 개발 방법론을 정리했습니다.",
+        title: "연구 기록 1 (테스트 데이터)",
+        content: "새로운 기술 스택에 대한 연구 기록입니다. React와 TypeScript를 활용한 개발 방법론을 정리했습니다. [DB 연결 실패로 테스트 데이터 표시 중]",
         date: new Date().toLocaleDateString('ko-KR'),
         images: [],
         thumbnail: null
       },
       {
         id: "filed-sample-2", 
-        title: "아이디어 노트",
-        content: "창의적인 아이디어들을 정리한 노트입니다. UI/UX 개선 방안과 사용자 경험 향상을 위한 아이디어들을 기록했습니다.",
+        title: "아이디어 노트 (테스트 데이터)",
+        content: "창의적인 아이디어들을 정리한 노트입니다. UI/UX 개선 방안과 사용자 경험 향상을 위한 아이디어들을 기록했습니다. [DB 연결 실패로 테스트 데이터 표시 중]",
         date: new Date().toLocaleDateString('ko-KR'),
         images: [],
         thumbnail: null
       },
       {
         id: "filed-sample-3",
-        title: "개발 일지",
-        content: "프로젝트 개발 과정에서 겪은 문제들과 해결 방법을 기록한 일지입니다. 버그 수정과 성능 최적화 내용을 포함합니다.",
+        title: "개발 일지 (테스트 데이터)",
+        content: "프로젝트 개발 과정에서 겪은 문제들과 해결 방법을 기록한 일지입니다. 버그 수정과 성능 최적화 내용을 포함합니다. [DB 연결 실패로 테스트 데이터 표시 중]",
         date: new Date().toLocaleDateString('ko-KR'),
         images: [],
         thumbnail: null
@@ -76,7 +88,9 @@ router.get('/', async (req, res) => {
       success: true,
       data: testData,
       count: testData.length,
-      note: "MongoDB 연결 실패로 테스트 데이터를 반환합니다."
+      source: 'fallback',
+      error: error.message,
+      note: "MongoDB 연결 실패로 테스트 데이터를 반환합니다. /api/debug에서 상세 정보를 확인하세요."
     });
   }
 });
@@ -84,6 +98,8 @@ router.get('/', async (req, res) => {
 // POST /api/filed - 새 기록 작성
 router.post('/', auth, async (req, res) => {
   try {
+    await ensureDBConnection();
+    
     const { title, content, thumbnail } = req.body;
     
     if (!title || !content) {
@@ -126,6 +142,8 @@ router.post('/', auth, async (req, res) => {
 // PUT /api/filed/:id - 기록 수정
 router.put('/:id', auth, async (req, res) => {
   try {
+    await ensureDBConnection();
+    
     const { id } = req.params;
     const { title, content, thumbnail } = req.body;
     
@@ -178,6 +196,8 @@ router.put('/:id', auth, async (req, res) => {
 // DELETE /api/filed/:id - 기록 삭제
 router.delete('/:id', auth, async (req, res) => {
   try {
+    await ensureDBConnection();
+    
     const { id } = req.params;
 
     const deletedWork = await Filed.findByIdAndDelete(id);
