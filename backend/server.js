@@ -23,14 +23,15 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// MongoDB 연결 상태 추적
-let isConnected = false;
+// MongoDB 연결 상태 추적 (서버리스 환경 최적화)
+let cachedConnection = null;
 
-// MongoDB 연결
+// MongoDB 연결 함수 (서버리스 환경 최적화)
 const connectDB = async () => {
-  if (isConnected) {
-    console.log('MongoDB 이미 연결됨');
-    return;
+  // 이미 연결이 있고 활성 상태라면 재사용
+  if (cachedConnection && mongoose.connection.readyState === 1) {
+    console.log('기존 MongoDB 연결 재사용');
+    return cachedConnection;
   }
 
   try {
@@ -39,43 +40,58 @@ const connectDB = async () => {
     }
 
     console.log('MongoDB 연결 시도 중...');
-    console.log('URI 길이:', process.env.MONGODB_URI.length);
-    console.log('URI 시작 부분:', process.env.MONGODB_URI.substring(0, 30) + '...');
-
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+    console.log('환경:', process.env.NODE_ENV || 'development');
+    console.log('Vercel 환경:', process.env.VERCEL ? 'YES' : 'NO');
+    
+    // 서버리스 환경에 최적화된 연결 옵션
+    const options = {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 10000, // 10초 타임아웃
-      socketTimeoutMS: 45000, // 45초 소켓 타임아웃
-      maxPoolSize: 10, // 최대 연결 풀 크기
+      serverSelectionTimeoutMS: 5000, // 5초로 단축 (Vercel 함수 타임아웃 고려)
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 10000,
+      maxPoolSize: 10,
+      minPoolSize: 1, // 최소 연결 유지
+      maxIdleTimeMS: 30000, // 30초 후 유휴 연결 정리
       bufferMaxEntries: 0, // 버퍼링 비활성화
-    });
+      bufferCommands: false, // 명령 버퍼링 비활성화
+      heartbeatFrequencyMS: 10000, // 하트비트 주기
+    };
+
+    // 기존 연결이 있다면 정리
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.disconnect();
+    }
+
+    const conn = await mongoose.connect(process.env.MONGODB_URI, options);
     
-    isConnected = true;
+    cachedConnection = conn;
     console.log(`MongoDB 연결 성공: ${conn.connection.host}`);
     console.log(`데이터베이스: ${conn.connection.name}`);
+    console.log(`연결 상태: ${mongoose.connection.readyState}`);
+    
+    return conn;
   } catch (error) {
     console.error('MongoDB 연결 실패:', error.message);
-    console.error('전체 에러:', error);
-    console.log('서버는 MongoDB 없이 계속 실행됩니다. 연결 문자열을 확인해주세요.');
-    isConnected = false;
+    console.error('상세 에러:', error);
+    cachedConnection = null;
+    throw error; // 에러를 다시 던져서 호출하는 곳에서 처리하도록
   }
 };
 
 // 연결 상태 모니터링
 mongoose.connection.on('connected', () => {
-  isConnected = true;
   console.log('MongoDB 연결됨');
 });
 
 mongoose.connection.on('disconnected', () => {
-  isConnected = false;
   console.log('MongoDB 연결 끊어짐');
+  cachedConnection = null;
 });
 
 mongoose.connection.on('error', (err) => {
   console.error('MongoDB 연결 오류:', err);
-  isConnected = false;
+  cachedConnection = null;
 });
 
 // 라우트
@@ -90,6 +106,7 @@ app.get('/', (req, res) => {
     mongoConnection: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     database: mongoose.connection.name,
     environment: process.env.NODE_ENV || 'development',
+    vercel: process.env.VERCEL ? 'YES' : 'NO',
     endpoints: {
       auth: '/api/auth',
       work: '/api/work',
@@ -102,6 +119,8 @@ app.get('/', (req, res) => {
 // 디버그 라우트 - MongoDB 연결 상태 확인
 app.get('/api/debug', async (req, res) => {
   try {
+    console.log('디버그 라우트 호출됨');
+    
     // MongoDB 연결 시도
     await connectDB();
     
@@ -116,11 +135,24 @@ app.get('/api/debug', async (req, res) => {
     let errorDetails = null;
 
     try {
+      console.log('데이터베이스 쿼리 시작...');
       workCount = await Work.countDocuments();
-      workSample = await Work.findOne().limit(1);
+      console.log('Work 문서 개수:', workCount);
+      
+      if (workCount > 0) {
+        workSample = await Work.findOne().limit(1);
+        console.log('Work 샘플 데이터 조회 완료');
+      }
+      
       filedCount = await Filed.countDocuments();
-      filedSample = await Filed.findOne().limit(1);
+      console.log('Filed 문서 개수:', filedCount);
+      
+      if (filedCount > 0) {
+        filedSample = await Filed.findOne().limit(1);
+        console.log('Filed 샘플 데이터 조회 완료');
+      }
     } catch (dbError) {
+      console.error('데이터베이스 쿼리 오류:', dbError);
       errorDetails = dbError.message;
     }
 
@@ -129,10 +161,15 @@ app.get('/api/debug', async (req, res) => {
       environment: process.env.NODE_ENV || 'development',
       platform: process.platform,
       nodeVersion: process.version,
+      vercelInfo: {
+        isVercel: !!process.env.VERCEL,
+        vercelEnv: process.env.VERCEL_ENV || 'NOT_SET',
+        vercelUrl: process.env.VERCEL_URL || 'NOT_SET'
+      },
       mongoUri: process.env.MONGODB_URI ? 'SET' : 'NOT_SET',
       mongoUriLength: process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0,
       mongoUriPreview: process.env.MONGODB_URI ? 
-        process.env.MONGODB_URI.substring(0, 30) + '...' : 'NOT_SET',
+        process.env.MONGODB_URI.substring(0, 50) + '...' : 'NOT_SET',
       mongoConnectionState: mongoose.connection.readyState,
       mongoConnectionStates: {
         0: 'disconnected',
@@ -140,16 +177,17 @@ app.get('/api/debug', async (req, res) => {
         2: 'connecting',
         3: 'disconnecting'
       },
-      isConnected: isConnected,
       databaseName: mongoose.connection.name,
       host: mongoose.connection.host,
+      port: mongoose.connection.port,
       collections: {
         work: {
           count: workCount,
           sample: workSample ? {
             id: workSample._id,
             title: workSample.title,
-            hasContents: !!workSample.contents
+            hasContents: !!workSample.contents,
+            createdAt: workSample.createdAt
           } : null
         },
         workshop: {
@@ -157,31 +195,28 @@ app.get('/api/debug', async (req, res) => {
           sample: filedSample ? {
             id: filedSample._id,
             title: filedSample.title,
-            hasContents: !!filedSample.contents
+            hasContents: !!filedSample.contents,
+            createdAt: filedSample.createdAt
           } : null
         }
       },
       dbError: errorDetails,
-      allEnvVars: Object.keys(process.env).filter(key => 
-        key.includes('MONGO') || key.includes('JWT') || key.includes('PORT') || key.includes('NODE_ENV') || key.includes('VERCEL')
-      ),
-      vercelEnv: {
-        VERCEL: process.env.VERCEL || 'NOT_SET',
-        VERCEL_ENV: process.env.VERCEL_ENV || 'NOT_SET',
-        VERCEL_URL: process.env.VERCEL_URL || 'NOT_SET'
-      }
+      connectionCache: cachedConnection ? 'CACHED' : 'NOT_CACHED'
     });
   } catch (error) {
+    console.error('디버그 라우트 오류:', error);
     res.status(500).json({
       error: 'Debug route failed',
       message: error.message,
-      stack: error.stack,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       environment: process.env.NODE_ENV || 'development',
       mongoConnectionState: mongoose.connection.readyState,
       timestamp: new Date().toISOString(),
-      allEnvVars: Object.keys(process.env).filter(key => 
-        key.includes('MONGO') || key.includes('JWT') || key.includes('PORT') || key.includes('NODE_ENV') || key.includes('VERCEL')
-      )
+      vercelInfo: {
+        isVercel: !!process.env.VERCEL,
+        vercelEnv: process.env.VERCEL_ENV || 'NOT_SET'
+      },
+      mongoUri: process.env.MONGODB_URI ? 'SET' : 'NOT_SET'
     });
   }
 });
@@ -201,14 +236,15 @@ app.post('/api/debug/create-test-data', async (req, res) => {
       thumbnail: null
     });
 
+    const savedWork = await testWork.save();
+
     // 테스트 Filed 데이터 생성
     const testFiled = new Filed({
-      title: '테스트 기록 ' + new Date().toLocaleString('ko-KR'),
-      contents: '이것은 MongoDB Filed 컬렉션의 테스트 데이터입니다.',
+      title: '테스트 워크샵 ' + new Date().toLocaleString('ko-KR'),
+      contents: '이것은 MongoDB에서 실제로 가져온 워크샵 테스트 데이터입니다.',
       thumbnail: null
     });
 
-    const savedWork = await testWork.save();
     const savedFiled = await testFiled.save();
 
     res.json({
@@ -227,24 +263,45 @@ app.post('/api/debug/create-test-data', async (req, res) => {
     });
 
   } catch (error) {
+    console.error('테스트 데이터 생성 오류:', error);
     res.status(500).json({
       success: false,
-      message: '테스트 데이터 생성 실패',
+      message: '테스트 데이터 생성에 실패했습니다.',
       error: error.message
     });
   }
 });
 
-// Vercel 서버리스 환경에서는 연결을 미리 시도
-connectDB();
+// 404 핸들러
+app.use('*', (req, res) => {
+  res.status(404).json({
+    message: '요청한 엔드포인트를 찾을 수 없습니다.',
+    path: req.originalUrl,
+    method: req.method
+  });
+});
 
-// 서버 시작 (로컬 개발용)
+// 에러 핸들러
+app.use((error, req, res, next) => {
+  console.error('서버 에러:', error);
+  res.status(500).json({
+    message: '서버 내부 오류가 발생했습니다.',
+    error: process.env.NODE_ENV === 'development' ? error.message : '내부 서버 오류'
+  });
+});
+
+// 서버 시작 (로컬 개발 환경에서만)
 if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
+  app.listen(PORT, async () => {
     console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
-    console.log(`브라우저에서 http://localhost:${PORT} 에 접속해보세요.`);
+    try {
+      await connectDB();
+    } catch (error) {
+      console.log('초기 DB 연결 실패, 요청 시 재시도합니다.');
+    }
   });
 }
 
 // Vercel용 export
-module.exports = app; 
+module.exports = app;
+module.exports.connectDB = connectDB; 

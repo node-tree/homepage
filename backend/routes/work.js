@@ -4,20 +4,38 @@ const Work = require('../models/Work');
 const auth = require('../middleware/auth');
 const mongoose = require('mongoose');
 
-// MongoDB 연결 확인 함수
+// MongoDB 연결 확인 및 연결 함수
 const ensureDBConnection = async () => {
-  if (mongoose.connection.readyState !== 1) {
-    throw new Error('MongoDB 연결이 끊어져 있습니다.');
+  if (mongoose.connection.readyState === 1) {
+    return true; // 이미 연결됨
   }
+  
+  // 연결이 안 되어 있으면 server.js의 connectDB 함수 호출
+  const connectDB = require('../server').connectDB;
+  if (connectDB) {
+    await connectDB();
+  } else {
+    throw new Error('MongoDB 연결 함수를 찾을 수 없습니다.');
+  }
+  
+  if (mongoose.connection.readyState !== 1) {
+    throw new Error('MongoDB 연결에 실패했습니다.');
+  }
+  
+  return true;
 };
 
 // GET /api/work - 모든 work 데이터 조회
 router.get('/', async (req, res) => {
   try {
-    // DB 연결 상태 확인
+    console.log('Work 데이터 조회 시작...');
+    
+    // DB 연결 상태 확인 및 연결
     await ensureDBConnection();
+    console.log('DB 연결 확인 완료');
     
     const works = await Work.find().sort({ _id: -1 });
+    console.log(`DB에서 ${works.length}개의 Work 데이터 조회 완료`);
     
     // 프론트엔드에서 사용하는 형식으로 변환
     const formattedWorks = works.map(work => {
@@ -51,33 +69,35 @@ router.get('/', async (req, res) => {
       success: true,
       data: formattedWorks,
       count: formattedWorks.length,
-      source: 'database'
+      source: 'database',
+      message: `실제 데이터베이스에서 ${formattedWorks.length}개의 데이터를 가져왔습니다.`
     });
   } catch (error) {
     console.error('Work 데이터 조회 오류:', error);
+    console.error('에러 스택:', error.stack);
     
-    // MongoDB 연결 실패 시 테스트 데이터 반환
+    // MongoDB 연결 실패 시에만 테스트 데이터 반환
     const testData = [
       {
-        id: "sample-1",
-        title: "첫 번째 프로젝트 (테스트 데이터)",
-        content: "노드트리 홈페이지 개발 프로젝트입니다. React와 Node.js를 사용하여 개발했습니다. [DB 연결 실패로 테스트 데이터 표시 중]",
+        id: "fallback-1",
+        title: "🔧 DB 연결 실패 - 테스트 데이터 1",
+        content: `데이터베이스 연결에 실패했습니다. 에러: ${error.message}. 실제 데이터를 보려면 MongoDB 연결을 확인해주세요.`,
         date: new Date().toLocaleDateString('ko-KR'),
         images: [],
         thumbnail: null
       },
       {
-        id: "sample-2", 
-        title: "두 번째 작업 (테스트 데이터)",
-        content: "데이터베이스 연동 및 로그인 시스템을 구현했습니다. MongoDB Atlas와 JWT를 활용했습니다. [DB 연결 실패로 테스트 데이터 표시 중]",
+        id: "fallback-2", 
+        title: "🔧 DB 연결 실패 - 테스트 데이터 2",
+        content: "MongoDB Atlas 연결 문자열과 네트워크 설정을 확인해주세요. /api/debug 엔드포인트에서 상세 정보를 확인할 수 있습니다.",
         date: new Date().toLocaleDateString('ko-KR'),
         images: [],
         thumbnail: null
       },
       {
-        id: "sample-3",
-        title: "UI/UX 디자인 (테스트 데이터)",
-        content: "반응형 웹 디자인과 애니메이션 효과를 구현했습니다. Framer Motion을 사용했습니다. [DB 연결 실패로 테스트 데이터 표시 중]",
+        id: "fallback-3",
+        title: "🔧 DB 연결 실패 - 테스트 데이터 3",
+        content: "Vercel 환경변수 MONGODB_URI가 올바르게 설정되어 있는지 확인해주세요. 현재는 임시 테스트 데이터를 표시하고 있습니다.",
         date: new Date().toLocaleDateString('ko-KR'),
         images: [],
         thumbnail: null
@@ -85,12 +105,13 @@ router.get('/', async (req, res) => {
     ];
     
     res.json({
-      success: true,
+      success: false,
       data: testData,
       count: testData.length,
       source: 'fallback',
       error: error.message,
-      note: "MongoDB 연결 실패로 테스트 데이터를 반환합니다. /api/debug에서 상세 정보를 확인하세요."
+      mongoConnectionState: mongoose.connection.readyState,
+      note: "⚠️ MongoDB 연결 실패로 테스트 데이터를 반환합니다. /api/debug에서 상세 정보를 확인하세요."
     });
   }
 });
@@ -116,6 +137,7 @@ router.post('/', auth, async (req, res) => {
     });
 
     const savedWork = await newWork.save();
+    console.log('새 Work 데이터 저장 완료:', savedWork._id);
     
     res.json({
       success: true,
@@ -134,7 +156,8 @@ router.post('/', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       message: '글 저장에 실패했습니다.',
-      error: error.message
+      error: error.message,
+      mongoConnectionState: mongoose.connection.readyState
     });
   }
 });
@@ -171,6 +194,8 @@ router.put('/:id', auth, async (req, res) => {
       });
     }
     
+    console.log('Work 데이터 수정 완료:', updatedWork._id);
+    
     res.json({
       success: true,
       message: '글이 성공적으로 수정되었습니다.',
@@ -188,7 +213,8 @@ router.put('/:id', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       message: '글 수정에 실패했습니다.',
-      error: error.message
+      error: error.message,
+      mongoConnectionState: mongoose.connection.readyState
     });
   }
 });
@@ -199,15 +225,17 @@ router.delete('/:id', auth, async (req, res) => {
     await ensureDBConnection();
     
     const { id } = req.params;
-
+    
     const deletedWork = await Work.findByIdAndDelete(id);
-
+    
     if (!deletedWork) {
       return res.status(404).json({
         success: false,
         message: '글을 찾을 수 없습니다.'
       });
     }
+    
+    console.log('Work 데이터 삭제 완료:', deletedWork._id);
     
     res.json({
       success: true,
@@ -223,7 +251,60 @@ router.delete('/:id', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       message: '글 삭제에 실패했습니다.',
-      error: error.message
+      error: error.message,
+      mongoConnectionState: mongoose.connection.readyState
+    });
+  }
+});
+
+// GET /api/work/:id - 특정 글 조회
+router.get('/:id', async (req, res) => {
+  try {
+    await ensureDBConnection();
+    
+    const { id } = req.params;
+    const work = await Work.findById(id);
+    
+    if (!work) {
+      return res.status(404).json({
+        success: false,
+        message: '글을 찾을 수 없습니다.'
+      });
+    }
+    
+    let dateString;
+    try {
+      if (work.createdAt && work.createdAt instanceof Date) {
+        dateString = work.createdAt.toLocaleDateString('ko-KR');
+      } else {
+        const objectId = work._id;
+        const timestamp = objectId.getTimestamp();
+        dateString = timestamp.toLocaleDateString('ko-KR');
+      }
+    } catch (dateError) {
+      dateString = new Date().toLocaleDateString('ko-KR');
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        id: work._id.toString(),
+        title: work.title || '제목 없음',
+        content: work.contents || '내용 없음',
+        date: dateString,
+        images: [],
+        thumbnail: work.thumbnail || null
+      },
+      source: 'database'
+    });
+    
+  } catch (error) {
+    console.error('Work 글 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '글 조회에 실패했습니다.',
+      error: error.message,
+      mongoConnectionState: mongoose.connection.readyState
     });
   }
 });
