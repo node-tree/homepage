@@ -4,52 +4,47 @@ const Work = require('../models/Work');
 const auth = require('../middleware/auth');
 const mongoose = require('mongoose');
 
-// MongoDB 연결 확인 및 연결 함수
+// 간소화된 DB 연결 확인 함수
 const ensureDBConnection = async () => {
-  console.log('🔍 DB 연결 상태 확인 중...');
-  console.log('현재 연결 상태:', mongoose.connection.readyState);
-  
-  // 연결 상태 확인 (0: disconnected, 1: connected, 2: connecting, 3: disconnecting)
+  // 이미 연결되어 있으면 바로 반환
   if (mongoose.connection.readyState === 1) {
-    console.log('✅ 기존 DB 연결 활성 상태');
     return true;
   }
   
-  if (mongoose.connection.readyState === 2) {
-    console.log('⏳ DB 연결 중... 대기');
-    // 연결 중이면 최대 10초 대기
-    for (let i = 0; i < 20; i++) {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      if (mongoose.connection.readyState === 1) {
-        console.log('✅ DB 연결 완료');
-        return true;
-      }
+  // 연결되지 않았다면 새로 연결 시도
+  if (mongoose.connection.readyState === 0) {
+    console.log('🔄 MongoDB 연결 시도...');
+    
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI 환경변수가 설정되지 않았습니다.');
     }
-    throw new Error('DB 연결 대기 시간 초과');
+
+    const options = {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
+      socketTimeoutMS: 0,
+      maxPoolSize: 1,
+      minPoolSize: 0,
+      maxIdleTimeMS: 10000,
+      bufferMaxEntries: 0,
+      bufferCommands: false,
+      family: 4,
+      heartbeatFrequencyMS: 30000,
+    };
+
+    let mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri.includes('retryWrites')) {
+      const separator = mongoUri.includes('?') ? '&' : '?';
+      mongoUri += `${separator}retryWrites=true&w=majority`;
+    }
+
+    await mongoose.connect(mongoUri, options);
+    console.log('✅ MongoDB 연결 성공');
   }
   
-  console.log('🔄 새로운 DB 연결 시도...');
-  
-  try {
-    // server.js의 connectDB 함수 동적 import
-    const serverModule = require('../server');
-    if (serverModule.connectDB) {
-      await serverModule.connectDB();
-    } else {
-      throw new Error('connectDB 함수를 찾을 수 없습니다.');
-    }
-    
-    // 연결 확인
-    if (mongoose.connection.readyState !== 1) {
-      throw new Error(`DB 연결 실패. 현재 상태: ${mongoose.connection.readyState}`);
-    }
-    
-    console.log('✅ DB 연결 성공');
-    return true;
-  } catch (error) {
-    console.error('❌ DB 연결 실패:', error.message);
-    throw error;
-  }
+  return true;
 };
 
 // GET /api/work - 모든 work 데이터 조회
