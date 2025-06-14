@@ -67,8 +67,7 @@ const connectDB = async () => {
       minPoolSize: 0,
       maxIdleTimeMS: 10000, // 10초 후 연결 해제
       
-      // 버퍼링 비활성화 (서버리스에서 권장)
-      bufferMaxEntries: 0,
+      // 버퍼링 비활성화 (서버리스에서 권장) - bufferMaxEntries 제거
       bufferCommands: false,
       
       // 네트워크 설정
