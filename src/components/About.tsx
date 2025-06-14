@@ -384,25 +384,17 @@ const About: React.FC = () => {
         <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '1rem'}}>NODE TREE에 대하여</div>
       </h1>
       
-      {/* 편집 버튼 */}
+      {/* 편집 버튼 - Work 페이지와 동일한 스타일로 오른쪽 정렬 */}
       {isAuthenticated && !isEditing && (
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <div className="work-header">
           <motion.button
+            className="write-button"
             onClick={startEditing}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            style={{
-              padding: '0.75rem 1.5rem',
-              backgroundColor: '#000',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '1rem'
-            }}
-          >
-            ✏️ 내용 편집
-          </motion.button>
+                      >
+              내용 편집
+            </motion.button>
         </div>
       )}
 

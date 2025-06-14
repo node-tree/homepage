@@ -186,9 +186,13 @@ const Location: React.FC = () => {
   // 선택된 도시 정보 영역으로 스크롤하는 함수
   const scrollToCityInfo = () => {
     if (cityInfoRef.current) {
-      cityInfoRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
+      // 모바일에서는 더 부드러운 스크롤을 위해 약간의 오프셋 추가
+      const offset = isMobile ? -50 : 0;
+      const elementPosition = cityInfoRef.current.offsetTop + offset;
+      
+      window.scrollTo({
+        top: elementPosition,
+        behavior: 'smooth'
       });
     }
   };
@@ -273,10 +277,11 @@ const Location: React.FC = () => {
     setSelectedCity(cityName);
     console.log(`${cityName} 클릭됨!`);
     
-    // 도시 선택 후 선택된 위치 정보로 스크롤
+    // 모바일에서는 지도 확대 애니메이션 완료 후 스크롤, 데스크톱에서는 즉시 스크롤
+    const scrollDelay = isMobile ? 300 : 100;
     setTimeout(() => {
       scrollToCityInfo();
-    }, 100);
+    }, scrollDelay);
   };
 
   // 이동하기 버튼 클릭 핸들러
@@ -361,7 +366,7 @@ const Location: React.FC = () => {
           style={{ 
             backgroundColor: '#ffffff', 
             transform: getMapTransform(),
-            transition: 'transform 0.1s ease-in-out'
+            transition: isMobile ? 'transform 0.25s ease-out' : 'transform 0.1s ease-in-out'
           }}
         >
           {/* 격자 배경 */}
@@ -384,18 +389,28 @@ const Location: React.FC = () => {
                 r={city.name === '부여' ? "8" : "5"}
                 fill="#000000"
                 initial={{ scale: 1 }}
-                animate={{
+                animate={isMobile ? {
+                  // 모바일에서는 단순한 애니메이션만
+                  scale: hoveredCity === city.name ? 1.3 : 1,
+                  opacity: hoveredCity === city.name ? [1, 0.4, 1] : 1
+                } : {
+                  // 데스크톱에서는 복잡한 애니메이션
                   scale: hoveredCity === city.name ? [1, 1.5, 1] : [1, 1.1, 1],
                   x: [0, Math.sin(index * 0.7) * 2.5, 0],
                   y: [0, Math.cos(index * 0.7) * 2.5, 0],
                   opacity: hoveredCity === city.name ? [1, 0.2, 1, 0.2, 1, 0.2, 1] : 1
                 }}
-                whileHover={{
+                whileHover={isMobile ? {} : {
                   scale: 1.5,
                   opacity: [1, 0.05, 1, 0.02, 1, 0.08, 1, 0.03, 1],
                 }}
                 whileTap={{ scale: 0.9 }}
-                transition={{
+                transition={isMobile ? {
+                  // 모바일에서는 빠르고 단순한 전환
+                  duration: 0.2,
+                  ease: "easeOut"
+                } : {
+                  // 데스크톱에서는 복잡한 전환
                   duration: hoveredCity === city.name ? 0.8 : 4 + index * 0.3,
                   repeat: Infinity,
                   ease: "easeInOut",
@@ -409,8 +424,8 @@ const Location: React.FC = () => {
                 }}
                 style={{ cursor: 'pointer' }}
                 onClick={() => handleCityClick(city.name)}
-                onUpdate={(latest) => {
-                  // 원의 현재 위치를 업데이트
+                onUpdate={isMobile ? undefined : (latest) => {
+                  // 모바일에서는 onUpdate 비활성화로 성능 향상
                   setCurrentPositions(prev => {
                     const newPositions = [...prev];
                     newPositions[index] = {
@@ -429,11 +444,11 @@ const Location: React.FC = () => {
                 fontWeight="500"
                 fill="#666666"
                 fontFamily="Arial, sans-serif"
-                animate={{
+                animate={isMobile ? {} : {
                   x: [0, Math.sin(index * 0.7) * 2.5, 0],
                   y: [0, Math.cos(index * 0.7) * 2.5, 0]
                 }}
-                transition={{
+                transition={isMobile ? {} : {
                   duration: 4 + index * 0.3,
                   repeat: Infinity,
                   ease: "easeInOut",
@@ -450,11 +465,11 @@ const Location: React.FC = () => {
                 fill="#999999"
                 fontFamily="Arial, sans-serif"
                 fontWeight="400"
-                animate={{
+                animate={isMobile ? {} : {
                   x: [0, Math.sin(index * 0.7) * 2.5, 0],
                   y: [0, Math.cos(index * 0.7) * 2.5, 0]
                 }}
-                transition={{
+                transition={isMobile ? {} : {
                   duration: 4 + index * 0.3,
                   repeat: Infinity,
                   ease: "easeInOut",
@@ -478,14 +493,14 @@ const Location: React.FC = () => {
             onMouseLeave={() => setHoveredCity(null)}
             onClick={() => handleCityClick(city.name)}
             whileHover={isMobile ? {} : { scale: 1.1 }} // 모바일에서는 확대 효과 제거
-            whileTap={isMobile ? {} : { scale: 0.95 }} // 모바일에서는 축소 효과 제거
+            whileTap={isMobile ? { scale: 0.98 } : { scale: 0.95 }} // 모바일에서는 미세한 축소 효과만
             animate={isMobile && hoveredCity === city.name ? {
-              opacity: [1, 0.3, 1, 0.3, 1] // 모바일에서는 깜박이 효과만
+              opacity: [1, 0.5, 1] // 모바일에서는 단순한 깜박이 효과
             } : {}}
             transition={isMobile && hoveredCity === city.name ? {
-              duration: 0.5,
+              duration: 0.3,
               repeat: Infinity,
-              ease: "easeInOut"
+              ease: "easeOut"
             } : {}}
             style={{
               backgroundColor: selectedCity === city.name ? '#000000' : '#ffffff',
