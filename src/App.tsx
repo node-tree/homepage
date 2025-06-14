@@ -20,7 +20,7 @@ function AppContent() {
   const [isInitialLoad, setIsInitialLoad] = useState(true); // 초기 로드 추적
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768); // 모바일 감지
   const [isSmallMobile, setIsSmallMobile] = useState(window.innerWidth <= 480); // 소형 모바일 감지
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
 
   // 안정적인 핸들러 함수들 - 컴포넌트 최상위에서 선언
   const handleMouseEnter = useCallback((index: number) => {
@@ -177,8 +177,8 @@ function AppContent() {
   return (
     <div className={`App ${currentStep === 2 ? 'page-mode' : ''}`}>
       <div className={`main-container ${currentStep === 2 ? 'page-mode' : ''}`}>
-        {/* 로그인 링크 - 로그인하지 않은 경우에만 표시 */}
-        {!isAuthenticated && (
+        {/* 로그인/로그아웃 링크 */}
+        {!isAuthenticated ? (
           <motion.a
             href="/login"
             className="login-link"
@@ -189,6 +189,22 @@ function AppContent() {
           >
             로그인
           </motion.a>
+        ) : (
+          <motion.div
+            className="logout-container"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.6 }}
+            whileHover={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+          >
+            <span className="user-info">{user?.username}님</span>
+            <button
+              onClick={logout}
+              className="logout-button"
+            >
+              로그아웃
+            </button>
+          </motion.div>
         )}
         
         {/* 홈페이지 리뉴얼중 팝업: 로그인 안 된 경우만 */}
