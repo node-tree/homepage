@@ -63,7 +63,19 @@ const connectDB = async () => {
       await mongoose.disconnect();
     }
 
-    const conn = await mongoose.connect(process.env.MONGODB_URI, options);
+    // Vercel 환경에서 더 안정적인 연결을 위한 URI 최적화
+    let mongoUri = process.env.MONGODB_URI;
+    
+    // URI에 추가 파라미터가 없다면 추가
+    if (!mongoUri.includes('maxPoolSize')) {
+      const separator = mongoUri.includes('?') ? '&' : '?';
+      mongoUri += `${separator}maxPoolSize=10&serverSelectionTimeoutMS=5000&socketTimeoutMS=45000&family=4`;
+    }
+
+    console.log('최적화된 MongoDB URI 길이:', mongoUri.length);
+    console.log('연결 시도 중...');
+
+    const conn = await mongoose.connect(mongoUri, options);
     
     cachedConnection = conn;
     console.log(`MongoDB 연결 성공: ${conn.connection.host}`);
@@ -113,6 +125,29 @@ app.get('/', (req, res) => {
       filed: '/api/filed',
       debug: '/api/debug'
     }
+  });
+});
+
+// 환경변수 테스트 라우트 (보안상 일부만 표시)
+app.get('/api/env-test', (req, res) => {
+  res.json({
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    vercel: {
+      isVercel: !!process.env.VERCEL,
+      vercelEnv: process.env.VERCEL_ENV || 'NOT_SET',
+      vercelUrl: process.env.VERCEL_URL || 'NOT_SET'
+    },
+    mongodb: {
+      uriExists: !!process.env.MONGODB_URI,
+      uriLength: process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0,
+      uriStart: process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 20) + '...' : 'NOT_SET',
+      uriContainsAtlas: process.env.MONGODB_URI ? process.env.MONGODB_URI.includes('mongodb+srv') : false,
+      uriContainsHomepage: process.env.MONGODB_URI ? process.env.MONGODB_URI.includes('homepage') : false
+    },
+    allEnvKeys: Object.keys(process.env).filter(key => 
+      key.includes('MONGO') || key.includes('VERCEL') || key.includes('NODE_ENV')
+    ).sort()
   });
 });
 
