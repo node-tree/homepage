@@ -80,6 +80,7 @@ router.get('/', async (req, res) => {
         id: work._id.toString(),
         title: work.title || '제목 없음',
         content: work.contents || '내용 없음', // contents를 content로 매핑
+        htmlContent: work.htmlContent || '',
         date: dateString,
         images: [],
         thumbnail: work.thumbnail || null
@@ -142,7 +143,7 @@ router.post('/', auth, async (req, res) => {
   try {
     await ensureDBConnection();
     
-    const { title, content, thumbnail } = req.body;
+    const { title, content, htmlContent, thumbnail } = req.body;
     
     if (!title || !content) {
       return res.status(400).json({
@@ -154,6 +155,7 @@ router.post('/', auth, async (req, res) => {
     const newWork = new Work({
       title: title.trim(),
       contents: content.trim(), // content를 contents로 매핑
+      htmlContent: htmlContent || '',
       thumbnail: thumbnail ? thumbnail.trim() : null
     });
 
@@ -167,6 +169,7 @@ router.post('/', auth, async (req, res) => {
         id: savedWork._id.toString(),
         title: savedWork.title,
         content: savedWork.contents,
+        htmlContent: savedWork.htmlContent,
         thumbnail: savedWork.thumbnail,
         date: savedWork.createdAt ? savedWork.createdAt.toLocaleDateString('ko-KR') : new Date().toLocaleDateString('ko-KR')
       }
@@ -189,7 +192,7 @@ router.put('/:id', auth, async (req, res) => {
     await ensureDBConnection();
     
     const { id } = req.params;
-    const { title, content, thumbnail } = req.body;
+    const { title, content, htmlContent, thumbnail } = req.body;
     
     if (!title || !content) {
       return res.status(400).json({
@@ -203,6 +206,7 @@ router.put('/:id', auth, async (req, res) => {
       {
         title: title.trim(),
         contents: content.trim(),
+        htmlContent: htmlContent || '',
         thumbnail: thumbnail ? thumbnail.trim() : null
       },
       { new: true }
@@ -224,6 +228,7 @@ router.put('/:id', auth, async (req, res) => {
         id: updatedWork._id.toString(),
         title: updatedWork.title,
         content: updatedWork.contents,
+        htmlContent: updatedWork.htmlContent,
         thumbnail: updatedWork.thumbnail,
         date: updatedWork.createdAt ? updatedWork.createdAt.toLocaleDateString('ko-KR') : new Date().toLocaleDateString('ko-KR')
       }
@@ -312,6 +317,7 @@ router.get('/:id', async (req, res) => {
         id: work._id.toString(),
         title: work.title || '제목 없음',
         content: work.contents || '내용 없음',
+        htmlContent: work.htmlContent || '',
         date: dateString,
         images: [],
         thumbnail: work.thumbnail || null

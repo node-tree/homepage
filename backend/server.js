@@ -131,6 +131,8 @@ mongoose.connection.on('error', (err) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/work', require('./routes/work'));
 app.use('/api/filed', require('./routes/filed'));
+app.use('/api/location-video', require('./routes/locationVideo'));
+app.use('/api/about', require('./routes/about'));
 
 // 기본 라우트
 app.get('/', (req, res) => {

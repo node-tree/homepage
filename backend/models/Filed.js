@@ -9,6 +9,10 @@ const filedSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  htmlContent: {
+    type: String,
+    default: ''
+  },
   thumbnail: {
     type: String,
     required: false
