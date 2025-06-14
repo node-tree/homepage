@@ -102,11 +102,11 @@ const Login: React.FC = () => {
           window.location.href = '/';
         }, 800);
       } else {
-        setError('로그인 정보가 올바르지 않습니다. 테스트 계정: admin/password, user/123456, nodetree/nodetree2024');
+        setError('사용자명 또는 비밀번호가 올바르지 않습니다.');
       }
     } catch (error) {
       console.error('로그인 오류:', error);
-      setError('로그인 정보가 올바르지 않습니다. 테스트 계정: admin/password, user/123456, nodetree/nodetree2024');
+      setError('로그인에 실패했습니다. 사용자명과 비밀번호를 확인해주세요.');
     } finally {
       setLoading(false);
     }

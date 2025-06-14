@@ -27,7 +27,9 @@ app.use(express.json());
 let cachedConnection = null;
 
 // MongoDB 연결 함수 (서버리스 환경 최적화)
-const connectDB = async () => {
+const connectDB = async (retryCount = 0) => {
+  const maxRetries = 3;
+  
   // 이미 연결이 있고 활성 상태라면 재사용
   if (cachedConnection && mongoose.connection.readyState === 1) {
     console.log('기존 MongoDB 연결 재사용');
@@ -39,55 +41,96 @@ const connectDB = async () => {
       throw new Error('MONGODB_URI 환경변수가 설정되지 않았습니다.');
     }
 
-    console.log('MongoDB 연결 시도 중...');
+    console.log(`MongoDB 연결 시도 중... (시도 ${retryCount + 1}/${maxRetries + 1})`);
     console.log('환경:', process.env.NODE_ENV || 'development');
     console.log('Vercel 환경:', process.env.VERCEL ? 'YES' : 'NO');
+    console.log('URI 존재:', !!process.env.MONGODB_URI);
+    console.log('URI 길이:', process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0);
     
     // 서버리스 환경에 최적화된 연결 옵션
     const options = {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000, // 5초로 단축 (Vercel 함수 타임아웃 고려)
+      serverSelectionTimeoutMS: 8000, // 8초로 증가
       socketTimeoutMS: 45000,
       connectTimeoutMS: 10000,
-      maxPoolSize: 10,
-      minPoolSize: 1, // 최소 연결 유지
-      maxIdleTimeMS: 30000, // 30초 후 유휴 연결 정리
-      bufferMaxEntries: 0, // 버퍼링 비활성화
-      bufferCommands: false, // 명령 버퍼링 비활성화
-      heartbeatFrequencyMS: 10000, // 하트비트 주기
+      maxPoolSize: 5, // 풀 크기 감소
+      minPoolSize: 0, // 최소 연결 0으로 설정
+      maxIdleTimeMS: 30000,
+      bufferMaxEntries: 0,
+      bufferCommands: false,
+      heartbeatFrequencyMS: 10000,
+      // Vercel 서버리스 환경을 위한 추가 옵션
+      family: 4, // IPv4 강제 사용
+      keepAlive: true,
+      keepAliveInitialDelay: 300000,
     };
 
-    // 기존 연결이 있다면 정리
+    // 기존 연결 정리
     if (mongoose.connection.readyState !== 0) {
+      console.log('기존 연결 정리 중...');
       await mongoose.disconnect();
+      // 연결 정리 후 잠시 대기
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     // Vercel 환경에서 더 안정적인 연결을 위한 URI 최적화
     let mongoUri = process.env.MONGODB_URI;
     
-    // URI에 추가 파라미터가 없다면 추가
-    if (!mongoUri.includes('maxPoolSize')) {
-      const separator = mongoUri.includes('?') ? '&' : '?';
-      mongoUri += `${separator}maxPoolSize=10&serverSelectionTimeoutMS=5000&socketTimeoutMS=45000&family=4`;
-    }
+    // URI에 추가 파라미터 추가 (기존 파라미터와 중복되지 않도록)
+    const additionalParams = [
+      'maxPoolSize=5',
+      'serverSelectionTimeoutMS=8000',
+      'socketTimeoutMS=45000',
+      'family=4',
+      'ssl=true',
+      'authSource=admin'
+    ];
+    
+    additionalParams.forEach(param => {
+      const [key] = param.split('=');
+      if (!mongoUri.includes(key)) {
+        const separator = mongoUri.includes('?') ? '&' : '?';
+        mongoUri += `${separator}${param}`;
+      }
+    });
 
     console.log('최적화된 MongoDB URI 길이:', mongoUri.length);
     console.log('연결 시도 중...');
 
+    // 연결 시도
     const conn = await mongoose.connect(mongoUri, options);
     
     cachedConnection = conn;
-    console.log(`MongoDB 연결 성공: ${conn.connection.host}`);
-    console.log(`데이터베이스: ${conn.connection.name}`);
-    console.log(`연결 상태: ${mongoose.connection.readyState}`);
+    console.log(`✅ MongoDB 연결 성공: ${conn.connection.host}`);
+    console.log(`📊 데이터베이스: ${conn.connection.name}`);
+    console.log(`🔗 연결 상태: ${mongoose.connection.readyState}`);
+    console.log(`⏱️ 연결 시간: ${new Date().toISOString()}`);
     
     return conn;
   } catch (error) {
-    console.error('MongoDB 연결 실패:', error.message);
+    console.error(`❌ MongoDB 연결 실패 (시도 ${retryCount + 1}):`, error.message);
+    
+    // 특정 에러에 대한 상세 정보
+    if (error.name === 'MongoServerSelectionError') {
+      console.error('서버 선택 타임아웃 - MongoDB Atlas 네트워크 설정을 확인하세요');
+    } else if (error.name === 'MongoNetworkError') {
+      console.error('네트워크 오류 - 인터넷 연결 및 방화벽 설정을 확인하세요');
+    } else if (error.name === 'MongoParseError') {
+      console.error('URI 파싱 오류 - MongoDB 연결 문자열을 확인하세요');
+    }
+    
     console.error('상세 에러:', error);
     cachedConnection = null;
-    throw error; // 에러를 다시 던져서 호출하는 곳에서 처리하도록
+    
+    // 재시도 로직
+    if (retryCount < maxRetries) {
+      console.log(`🔄 ${2000 * (retryCount + 1)}ms 후 재시도...`);
+      await new Promise(resolve => setTimeout(resolve, 2000 * (retryCount + 1)));
+      return connectDB(retryCount + 1);
+    }
+    
+    throw error; // 최대 재시도 후에도 실패하면 에러 던지기
   }
 };
 

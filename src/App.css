@@ -49,6 +49,101 @@
   }
 }
 
+/* 로그아웃 컨테이너 스타일 */
+.logout-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 8px 16px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  pointer-events: auto;
+}
+
+.logout-container:hover {
+  background: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.user-info {
+  font-size: 0.85rem;
+  color: #333;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.logout-button {
+  background: #666666;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Arial', sans-serif;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: auto;
+  z-index: 10000;
+  position: relative;
+}
+
+.logout-button:hover {
+  background: #555555;
+  transform: scale(1.05);
+}
+
+.logout-button:active {
+  transform: scale(0.95);
+}
+
+/* 모바일 반응형 - 로그아웃 컨테이너 */
+@media (max-width: 768px) {
+  .logout-container {
+    top: 15px;
+    right: 15px;
+    padding: 6px 12px;
+    gap: 8px;
+  }
+  
+  .user-info {
+    font-size: 0.8rem;
+  }
+  
+  .logout-button {
+    padding: 5px 10px;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .logout-container {
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    gap: 6px;
+  }
+  
+  .user-info {
+    font-size: 0.75rem;
+  }
+  
+  .logout-button {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+  }
+}
+
 .App {
   width: 100vw;
   min-height: 100vh; /* height를 min-height로 변경 */

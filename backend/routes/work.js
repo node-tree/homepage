@@ -6,23 +6,50 @@ const mongoose = require('mongoose');
 
 // MongoDB 연결 확인 및 연결 함수
 const ensureDBConnection = async () => {
+  console.log('🔍 DB 연결 상태 확인 중...');
+  console.log('현재 연결 상태:', mongoose.connection.readyState);
+  
+  // 연결 상태 확인 (0: disconnected, 1: connected, 2: connecting, 3: disconnecting)
   if (mongoose.connection.readyState === 1) {
-    return true; // 이미 연결됨
+    console.log('✅ 기존 DB 연결 활성 상태');
+    return true;
   }
   
-  // 연결이 안 되어 있으면 server.js의 connectDB 함수 호출
-  const connectDB = require('../server').connectDB;
-  if (connectDB) {
-    await connectDB();
-  } else {
-    throw new Error('MongoDB 연결 함수를 찾을 수 없습니다.');
+  if (mongoose.connection.readyState === 2) {
+    console.log('⏳ DB 연결 중... 대기');
+    // 연결 중이면 최대 10초 대기
+    for (let i = 0; i < 20; i++) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (mongoose.connection.readyState === 1) {
+        console.log('✅ DB 연결 완료');
+        return true;
+      }
+    }
+    throw new Error('DB 연결 대기 시간 초과');
   }
   
-  if (mongoose.connection.readyState !== 1) {
-    throw new Error('MongoDB 연결에 실패했습니다.');
-  }
+  console.log('🔄 새로운 DB 연결 시도...');
   
-  return true;
+  try {
+    // server.js의 connectDB 함수 동적 import
+    const serverModule = require('../server');
+    if (serverModule.connectDB) {
+      await serverModule.connectDB();
+    } else {
+      throw new Error('connectDB 함수를 찾을 수 없습니다.');
+    }
+    
+    // 연결 확인
+    if (mongoose.connection.readyState !== 1) {
+      throw new Error(`DB 연결 실패. 현재 상태: ${mongoose.connection.readyState}`);
+    }
+    
+    console.log('✅ DB 연결 성공');
+    return true;
+  } catch (error) {
+    console.error('❌ DB 연결 실패:', error.message);
+    throw error;
+  }
 };
 
 // GET /api/work - 모든 work 데이터 조회
