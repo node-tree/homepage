@@ -213,8 +213,10 @@ app.get('/api/debug', async (req, res) => {
     let connectionResult = null;
     let workCount = 0;
     let filedCount = 0;
+    let userCount = 0;
     let workSample = null;
     let filedSample = null;
+    let userSample = null;
     let errorDetails = null;
 
     try {
@@ -225,6 +227,7 @@ app.get('/api/debug', async (req, res) => {
       // 컬렉션 데이터 직접 확인
       const Work = require('./models/Work');
       const Filed = require('./models/Filed');
+      const User = require('./models/User');
       
       console.log('데이터베이스 쿼리 시작...');
       workCount = await Work.countDocuments();
@@ -241,6 +244,16 @@ app.get('/api/debug', async (req, res) => {
       if (filedCount > 0) {
         filedSample = await Filed.findOne().limit(1);
         console.log('Filed 샘플 데이터 조회 완료');
+      }
+      
+      // Users 컬렉션 정보 추가
+      const userCount = await User.countDocuments();
+      console.log('User 문서 개수:', userCount);
+      
+      let userSample = null;
+      if (userCount > 0) {
+        userSample = await User.findOne().limit(1);
+        console.log('User 샘플 데이터 조회 완료');
       }
       
     } catch (error) {
@@ -279,6 +292,7 @@ app.get('/api/debug', async (req, res) => {
       data: {
         workCount,
         filedCount,
+        userCount: userCount || 0,
         workSample: workSample ? {
           id: workSample._id?.toString(),
           title: workSample.title,
@@ -288,6 +302,12 @@ app.get('/api/debug', async (req, res) => {
           id: filedSample._id?.toString(),
           title: filedSample.title,
           hasContent: !!filedSample.contents
+        } : null,
+        userSample: userSample ? {
+          id: userSample._id?.toString(),
+          username: userSample.username,
+          email: userSample.email,
+          role: userSample.role
         } : null
       },
       error: errorDetails,
