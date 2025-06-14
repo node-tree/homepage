@@ -7,6 +7,8 @@ if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
 }
 
+// JWT_SECRET 환경변수가 Vercel에 설정되어 있어야 함
+
 const app = express();
 const PORT = process.env.PORT || 8000;
 
