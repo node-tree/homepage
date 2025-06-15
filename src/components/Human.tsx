@@ -5,7 +5,7 @@ const Human: React.FC = () => {
     <div className="page-content">
       <h1 className="page-title">
         HUMAN
-        <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '1rem'}}>인간과 관계</div>
+        <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>NODE TREE의 관계성</div>
       </h1>
       
       {/* 캐릭터 프로필 컨테이너 */}

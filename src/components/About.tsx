@@ -368,7 +368,7 @@ const About: React.FC = () => {
       <div className="page-content">
         <h1 className="page-title">
           ABOUT
-          <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '1rem'}}>NODE TREE에 대하여</div>
+          <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>NODE TREE에 대하여</div>
         </h1>
         <div style={{ textAlign: 'center', padding: '2rem' }}>
           <p>로딩 중...</p>
@@ -381,7 +381,7 @@ const About: React.FC = () => {
     <div className="page-content">
       <h1 className="page-title">
         ABOUT
-        <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '1rem'}}>NODE TREE에 대하여</div>
+        <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>NODE TREE에 대하여</div>
       </h1>
       
       {/* 편집 버튼 - Work 페이지와 동일한 스타일로 오른쪽 정렬 */}

@@ -1,0 +1,612 @@
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls, Text, Sphere, Line } from '@react-three/drei';
+import { motion, AnimatePresence } from 'framer-motion';
+import * as THREE from 'three';
+
+// Location 영상 데이터 타입 정의
+interface LocationVideo {
+  _id: string;
+  cityName: string;
+  videoUrl: string;
+  videoTitle?: string;
+  videoDescription?: string;
+  isActive: boolean;
+}
+
+// 도시 데이터 타입 정의
+interface City {
+  name: string;
+  lat: number;
+  lng: number;
+  x: number;
+  y: number;
+  z: number; // 3D용 z축 추가
+}
+
+// 3D 도시 구체 컴포넌트
+function CityNode({ 
+  city, 
+  index, 
+  isSelected, 
+  isHovered, 
+  onClick, 
+  onHover,
+  onPositionUpdate
+}: {
+  city: City;
+  index: number;
+  isSelected: boolean;
+  isHovered: boolean;
+  onClick: () => void;
+  onHover: (hovered: boolean) => void;
+  onPositionUpdate: (cityName: string, position: THREE.Vector3) => void;
+}) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const nameTextRef = useRef<THREE.Mesh>(null);
+  const coordTextRef = useRef<THREE.Mesh>(null);
+  const { camera } = useThree();
+
+  useFrame((state) => {
+    if (meshRef.current) {
+      // 부드러운 회전 애니메이션
+      meshRef.current.rotation.y += 0.01;
+      
+      // 선택되거나 호버된 경우 위아래로 부드럽게 움직임
+      let currentY = city.y;
+      if (isSelected || isHovered) {
+        currentY = city.y + Math.sin(state.clock.elapsedTime * 2) * 0.1;
+      }
+      
+      meshRef.current.position.y = currentY;
+      
+      // 실시간 위치를 부모 컴포넌트에 전달
+      onPositionUpdate(city.name, new THREE.Vector3(city.x, currentY, city.z));
+    }
+
+    // 텍스트들이 카메라를 바라보도록 설정
+    if (nameTextRef.current && camera) {
+      nameTextRef.current.lookAt(camera.position);
+    }
+    if (coordTextRef.current && camera) {
+      coordTextRef.current.lookAt(camera.position);
+    }
+  });
+
+  const scale = isSelected ? 0.4 : isHovered ? 0.25 : 0.15; // 기본 크기를 0.15로 매우 작게, 선택 시 0.4로 확대
+  const color = isSelected ? '#ff4444' : isHovered ? '#4444ff' : '#000000';
+
+  return (
+    <group>
+      <Sphere
+        ref={meshRef}
+        position={[city.x, city.y, city.z]}
+        scale={scale}
+        onClick={onClick}
+        onPointerOver={() => {
+          onHover(true);
+        }}
+        onPointerOut={() => {
+          onHover(false);
+        }}
+      >
+        <meshStandardMaterial color={color} />
+      </Sphere>
+      
+      {/* 도시 이름 텍스트 */}
+      <Text
+        ref={nameTextRef}
+        position={[city.x, city.y + (isSelected ? 0.6 : 0.25), city.z]}
+        fontSize={isSelected ? 0.18 : 0.08}
+        color="#333333"
+        anchorX="center"
+        anchorY="middle"
+      >
+        {city.name}
+      </Text>
+      
+      {/* 좌표 텍스트 */}
+      <Text
+        ref={coordTextRef}
+        position={[city.x, city.y - (isSelected ? 0.6 : 0.25), city.z]}
+        fontSize={isSelected ? 0.08 : 0.04}
+        color="#666666"
+        anchorX="center"
+        anchorY="middle"
+      >
+        {city.lat.toFixed(2)}°, {city.lng.toFixed(2)}°
+      </Text>
+    </group>
+  );
+}
+
+// 3D 연결선 컴포넌트
+function ConnectionLine({ 
+  from, 
+  to, 
+  cityPositions 
+}: { 
+  from: City; 
+  to: City; 
+  cityPositions: Map<string, THREE.Vector3>;
+}) {
+  const [points, setPoints] = useState<THREE.Vector3[]>([
+    new THREE.Vector3(from.x, from.y, from.z),
+    new THREE.Vector3(to.x, to.y, to.z)
+  ]);
+
+  useFrame(() => {
+    const fromPos = cityPositions.get(from.name) || new THREE.Vector3(from.x, from.y, from.z);
+    const toPos = cityPositions.get(to.name) || new THREE.Vector3(to.x, to.y, to.z);
+    
+    setPoints([fromPos, toPos]);
+  });
+
+  return (
+    <Line
+      points={points}
+      color="#cccccc"
+      lineWidth={2}
+      transparent
+      opacity={0.6}
+    />
+  );
+}
+
+// 3D 장면 컴포넌트
+function Scene3D({ 
+  cities, 
+  connections, 
+  selectedCity, 
+  hoveredCity, 
+  onCityClick, 
+  onCityHover 
+}: {
+  cities: City[];
+  connections: { from: string; to: string }[];
+  selectedCity: string | null;
+  hoveredCity: string | null;
+  onCityClick: (cityName: string) => void;
+  onCityHover: (cityName: string | null) => void;
+}) {
+  const { camera } = useThree();
+  const [cityPositions, setCityPositions] = useState<Map<string, THREE.Vector3>>(new Map());
+
+  useEffect(() => {
+    // 카메라 초기 위치 설정
+    camera.position.set(0, 5, 10);
+    camera.lookAt(0, 0, 0);
+  }, [camera]);
+
+  // 도시 위치 업데이트 핸들러
+  const handlePositionUpdate = useCallback((cityName: string, position: THREE.Vector3) => {
+    setCityPositions(prev => {
+      const newMap = new Map(prev);
+      newMap.set(cityName, position.clone());
+      return newMap;
+    });
+  }, []);
+
+  return (
+    <>
+      {/* 조명 설정 */}
+      <ambientLight intensity={0.6} />
+      <pointLight position={[10, 10, 10]} intensity={1} />
+      <pointLight position={[-10, -10, -10]} intensity={0.5} />
+
+      {/* 도시 노드들 */}
+      {cities.map((city, index) => (
+        <CityNode
+          key={city.name}
+          city={city}
+          index={index}
+          isSelected={selectedCity === city.name}
+          isHovered={hoveredCity === city.name}
+          onClick={() => onCityClick(city.name)}
+          onHover={(hovered) => onCityHover(hovered ? city.name : null)}
+          onPositionUpdate={handlePositionUpdate}
+        />
+      ))}
+
+      {/* 연결선들 */}
+      {connections.map((connection, index) => {
+        const fromCity = cities.find(city => city.name === connection.from);
+        const toCity = cities.find(city => city.name === connection.to);
+        
+        if (!fromCity || !toCity) return null;
+        
+        return (
+          <ConnectionLine
+            key={index}
+            from={fromCity}
+            to={toCity}
+            cityPositions={cityPositions}
+          />
+        );
+      })}
+
+      {/* 카메라 컨트롤 */}
+      <OrbitControls
+        enablePan={true}
+        enableZoom={true}
+        enableRotate={true}
+        minDistance={5}
+        maxDistance={20}
+        maxPolarAngle={Math.PI / 2}
+      />
+    </>
+  );
+}
+
+const Location3D: React.FC = () => {
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [hoveredCity, setHoveredCity] = useState<string | null>(null);
+  const [currentVideo, setCurrentVideo] = useState<LocationVideo | null>(null);
+  const [isVideoLoading, setIsVideoLoading] = useState(false);
+  const [showScrollToTop, setShowScrollToTop] = useState(false);
+  const videoSectionRef = useRef<HTMLDivElement>(null);
+  const cityInfoRef = useRef<HTMLDivElement>(null);
+
+  // 도시 데이터 (기존 Location 컴포넌트와 동일한 도시들을 3D 좌표로 변환, Y축 다양화)
+  const cities: City[] = [
+    { name: '서울', lat: 37.5665, lng: 126.9780, x: 0, y: 0.5, z: 2 },
+    { name: '용인', lat: 37.2411, lng: 127.1776, x: 1, y: -0.3, z: 2.5 },
+    { name: '부여', lat: 36.2756, lng: 126.9100, x: -0.5, y: 0, z: 1.5 },
+    { name: '서산', lat: 36.7848, lng: 126.4503, x: -1.5, y: 0.8, z: 1 },
+    { name: '태안', lat: 36.7456, lng: 126.2978, x: -2, y: -0.5, z: 0.5 },
+    { name: '서천', lat: 36.0788, lng: 126.6919, x: -1, y: 0.3, z: 0.5 },
+    { name: '강경', lat: 36.1619, lng: 126.7975, x: -0.5, y: -0.2, z: 0.8 },
+    { name: '전주', lat: 35.8242, lng: 127.1480, x: 0.5, y: 0.6, z: 0 },
+    { name: '칸타요프스', lat: 41.6167, lng: 1.4833, x: -4, y: 1.2, z: 3 },
+    { name: '마인츠', lat: 50.0000, lng: 8.2711, x: -3, y: 1.5, z: 4 },
+    { name: '야따마우까', lat: -32.5000, lng: -60.5000, x: -6, y: -1.0, z: -2 },
+    { name: '울룰루', lat: -25.3444, lng: 131.0369, x: 5, y: -0.8, z: -3 },
+    { name: '뉴욕', lat: 40.7128, lng: -74.0060, x: -5, y: 1.0, z: 2 }
+  ];
+
+  // 연결선 데이터 (기존 Location 컴포넌트와 동일)
+  const connections = [
+    // 한국 도시들 연결 (근접한 도시들끼리)
+    { from: '서울', to: '부여' },
+    { from: '부여', to: '서산' },
+    { from: '서산', to: '태안' },
+    { from: '용인', to: '부여' },
+    { from: '부여', to: '서천' },
+    { from: '부여', to: '강경' },
+    { from: '부여', to: '전주' },
+    
+    // 대륙간 주요 연결 (부여를 중심으로)
+    { from: '부여', to: '마인츠' },
+    { from: '용인', to: '칸타요프스' },
+    { from: '부여', to: '울룰루' },
+    { from: '부여', to: '야따마우까' },
+    { from: '부여', to: '뉴욕' }
+  ];
+
+  // 스크롤 이벤트 처리
+  const handleScroll = useCallback(() => {
+    setShowScrollToTop(window.scrollY > 500);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
+  // 클릭 사운드 재생 함수
+  const playClickSound = () => {
+    try {
+      const audio = new Audio('/click02.wav');
+      audio.volume = 0.3;
+      audio.play().catch(error => {
+        console.log('사운드 재생 실패:', error);
+      });
+    } catch (error) {
+      console.log('사운드 로드 실패:', error);
+    }
+  };
+
+  // 도시 클릭 핸들러
+  const handleCityClick = (cityName: string) => {
+    // 클릭 사운드 재생
+    playClickSound();
+    
+    // 다른 도시를 클릭하면 이전 영상 닫기
+    if (selectedCity !== cityName) {
+      setCurrentVideo(null);
+    }
+    
+    setSelectedCity(cityName);
+    console.log(`${cityName} 클릭됨!`);
+    
+    setTimeout(() => {
+      scrollToCityInfo();
+    }, 300);
+  };
+
+  // 도시 호버 핸들러
+  const handleCityHover = (cityName: string | null) => {
+    setHoveredCity(cityName);
+  };
+
+  // 이동하기 버튼 클릭 핸들러
+  const handleMoveClick = async (cityName: string) => {
+    console.log(`${cityName}로 이동하기 클릭됨`);
+    setIsVideoLoading(true);
+    
+    try {
+      const response = await fetch(`/api/location-video/${encodeURIComponent(cityName)}`);
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        setCurrentVideo(data.data);
+        setTimeout(() => {
+          scrollToVideo();
+        }, 100);
+      } else {
+        console.log('영상 데이터를 찾을 수 없습니다.');
+      }
+    } catch (error) {
+      console.error('영상 데이터 가져오기 오류:', error);
+    } finally {
+      setIsVideoLoading(false);
+    }
+  };
+
+  // 스크롤 함수들
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const scrollToCityInfo = () => {
+    if (cityInfoRef.current) {
+      const offset = -50;
+      const elementPosition = cityInfoRef.current.offsetTop + offset;
+      window.scrollTo({ top: elementPosition, behavior: 'smooth' });
+    }
+  };
+
+  const scrollToVideo = () => {
+    if (videoSectionRef.current) {
+      videoSectionRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  };
+
+  // YouTube URL을 임베드 형식으로 변환하는 함수
+  const convertToEmbedUrl = (url: string): string => {
+    if (url.includes('youtube.com/embed/')) {
+      return url;
+    }
+    
+    const youtubeRegex = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/;
+    const match = url.match(youtubeRegex);
+    
+    if (match && match[1]) {
+      return `https://www.youtube.com/embed/${match[1]}`;
+    }
+    
+    return url;
+  };
+
+  return (
+    <div className="page-content">
+      <h1 className="page-title">
+        LOCATION
+        <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>NODE TREE의 이동 경로</div>
+      </h1>
+      
+      {/* 3D 지도 영역 */}
+      <div style={{ 
+        width: '100%', 
+        height: '600px', 
+        margin: '2rem 0',
+        overflow: 'hidden',
+        position: 'relative'
+      }}>
+        <Canvas>
+          <Suspense fallback={null}>
+            <Scene3D
+              cities={cities}
+              connections={connections}
+              selectedCity={selectedCity}
+              hoveredCity={hoveredCity}
+              onCityClick={handleCityClick}
+              onCityHover={handleCityHover}
+            />
+          </Suspense>
+        </Canvas>
+        
+        {/* 조작 가이드 오버레이 */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          style={{
+            position: 'absolute',
+            top: '15px',
+            right: '15px',
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95))',
+            padding: '12px 16px',
+            borderRadius: '12px',
+            fontSize: '12px',
+            color: '#4a5568',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            lineHeight: '1.5',
+            minWidth: '140px'
+          }}
+        >
+          <div style={{ 
+            marginBottom: '8px', 
+            fontWeight: '600', 
+            color: '#2d3748',
+            fontSize: '13px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}>
+            <span style={{ fontSize: '16px' }}>🎮</span>
+            조작법
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
+              padding: '2px 0'
+            }}>
+              <span style={{ fontSize: '14px', width: '16px' }}>🖱️</span>
+              <span style={{ fontSize: '11px' }}>드래그로 회전</span>
+            </div>
+            
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
+              padding: '2px 0'
+            }}>
+              <span style={{ fontSize: '14px', width: '16px' }}>🔍</span>
+              <span style={{ fontSize: '11px' }}>휠로 줌</span>
+            </div>
+            
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
+              padding: '2px 0'
+            }}>
+              <span style={{ fontSize: '14px', width: '16px' }}>✋</span>
+              <span style={{ fontSize: '11px' }}>우클릭으로 이동</span>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* 원형 버튼들 */}
+      <div className="location-controls">
+        {cities.map((city, index) => (
+          <motion.div
+            key={city.name}
+            className="location-button"
+            onMouseEnter={() => setHoveredCity(city.name)}
+            onMouseLeave={() => setHoveredCity(null)}
+            onClick={() => handleCityClick(city.name)}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            style={{
+              backgroundColor: selectedCity === city.name ? '#000000' : '#ffffff',
+              color: selectedCity === city.name ? '#ffffff' : '#000000',
+              border: hoveredCity === city.name ? '3px solid #000000' : '2px solid #cccccc',
+              fontSize: '9px',
+              letterSpacing: city.name === 'node tree' ? '-3px' : '-2px'
+            }}
+          >
+            {index + 1}
+          </motion.div>
+        ))}
+      </div>
+
+      {/* 선택된 도시 정보 */}
+      {selectedCity && (
+        <div ref={cityInfoRef} className="location-city-info" style={{ textAlign: 'center', marginTop: '1rem' }}>
+          <h3 className="page-body-text" style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', fontWeight: '500' }}>선택된 위치</h3>
+          <p className="page-body-text" style={{ margin: '0 0 1rem 0' }}>{selectedCity}</p>
+          <motion.button
+            className="location-move-button"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => handleMoveClick(selectedCity!)}
+            disabled={isVideoLoading}
+          >
+            {isVideoLoading ? '로딩 중...' : '이동하기'}
+          </motion.button>
+        </div>
+      )}
+
+      {/* 영상 표시 영역 */}
+      <div ref={videoSectionRef}>
+        {currentVideo && (
+          <motion.div 
+            className="location-video-container"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            style={{ 
+              marginTop: '2rem', 
+              textAlign: 'center',
+              maxWidth: '800px',
+              margin: '2rem auto 0'
+            }}
+          >
+            <h3 className="page-body-text" style={{ 
+              margin: '0 0 1rem 0', 
+              fontSize: '1.2rem', 
+              fontWeight: '600' 
+            }}>
+              {currentVideo.videoTitle || `${currentVideo.cityName} 영상`}
+            </h3>
+            
+            {currentVideo.videoDescription && (
+              <p className="page-body-text" style={{ 
+                margin: '0 0 1.5rem 0',
+                color: '#666',
+                fontSize: '0.9rem'
+              }}>
+                {currentVideo.videoDescription}
+              </p>
+            )}
+            
+            <div style={{ 
+              position: 'relative', 
+              paddingBottom: '56.25%', 
+              height: 0, 
+              overflow: 'hidden',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+            }}>
+              <iframe
+                src={convertToEmbedUrl(currentVideo.videoUrl)}
+                title={currentVideo.videoTitle || `${currentVideo.cityName} 영상`}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  border: 'none'
+                }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </motion.div>
+        )}
+      </div>
+
+      {/* 위로 올라가기 버튼 */}
+      <AnimatePresence>
+        {showScrollToTop && (
+          <motion.button
+            className="scroll-to-top-button"
+            onClick={scrollToTop}
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            ↑
+          </motion.button>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+export default Location3D; 

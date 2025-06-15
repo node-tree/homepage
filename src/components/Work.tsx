@@ -201,7 +201,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
     <div className="page-content">
       <h1 className="page-title">
         WORK
-        <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '1rem'}}>프로젝트와 작업들을 공유합니다</div>
+        <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>프로젝트와 작업들을 공유합니다</div>
       </h1>
       
       <div className="work-container">

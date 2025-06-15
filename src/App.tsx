@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import './App.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
-import Location from './components/Location';
+import Location3D from './components/Location3D';
 import Human from './components/Human';
 import About from './components/About';
 import Work from './components/Work';
@@ -23,6 +23,19 @@ function AppContent() {
   const [isSmallMobile, setIsSmallMobile] = useState(window.innerWidth <= 480); // 소형 모바일 감지
   const { isAuthenticated, logout, user } = useAuth();
 
+  // 클릭 사운드 재생 함수
+  const playClickSound = useCallback(() => {
+    try {
+      const audio = new Audio('/click.wav');
+      audio.volume = 0.3; // 볼륨 조절 (0.0 ~ 1.0)
+      audio.play().catch(error => {
+        console.log('사운드 재생 실패:', error);
+      });
+    } catch (error) {
+      console.log('사운드 로드 실패:', error);
+    }
+  }, []);
+
   // 안정적인 핸들러 함수들 - 컴포넌트 최상위에서 선언
   const handleMouseEnter = useCallback((index: number) => {
     setHoveredCircle(prev => prev !== index ? index : prev);
@@ -33,6 +46,9 @@ function AppContent() {
   }, []);
 
   const handleCircleClickStable = useCallback((page: string) => {
+    // 클릭 사운드 재생
+    playClickSound();
+    
     setCurrentStep((prevStep) => {
       if (prevStep === 0) {
         // 첫 번째 클릭: 원들만 펼치기 (y축 이동 없음)
@@ -48,7 +64,7 @@ function AppContent() {
       }
       return prevStep;
     });
-  }, []); // 의존성 배열을 비워서 함수 재생성 방지
+  }, [playClickSound]); // playClickSound 의존성 추가
 
   // MongoDB에서 로드된 포스트 처리 - useCallback으로 메모화
   const handlePostsLoaded = useCallback((count: number) => {
@@ -85,6 +101,13 @@ function AppContent() {
       setShowLabels(true);
     }
   }, [currentPage, currentStep]);
+
+  // 페이지 변경 시 스크롤 위치 리셋
+  useEffect(() => {
+    if (currentPage) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [currentPage]);
 
   useEffect(() => {
     if (isInitialLoad) {
@@ -128,6 +151,8 @@ function AppContent() {
   const handleCenterClick = () => {
     if (currentStep === 0) {
       console.log('중앙 원 클릭: currentStep 0 → 1로 변경');
+      // 클릭 사운드 재생
+      playClickSound();
       setCurrentStep(1); // 메뉴 펼침
     }
   };
@@ -179,7 +204,7 @@ function AppContent() {
   const renderPageContent = () => {
     switch(currentPage) {
       case 'LOCATION':
-        return <Location />;
+        return <Location3D />;
       case 'HUMAN':
         return <Human />;
       case 'ABOUT':

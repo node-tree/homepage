@@ -639,7 +639,7 @@
   display: flex;
   gap: 3rem;
   max-width: 1200px;
-  margin: 3rem auto;
+  margin: 5rem auto 3rem auto;
   padding: 0 20px;
 }
 
