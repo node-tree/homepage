@@ -243,6 +243,8 @@ const Location3D: React.FC = () => {
   const [hoveredCity, setHoveredCity] = useState<string | null>(null);
   const [currentVideo, setCurrentVideo] = useState<LocationVideo | null>(null);
   const [isVideoLoading, setIsVideoLoading] = useState(false);
+  const [audioInitialized, setAudioInitialized] = useState(false);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const videoSectionRef = useRef<HTMLDivElement>(null);
   const cityInfoRef = useRef<HTMLDivElement>(null);
@@ -293,16 +295,145 @@ const Location3D: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
 
-  // 클릭 사운드 재생 함수
-  const playClickSound = () => {
+  // 오디오 초기화 및 프리로딩
+  useEffect(() => {
+    const initializeAudio = () => {
+      try {
+        const audio = new Audio('/click02.wav');
+        audio.volume = 0.3;
+        audio.preload = 'auto';
+        
+        // 오디오 로드 완료 시
+        audio.addEventListener('canplaythrough', () => {
+          setAudioElement(audio);
+          console.log('오디오 프리로딩 완료');
+        });
+        
+        // 오디오 로드 에러 시
+        audio.addEventListener('error', (e) => {
+          console.log('오디오 로드 실패:', e);
+        });
+        
+        // 오디오 로드 시작
+        audio.load();
+      } catch (error) {
+        console.log('오디오 초기화 실패:', error);
+      }
+    };
+
+    initializeAudio();
+  }, []);
+
+  // 사용자 첫 상호작용 감지 및 오디오 컨텍스트 활성화
+  useEffect(() => {
+    const enableAudio = async () => {
+      if (audioInitialized) return;
+      
+      try {
+        // HTTPS 체크 (배포 환경에서 중요)
+        const isSecureContext = window.isSecureContext || window.location.protocol === 'https:';
+        if (!isSecureContext) {
+          console.log('HTTPS가 아닌 환경에서는 오디오 기능이 제한될 수 있습니다.');
+        }
+
+        // AudioContext 생성 및 활성화
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioContextClass) {
+          console.log('이 브라우저는 Web Audio API를 지원하지 않습니다.');
+          return;
+        }
+
+        const audioContext = new AudioContextClass();
+        
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+        
+        // 더미 오디오 재생으로 브라우저 정책 우회
+        if (audioElement) {
+          // 볼륨을 0으로 설정하여 무음으로 테스트
+          const originalVolume = audioElement.volume;
+          audioElement.volume = 0;
+          
+          const playPromise = audioElement.play();
+          if (playPromise !== undefined) {
+            playPromise.then(() => {
+              audioElement.pause();
+              audioElement.currentTime = 0;
+              audioElement.volume = originalVolume; // 원래 볼륨 복원
+              setAudioInitialized(true);
+              console.log('오디오 컨텍스트 활성화 완료');
+            }).catch((error) => {
+              console.log('오디오 활성화 실패:', error);
+              // 실패해도 일단 초기화된 것으로 표시 (폴백 사용)
+              setAudioInitialized(true);
+            });
+          }
+        }
+      } catch (error) {
+        console.log('오디오 컨텍스트 생성 실패:', error);
+        // 실패해도 일단 초기화된 것으로 표시 (폴백 사용)
+        setAudioInitialized(true);
+      }
+    };
+
+    // 다양한 사용자 상호작용 이벤트 리스너
+    const handleFirstInteraction = (event: Event) => {
+      console.log('사용자 첫 상호작용 감지:', event.type);
+      enableAudio();
+      // 이벤트 리스너 제거 (한 번만 실행)
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('touchstart', handleFirstInteraction);
+      document.removeEventListener('touchend', handleFirstInteraction);
+      document.removeEventListener('keydown', handleFirstInteraction);
+      document.removeEventListener('mousedown', handleFirstInteraction);
+    };
+
+    document.addEventListener('click', handleFirstInteraction, { passive: true });
+    document.addEventListener('touchstart', handleFirstInteraction, { passive: true });
+    document.addEventListener('touchend', handleFirstInteraction, { passive: true });
+    document.addEventListener('keydown', handleFirstInteraction, { passive: true });
+    document.addEventListener('mousedown', handleFirstInteraction, { passive: true });
+
+    return () => {
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('touchstart', handleFirstInteraction);
+      document.removeEventListener('touchend', handleFirstInteraction);
+      document.removeEventListener('keydown', handleFirstInteraction);
+      document.removeEventListener('mousedown', handleFirstInteraction);
+    };
+  }, [audioElement, audioInitialized]);
+
+  // 개선된 클릭 사운드 재생 함수
+  const playClickSound = async () => {
+    if (!audioElement || !audioInitialized) {
+      console.log('오디오가 아직 초기화되지 않았습니다.');
+      return;
+    }
+
     try {
-      const audio = new Audio('/click02.wav');
-      audio.volume = 0.3;
-      audio.play().catch(error => {
-        console.log('사운드 재생 실패:', error);
-      });
+      // 현재 재생 중인 사운드 정지
+      audioElement.pause();
+      audioElement.currentTime = 0;
+      
+      // 새로운 사운드 재생
+      const playPromise = audioElement.play();
+      
+      if (playPromise !== undefined) {
+        await playPromise;
+        console.log('클릭 사운드 재생 성공');
+      }
     } catch (error) {
-      console.log('사운드 로드 실패:', error);
+      console.log('사운드 재생 실패:', error);
+      
+      // 폴백: 새로운 Audio 인스턴스로 재시도
+      try {
+        const fallbackAudio = new Audio('/click02.wav');
+        fallbackAudio.volume = 0.3;
+        await fallbackAudio.play();
+      } catch (fallbackError) {
+        console.log('폴백 사운드 재생도 실패:', fallbackError);
+      }
     }
   };
 
