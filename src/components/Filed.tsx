@@ -199,7 +199,7 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
     <div className="page-content">
       <h1 className="page-title">
         FIELD
-        <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '1rem'}}>연구와 기록들을 정리합니다</div>
+        <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>연구와 기록들을 정리합니다</div>
       </h1>
       
       <div className="filed-container">
