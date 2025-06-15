@@ -913,33 +913,33 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
             </div>
           ) : (
             /* 일반 텍스트 에디터 */
-            <textarea
-              id="content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
+          <textarea
+            id="content"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
               placeholder="글 내용을 입력하세요"
-              className="form-textarea"
-              disabled={saving}
+            className="form-textarea"
+            disabled={saving}
               rows={15}
-            />
+          />
           )}
         </div>
 
         {/* 기존 이미지 관리 (일반 모드에서만) */}
         {!useRichEditor && (
-          <div className="form-group">
-            <div className="images-header">
+        <div className="form-group">
+          <div className="images-header">
               <label className="form-label">이미지 관리</label>
-              <button 
-                type="button"
-                onClick={addImage}
-                className="add-image-button"
-                disabled={saving}
-              >
-                + 이미지 추가
-              </button>
-            </div>
-
+            <button 
+              type="button" 
+              onClick={addImage}
+              className="add-image-button"
+              disabled={saving}
+            >
+              + 이미지 추가
+            </button>
+          </div>
+          
             {images.map((image, index) => (
               <div key={index} className="image-item">
                 <div className="image-inputs">
@@ -962,32 +962,32 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
                 </div>
                 
                 <div className="image-actions">
-                  <button 
-                    type="button"
-                    onClick={() => insertImageToContent(image.url)}
+                    <button 
+                      type="button"
+                      onClick={() => insertImageToContent(image.url)}
                     className="insert-button"
-                    disabled={!image.url || saving}
-                  >
+                      disabled={!image.url || saving}
+                    >
                     본문에 삽입
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => copyImageTag(image.url)}
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => copyImageTag(image.url)}
                     className="copy-button"
-                    disabled={!image.url || saving}
-                  >
-                    태그 복사
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => removeImage(index)}
+                      disabled={!image.url || saving}
+                    >
+                      태그 복사
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => removeImage(index)}
                     className="remove-button"
-                    disabled={saving}
-                  >
-                    삭제
-                  </button>
-                </div>
-
+                      disabled={saving}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                
                 {image.url && (
                   <div className="image-preview">
                     <img 
