@@ -3,7 +3,7 @@ const isNodeTreeSite = typeof window !== 'undefined' &&
   (window.location.hostname === 'nodetree.kr' || window.location.hostname === 'www.nodetree.kr');
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 
-  (isNodeTreeSite ? 'https://nodetree.kr/api' : 
+  (isNodeTreeSite ? 'https://www.nodetree.kr/api' : 
    process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api');
 
 // 토큰을 가져오는 헬퍼 함수
