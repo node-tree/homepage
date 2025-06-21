@@ -325,6 +325,52 @@ router.post('/create-admin', async (req, res) => {
   }
 });
 
+// 관리자 비밀번호 재설정 (디버그용)
+router.post('/reset-admin-password', async (req, res) => {
+  try {
+    // MongoDB 연결 상태 확인
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+
+    // mcwjd 사용자 찾기
+    const user = await User.findOne({ username: 'mcwjd' });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'mcwjd 사용자를 찾을 수 없습니다.'
+      });
+    }
+
+    // 새 비밀번호 설정 (User 모델의 pre('save') 미들웨어가 자동으로 해싱)
+    user.password = 'Mc@@152615';
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'mcwjd 사용자의 비밀번호가 Mc@@152615로 재설정되었습니다.',
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    console.error('비밀번호 재설정 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '비밀번호 재설정에 실패했습니다.',
+      error: error.message
+    });
+  }
+});
+
 // 로그아웃
 router.post('/logout', (req, res) => {
   res.json({
