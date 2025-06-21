@@ -220,6 +220,8 @@ app.get('/api/debug', async (req, res) => {
     let filedSample = null;
     let userSample = null;
     let errorDetails = null;
+    let collectionNames = [];
+    let directUserCount = 0;
 
     try {
       console.log('MongoDB 연결 시도...');
@@ -249,13 +251,25 @@ app.get('/api/debug', async (req, res) => {
       }
       
       // Users 컬렉션 정보 추가
-      const userCount = await User.countDocuments();
+      userCount = await User.countDocuments();
       console.log('User 문서 개수:', userCount);
       
-      let userSample = null;
       if (userCount > 0) {
         userSample = await User.findOne().limit(1);
         console.log('User 샘플 데이터 조회 완료');
+      }
+      
+      // 모든 컬렉션 목록 확인
+      const collections = await mongoose.connection.db.listCollections().toArray();
+      collectionNames = collections.map(col => col.name);
+      console.log('MongoDB 컬렉션 목록:', collectionNames);
+      
+      // users 컬렉션 직접 확인
+      try {
+        directUserCount = await mongoose.connection.db.collection('users').countDocuments();
+        console.log('users 컬렉션 직접 조회 결과:', directUserCount);
+      } catch (err) {
+        console.log('users 컬렉션 직접 조회 실패:', err.message);
       }
       
     } catch (error) {
