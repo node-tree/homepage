@@ -266,6 +266,65 @@ router.get('/verify', auth, async (req, res) => {
   }
 });
 
+// 관리자 사용자 생성 (초기 설정용)
+router.post('/create-admin', async (req, res) => {
+  try {
+    // MongoDB 연결 상태 확인
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+
+    // 이미 사용자가 있는지 확인
+    const existingUsers = await User.countDocuments();
+    if (existingUsers > 0) {
+      return res.status(400).json({
+        success: false,
+        message: '이미 사용자가 존재합니다. 보안상 관리자 생성을 거부합니다.'
+      });
+    }
+
+    // 관리자 사용자 생성
+    const adminUser = new User({
+      username: 'mcwjd',
+      email: 'admin@nodetree.kr',
+      password: 'Mc@@152615', // User 모델에서 자동으로 해싱됨
+      role: 'admin'
+    });
+
+    await adminUser.save();
+
+    const token = jwt.sign(
+      { userId: adminUser._id, username: adminUser.username, role: adminUser.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      success: true,
+      message: '관리자 계정이 생성되었습니다.',
+      token,
+      user: { 
+        id: adminUser._id,
+        username: adminUser.username, 
+        email: adminUser.email, 
+        role: adminUser.role 
+      }
+    });
+
+  } catch (error) {
+    console.error('관리자 생성 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '관리자 생성에 실패했습니다.',
+      error: error.message
+    });
+  }
+});
+
 // 로그아웃
 router.post('/logout', (req, res) => {
   res.json({
