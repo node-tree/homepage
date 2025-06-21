@@ -29,9 +29,14 @@ function AppContent() {
   useEffect(() => {
     const initializeAudio = () => {
       try {
-        const audio = new Audio('/click.wav');
+        // 배포 환경에서 더 안전한 오디오 초기화
+        const isNodeTreeSite = window.location.hostname === 'nodetree.kr' || window.location.hostname === 'www.nodetree.kr';
+        const audioPath = isNodeTreeSite ? 'https://nodetree.kr/click.wav' : '/click.wav';
+        
+        const audio = new Audio(audioPath);
         audio.volume = 0.3;
         audio.preload = 'auto';
+        audio.crossOrigin = 'anonymous'; // CORS 문제 방지
         
         // 오디오 로드 완료 시
         audio.addEventListener('canplaythrough', () => {
@@ -42,6 +47,17 @@ function AppContent() {
         // 오디오 로드 에러 시
         audio.addEventListener('error', (e) => {
           console.log('App 오디오 로드 실패:', e);
+          // 폴백으로 상대 경로 시도
+          if (isNodeTreeSite) {
+            const fallbackAudio = new Audio('/click.wav');
+            fallbackAudio.volume = 0.3;
+            fallbackAudio.preload = 'auto';
+            fallbackAudio.addEventListener('canplaythrough', () => {
+              setAudioElement(fallbackAudio);
+              console.log('App 폴백 오디오 프리로딩 완료');
+            });
+            fallbackAudio.load();
+          }
         });
         
         // 오디오 로드 시작
@@ -57,12 +73,12 @@ function AppContent() {
   // 사용자 첫 상호작용 감지 및 오디오 컨텍스트 활성화
   useEffect(() => {
     const enableAudio = async () => {
-      if (audioInitialized) return;
+      if (audioInitialized || !audioElement) return;
       
       try {
         // HTTPS 체크 (배포 환경에서 중요)
         const isSecureContext = window.isSecureContext || window.location.protocol === 'https:';
-        if (!isSecureContext) {
+        if (!isSecureContext && window.location.hostname !== 'localhost') {
           console.log('HTTPS가 아닌 환경에서는 오디오 기능이 제한될 수 있습니다.');
         }
 
@@ -70,6 +86,7 @@ function AppContent() {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
         if (!AudioContextClass) {
           console.log('이 브라우저는 Web Audio API를 지원하지 않습니다.');
+          setAudioInitialized(true); // 오디오 없이도 계속 진행
           return;
         }
 
@@ -80,25 +97,24 @@ function AppContent() {
         }
         
         // 더미 오디오 재생으로 브라우저 정책 우회
-        if (audioElement) {
-          // 볼륨을 0으로 설정하여 무음으로 테스트
-          const originalVolume = audioElement.volume;
-          audioElement.volume = 0;
-          
+        const originalVolume = audioElement.volume;
+        audioElement.volume = 0;
+        
+        try {
           const playPromise = audioElement.play();
           if (playPromise !== undefined) {
-            playPromise.then(() => {
-              audioElement.pause();
-              audioElement.currentTime = 0;
-              audioElement.volume = originalVolume; // 원래 볼륨 복원
-              setAudioInitialized(true);
-              console.log('App 오디오 컨텍스트 활성화 완료');
-            }).catch((error) => {
-              console.log('App 오디오 활성화 실패:', error);
-              // 실패해도 일단 초기화된 것으로 표시 (폴백 사용)
-              setAudioInitialized(true);
-            });
+            await playPromise;
+            audioElement.pause();
+            audioElement.currentTime = 0;
+            audioElement.volume = originalVolume; // 원래 볼륨 복원
+            setAudioInitialized(true);
+            console.log('App 오디오 컨텍스트 활성화 완료');
           }
+        } catch (playError) {
+          console.log('App 오디오 활성화 실패:', playError);
+          // 실패해도 일단 초기화된 것으로 표시 (폴백 사용)
+          audioElement.volume = originalVolume;
+          setAudioInitialized(true);
         }
       } catch (error) {
         console.log('App 오디오 컨텍스트 생성 실패:', error);
@@ -112,32 +128,63 @@ function AppContent() {
       console.log('App 사용자 첫 상호작용 감지:', event.type);
       enableAudio();
       // 이벤트 리스너 제거 (한 번만 실행)
+      removeEventListeners();
+    };
+
+    const removeEventListeners = () => {
       document.removeEventListener('click', handleFirstInteraction);
       document.removeEventListener('touchstart', handleFirstInteraction);
       document.removeEventListener('touchend', handleFirstInteraction);
       document.removeEventListener('keydown', handleFirstInteraction);
       document.removeEventListener('mousedown', handleFirstInteraction);
+      document.removeEventListener('pointerdown', handleFirstInteraction);
     };
 
-    document.addEventListener('click', handleFirstInteraction, { passive: true });
-    document.addEventListener('touchstart', handleFirstInteraction, { passive: true });
-    document.addEventListener('touchend', handleFirstInteraction, { passive: true });
-    document.addEventListener('keydown', handleFirstInteraction, { passive: true });
-    document.addEventListener('mousedown', handleFirstInteraction, { passive: true });
+    // 더 많은 이벤트 타입 등록
+    document.addEventListener('click', handleFirstInteraction, { passive: true, once: true });
+    document.addEventListener('touchstart', handleFirstInteraction, { passive: true, once: true });
+    document.addEventListener('touchend', handleFirstInteraction, { passive: true, once: true });
+    document.addEventListener('keydown', handleFirstInteraction, { passive: true, once: true });
+    document.addEventListener('mousedown', handleFirstInteraction, { passive: true, once: true });
+    document.addEventListener('pointerdown', handleFirstInteraction, { passive: true, once: true });
 
-    return () => {
-      document.removeEventListener('click', handleFirstInteraction);
-      document.removeEventListener('touchstart', handleFirstInteraction);
-      document.removeEventListener('touchend', handleFirstInteraction);
-      document.removeEventListener('keydown', handleFirstInteraction);
-      document.removeEventListener('mousedown', handleFirstInteraction);
-    };
+    return removeEventListeners;
   }, [audioElement, audioInitialized]);
 
   // 개선된 클릭 사운드 재생 함수
   const playClickSound = useCallback(async () => {
-    if (!audioElement || !audioInitialized) {
-      console.log('App 오디오가 아직 초기화되지 않았습니다.');
+    // 배포 환경에서 추가 체크
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isSecureContext = window.isSecureContext || window.location.protocol === 'https:';
+    
+    if (isProduction && !isSecureContext) {
+      console.log('배포 환경에서는 HTTPS가 필요합니다. 사운드를 재생할 수 없습니다.');
+      return;
+    }
+
+    // 오디오가 초기화되지 않았어도 시도해보기
+    if (!audioElement) {
+      console.log('App 오디오 엘리먼트가 없습니다.');
+      // 폴백으로 새로운 Audio 인스턴스 생성
+      try {
+        const fallbackAudio = new Audio('/click.wav');
+        fallbackAudio.volume = 0.3;
+        
+        // 배포 환경에서는 사용자 제스처가 필요
+        if (isProduction) {
+          // 사용자 제스처 없이는 재생하지 않음
+          fallbackAudio.muted = false;
+        }
+        
+        await fallbackAudio.play();
+        console.log('App 폴백 사운드 재생 성공');
+      } catch (fallbackError) {
+        console.log('App 폴백 사운드 재생 실패:', fallbackError);
+        // 배포 환경에서는 조용히 실패
+        if (!isProduction) {
+          console.warn('사운드 재생 실패, 사용자 상호작용이 필요할 수 있습니다.');
+        }
+      }
       return;
     }
 
@@ -145,6 +192,11 @@ function AppContent() {
       // 현재 재생 중인 사운드 정지
       audioElement.pause();
       audioElement.currentTime = 0;
+      
+      // 배포 환경에서 추가 체크
+      if (isProduction && audioElement.muted) {
+        audioElement.muted = false;
+      }
       
       // 새로운 사운드 재생
       const playPromise = audioElement.play();
@@ -160,12 +212,25 @@ function AppContent() {
       try {
         const fallbackAudio = new Audio('/click.wav');
         fallbackAudio.volume = 0.3;
+        
+        // 배포 환경에서는 더 신중하게
+        if (isProduction) {
+          fallbackAudio.muted = false;
+          // 사용자 제스처 체크
+          if (!document.hasFocus()) {
+            console.log('페이지가 포커스되지 않아 사운드를 재생할 수 없습니다.');
+            return;
+          }
+        }
+        
         await fallbackAudio.play();
+        console.log('App 폴백 사운드 재생 성공');
       } catch (fallbackError) {
         console.log('App 폴백 사운드 재생도 실패:', fallbackError);
+        // 배포 환경에서는 사용자에게 알리지 않음
       }
     }
-  }, [audioElement, audioInitialized]);
+  }, [audioElement]);
 
   // 안정적인 핸들러 함수들 - 컴포넌트 최상위에서 선언
   const handleMouseEnter = useCallback((index: number) => {

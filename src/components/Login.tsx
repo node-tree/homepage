@@ -37,8 +37,13 @@ const Login: React.FC = () => {
     setError(null);
 
     try {
-      // 테스트 계정들 (백엔드 없을 때)
-      const testAccounts = [
+      // 테스트 계정들 (백엔드 없을 때) - 배포 환경에서는 제한
+      const isNodeTreeSite = window.location.hostname === 'nodetree.kr' || window.location.hostname === 'www.nodetree.kr';
+      const testAccounts = isNodeTreeSite ? [
+        // 배포 환경에서는 admin 계정만 허용
+        { username: 'admin', password: 'nodetree2024!', role: 'admin' as const }
+      ] : [
+        // 개발 환경에서는 여러 테스트 계정 허용
         { username: 'admin', password: 'password', role: 'admin' as const },
         { username: 'user', password: '123456', role: 'user' as const },
         { username: 'nodetree', password: 'nodetree2024', role: 'admin' as const }
@@ -70,9 +75,10 @@ const Login: React.FC = () => {
         return;
       }
 
-      // 백엔드 API 시도 (나중에 백엔드 배포 시 사용)
+      // 백엔드 API 시도 - 같은 변수 재사용
       const apiUrl = process.env.REACT_APP_API_URL || 
-        (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api');
+        (isNodeTreeSite ? 'https://nodetree.kr/api' : 
+         process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api');
       
       console.log('로그인 API URL:', apiUrl);
       
@@ -149,6 +155,10 @@ const Login: React.FC = () => {
                 className="form-input"
                 disabled={loading}
                 required
+                autoComplete="username"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
               />
             </div>
 
@@ -165,6 +175,10 @@ const Login: React.FC = () => {
                   disabled={loading}
                   required
                   minLength={6}
+                  autoComplete="current-password"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck="false"
                 />
                 <button
                   type="button"

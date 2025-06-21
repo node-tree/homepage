@@ -126,6 +126,18 @@ const Location: React.FC = () => {
   // 호버된 도시를 추적하는 상태 (버튼 호버용)
   const [hoveredCity, setHoveredCity] = useState<string | null>(null);
 
+  // 지도 중심점을 추적하는 상태 (클릭된 원이 중심이 되도록)
+  const [mapCenter, setMapCenter] = useState({ x: 1000, y: 450 }); // 기본 중심점
+  const [mapScale, setMapScale] = useState(1); // 지도 확대/축소 상태
+  const [isTransitioning, setIsTransitioning] = useState(false); // 애니메이션 진행 상태
+  const [forceUpdate, setForceUpdate] = useState(0); // 강제 리렌더링용
+
+  // selectedCity 변경 시 강제 리렌더링
+  useEffect(() => {
+    console.log(`selectedCity 변경됨: ${selectedCity}`);
+    setForceUpdate(prev => prev + 1);
+  }, [selectedCity]);
+
   // 영상 데이터 상태
   // locationVideos 상태는 더 이상 사용하지 않음
   const [currentVideo, setCurrentVideo] = useState<LocationVideo | null>(null);
@@ -230,58 +242,93 @@ const Location: React.FC = () => {
     };
   }, []);
 
-  // 지도 확대 변환 계산 함수 (모바일 대응)
+  // 지도 3D 변환 계산 함수 (클릭된 도시를 중심으로)
   const getMapTransform = () => {
-    if (!hoveredCity || !svgRef.current) {
-      return 'scale(1) translate(0px, 0px)';
+    console.log(`🗺️ getMapTransform 호출됨 - selectedCity: ${selectedCity}`);
+    
+    // 클릭된 도시가 없으면 기본 상태
+    if (!selectedCity) {
+      console.log(`🗺️ 변환 없음 - selectedCity 없음`);
+      return 'perspective(1000px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1) translate3d(0px, 0px, 0px)';
     }
     
-    const hoveredCityData = cities.find(city => city.name === hoveredCity);
-    if (!hoveredCityData) {
-      return 'scale(1) translate(0px, 0px)';
+    const selectedCityData = cities.find(city => city.name === selectedCity);
+    if (!selectedCityData) {
+      console.log(`🗺️ 도시 데이터 없음: ${selectedCity}`);
+      return 'perspective(1000px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1) translate3d(0px, 0px, 0px)';
     }
     
-    // 확대 비율
-    const scale = 2.5;
-    
-    // SVG의 실제 렌더링 크기 가져오기
-    const rect = svgRef.current.getBoundingClientRect();
-    const svgWidth = rect.width;
-    const svgHeight = rect.height;
+    // 확대 비율 (3D 효과와 함께)
+    const scale = isMobile ? 2.5 : 3.0;
     
     // SVG viewBox 크기 (2000 x 900)
     const viewBoxWidth = 2000;
     const viewBoxHeight = 900;
     
-    // 실제 화면에서의 중심점 계산
-    const centerX = svgWidth / 2;
-    const centerY = svgHeight / 2;
+    // 화면의 중심점 (viewBox 좌표계에서)
+    const centerX = viewBoxWidth / 2;  // 1000
+    const centerY = viewBoxHeight / 2; // 450
     
-    // viewBox 좌표를 실제 화면 좌표로 변환
-    const scaleX = svgWidth / viewBoxWidth;
-    const scaleY = svgHeight / viewBoxHeight;
+    // 선택된 도시를 중심으로 이동할 거리 계산
+    const translateX = centerX - selectedCityData.x;
+    const translateY = centerY - selectedCityData.y;
     
-    // 도시의 실제 화면 좌표
-    const cityScreenX = hoveredCityData.x * scaleX;
-    const cityScreenY = hoveredCityData.y * scaleY;
+    // 3D 효과를 위한 Z축 이동 (앞으로 나오는 효과)
+    const translateZ = isTransitioning ? 200 : 150;
     
-    // 해당 도시를 중심으로 이동할 좌표 계산
-    const translateX = (centerX - cityScreenX) / scale;
-    const translateY = (centerY - cityScreenY) / scale;
+    // 3D 회전 효과 (X, Y, Z축)
+    const rotateX = isTransitioning ? -5 : -2; // 약간 위에서 내려다보는 각도
+    const rotateY = isTransitioning ? Math.sin(Date.now() * 0.001) * 3 : 0; // 좌우 흔들림
+    const rotateZ = isTransitioning ? Math.sin(Date.now() * 0.002) * 1 : 0; // 미세한 회전
     
-    return `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
+    console.log(`🗺️ 3D 지도 변환: ${selectedCity}`);
+    console.log(`🗺️ - 도시 위치: (${selectedCityData.x}, ${selectedCityData.y})`);
+    console.log(`🗺️ - 중심점: (${centerX}, ${centerY})`);
+    console.log(`🗺️ - 이동거리: (${translateX}, ${translateY}, ${translateZ})`);
+    console.log(`🗺️ - 확대: ${scale}x`);
+    console.log(`🗺️ - 3D 회전: X${rotateX}° Y${rotateY.toFixed(1)}° Z${rotateZ.toFixed(1)}°`);
+    
+    return `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg) scale(${scale}) translate3d(${translateX}px, ${translateY}px, ${translateZ}px)`;
   };
 
-  // 도시 클릭 핸들러
+  // 도시 클릭 핸들러 (중심 이동 애니메이션 포함)
   const handleCityClick = (cityName: string) => {
-    setSelectedCity(cityName);
-    console.log(`${cityName} 클릭됨!`);
+    console.log(`🎯 ${cityName} 클릭됨!`);
     
-    // 모바일에서는 지도 확대 애니메이션 완료 후 스크롤, 데스크톱에서는 즉시 스크롤
-    const scrollDelay = isMobile ? 300 : 100;
+    // 애니메이션 시작
+    setIsTransitioning(true);
+    
+    // 같은 도시를 다시 클릭하면 원래 상태로 돌아가기
+    if (selectedCity === cityName) {
+      console.log(`🔄 ${cityName} 선택 해제 - 원래 상태로 복귀`);
+      setSelectedCity(null);
+      setMapCenter({ x: 1000, y: 450 }); // 기본 중심점으로 복귀
+      setMapScale(1);
+    } else {
+      // 새로운 도시 선택
+      console.log(`🎯 ${cityName} 새로 선택 - 중심으로 이동 시작`);
+      setSelectedCity(cityName);
+      const clickedCity = cities.find(city => city.name === cityName);
+      if (clickedCity) {
+        setMapCenter({ x: clickedCity.x, y: clickedCity.y });
+        setMapScale(isMobile ? 2.5 : 3.0);
+        console.log(`📍 중심점 설정: (${clickedCity.x}, ${clickedCity.y}), 확대: ${isMobile ? 2.5 : 3.0}x`);
+      }
+    }
+    
+    // 애니메이션 완료 후 처리
     setTimeout(() => {
-      scrollToCityInfo();
-    }, scrollDelay);
+      setIsTransitioning(false);
+      console.log(`✅ ${cityName} 애니메이션 완료`);
+      
+      // 새로운 도시가 선택된 경우에만 스크롤
+      if (selectedCity !== cityName) {
+        const scrollDelay = isMobile ? 200 : 50;
+        setTimeout(() => {
+          scrollToCityInfo();
+        }, scrollDelay);
+      }
+    }, isMobile ? 800 : 600); // 애니메이션 시간을 더 길게
   };
 
   // 이동하기 버튼 클릭 핸들러
@@ -347,7 +394,7 @@ const Location: React.FC = () => {
       </h1>
       
             
-      {/* 지도 영역 - 오른쪽으로 이동 */}
+      {/* 지도 영역 - 3D 변환 지원 */}
       <div className="location-map-container location-map-desktop-offset" style={{ 
         display: 'flex', 
         justifyContent: 'flex-end', // 오른쪽 정렬로 변경
@@ -355,7 +402,9 @@ const Location: React.FC = () => {
         width: '100%', 
         overflow: 'hidden',
         paddingRight: '300px', // 오른쪽 여백을 더 늘림
-        marginLeft: 'auto' // 추가: 왼쪽 마진 자동
+        marginLeft: 'auto', // 추가: 왼쪽 마진 자동
+        perspective: '1000px', // 3D 원근감 추가
+        transformStyle: 'preserve-3d' // 3D 변환 유지
       }}>
         <svg 
           ref={svgRef}
@@ -366,7 +415,13 @@ const Location: React.FC = () => {
           style={{ 
             backgroundColor: '#ffffff', 
             transform: getMapTransform(),
-            transition: isMobile ? 'transform 0.25s ease-out' : 'transform 0.1s ease-in-out'
+            transformStyle: 'preserve-3d', // 3D 변환 유지
+            backfaceVisibility: 'visible', // 뒷면도 보이게
+            transition: isTransitioning 
+              ? (isMobile ? 'transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)')
+              : (isMobile ? 'transform 0.25s ease-out' : 'transform 0.1s ease-in-out'),
+            boxShadow: selectedCity ? '0 20px 40px rgba(0,0,0,0.3)' : '0 5px 15px rgba(0,0,0,0.1)', // 3D 그림자 효과
+            borderRadius: '8px' // 모서리 둥글게
           }}
         >
           {/* 격자 배경 */}
@@ -383,46 +438,93 @@ const Location: React.FC = () => {
           {/* 도시 점과 라벨 */}
           {cities.map((city, index) => (
             <g key={city.name}>
+              {/* 선택된 도시 주변의 펄스 효과 */}
+              {selectedCity === city.name && (
+                <motion.circle
+                  cx={city.x}
+                  cy={city.y}
+                  r="15"
+                  fill="none"
+                  stroke="#ff6b6b"
+                  strokeWidth="2"
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{
+                    scale: [0, 1.5, 2],
+                    opacity: [0, 0.8, 0],
+                    strokeWidth: [2, 1, 0]
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeOut"
+                  }}
+                />
+              )}
               <motion.circle
                 cx={city.x}
                 cy={city.y}
                 r={city.name === '부여' ? "8" : "5"}
-                fill="#000000"
+                fill={selectedCity === city.name ? "#ff6b6b" : "#000000"} // 선택된 원은 빨간색
                 initial={{ scale: 1 }}
-                animate={isMobile ? {
-                  // 모바일에서는 단순한 애니메이션만
-                  scale: hoveredCity === city.name ? 1.3 : 1,
-                  opacity: hoveredCity === city.name ? [1, 0.4, 1] : 1
-                } : {
-                  // 데스크톱에서는 복잡한 애니메이션
-                  scale: hoveredCity === city.name ? [1, 1.5, 1] : [1, 1.1, 1],
-                  x: [0, Math.sin(index * 0.7) * 2.5, 0],
-                  y: [0, Math.cos(index * 0.7) * 2.5, 0],
-                  opacity: hoveredCity === city.name ? [1, 0.2, 1, 0.2, 1, 0.2, 1] : 1
-                }}
-                whileHover={isMobile ? {} : {
+                animate={
+                  selectedCity === city.name ? {
+                    // 선택된 도시는 특별한 3D 애니메이션
+                    scale: [1, 1.4, 1.2],
+                    opacity: [1, 0.8, 1],
+                    fill: ["#ff6b6b", "#ff8e8e", "#ff6b6b"]
+                  } : isMobile ? {
+                    // 모바일에서는 단순한 애니메이션만
+                    scale: hoveredCity === city.name ? 1.3 : 1,
+                    opacity: hoveredCity === city.name ? [1, 0.4, 1] : 1
+                  } : {
+                    // 데스크톱에서는 복잡한 애니메이션
+                    scale: hoveredCity === city.name ? [1, 1.5, 1] : [1, 1.1, 1],
+                    x: [0, Math.sin(index * 0.7) * 2.5, 0],
+                    y: [0, Math.cos(index * 0.7) * 2.5, 0],
+                    opacity: hoveredCity === city.name ? [1, 0.2, 1, 0.2, 1, 0.2, 1] : 1
+                  }
+                }
+                whileHover={selectedCity === city.name ? {
+                  scale: 1.3,
+                  fill: "#ff4757"
+                } : isMobile ? {} : {
                   scale: 1.5,
                   opacity: [1, 0.05, 1, 0.02, 1, 0.08, 1, 0.03, 1],
                 }}
-                whileTap={{ scale: 0.9 }}
-                transition={isMobile ? {
-                  // 모바일에서는 빠르고 단순한 전환
-                  duration: 0.2,
-                  ease: "easeOut"
-                } : {
-                  // 데스크톱에서는 복잡한 전환
-                  duration: hoveredCity === city.name ? 0.8 : 4 + index * 0.3,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  delay: hoveredCity === city.name ? 0 : index * 0.15,
-                  opacity: { 
-                    duration: hoveredCity === city.name ? 0.5 : 1.2, 
+                whileTap={{ scale: 0.8 }}
+                transition={
+                  selectedCity === city.name ? {
+                    // 선택된 도시는 부드러운 전환
+                    duration: 1.0,
                     repeat: Infinity,
                     ease: "easeInOut"
-                  },
-                  hover: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+                  } : isMobile ? {
+                    // 모바일에서는 빠르고 단순한 전환
+                    duration: 0.2,
+                    ease: "easeOut"
+                  } : {
+                    // 데스크톱에서는 복잡한 전환
+                    duration: hoveredCity === city.name ? 0.8 : 4 + index * 0.3,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: hoveredCity === city.name ? 0 : index * 0.15,
+                    opacity: { 
+                      duration: hoveredCity === city.name ? 0.5 : 1.2, 
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    },
+                    hover: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+                  }
+                }
+                style={{ 
+                  cursor: 'pointer',
+                  // 3D 효과: 선택된 원은 Z축으로 앞으로 나오고 그림자 효과
+                  filter: selectedCity === city.name 
+                    ? 'drop-shadow(0 15px 25px rgba(255, 107, 107, 0.5)) drop-shadow(0 5px 10px rgba(255, 107, 107, 0.3))' 
+                    : 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+                  transformOrigin: 'center',
+                  transition: 'filter 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
                 }}
-                style={{ cursor: 'pointer' }}
                 onClick={() => handleCityClick(city.name)}
                 onUpdate={isMobile ? undefined : (latest) => {
                   // 모바일에서는 onUpdate 비활성화로 성능 향상
@@ -440,20 +542,32 @@ const Location: React.FC = () => {
                 x={city.x}
                 y={city.y - 20}
                 textAnchor="middle"
-                fontSize="13"
-                fontWeight="500"
-                fill="#666666"
+                fontSize={selectedCity === city.name ? "15" : "13"}
+                fontWeight={selectedCity === city.name ? "700" : "500"}
+                fill={selectedCity === city.name ? "#ff6b6b" : "#666666"}
                 fontFamily="Arial, sans-serif"
-                animate={isMobile ? {} : {
-                  x: [0, Math.sin(index * 0.7) * 2.5, 0],
-                  y: [0, Math.cos(index * 0.7) * 2.5, 0]
-                }}
-                transition={isMobile ? {} : {
-                  duration: 4 + index * 0.3,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  delay: index * 0.15
-                }}
+                animate={
+                  selectedCity === city.name ? {
+                    // 선택된 도시 텍스트 애니메이션
+                    scale: [1, 1.1, 1],
+                    fill: ["#ff6b6b", "#ff4757", "#ff6b6b"]
+                  } : isMobile ? {} : {
+                    x: [0, Math.sin(index * 0.7) * 2.5, 0],
+                    y: [0, Math.cos(index * 0.7) * 2.5, 0]
+                  }
+                }
+                transition={
+                  selectedCity === city.name ? {
+                    duration: 1.5,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  } : isMobile ? {} : {
+                    duration: 4 + index * 0.3,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: index * 0.15
+                  }
+                }
               >
                 {city.name}
               </motion.text>
@@ -461,20 +575,32 @@ const Location: React.FC = () => {
                 x={city.x}
                 y={city.y + 35}
                 textAnchor="middle"
-                fontSize="10"
-                fill="#999999"
+                fontSize={selectedCity === city.name ? "11" : "10"}
+                fill={selectedCity === city.name ? "#ff6b6b" : "#999999"}
                 fontFamily="Arial, sans-serif"
-                fontWeight="400"
-                animate={isMobile ? {} : {
-                  x: [0, Math.sin(index * 0.7) * 2.5, 0],
-                  y: [0, Math.cos(index * 0.7) * 2.5, 0]
-                }}
-                transition={isMobile ? {} : {
-                  duration: 4 + index * 0.3,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  delay: index * 0.15
-                }}
+                fontWeight={selectedCity === city.name ? "500" : "400"}
+                animate={
+                  selectedCity === city.name ? {
+                    // 선택된 도시 좌표 텍스트 애니메이션
+                    opacity: [0.8, 1, 0.8],
+                    fill: ["#ff6b6b", "#ff8e8e", "#ff6b6b"]
+                  } : isMobile ? {} : {
+                    x: [0, Math.sin(index * 0.7) * 2.5, 0],
+                    y: [0, Math.cos(index * 0.7) * 2.5, 0]
+                  }
+                }
+                transition={
+                  selectedCity === city.name ? {
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  } : isMobile ? {} : {
+                    duration: 4 + index * 0.3,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: index * 0.15
+                  }
+                }
               >
                 {city.lat.toFixed(2)}°, {city.lng.toFixed(2)}°
               </motion.text>
@@ -503,11 +629,16 @@ const Location: React.FC = () => {
               ease: "easeOut"
             } : {}}
             style={{
-              backgroundColor: selectedCity === city.name ? '#000000' : '#ffffff',
+              backgroundColor: selectedCity === city.name ? '#ff6b6b' : '#ffffff',
               color: selectedCity === city.name ? '#ffffff' : '#000000',
-              border: hoveredCity === city.name ? '3px solid #000000' : '2px solid #cccccc',
+              border: selectedCity === city.name 
+                ? '3px solid #ff6b6b' 
+                : hoveredCity === city.name 
+                  ? '3px solid #000000' 
+                  : '2px solid #cccccc',
               fontSize: '9px',
-              letterSpacing: city.name === 'node tree' ? '-3px' : '-2px'
+              letterSpacing: city.name === 'node tree' ? '-3px' : '-2px',
+              boxShadow: selectedCity === city.name ? '0 0 10px rgba(255, 107, 107, 0.3)' : 'none'
             }}
           >
             {index + 1}
