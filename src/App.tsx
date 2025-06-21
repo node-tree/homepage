@@ -31,7 +31,7 @@ function AppContent() {
       try {
         // 배포 환경에서 더 안전한 오디오 초기화
         const isNodeTreeSite = window.location.hostname === 'nodetree.kr' || window.location.hostname === 'www.nodetree.kr';
-        const audioPath = isNodeTreeSite ? 'https://nodetree.kr/click.wav' : '/click.wav';
+        const audioPath = isNodeTreeSite ? '/click.wav' : '/click.wav';
         
         const audio = new Audio(audioPath);
         audio.volume = 0.3;

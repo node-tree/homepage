@@ -35,6 +35,14 @@
       "dest": "/robots.txt"
     },
     {
+      "src": "/click.wav",
+      "dest": "/click.wav"
+    },
+    {
+      "src": "/click02.wav",
+      "dest": "/click02.wav"
+    },
+    {
       "src": "/(.*)",
       "dest": "/index.html"
     }
