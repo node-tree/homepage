@@ -171,12 +171,111 @@ function Scene3D({
 }) {
   const { camera } = useThree();
   const [cityPositions, setCityPositions] = useState<Map<string, THREE.Vector3>>(new Map());
+  const controlsRef = useRef<any>(null);
 
   useEffect(() => {
     // 카메라 초기 위치 설정
     camera.position.set(0, 5, 10);
     camera.lookAt(0, 0, 0);
   }, [camera]);
+
+  // 선택된 도시로 카메라 이동
+  useEffect(() => {
+    if (controlsRef.current) {
+      if (selectedCity) {
+        // 도시가 선택된 경우 - 해당 도시로 이동
+        const selectedCityData = cities.find(city => city.name === selectedCity);
+        if (selectedCityData) {
+          console.log(`🎯 ${selectedCity} 선택됨 - 카메라 이동 시작`);
+          
+          // 선택된 도시 위치로 카메라 이동 (3D 좌표 사용)
+          const targetPosition = new THREE.Vector3(
+            selectedCityData.x,
+            selectedCityData.y + 2, // 도시 위에서 내려다보도록
+            selectedCityData.z + 3  // 적절한 거리 유지
+          );
+          
+          const lookAtTarget = new THREE.Vector3(
+            selectedCityData.x,
+            selectedCityData.y,
+            selectedCityData.z
+          );
+          
+          // 카메라 이동 애니메이션
+          const startPosition = camera.position.clone();
+          const startTarget = controlsRef.current.target.clone();
+          const startTime = Date.now();
+          const duration = 1500; // 1.5초 애니메이션
+          
+          const animateCamera = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // easeInOutCubic 이징 함수
+            const easeProgress = progress < 0.5 
+              ? 4 * progress * progress * progress
+              : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+            
+            // 카메라 위치 보간
+            camera.position.lerpVectors(startPosition, targetPosition, easeProgress);
+            
+            // 타겟 위치 보간
+            const currentTarget = new THREE.Vector3();
+            currentTarget.lerpVectors(startTarget, lookAtTarget, easeProgress);
+            controlsRef.current.target.copy(currentTarget);
+            controlsRef.current.update();
+            
+            if (progress < 1) {
+              requestAnimationFrame(animateCamera);
+            } else {
+              console.log(`🗺️ ${selectedCity} 카메라 이동 완료`);
+            }
+          };
+          
+          requestAnimationFrame(animateCamera);
+        }
+      } else {
+        // 도시 선택 해제된 경우 - 원래 위치로 복귀
+        console.log(`🔄 원래 위치로 복귀 시작`);
+        
+        const originalPosition = new THREE.Vector3(0, 5, 10);
+        const originalTarget = new THREE.Vector3(0, 0, 0);
+        
+        // 카메라 복귀 애니메이션
+        const startPosition = camera.position.clone();
+        const startTarget = controlsRef.current.target.clone();
+        const startTime = Date.now();
+        const duration = 1200; // 1.2초 애니메이션
+        
+        const animateCamera = () => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          
+          // easeInOutCubic 이징 함수
+          const easeProgress = progress < 0.5 
+            ? 4 * progress * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+          
+          // 카메라 위치 보간
+          camera.position.lerpVectors(startPosition, originalPosition, easeProgress);
+          
+          // 타겟 위치 보간
+          const currentTarget = new THREE.Vector3();
+          currentTarget.lerpVectors(startTarget, originalTarget, easeProgress);
+          controlsRef.current.target.copy(currentTarget);
+          controlsRef.current.update();
+          
+          if (progress < 1) {
+            requestAnimationFrame(animateCamera);
+          } else {
+            console.log(`🗺️ 원래 위치 복귀 완료`);
+          }
+        };
+        
+        requestAnimationFrame(animateCamera);
+      }
+    }
+  }, [selectedCity, cities, camera]);
 
   // 도시 위치 업데이트 핸들러
   const handlePositionUpdate = useCallback((cityName: string, position: THREE.Vector3) => {
@@ -227,6 +326,7 @@ function Scene3D({
 
       {/* 카메라 컨트롤 */}
       <OrbitControls
+        ref={controlsRef}
         enablePan={true}
         enableZoom={true}
         enableRotate={true}
@@ -439,6 +539,8 @@ const Location3D: React.FC = () => {
 
   // 도시 클릭 핸들러
   const handleCityClick = (cityName: string) => {
+    console.log(`🎯 ${cityName} 클릭됨! - 3D 카메라 이동 시작`);
+    
     // 클릭 사운드 재생
     playClickSound();
     
@@ -447,8 +549,13 @@ const Location3D: React.FC = () => {
       setCurrentVideo(null);
     }
     
-    setSelectedCity(cityName);
-    console.log(`${cityName} 클릭됨!`);
+    // 같은 도시를 다시 클릭하면 원래 위치로 복귀
+    if (selectedCity === cityName) {
+      setSelectedCity(null);
+      console.log(`🔄 ${cityName} 선택 해제 - 원래 위치로 복귀`);
+    } else {
+      setSelectedCity(cityName);
+    }
     
     setTimeout(() => {
       scrollToCityInfo();
