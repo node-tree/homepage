@@ -20,30 +20,28 @@ interface WorkProps {
 const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
   const { isAuthenticated } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showWritePost, setShowWritePost] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const loadPosts = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const response = await workAPI.getAllPosts();
-      
-      if (response.success && response.data) {
+      if (response.success) {
         setPosts(response.data);
-        onPostsLoaded?.(response.data.length);
+        if (onPostsLoaded) {
+          onPostsLoaded(response.data.length);
+        }
       } else {
-        setPosts([]);
-        onPostsLoaded?.(0);
+        setError(response.message);
       }
     } catch (err) {
-      console.error('Work 데이터 로드 오류:', err);
-      setError('데이터를 불러오는데 실패했습니다. 서버 연결을 확인해주세요.');
-      setPosts([]);
-      onPostsLoaded?.(0);
+      setError('글을 불러오는데 실패했습니다.');
+      console.error('Work 로딩 오류:', err);
     } finally {
       setLoading(false);
     }
@@ -73,7 +71,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
   };
 
   const handleDeletePost = async (post: Post) => {
-    if (window.confirm(`"${post.title}" 글을 정말 삭제하시겠습니까?`)) {
+    if (window.confirm(`"${post.title}" 작품을 정말 삭제하시겠습니까?`)) {
       try {
         const response = await workAPI.deletePost(post.id);
         if (response.success) {
@@ -82,8 +80,8 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
           loadPosts(); // 목록 새로고침
         }
       } catch (err) {
-        console.error('글 삭제 오류:', err);
-        alert(err instanceof Error ? err.message : '글 삭제에 실패했습니다.');
+        console.error('작품 삭제 오류:', err);
+        alert(err instanceof Error ? err.message : '작품 삭제에 실패했습니다.');
       }
     }
   };
@@ -199,9 +197,23 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
 
   return (
     <div className="page-content">
+      <div className="page-header">
       <h1 className="page-title">
-        WORK
-        <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>프로젝트와 작업들을 공유합니다</div>
+        ART WORK
+        <motion.div 
+            className="page-subtitle-container"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6, duration: 1 }}
+          ></motion.div>
+        <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>서사적 과정의 매개물 - 생성, 감응, 재구성의 현장
+        <br />
+        <br />
+        'Art Work'은 NODE TREE의 리서치, 수집, 기록, 관계, 재구성의 복합적 흐름 속에서 생성된  <br />
+        서사적 매개물의 카테고리이다. 다양한 관계와 감응이 축적되고, 서사가 응축되는 특정한 순간을 <br />
+        시각적‧청각적‧공간적 형식으로 구성한 장면들을 소개한다.
+
+        </div>
       </h1>
       
       <div className="work-container">
@@ -230,7 +242,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
             >
               ⟳
             </motion.div>
-            <p>포스트를 불러오는 중...</p>
+            <p>작품을 불러오는 중...</p>
           </div>
         )}
 
@@ -255,8 +267,8 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
-            <p>MongoDB에서 데이터를 불러왔지만 아직 글이 없습니다.</p>
-            <p>새 글을 작성해보세요!</p>
+            <p>아직 작품이 없습니다.</p>
+            <p>새 작품을 등록해보세요!</p>
           </motion.div>
         )}
 
@@ -287,6 +299,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 };

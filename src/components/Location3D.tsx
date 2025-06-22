@@ -208,6 +208,7 @@ function Scene3D({
           const duration = 1500; // 1.5초 애니메이션
           
           const animateCamera = () => {
+            if (!controlsRef.current) return;
             const elapsed = Date.now() - startTime;
             const progress = Math.min(elapsed / duration, 1);
             
@@ -248,6 +249,7 @@ function Scene3D({
         const duration = 1200; // 1.2초 애니메이션
         
         const animateCamera = () => {
+          if (!controlsRef.current) return;
           const elapsed = Date.now() - startTime;
           const progress = Math.min(elapsed / duration, 1);
           
@@ -631,9 +633,23 @@ const Location3D: React.FC = () => {
 
   return (
     <div className="page-content">
+      <div className="page-header">
       <h1 className="page-title">
-        LOCATION
-        <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>NODE TREE의 이동 경로</div>
+        CROSS CITY
+        <motion.div 
+          className="page-subtitle-container"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6, duration: 1 }}
+        >
+          <div className="page-subtitle">서사 교차점의 기록장소 <br /> 
+          <br />
+        'Cross City'는 NODE TREE가 리서치를 진항하며 <br />
+        도착한 도시들을 기록하는 카테고리로, <br />
+        단순한 지리적 이동이 아닌 서사가 교차하고 <br />
+        축적된 장소들을 의미한다.
+          </div>
+        </motion.div>
       </h1>
       
       {/* 3D 지도 영역 */}
@@ -843,6 +859,7 @@ const Location3D: React.FC = () => {
           </motion.button>
         )}
       </AnimatePresence>
+    </div>
     </div>
   );
 };

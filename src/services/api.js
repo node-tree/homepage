@@ -125,9 +125,33 @@ export const filedAPI = {
   }
 };
 
-const api = {
-  work: workAPI,
-  filed: filedAPI
+// About API
+export const aboutAPI = {
+  getAbout: async () => {
+    const response = await fetch(`${API_BASE_URL}/about`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch about content');
+    }
+    return response.json();
+  },
+
+  updateAbout: async (aboutData) => {
+    const response = await fetch(`${API_BASE_URL}/about`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(aboutData)
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update about content');
+    }
+    return response.json();
+  }
 };
 
-export default api; 
+const api = {
+  work: workAPI,
+  filed: filedAPI,
+  about: aboutAPI
+};
+
+export default api;
