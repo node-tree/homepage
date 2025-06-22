@@ -366,10 +366,20 @@ const About: React.FC = () => {
   if (isLoading) {
     return (
       <div className="page-content">
-        <h1 className="page-title">
-          ABOUT
-          <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>NODE TREE에 대하여</div>
-        </h1>
+        <div className="page-header">
+          <h1 className="page-title">
+            ABOUT
+            <motion.div 
+              className="page-subtitle-container"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6, duration: 1 }}
+            ></motion.div>
+            <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>노드 트리(NODE TREE)
+              
+            </div>
+          </h1>
+        </div>
         <div style={{ textAlign: 'center', padding: '2rem' }}>
           <p>로딩 중...</p>
         </div>
@@ -379,10 +389,20 @@ const About: React.FC = () => {
 
   return (
     <div className="page-content">
-      <h1 className="page-title">
-        ABOUT
-        <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>NODE TREE에 대하여</div>
-      </h1>
+      <div className="page-header">
+        <h1 className="page-title">
+          ABOUT
+          <motion.div 
+            className="page-subtitle-container"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6, duration: 1 }}
+          ></motion.div>
+          <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>노드 트리(NODE TREE)
+            
+          </div>
+        </h1>
+      </div>
       
       {/* 편집 버튼 - Work 페이지와 동일한 스타일로 오른쪽 정렬 */}
       {isAuthenticated && !isEditing && (

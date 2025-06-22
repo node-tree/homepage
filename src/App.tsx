@@ -8,6 +8,7 @@ import Human from './components/Human';
 import About from './components/About';
 import Work from './components/Work';
 import Filed from './components/Filed';
+import CV from './components/CV';
 import Popup from './components/Popup';
 import LocationVideoSettings from './components/LocationVideoSettings';
 
@@ -272,11 +273,12 @@ function AppContent() {
   const currentPath = window.location.pathname;
   
   const circles = [
-    { id: 1, text: 'LOCATION', delay: 0, page: 'LOCATION' },
-    { id: 2, text: 'HUMAN', delay: 0.1, page: 'HUMAN' },
+    { id: 1, text: 'CROSS CITY', delay: 0, page: 'LOCATION' },
+    { id: 2, text: 'ART NETWORK', delay: 0.1, page: 'HUMAN' },
     { id: 3, text: 'NODE TREE', delay: 0.2, page: 'ABOUT' },
-    { id: 4, text: 'WORK', delay: 0.3, page: 'WORK' },
-    { id: 5, text: 'FIELD', delay: 0.4, page: 'FILED' }
+    { id: 4, text: 'ART WORK', delay: 0.3, page: 'WORK' },
+    { id: 5, text: 'COMMONS', delay: 0.4, page: 'FILED' },
+    { id: 6, text: 'CV', delay: 0.5, page: 'CV' }
   ];
 
   useEffect(() => {
@@ -360,10 +362,10 @@ function AppContent() {
         return { x: 0, y: 0, scale: 1 }; // 완전히 중앙에 위치
       case 1: // 메뉴 상태: 가로로 펼쳐짐 (중간) - 모바일 반응형 적용
         const menuPositions = isSmallMobile 
-          ? [-140, -70, 0, 70, 140] // 소형 모바일에서 간격 약간 증가
+          ? [-175, -105, -35, 35, 105, 175] // 소형 모바일에서 6개 원 간격
           : isMobile 
-          ? [-180, -90, 0, 90, 180] // 모바일에서 간격 약간 증가
-          : [-400, -200, 0, 200, 400]; // 데스크탑 간격 유지
+          ? [-225, -135, -45, 45, 135, 225] // 모바일에서 6개 원 간격
+          : [-500, -300, -100, 100, 300, 500]; // 데스크탑 6개 원 간격
         const menuScale = isSmallMobile ? 0.7 : isMobile ? 0.8 : 1; // 메뉴 상태에서 모바일 스케일 조정
         const result = { x: menuPositions[index], y: 0, scale: menuScale };
         console.log(`메뉴 상태 - index ${index}, 계산된 위치:`, result);
@@ -371,10 +373,10 @@ function AppContent() {
       case 2: // 페이지 상태: 작아지며 상단으로 (모든 페이지 공통)
         // 화면 크기에 따라 간격 조정
         const pagePositions = isSmallMobile 
-          ? [-120, -60, 0, 60, 120] // 소형 모바일에서 간격 대폭 확대
+          ? [-150, -90, -30, 30, 90, 150] // 소형 모바일에서 6개 원 간격
           : isMobile 
-          ? [-160, -80, 0, 80, 160] // 모바일에서 간격 대폭 확대
-          : [-280, -140, 0, 140, 280]; // 데스크톱에서는 기존 간격
+          ? [-200, -120, -40, 40, 120, 200] // 모바일에서 6개 원 간격
+          : [-350, -210, -70, 70, 210, 350]; // 데스크톱에서 6개 원 간격
         const mobileScale = isSmallMobile ? 0.45 : isMobile ? 0.35 : 0.23; // 화면 크기별 스케일
         
         // y축 위치도 화면 크기에 따라 조정 - 원들을 아래로 내림
@@ -398,17 +400,22 @@ function AppContent() {
   };
 
   const renderPageContent = () => {
-    switch(currentPage) {
+    if (!currentPage) return null;
+
+    switch (currentPage.toUpperCase()) {
       case 'LOCATION':
+      case 'LOCATION3D':
         return <Location3D />;
       case 'HUMAN':
         return <Human />;
       case 'ABOUT':
         return <About />;
       case 'WORK':
-        return <Work onPostsLoaded={handlePostsLoaded} />;
+        return <Work />;
       case 'FILED':
-        return <Filed onPostsLoaded={handlePostsLoaded} />;
+        return <Filed />;
+      case 'CV':
+        return <CV />;
       case 'LOCATION_SETTINGS':
         return <LocationVideoSettings />;
       default:
@@ -538,7 +545,7 @@ function AppContent() {
                   }
                 }}
                 style={{
-                  // 모바일에서 첫 페이지(step 0)에서만 NODE TREE가 아닌 원들을 숨김
+                  // 모바일에서 첫 페이지(step 0)에서만 NODE TREE가 아닌 원들을 숨김 (index 2가 NODE TREE)
                   display: currentStep === 0 && (isMobile || isSmallMobile) && index !== 2 ? 'none' : 'block'
                 }}
                 onClick={() => {

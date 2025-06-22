@@ -7,7 +7,7 @@
     "node": "18.x"
   },
   "dependencies": {
-    "@react-three/drei": "^10.2.0",
+    "@react-three/drei": "^10.3.0",
     "@react-three/fiber": "^9.1.2",
     "@types/node": "^16.18.126",
     "@types/react": "^19.1.6",

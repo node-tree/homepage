@@ -197,9 +197,23 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
 
   return (
     <div className="page-content">
+      <div className="page-header">
       <h1 className="page-title">
-        FIELD
-        <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>연구와 기록들을 정리합니다</div>
+        COMMONS
+        <motion.div 
+            className="page-subtitle-container"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6, duration: 1 }}
+          ></motion.div>
+        <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>소리·기억·관계로 이루어진 감각적 자산
+        <br />
+        <br />
+        NODE TREE는 예술을 개인의 소유가 아닌, 관계와 감응 속에서 함께 만들어가는 공공의 장으로   <br />
+        실천한다. 이 카테고리는 마을 주민·농부·청소년 등 다양한 존재가 예술의 주체로 참여해 구축해 온  <br />
+        창작 커먼즈의 기록이다.
+
+        </div>
       </h1>
       
       <div className="filed-container">
@@ -285,6 +299,7 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 };
