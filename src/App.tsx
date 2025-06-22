@@ -263,12 +263,6 @@ function AppContent() {
     });
   }, [playClickSound]); // playClickSound 의존성 추가
 
-  // MongoDB에서 로드된 포스트 처리 - useCallback으로 메모화
-  const handlePostsLoaded = useCallback((count: number) => {
-    // 포스트 수 업데이트 처리
-    console.log(`총 ${count}개의 포스트가 로드되었습니다.`);
-  }, []);
-
   // URL 경로 확인
   const currentPath = window.location.pathname;
   
