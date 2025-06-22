@@ -416,271 +416,173 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
 
   // 이미지 갤러리 삽입 (같은 행에 여러 이미지)
   const insertImageGallery = () => {
-    const urls = prompt('이미지 URL들을 쉼표로 구분하여 입력하세요:');
-    if (urls && urls.trim() && editorRef.current) {
-      const urlArray = urls.split(',').map(url => url.trim()).filter(url => url);
-      
-      if (urlArray.length === 0) {
-        alert('올바른 이미지 URL을 입력해주세요.');
-        return;
+    if (!useRichEditor || !editorRef.current) return;
+
+    const videoUrl = prompt("영상 URL을 입력하세요 (YouTube, Vimeo, 또는 직접 비디오 파일):");
+    if (!videoUrl || !videoUrl.trim()) return;
+
+    const cleanUrl = videoUrl.trim();
+    let videoElement = '';
+
+    // YouTube URL 처리
+    if (cleanUrl.includes('youtube.com/watch') || cleanUrl.includes('youtu.be/')) {
+      let videoId = '';
+      if (cleanUrl.includes('youtube.com/watch')) {
+        const urlParams = new URLSearchParams(cleanUrl.split('?')[1]);
+        videoId = urlParams.get('v') || '';
+      } else if (cleanUrl.includes('youtu.be/')) {
+        videoId = cleanUrl.split('youtu.be/')[1].split('?')[0];
       }
       
-      // 현재 선택 영역 가져오기
-      const selection = window.getSelection();
-      let range;
-      
-      if (selection && selection.rangeCount > 0) {
-        range = selection.getRangeAt(0);
-      } else {
-        // 선택 영역이 없으면 에디터 끝에 삽입
-        range = document.createRange();
-        range.selectNodeContents(editorRef.current);
-        range.collapse(false);
+      if (videoId) {
+        videoElement = `<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 1rem 0;">
+          <iframe 
+            src="https://www.youtube.com/embed/${videoId}" 
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" 
+            frameborder="0" 
+            allowfullscreen>
+          </iframe>
+        </div>`;
       }
+    }
+    // Vimeo URL 처리
+    else if (cleanUrl.includes('vimeo.com/')) {
+      const videoId = cleanUrl.split('vimeo.com/')[1].split('?')[0];
+      if (videoId) {
+        videoElement = `<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 1rem 0;">
+          <iframe 
+            src="https://player.vimeo.com/video/${videoId}" 
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" 
+            frameborder="0" 
+            allowfullscreen>
+          </iframe>
+        </div>`;
+      }
+    }
+    // 직접 비디오 파일 (.mp4, .webm, .ogg)
+    else if (cleanUrl.match(/\.(mp4|webm|ogg)(\?.*)?$/i)) {
+      videoElement = `<div style="margin: 1rem 0;">
+        <video 
+          controls 
+          style="width: 100%; max-width: 100%; height: auto;"
+          src="${cleanUrl}">
+          브라우저가 비디오 태그를 지원하지 않습니다.
+        </video>
+      </div>`;
+    }
+    else {
+      alert('지원되는 영상 형식이 아닙니다.\n\n지원 형식:\n- YouTube (youtube.com, youtu.be)\n- Vimeo (vimeo.com)\n- 직접 비디오 파일 (.mp4, .webm, .ogg)');
+      return;
+    }
+
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
       
-      // 갤러리 컨테이너 생성
-      const galleryDiv = document.createElement('div');
-      galleryDiv.style.cssText = 'display: flex; flex-wrap: wrap; gap: 10px; margin: 20px auto; justify-content: center; max-width: 100%;';
+      // 현재 위치에 비디오 삽입
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = videoElement;
+      const videoNode = tempDiv.firstChild;
       
-      // 각 이미지 추가
-      urlArray.forEach(url => {
-        const img = document.createElement('img');
-        img.src = url;
-        img.alt = '갤러리 이미지';
-        img.style.cssText = 'flex: 1; min-width: 200px; max-width: 300px; height: auto; border-radius: 8px; object-fit: cover; cursor: pointer;';
-        img.contentEditable = 'false'; // 이미지 자체는 편집 불가
-        img.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          // 기존 선택 해제
-          const prevSelected = editorRef.current?.querySelector('img[data-selected="true"]');
-          if (prevSelected) {
-            prevSelected.removeAttribute('data-selected');
-            (prevSelected as HTMLImageElement).style.outline = '';
-          }
-          
-          // 현재 이미지 선택
-          img.setAttribute('data-selected', 'true');
-          img.style.outline = '2px solid #007bff';
-          
-          // 이미지를 선택 영역으로 설정
-          const range = document.createRange();
-          const selection = window.getSelection();
-          range.selectNode(img);
-          selection?.removeAllRanges();
-          selection?.addRange(range);
-        });
-        galleryDiv.appendChild(img);
-      });
-      
-      // 갤러리를 중앙정렬하는 p 태그로 감싸기
-      const galleryContainer = document.createElement('p');
-      galleryContainer.style.textAlign = 'center';
-      galleryContainer.appendChild(galleryDiv);
-      
-      // 갤러리 다음에 올 새로운 p 태그 생성
-      const newP = document.createElement('p');
-      newP.innerHTML = '<br>';
-      
-      // 현재 위치에 갤러리 컨테이너와 새 p 태그 삽입
-      range.deleteContents();
-      range.insertNode(newP);
-      range.insertNode(galleryContainer);
-      
-      // 커서를 새 p 태그 안으로 이동
-      range.setStart(newP, 0);
-      range.setEnd(newP, 0);
-      
-      // 선택 영역 업데이트
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-      
-      // HTML 콘텐츠 업데이트
-      setHtmlContent(editorRef.current.innerHTML);
-      
-      // onInput 이벤트를 수동으로 트리거하여 상태 업데이트 보장
-      const inputEvent = new Event('input', { bubbles: true });
-      editorRef.current.dispatchEvent(inputEvent);
-      
-      // 포커스 유지 및 커서 위치 재설정
-      setTimeout(() => {
-        if (editorRef.current) {
-          editorRef.current.focus();
-          // 커서를 새 p 태그로 다시 이동
-          const newRange = document.createRange();
-          const newSelection = window.getSelection();
-          newRange.setStart(newP, 0);
-          newRange.setEnd(newP, 0);
-          newSelection?.removeAllRanges();
-          newSelection?.addRange(newRange);
-          
-          // HTML 콘텐츠 다시 업데이트
-          setHtmlContent(editorRef.current.innerHTML);
-        }
-      }, 50);
-      
-    } else if (urls !== null) {
-      alert('올바른 이미지 URL들을 입력해주세요.');
+      if (videoNode) {
+        range.deleteContents();
+        range.insertNode(videoNode);
+        
+        // 커서를 비디오 다음으로 이동
+        range.setStartAfter(videoNode);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        // HTML 콘텐츠 업데이트
+        setHtmlContent(editorRef.current.innerHTML);
+      }
     }
   };
 
   // 영상 삽입 함수
   const insertVideo = () => {
-    const videoUrl = prompt('영상 URL을 입력하세요 (YouTube, Vimeo, 또는 직접 비디오 파일):');
-    if (videoUrl && videoUrl.trim() && editorRef.current) {
-      const url = videoUrl.trim();
-      
-      // 현재 선택 영역 가져오기
-      const selection = window.getSelection();
-      let range;
-      
-      if (selection && selection.rangeCount > 0) {
-        range = selection.getRangeAt(0);
-      } else {
-        // 선택 영역이 없으면 에디터 끝에 삽입
-        range = document.createRange();
-        range.selectNodeContents(editorRef.current);
-        range.collapse(false);
+    if (!useRichEditor || !editorRef.current) return;
+
+    const videoUrl = prompt("영상 URL을 입력하세요 (YouTube, Vimeo, 또는 직접 비디오 파일):");
+    if (!videoUrl || !videoUrl.trim()) return;
+
+    const cleanUrl = videoUrl.trim();
+    let videoElement = '';
+
+    // YouTube URL 처리
+    if (cleanUrl.includes('youtube.com/watch') || cleanUrl.includes('youtu.be/')) {
+      let videoId = '';
+      if (cleanUrl.includes('youtube.com/watch')) {
+        const urlParams = new URLSearchParams(cleanUrl.split('?')[1]);
+        videoId = urlParams.get('v') || '';
+      } else if (cleanUrl.includes('youtu.be/')) {
+        videoId = cleanUrl.split('youtu.be/')[1].split('?')[0];
       }
       
-      let videoElement: HTMLElement;
+      if (videoId) {
+        videoElement = `<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 1rem 0;">
+          <iframe 
+            src="https://www.youtube.com/embed/${videoId}" 
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" 
+            frameborder="0" 
+            allowfullscreen>
+          </iframe>
+        </div>`;
+      }
+    }
+    // Vimeo URL 처리
+    else if (cleanUrl.includes('vimeo.com/')) {
+      const videoId = cleanUrl.split('vimeo.com/')[1].split('?')[0];
+      if (videoId) {
+        videoElement = `<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 1rem 0;">
+          <iframe 
+            src="https://player.vimeo.com/video/${videoId}" 
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" 
+            frameborder="0" 
+            allowfullscreen>
+          </iframe>
+        </div>`;
+      }
+    }
+    // 직접 비디오 파일 (.mp4, .webm, .ogg)
+    else if (cleanUrl.match(/\.(mp4|webm|ogg)(\?.*)?$/i)) {
+      videoElement = `<div style="margin: 1rem 0;">
+        <video 
+          controls 
+          style="width: 100%; max-width: 100%; height: auto;"
+          src="${cleanUrl}">
+          브라우저가 비디오 태그를 지원하지 않습니다.
+        </video>
+      </div>`;
+    }
+    else {
+      alert('지원되는 영상 형식이 아닙니다.\n\n지원 형식:\n- YouTube (youtube.com, youtu.be)\n- Vimeo (vimeo.com)\n- 직접 비디오 파일 (.mp4, .webm, .ogg)');
+      return;
+    }
+
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
       
-      // YouTube URL 처리
-      if (url.includes('youtube.com/watch?v=') || url.includes('youtu.be/')) {
-        let videoId = '';
-        if (url.includes('youtube.com/watch?v=')) {
-          videoId = url.split('v=')[1]?.split('&')[0] || '';
-        } else if (url.includes('youtu.be/')) {
-          videoId = url.split('youtu.be/')[1]?.split('?')[0] || '';
-        }
+      // 현재 위치에 비디오 삽입
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = videoElement;
+      const videoNode = tempDiv.firstChild;
+      
+      if (videoNode) {
+        range.deleteContents();
+        range.insertNode(videoNode);
         
-        if (videoId) {
-          const iframe = document.createElement('iframe');
-          iframe.src = `https://www.youtube.com/embed/${videoId}`;
-          iframe.width = '560';
-          iframe.height = '315';
-          iframe.setAttribute('frameborder', '0');
-          iframe.setAttribute('allowfullscreen', 'true');
-          iframe.style.cssText = 'max-width: 100%; height: auto; aspect-ratio: 16/9; border-radius: 8px; cursor: pointer;';
-          iframe.contentEditable = 'false';
-          videoElement = iframe;
-        } else {
-          alert('올바른 YouTube URL을 입력해주세요.');
-          return;
-        }
-      }
-      // Vimeo URL 처리
-      else if (url.includes('vimeo.com/')) {
-        const videoId = url.split('vimeo.com/')[1]?.split('?')[0] || '';
-        if (videoId) {
-          const iframe = document.createElement('iframe');
-          iframe.src = `https://player.vimeo.com/video/${videoId}`;
-          iframe.width = '560';
-          iframe.height = '315';
-          iframe.setAttribute('frameborder', '0');
-          iframe.setAttribute('allowfullscreen', 'true');
-          iframe.style.cssText = 'max-width: 100%; height: auto; aspect-ratio: 16/9; border-radius: 8px; cursor: pointer;';
-          iframe.contentEditable = 'false';
-          videoElement = iframe;
-        } else {
-          alert('올바른 Vimeo URL을 입력해주세요.');
-          return;
-        }
-      }
-      // 직접 비디오 파일 처리
-      else if (url.match(/\.(mp4|webm|ogg)$/i)) {
-        const video = document.createElement('video');
-        video.src = url;
-        video.controls = true;
-        video.style.cssText = 'max-width: 100%; height: auto; border-radius: 8px; cursor: pointer;';
-        video.contentEditable = 'false';
-        videoElement = video;
-      }
-      // 기타 URL (iframe으로 시도)
-      else {
-        const iframe = document.createElement('iframe');
-        iframe.src = url;
-        iframe.width = '560';
-        iframe.height = '315';
-        iframe.setAttribute('frameborder', '0');
-        iframe.style.cssText = 'max-width: 100%; height: auto; aspect-ratio: 16/9; border-radius: 8px; cursor: pointer;';
-        iframe.contentEditable = 'false';
-        videoElement = iframe;
-      }
-      
-      // 비디오 클릭 이벤트 추가
-      videoElement.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+        // 커서를 비디오 다음으로 이동
+        range.setStartAfter(videoNode);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
         
-        // 기존 선택 해제
-        const prevSelected = editorRef.current?.querySelector('[data-selected="true"]');
-        if (prevSelected) {
-          prevSelected.removeAttribute('data-selected');
-          (prevSelected as HTMLElement).style.outline = '';
-        }
-        
-        // 현재 비디오 선택
-        videoElement.setAttribute('data-selected', 'true');
-        videoElement.style.outline = '2px solid #007bff';
-        
-        // 비디오를 선택 영역으로 설정
-        const range = document.createRange();
-        const selection = window.getSelection();
-        range.selectNode(videoElement);
-        selection?.removeAllRanges();
-        selection?.addRange(range);
-      });
-      
-      // 비디오를 중앙정렬하는 p 태그로 감싸기
-      const videoContainer = document.createElement('p');
-      videoContainer.style.textAlign = 'center';
-      videoContainer.appendChild(videoElement);
-      
-      // 비디오 다음에 올 새로운 p 태그 생성
-      const newP = document.createElement('p');
-      newP.innerHTML = '<br>';
-      
-      // 현재 위치에 비디오 컨테이너와 새 p 태그 삽입
-      range.deleteContents();
-      range.insertNode(newP);
-      range.insertNode(videoContainer);
-      
-      // 커서를 새 p 태그 안으로 이동
-      range.setStart(newP, 0);
-      range.setEnd(newP, 0);
-      
-      // 선택 영역 업데이트
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-      
-      // HTML 콘텐츠 업데이트
-      setHtmlContent(editorRef.current.innerHTML);
-      
-      // onInput 이벤트를 수동으로 트리거하여 상태 업데이트 보장
-      const inputEvent = new Event('input', { bubbles: true });
-      editorRef.current.dispatchEvent(inputEvent);
-      
-      // 포커스 유지 및 커서 위치 재설정
-      setTimeout(() => {
-        if (editorRef.current) {
-          editorRef.current.focus();
-          // 커서를 새 p 태그로 다시 이동
-          const newRange = document.createRange();
-          const newSelection = window.getSelection();
-          newRange.setStart(newP, 0);
-          newRange.setEnd(newP, 0);
-          newSelection?.removeAllRanges();
-          newSelection?.addRange(newRange);
-          
-          // HTML 콘텐츠 다시 업데이트
-          setHtmlContent(editorRef.current.innerHTML);
-        }
-      }, 50);
-      
-    } else if (videoUrl !== null) {
-      alert('올바른 영상 URL을 입력해주세요.');
+        // HTML 콘텐츠 업데이트
+        setHtmlContent(editorRef.current.innerHTML);
+      }
     }
   };
 
@@ -932,7 +834,13 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
                 alignItems: 'center'
               }}>
                 {/* 텍스트 포맷팅 */}
-                <button type="button" onClick={() => formatText('bold')} style={toolbarButtonStyle}>
+                <button type="button" onClick={() => formatText('bold')} style={{
+                  padding: '0.5rem',
+                  backgroundColor: '#f8f9fa',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}>
                   <strong>B</strong>
                 </button>
                 <button type="button" onClick={() => formatText('italic')} style={toolbarButtonStyle}>
@@ -990,8 +898,11 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
                 <button type="button" onClick={insertImage} style={toolbarButtonStyle}>
                   🖼️ 이미지
                 </button>
-                <button type="button" onClick={insertImageGallery} style={toolbarButtonStyle}>
+                <button type="button" onClick={insertImageGallery} style={{padding: "0.5rem", backgroundColor: "#f8f9fa", border: "1px solid #ddd", borderRadius: "4px", cursor: "pointer"}}>
                   🖼️ 갤러리
+                </button>
+                <button type="button" onClick={insertVideo} style={{padding: "0.5rem", backgroundColor: "#f8f9fa", border: "1px solid #ddd", borderRadius: "4px", cursor: "pointer"}}>
+                  🎬 영상
                 </button>
               </div>
               
