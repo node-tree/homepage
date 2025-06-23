@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import './App.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
@@ -350,7 +350,7 @@ function AppContent() {
       setCurrentPage(null);
       setCurrentStep(0);
     }
-  }, [location.pathname]);
+  }, [location.pathname, circles]);
 
   // 로그인 페이지일 때는 별도 렌더링
   if (currentPath === '/login') {
