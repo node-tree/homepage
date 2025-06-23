@@ -9,9 +9,9 @@ import Human from './components/Human';
 import Filed from './components/Filed';
 import CV from './components/CV';
 import LocationVideoSettings from './components/LocationVideoSettings';
+import About from './components/About';
 
 const Work = lazy(() => import('./components/Work'));
-const About = lazy(() => import('./components/About'));
 
 // 이 컴포넌트는 App 내부의 라우팅과 상태 관리를 담당합니다.
 function AppContent() {
@@ -526,6 +526,7 @@ function AppContent() {
         >
           {circles.map((circle, index) => {
             const position = getCirclePosition(index);
+            
             return (
               <motion.div
                 key={circle.id}
@@ -534,14 +535,7 @@ function AppContent() {
                 className="circle-motion"
                 data-step={currentStep.toString()}
                 initial={isInitialLoad ? { opacity: 0, scale: 0 } : false}
-                animate={currentStep === 0 ? {
-                  // 첫 페이지에서는 CSS가 위치를 완전히 제어하므로 Framer Motion 변환 최소화
-                  opacity: 1,
-                  scale: 1,
-                  x: 0,
-                  y: 0
-                } : {
-                  // 다른 페이지에서는 Framer Motion이 위치 제어
+                animate={{
                   opacity: 1,
                   scale: position.scale,
                   x: position.x,
@@ -550,22 +544,14 @@ function AppContent() {
                 transition={{
                   ...springTransition,
                   delay: currentStep === 2 ? 0 : circle.delay,
-                  layout: { // layout 관련 transition을 별도 객체로 분리
-                    type: "spring",
-                    damping: 30,
-                    stiffness: 200
-                  }
                 }}
                 style={{
-                  // 모바일에서 첫 페이지(step 0)에서만 NODE TREE가 아닌 원들을 숨김 (index 2가 NODE TREE)
                   display: currentStep === 0 && (isMobile || isSmallMobile) && index !== 2 ? 'none' : 'block'
                 }}
                 onClick={() => {
                   if (currentStep === 0) {
-                    // 첫 번째 페이지에서는 어떤 원을 클릭해도 먼저 펼치기만
                     handleCenterClick();
                   } else {
-                    // 펼쳐진 상태 이후에는 페이지 이동
                     handleCircleClickStable(circle.page);
                   }
                 }}
