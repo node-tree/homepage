@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Text, Sphere, Line } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as THREE from 'three';
-import fontUrl from '../../assets/fonts/SCDream4.otf';
+import fontUrl from '../assets/fonts/SCDream4.otf';
 
 // Location 영상 데이터 타입 정의
 interface LocationVideo {
