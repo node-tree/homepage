@@ -38,7 +38,9 @@ const Human: React.FC = () => {
         
         {/* 캐릭터 정보 */}
         <div className="character-info-container">
+          <div className="character-name">내용 수정중</div>
           
+        
           <div className="character-abilities">
             
           </div>

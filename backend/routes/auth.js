@@ -18,7 +18,14 @@ let testUsers = [
 ];
 
 // JWT 비밀키 (환경변수로 관리)
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error("치명적 오류: JWT_SECRET 환경 변수가 설정되지 않았습니다.");
+  // 개발 환경에서는 기본값을 사용하고, 프로덕션에서는 프로세스를 종료할 수 있습니다.
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+}
 
 // 회원가입
 router.post('/register', async (req, res) => {
@@ -57,7 +64,7 @@ router.post('/register', async (req, res) => {
 
       const token = jwt.sign(
         { userId: newUser.id, username: newUser.username, role: newUser.role },
-        process.env.JWT_SECRET,
+        JWT_SECRET,
         { expiresIn: '7d' }
       );
 
@@ -97,7 +104,7 @@ router.post('/register', async (req, res) => {
 
     const token = jwt.sign(
       { userId: user._id, username: user.username, role: user.role },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 
@@ -163,7 +170,7 @@ router.post('/login', async (req, res) => {
 
       const token = jwt.sign(
         { userId: user.id, username: user.username, role: user.role },
-        process.env.JWT_SECRET,
+        JWT_SECRET,
         { expiresIn: '7d' }
       );
 
@@ -203,7 +210,7 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(
       { userId: user._id, username: user.username, role: user.role },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 
