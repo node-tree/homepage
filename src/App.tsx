@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import './App.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
@@ -13,7 +13,9 @@ import LocationVideoSettings from './components/LocationVideoSettings';
 const Work = lazy(() => import('./components/Work'));
 const About = lazy(() => import('./components/About'));
 
+// 이 컴포넌트는 App 내부의 라우팅과 상태 관리를 담당합니다.
 function AppContent() {
+  const location = useLocation();
   // 모든 상태를 최상위에서 선언
   const [currentStep, setCurrentStep] = useState(0); // 0: 초기, 1: 메뉴 펼침, 2: 페이지 표시
   const [currentPage, setCurrentPage] = useState<string | null>(null); // 현재 페이지
@@ -336,6 +338,20 @@ function AppContent() {
     };
   }, [handleCircleClickStable]);
 
+  // URL 경로에 따라 초기 상태를 설정하는 useEffect
+  useEffect(() => {
+    const path = location.pathname.toUpperCase().replace('/', '');
+    if (path && circles.some(c => c.page === path)) {
+      setCurrentPage(path);
+      setCurrentStep(2);
+    } else if (path === 'LOGIN') {
+      // 로그인 페이지는 별도 처리
+    } else {
+      setCurrentPage(null);
+      setCurrentStep(0);
+    }
+  }, [location.pathname]);
+
   // 로그인 페이지일 때는 별도 렌더링
   if (currentPath === '/login') {
     return <Login />;
@@ -594,10 +610,18 @@ function AppContent() {
   );
 }
 
+// App 컴포넌트는 라우터와 인증 공급자만 설정합니다.
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <BrowserRouter>
+        <Suspense fallback={<div className="loading-spinner">...</div>}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="*" element={<AppContent />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
     </AuthProvider>
   );
 }
