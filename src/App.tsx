@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import './App.css';
@@ -269,14 +269,14 @@ function AppContent() {
   // URL 경로 확인
   const currentPath = window.location.pathname;
   
-  const circles = [
+  const circles = useMemo(() => [
     { id: 1, text: 'CROSS CITY', delay: 0, page: 'LOCATION' },
     { id: 2, text: 'ART NETWORK', delay: 0.1, page: 'HUMAN' },
     { id: 3, text: 'NODE TREE', delay: 0.2, page: 'ABOUT' },
     { id: 4, text: 'ART WORK', delay: 0.3, page: 'WORK' },
     { id: 5, text: 'COMMONS', delay: 0.4, page: 'FILED' },
     { id: 6, text: 'CV', delay: 0.5, page: 'CV' }
-  ];
+  ], []);
 
   useEffect(() => {
     if (currentStep === 2) {
