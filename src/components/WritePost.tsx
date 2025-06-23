@@ -2,11 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import api from '../services/api';
 
-interface ImageData {
-  url: string;
-  caption: string;
-}
-
 interface WritePostProps {
   onSavePost: (postData: { title: string; content: string; date: string; images?: string[]; thumbnail?: string }) => void;
   onBackToWork: () => void;
