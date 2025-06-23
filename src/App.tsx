@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import './App.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
@@ -9,8 +10,10 @@ import About from './components/About';
 import Work from './components/Work';
 import Filed from './components/Filed';
 import CV from './components/CV';
-import Popup from './components/Popup';
 import LocationVideoSettings from './components/LocationVideoSettings';
+
+const Work = lazy(() => import('./components/Work'));
+const About = lazy(() => import('./components/About'));
 
 function AppContent() {
   // 모든 상태를 최상위에서 선언
