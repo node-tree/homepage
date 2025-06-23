@@ -6,8 +6,6 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import Location3D from './components/Location3D';
 import Human from './components/Human';
-import About from './components/About';
-import Work from './components/Work';
 import Filed from './components/Filed';
 import CV from './components/CV';
 import LocationVideoSettings from './components/LocationVideoSettings';
