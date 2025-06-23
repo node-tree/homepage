@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 
 // Vercel 환경에서는 dotenv를 다르게 처리
 if (process.env.NODE_ENV !== 'production') {
@@ -24,6 +25,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Vercel 서버리스 환경에 최적화된 MongoDB 연결
 // 검색 결과에 따르면 연결 캐싱보다는 직접 연결이 더 안정적임
@@ -128,11 +130,17 @@ mongoose.connection.on('error', (err) => {
 });
 
 // 라우트
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/work', require('./routes/work'));
-app.use('/api/filed', require('./routes/filed'));
-app.use('/api/location-video', require('./routes/locationVideo'));
-app.use('/api/about', require('./routes/about'));
+const authRoutes = require('./routes/auth');
+const workRoutes = require('./routes/work');
+const locationVideoRoutes = require('./routes/locationVideo');
+const aboutRoutes = require('./routes/about');
+const filedRoutes = require('./routes/filed');
+
+app.use('/api/auth', authRoutes);
+app.use('/api/work', workRoutes);
+app.use('/api/location-video', locationVideoRoutes);
+app.use('/api/about', aboutRoutes);
+app.use('/api/filed', filedRoutes);
 
 // 기본 라우트
 app.get('/', (req, res) => {

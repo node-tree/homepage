@@ -1,6 +1,12 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error("치명적 오류: JWT_SECRET 환경 변수가 설정되지 않았습니다.");
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+}
 
 const auth = (req, res, next) => {
   try {

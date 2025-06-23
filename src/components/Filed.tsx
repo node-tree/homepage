@@ -4,6 +4,7 @@ import { filedAPI } from '../services/api';
 import WritePost from './WritePost';
 import { useAuth } from '../contexts/AuthContext';
 
+// Post interface
 interface Post {
   id: string;
   title: string;
@@ -88,27 +89,83 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
 
   const formatContent = (content: string) => {
     return content.split('\n').map((line, index) => {
-      // 이미지 마크다운 처리: ![alt](url)
-      const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
-      const parts = line.split(imageRegex);
-      
+      // 이미지 및 비디오 마크다운 처리를 위한 정규식
+      const mediaRegex = /(!{1,2})\[([^\]]*)\]\(([^)]+)\)/g;
+      let lastIndex = 0;
+      const elements: (string | JSX.Element)[] = [];
+
+      line.replace(mediaRegex, (match, type, alt, url, offset) => {
+        // Add text before the match
+        elements.push(line.substring(lastIndex, offset));
+
+        if (type === '!!') { // 비디오: !![alt](url)
+          let videoElement;
+          if (url.includes('youtube.com') || url.includes('youtu.be')) {
+            const videoIdMatch = url.match(/(?:v=|vi\/|embed\/|\.be\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+            const videoId = videoIdMatch ? videoIdMatch[1] : null;
+            if (videoId) {
+              videoElement = (
+                <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', maxWidth: '100%', background: '#000' }}>
+                  <iframe
+                    src={`https://www.youtube.com/embed/${videoId}`}
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title={alt || 'YouTube video player'}
+                  ></iframe>
+                </div>
+              );
+            }
+          } else if (url.includes('vimeo.com')) {
+            const videoIdMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+            const videoId = videoIdMatch ? videoIdMatch[1] : null;
+            if(videoId) {
+              videoElement = (
+                <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', maxWidth: '100%', background: '#000' }}>
+                   <iframe 
+                     src={`https://player.vimeo.com/video/${videoId}`}
+                     style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}
+                     frameBorder="0" 
+                     allow="autoplay; fullscreen; picture-in-picture" 
+                     allowFullScreen
+                     title={alt || 'Vimeo video player'}>
+                   </iframe>
+                </div>
+              );
+            }
+          } else { // 직접 링크
+            videoElement = <video src={url} controls style={{ maxWidth: '100%', borderRadius: '8px' }} title={alt} />;
+          }
+          
+          if(videoElement) {
+              elements.push(
+                <div key={`${index}-${offset}`} style={{ margin: '20px 0' }}>
+                  {videoElement}
+                </div>
+              );
+          } else {
+             elements.push(match);
+          }
+
+        } else if (type === '!') { // 이미지: ![alt](url)
+          elements.push(
+            <div key={`${index}-${offset}`} style={{ textAlign: 'center', margin: '20px 0' }}>
+              <img src={url} alt={alt || '이미지'} style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }} />
+            </div>
+          );
+        }
+        
+        lastIndex = offset + match.length;
+        return match;
+      });
+
+      // Add the rest of the line
+      elements.push(line.substring(lastIndex));
+
       return (
         <React.Fragment key={index}>
-          {parts.map((part, partIndex) => {
-            // 홀수 인덱스는 alt 텍스트, 짝수+1 인덱스는 URL
-            if (partIndex % 3 === 2) {
-              return (
-                <img 
-                  key={partIndex} 
-                  src={part} 
-                  alt={parts[partIndex - 1] || '이미지'} 
-                />
-              );
-            } else if (partIndex % 3 === 1) {
-              return null; // alt 텍스트는 img 태그에서 사용됨
-            }
-            return part;
-          })}
+          {elements.map((el, i) => <React.Fragment key={i}>{el}</React.Fragment>)}
           {index < content.split('\n').length - 1 && <br />}
         </React.Fragment>
       );

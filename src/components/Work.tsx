@@ -34,7 +34,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
       if (response.success) {
         setPosts(response.data);
         if (onPostsLoaded) {
-          onPostsLoaded(response.data.length);
+          onPostsLoaded(response.data.length);  
         }
       } else {
         setError(response.message);
@@ -71,7 +71,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
   };
 
   const handleDeletePost = async (post: Post) => {
-    if (window.confirm(`"${post.title}" 작품을 정말 삭제하시겠습니까?`)) {
+    if (window.confirm(`"${post.title}" 기록을 정말 삭제하시겠습니까?`)) {
       try {
         const response = await workAPI.deletePost(post.id);
         if (response.success) {
@@ -80,35 +80,91 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
           loadPosts(); // 목록 새로고침
         }
       } catch (err) {
-        console.error('작품 삭제 오류:', err);
-        alert(err instanceof Error ? err.message : '작품 삭제에 실패했습니다.');
+        console.error('기록 삭제 오류:', err);
+        alert(err instanceof Error ? err.message : '기록 삭제에 실패했습니다.');
       }
     }
   };
 
   const formatContent = (content: string) => {
     return content.split('\n').map((line, index) => {
-      // 이미지 마크다운 처리: ![alt](url)
-      const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
-      const parts = line.split(imageRegex);
-      
+      // 이미지 및 비디오 마크다운 처리를 위한 정규식
+      const mediaRegex = /(!{1,2})\[([^\]]*)\]\(([^)]+)\)/g;
+      let lastIndex = 0;
+      const elements: (string | JSX.Element)[] = [];
+
+      line.replace(mediaRegex, (match, type, alt, url, offset) => {
+        // Add text before the match
+        elements.push(line.substring(lastIndex, offset));
+
+        if (type === '!!') { // 비디오: !![alt](url)
+          let videoElement;
+          if (url.includes('youtube.com') || url.includes('youtu.be')) {
+            const videoIdMatch = url.match(/(?:v=|vi\/|embed\/|\.be\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+            const videoId = videoIdMatch ? videoIdMatch[1] : null;
+            if (videoId) {
+              videoElement = (
+                <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', maxWidth: '100%', background: '#000' }}>
+                  <iframe
+                    src={`https://www.youtube.com/embed/${videoId}`}
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title={alt || 'YouTube video player'}
+                  ></iframe>
+                </div>
+              );
+            }
+          } else if (url.includes('vimeo.com')) {
+            const videoIdMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+            const videoId = videoIdMatch ? videoIdMatch[1] : null;
+            if(videoId) {
+              videoElement = (
+                <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', maxWidth: '100%', background: '#000' }}>
+                   <iframe 
+                     src={`https://player.vimeo.com/video/${videoId}`}
+                     style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}
+                     frameBorder="0" 
+                     allow="autoplay; fullscreen; picture-in-picture" 
+                     allowFullScreen
+                     title={alt || 'Vimeo video player'}>
+                   </iframe>
+                </div>
+              );
+            }
+          } else { // 직접 링크
+            videoElement = <video src={url} controls style={{ maxWidth: '100%', borderRadius: '8px' }} title={alt} />;
+          }
+          
+          if(videoElement) {
+              elements.push(
+                <div key={`${index}-${offset}`} style={{ margin: '20px 0' }}>
+                  {videoElement}
+                </div>
+              );
+          } else {
+             elements.push(match);
+          }
+
+        } else if (type === '!') { // 이미지: ![alt](url)
+          elements.push(
+            <div key={`${index}-${offset}`} style={{ textAlign: 'center', margin: '20px 0' }}>
+              <img src={url} alt={alt || '이미지'} style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }} />
+            </div>
+          );
+        }
+        
+        lastIndex = offset + match.length;
+        return match;
+      });
+
+      // Add the rest of the line
+      elements.push(line.substring(lastIndex));
+
       return (
         <React.Fragment key={index}>
-          {parts.map((part, partIndex) => {
-            // 홀수 인덱스는 alt 텍스트, 짝수+1 인덱스는 URL
-            if (partIndex % 3 === 2) {
-              return (
-                <img 
-                  key={partIndex} 
-                  src={part} 
-                  alt={parts[partIndex - 1] || '이미지'} 
-                />
-              );
-            } else if (partIndex % 3 === 1) {
-              return null; // alt 텍스트는 img 태그에서 사용됨
-            }
-            return part;
-          })}
+          {elements.map((el, i) => <React.Fragment key={i}>{el}</React.Fragment>)}
           {index < content.split('\n').length - 1 && <br />}
         </React.Fragment>
       );
@@ -206,12 +262,12 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6, duration: 1 }}
           ></motion.div>
-        <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>서사적 과정의 매개물 - 생성, 감응, 재구성의 현장
+        <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>소리·기억·관계로 이루어진 감각적 자산
         <br />
         <br />
-        'Art Work'은 NODE TREE의 리서치, 수집, 기록, 관계, 재구성의 복합적 흐름 속에서 생성된  <br />
-        서사적 매개물의 카테고리이다. 다양한 관계와 감응이 축적되고, 서사가 응축되는 특정한 순간을 <br />
-        시각적‧청각적‧공간적 형식으로 구성한 장면들을 소개한다.
+        NODE TREE는 예술을 개인의 소유가 아닌, 관계와 감응 속에서 함께 만들어가는 공공의 장으로   <br />
+        실천한다. 이 카테고리는 마을 주민·농부·청소년 등 다양한 존재가 예술의 주체로 참여해 구축해 온  <br />
+        창작 커먼즈의 기록이다.
 
         </div>
       </h1>
@@ -242,7 +298,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
             >
               ⟳
             </motion.div>
-            <p>작품을 불러오는 중...</p>
+            <p>기록을 불러오는 중...</p>
           </div>
         )}
 
@@ -267,8 +323,8 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
-            <p>아직 작품이 없습니다.</p>
-            <p>새 작품을 등록해보세요!</p>
+            <p>아직 기록된 내용이 없습니다.</p>
+            <p>새 기록을 작성해보세요!</p>
           </motion.div>
         )}
 

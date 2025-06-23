@@ -6,6 +6,11 @@ const API_BASE_URL = process.env.REACT_APP_API_URL ||
   (isNodeTreeSite ? 'https://www.nodetree.kr/api' : 
    process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api');
 
+// 추가된 디버깅 코드
+console.log('Current API_BASE_URL:', API_BASE_URL);
+console.log('process.env.NODE_ENV:', process.env.NODE_ENV);
+console.log('isNodeTreeSite:', isNodeTreeSite);
+
 // 토큰을 가져오는 헬퍼 함수
 const getAuthToken = () => {
   return localStorage.getItem('auth_token');
@@ -152,6 +157,10 @@ const api = {
   work: workAPI,
   filed: filedAPI,
   about: aboutAPI
+};
+
+export const utilAPI = {
+  fetchMetadata: (url) => api.get(`/util/fetch-metadata?url=${encodeURIComponent(url)}`),
 };
 
 export default api;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
+import { aboutAPI } from '../services/api';
 
 // About 데이터 타입 정의
 interface AboutData {
@@ -12,7 +13,7 @@ interface AboutData {
 }
 
 const About: React.FC = () => {
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [aboutData, setAboutData] = useState<AboutData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -23,14 +24,13 @@ const About: React.FC = () => {
   const fetchAboutData = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/about');
-      const data = await response.json();
+      const response = await aboutAPI.getAbout();
       
-      if (data.success) {
-        setAboutData(data.data);
-        setEditContent(data.data.htmlContent || data.data.content || '');
+      if (response.success) {
+        setAboutData(response.data);
+        setEditContent(response.data.htmlContent || response.data.content || '');
       } else {
-        console.error('About 데이터 가져오기 실패:', data.message);
+        console.error('About 데이터 가져오기 실패:', response.message);
       }
     } catch (error) {
       console.error('About 데이터 가져오기 오류:', error);
@@ -41,31 +41,22 @@ const About: React.FC = () => {
 
   // About 내용 저장
   const saveContent = async () => {
-    if (!isAuthenticated || !token) {
+    if (!isAuthenticated) {
       alert('로그인이 필요합니다.');
       return;
     }
 
     try {
-      const response = await fetch('/api/about', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          htmlContent: editContent
-        })
+      const response = await aboutAPI.updateAbout({
+        htmlContent: editContent
       });
-
-      const data = await response.json();
       
-      if (data.success) {
+      if (response.success) {
         alert('내용이 저장되었습니다.');
-        setAboutData(data.data);
+        setAboutData(response.data);
         setIsEditing(false);
       } else {
-        alert(data.message || '저장에 실패했습니다.');
+        alert(response.message || '저장에 실패했습니다.');
       }
     } catch (error) {
       console.error('About 저장 오류:', error);

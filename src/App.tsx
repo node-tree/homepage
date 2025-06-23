@@ -386,11 +386,12 @@ function AppContent() {
     }
   };
 
+  // 공용 트랜지션
   const springTransition = {
-    type: "spring",
-    damping: 35,
-    stiffness: 80,
-    mass: 1.2
+    type: "spring" as const, // 타입을 명시적으로 지정
+    damping: 20,
+    stiffness: 150,
+    mass: 0.5
   };
 
   const renderPageContent = () => {
@@ -467,13 +468,13 @@ function AppContent() {
         )}
         
         {/* 홈페이지 리뉴얼중 팝업: 로그인 안 된 경우만 */}
-        {!isAuthenticated && (
+        {/* {!isAuthenticated && (
           <Popup 
             open={true}
             message="NODE TREE
             홈페이지 리뉴얼중입니다. 곧 새로운 모습으로 찾아뵙겠습니다!"
           />
-        )}
+        )} */}
         <div 
           className="circle-container-motion"
           style={currentStep === 0 || currentStep === 1 ? {
@@ -532,10 +533,10 @@ function AppContent() {
                 transition={{
                   ...springTransition,
                   delay: currentStep === 2 ? 0 : circle.delay,
-                  layout: {
+                  layout: { // layout 관련 transition을 별도 객체로 분리
                     type: "spring",
-                    damping: 25,
-                    stiffness: 120
+                    damping: 30,
+                    stiffness: 200
                   }
                 }}
                 style={{
