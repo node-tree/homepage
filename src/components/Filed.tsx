@@ -29,7 +29,6 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
   const [title, setTitle] = useState('FILED');
   const [subtitle, setSubtitle] = useState('기록/아카이브');
   const [isEditingHeader, setIsEditingHeader] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   const loadPosts = useCallback(async () => {
     setLoading(true);
@@ -59,7 +58,6 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
   useEffect(() => {
     const fetchFiledHeader = async () => {
       try {
-        setIsLoading(true);
         const res = await filedAPI.getFiledHeader();
         if (res.success && res.data) {
           setTitle(res.data.title || 'FILED');
@@ -67,8 +65,6 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
         }
       } catch (e) {
         // 에러 무시, 기본값 사용
-      } finally {
-        setIsLoading(false);
       }
     };
     fetchFiledHeader();
@@ -111,13 +107,10 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
 
   const handleSaveHeader = async () => {
     try {
-      setIsLoading(true);
       await filedAPI.updateFiledHeader({ title, subtitle });
       setIsEditingHeader(false);
     } catch (e) {
       alert('저장에 실패했습니다.');
-    } finally {
-      setIsLoading(false);
     }
   };
 

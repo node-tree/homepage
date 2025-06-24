@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import './Human.css';
 import { useAuth } from '../contexts/AuthContext';
 import { humanAPI } from '../services/api';
@@ -8,13 +7,11 @@ const Human: React.FC = () => {
   const [title, setTitle] = useState('ART NETWORK');
   const [subtitle, setSubtitle] = useState('예술의 장을 구성하는 여러 지점들-‘누구와 함께’, ‘무엇이 연결되는가’');
   const [isEditingHeader, setIsEditingHeader] = useState(false);
-  const [isLoadingHeader, setIsLoadingHeader] = useState(true);
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     const fetchHeader = async () => {
       try {
-        setIsLoadingHeader(true);
         const res = await humanAPI.getHumanHeader();
         if (res.success && res.data) {
           setTitle(res.data.title || 'ART NETWORK');
@@ -22,8 +19,6 @@ const Human: React.FC = () => {
         }
       } catch (e) {
         // 에러 무시, 기본값 사용
-      } finally {
-        setIsLoadingHeader(false);
       }
     };
     fetchHeader();
@@ -31,14 +26,11 @@ const Human: React.FC = () => {
 
   const handleSaveHeader = async () => {
     try {
-      setIsLoadingHeader(true);
       await humanAPI.updateHumanHeader({ title, subtitle });
       setIsEditingHeader(false);
     } catch (e) {
       const msg = (e instanceof Error && e.message) ? e.message : '';
       alert('저장에 실패했습니다. ' + msg);
-    } finally {
-      setIsLoadingHeader(false);
     }
   };
 

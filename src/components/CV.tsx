@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { cvAPI } from '../services/api';
 
@@ -13,13 +12,11 @@ const CV: React.FC = () => {
   const [title, setTitle] = useState('CV');
   const [subtitle, setSubtitle] = useState('활동 이력');
   const [isEditingHeader, setIsEditingHeader] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   // DB에서 CV 데이터 불러오기
   useEffect(() => {
     const fetchCV = async () => {
       try {
-        setLoading(true);
         const res = await cvAPI.getCV();
         if (res.success && res.data) {
           setTitle(res.data.title || 'CV');
@@ -28,8 +25,6 @@ const CV: React.FC = () => {
         }
       } catch (e) {
         // 에러 무시, 기본값 사용
-      } finally {
-        setLoading(false);
       }
     };
     fetchCV();
@@ -38,7 +33,6 @@ const CV: React.FC = () => {
   // 저장 핸들러 (제목/부제목/본문 모두)
   const handleSaveAll = async () => {
     try {
-      setLoading(true);
       await cvAPI.updateCV({
         title,
         subtitle,
@@ -48,8 +42,6 @@ const CV: React.FC = () => {
       setIsEditingHeader(false);
     } catch (e) {
       alert('저장에 실패했습니다.');
-    } finally {
-      setLoading(false);
     }
   };
 

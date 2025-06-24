@@ -358,7 +358,6 @@ const Location3D: React.FC = () => {
   const [title, setTitle] = useState('CROSS CITY');
   const [subtitle, setSubtitle] = useState('서사 교차점의 기록장소');
   const [isEditingHeader, setIsEditingHeader] = useState(false);
-  const [isLoadingHeader, setIsLoadingHeader] = useState(false);
   const { isAuthenticated } = useAuth();
 
   // 도시 데이터 (기존 Location 컴포넌트와 동일한 도시들을 3D 좌표로 변환, Y축 다양화)
@@ -647,7 +646,6 @@ const Location3D: React.FC = () => {
   useEffect(() => {
     const fetchHeader = async () => {
       try {
-        setIsLoadingHeader(true);
         const res = await locationAPI.getLocationHeader();
         if (res.success && res.data) {
           setTitle(res.data.title || 'LOCATION');
@@ -655,8 +653,6 @@ const Location3D: React.FC = () => {
         }
       } catch (e) {
         // 에러 무시, 기본값 사용
-      } finally {
-        setIsLoadingHeader(false);
       }
     };
     fetchHeader();
@@ -664,13 +660,10 @@ const Location3D: React.FC = () => {
 
   const handleSaveHeader = async () => {
     try {
-      setIsLoadingHeader(true);
       await locationAPI.updateLocationHeader({ title, subtitle });
       setIsEditingHeader(false);
     } catch (e) {
       alert('저장에 실패했습니다.');
-    } finally {
-      setIsLoadingHeader(false);
     }
   };
 
