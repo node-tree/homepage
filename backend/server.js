@@ -135,12 +135,16 @@ const workRoutes = require('./routes/work');
 const locationVideoRoutes = require('./routes/locationVideo');
 const aboutRoutes = require('./routes/about');
 const filedRoutes = require('./routes/filed');
+const cvRouter = require('./routes/cv');
+const humanRoutes = require('./routes/human');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/work', workRoutes);
 app.use('/api/location-video', locationVideoRoutes);
 app.use('/api/about', aboutRoutes);
 app.use('/api/filed', filedRoutes);
+app.use('/api/cv', cvRouter);
+app.use('/api/human', humanRoutes);
 
 // 기본 라우트
 app.get('/', (req, res) => {

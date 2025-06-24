@@ -43,4 +43,13 @@ locationVideoSchema.pre('save', function(next) {
 });
 
 // 'video' 컬렉션을 사용하도록 명시적으로 지정
-module.exports = mongoose.model('LocationVideo', locationVideoSchema, 'video'); 
+module.exports = mongoose.model('LocationVideo', locationVideoSchema, 'video');
+
+const locationHeaderSchema = new mongoose.Schema({
+  title: { type: String, default: 'LOCATION' },
+  subtitle: { type: String, default: '장소/3D' }
+});
+
+const LocationHeader = mongoose.model('LocationHeader', locationHeaderSchema, 'location_header');
+
+module.exports.LocationHeader = LocationHeader; 

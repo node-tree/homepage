@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const HumanHeader = require('../models/User').HumanHeader;
 
 const router = express.Router();
 
@@ -389,49 +390,33 @@ router.post('/logout', (req, res) => {
   });
 });
 
-// 관리자 비밀번호 재설정 (디버그용)
-router.post('/reset-admin-password', async (req, res) => {
+// GET /human/header - 상단 제목/부제목 조회
+router.get('/human/header', async (req, res) => {
   try {
-    // MongoDB 연결 상태 확인
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState !== 1) {
-      return res.status(503).json({
-        success: false,
-        message: 'MongoDB 연결이 필요합니다.'
-      });
+    let header = await HumanHeader.findOne({});
+    if (!header) {
+      header = new HumanHeader({ title: 'ART NETWORK', subtitle: '예술의 장을 구성하는 여러 지점들-‘누구와 함께’, ‘무엇이 연결되는가’' });
+      await header.save();
     }
+    res.json({ success: true, data: header });
+  } catch (e) {
+    res.status(500).json({ success: false, message: '헤더 조회 실패', error: e.message });
+  }
+});
 
-    // mcwjd 사용자 찾기
-    const user = await User.findOne({ username: 'mcwjd' });
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'mcwjd 사용자를 찾을 수 없습니다.'
-      });
+// PUT /human/header - 상단 제목/부제목 수정
+router.put('/human/header', require('../middleware/auth'), async (req, res) => {
+  try {
+    let header = await HumanHeader.findOne({});
+    if (!header) {
+      header = new HumanHeader({});
     }
-
-    // 새 비밀번호 설정 (User 모델의 pre('save') 미들웨어가 자동으로 해싱)
-    user.password = 'Mc@@152615';
-    await user.save();
-
-    res.json({
-      success: true,
-      message: 'mcwjd 사용자의 비밀번호가 Mc@@152615로 재설정되었습니다.',
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        role: user.role
-      }
-    });
-
-  } catch (error) {
-    console.error('비밀번호 재설정 오류:', error);
-    res.status(500).json({
-      success: false,
-      message: '비밀번호 재설정에 실패했습니다.',
-      error: error.message
-    });
+    if (req.body.title !== undefined) header.title = req.body.title;
+    if (req.body.subtitle !== undefined) header.subtitle = req.body.subtitle;
+    await header.save();
+    res.json({ success: true, data: header });
+  } catch (e) {
+    res.status(500).json({ success: false, message: '헤더 수정 실패', error: e.message });
   }
 });
 

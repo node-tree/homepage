@@ -77,6 +77,28 @@ export const workAPI = {
       throw new Error('Failed to delete post');
     }
     return response.json();
+  },
+
+  // 상단 제목/부제목 단일 데이터 조회
+  getWorkHeader: async () => {
+    const response = await fetch(`${API_BASE_URL}/work/header`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch work header');
+    }
+    return response.json();
+  },
+
+  // 상단 제목/부제목 단일 데이터 수정
+  updateWorkHeader: async (headerData) => {
+    const response = await fetch(`${API_BASE_URL}/work/header`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(headerData)
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update work header');
+    }
+    return response.json();
   }
 };
 
@@ -127,6 +149,28 @@ export const filedAPI = {
       throw new Error('Failed to delete post');
     }
     return response.json();
+  },
+
+  // 상단 제목/부제목 단일 데이터 조회
+  getFiledHeader: async () => {
+    const response = await fetch(`${API_BASE_URL}/filed/header`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch filed header');
+    }
+    return response.json();
+  },
+
+  // 상단 제목/부제목 단일 데이터 수정
+  updateFiledHeader: async (headerData) => {
+    const response = await fetch(`${API_BASE_URL}/filed/header`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(headerData)
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update filed header');
+    }
+    return response.json();
   }
 };
 
@@ -148,6 +192,85 @@ export const aboutAPI = {
     });
     if (!response.ok) {
       throw new Error('Failed to update about content');
+    }
+    return response.json();
+  }
+};
+
+// CV API
+export const cvAPI = {
+  getCV: async () => {
+    const response = await fetch(`${API_BASE_URL}/cv`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch CV');
+    }
+    return response.json();
+  },
+  updateCV: async (cvData) => {
+    const response = await fetch(`${API_BASE_URL}/cv`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(cvData)
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update CV');
+    }
+    return response.json();
+  }
+};
+
+// Location API (단일 데이터)
+export const locationAPI = {
+  getLocation: async () => {
+    const response = await fetch(`${API_BASE_URL}/location-video`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch location');
+    }
+    return response.json();
+  },
+  updateLocation: async (locationData) => {
+    const response = await fetch(`${API_BASE_URL}/location-video`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(locationData)
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update location');
+    }
+    return response.json();
+  },
+  getLocationHeader: async () => {
+    const response = await fetch(`${API_BASE_URL}/location-video/header`);
+    if (!response.ok) throw new Error('Failed to fetch location header');
+    return response.json();
+  },
+  updateLocationHeader: async (headerData) => {
+    const response = await fetch(`${API_BASE_URL}/location-video/header`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(headerData)
+    });
+    if (!response.ok) throw new Error('Failed to update location header');
+    return response.json();
+  }
+};
+
+export const humanAPI = {
+  getHumanHeader: async () => {
+    const response = await fetch(`${API_BASE_URL}/human/header`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch human header');
+    }
+    return response.json();
+  },
+  updateHumanHeader: async (headerData) => {
+    const response = await fetch(`${API_BASE_URL}/human/header`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(headerData)
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update human header');
     }
     return response.json();
   }

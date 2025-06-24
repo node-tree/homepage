@@ -22,4 +22,12 @@ const workSchema = new mongoose.Schema({
   collection: 'work'
 });
 
-module.exports = mongoose.model('Work', workSchema); 
+const workHeaderSchema = new mongoose.Schema({
+  title: { type: String, default: 'WORK' },
+  subtitle: { type: String, default: '작업/프로젝트' }
+});
+
+const WorkHeader = mongoose.model('WorkHeader', workHeaderSchema, 'work_header');
+
+module.exports = mongoose.model('Work', workSchema);
+module.exports.WorkHeader = WorkHeader; 

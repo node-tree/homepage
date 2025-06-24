@@ -49,4 +49,12 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-module.exports = mongoose.model('User', userSchema, 'users'); 
+const humanHeaderSchema = new mongoose.Schema({
+  title: { type: String, default: 'ART NETWORK' },
+  subtitle: { type: String, default: '예술의 장을 구성하는 여러 지점들-‘누구와 함께’, ‘무엇이 연결되는가’' }
+});
+
+const HumanHeader = mongoose.model('HumanHeader', humanHeaderSchema, 'human_header');
+
+module.exports = mongoose.model('User', userSchema, 'users');
+module.exports.HumanHeader = HumanHeader; 

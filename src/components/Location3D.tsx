@@ -4,6 +4,8 @@ import { OrbitControls, Text, Sphere, Line } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as THREE from 'three';
 import fontUrl from '../assets/fonts/SCDream4.otf';
+import { useAuth } from '../contexts/AuthContext';
+import { locationAPI } from '../services/api';
 
 // Location 영상 데이터 타입 정의
 interface LocationVideo {
@@ -353,6 +355,11 @@ const Location3D: React.FC = () => {
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const videoSectionRef = useRef<HTMLDivElement>(null);
   const cityInfoRef = useRef<HTMLDivElement>(null);
+  const [title, setTitle] = useState('CROSS CITY');
+  const [subtitle, setSubtitle] = useState('서사 교차점의 기록장소');
+  const [isEditingHeader, setIsEditingHeader] = useState(false);
+  const [isLoadingHeader, setIsLoadingHeader] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   // 도시 데이터 (기존 Location 컴포넌트와 동일한 도시들을 3D 좌표로 변환, Y축 다양화)
   const cities: City[] = [
@@ -634,32 +641,185 @@ const Location3D: React.FC = () => {
     return url;
   };
 
+  // 모바일 감지
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+
+  useEffect(() => {
+    const fetchHeader = async () => {
+      try {
+        setIsLoadingHeader(true);
+        const res = await locationAPI.getLocationHeader();
+        if (res.success && res.data) {
+          setTitle(res.data.title || 'LOCATION');
+          setSubtitle(res.data.subtitle || '장소/3D');
+        }
+      } catch (e) {
+        // 에러 무시, 기본값 사용
+      } finally {
+        setIsLoadingHeader(false);
+      }
+    };
+    fetchHeader();
+  }, []);
+
+  const handleSaveHeader = async () => {
+    try {
+      setIsLoadingHeader(true);
+      await locationAPI.updateLocationHeader({ title, subtitle });
+      setIsEditingHeader(false);
+    } catch (e) {
+      alert('저장에 실패했습니다.');
+    } finally {
+      setIsLoadingHeader(false);
+    }
+  };
+
   return (
     <div className="page-content">
       <div className="page-header">
-      <h1 className="page-title">
-        CROSS CITY
-        <motion.div 
-          className="page-subtitle-container"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6, duration: 1 }}
-        >
-          <div className="page-subtitle">서사 교차점의 기록장소 <br /> 
-          <br />
-        'Cross City'는 NODE TREE가 리서치를 진항하며 <br />
-        도착한 도시들을 기록하는 카테고리로, <br />
-        단순한 지리적 이동이 아닌 서사가 교차하고 <br />
-        축적된 장소들을 의미한다.
+        {isEditingHeader ? (
+          <div style={{
+            background: '#fff',
+            borderRadius: '16px',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+            padding: '24px 20px 16px 20px',
+            marginBottom: 16,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'stretch',
+            gap: 12,
+            maxWidth: 480,
+            width: '100%',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+          }}>
+            <textarea value={title} onChange={e => setTitle(e.target.value)}
+              style={{
+                fontSize: '2rem',
+                fontWeight: 700,
+                border: 'none',
+                borderBottom: '2px solid #eee',
+                outline: 'none',
+                padding: '8px 0',
+                marginBottom: 4,
+                background: 'transparent',
+                textAlign: 'center',
+                borderRadius: 0,
+                transition: 'border-color 0.2s',
+                resize: 'none',
+                minHeight: 40,
+                overflow: 'hidden',
+              }}
+              placeholder="제목 입력"
+              autoFocus
+              rows={1}
+              onInput={e => {
+                const ta = e.target as HTMLTextAreaElement;
+                ta.style.height = 'auto';
+                ta.style.height = ta.scrollHeight + 'px';
+              }}
+            />
+            <textarea value={subtitle} onChange={e => setSubtitle(e.target.value)}
+              style={{
+                fontSize: '1.1rem',
+                border: 'none',
+                borderBottom: '1.5px solid #eee',
+                outline: 'none',
+                padding: '6px 0',
+                background: 'transparent',
+                textAlign: 'center',
+                borderRadius: 0,
+                transition: 'border-color 0.2s',
+                resize: 'none',
+                minHeight: 32,
+                overflow: 'hidden',
+              }}
+              placeholder="부제목 입력"
+              rows={1}
+              onInput={e => {
+                const ta = e.target as HTMLTextAreaElement;
+                ta.style.height = 'auto';
+                ta.style.height = ta.scrollHeight + 'px';
+              }}
+            />
+            <button onClick={handleSaveHeader}
+              style={{
+                background: '#222',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px 0',
+                fontWeight: 600,
+                fontSize: '1rem',
+                marginTop: 8,
+                cursor: 'pointer',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                transition: 'background 0.2s',
+                width: 120,
+                alignSelf: 'center',
+              }}
+            >저장</button>
           </div>
-        </motion.div>
-      </h1>
+        ) : (
+          <>
+            <h1 className="page-title">{title}</h1>
+            <div className="page-subtitle">{subtitle}</div>
+            {isAuthenticated && (
+              <button onClick={() => setIsEditingHeader(true)} className="write-button">편집</button>
+            )}
+          </>
+        )}
+      </div>
       
+      {/* 3D 지도 영역 위에 조작법 안내 (모바일) */}
+      {isMobile && (
+        <div
+          style={{
+            position: 'static',
+            margin: '0 0 6px 0',
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(248,250,252,0.95))',
+            padding: '2px 4px',
+            borderRadius: '8px',
+            fontSize: '8px',
+            color: '#4a5568',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            lineHeight: '1.2',
+            minWidth: '50px',
+            maxWidth: '90vw',
+            zIndex: 10,
+            textAlign: 'left',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            width: 'fit-content'
+          }}
+        >
+          <div style={{ fontWeight: 600, color: '#2d3748', fontSize: '8px', display: 'flex', alignItems: 'center', gap: '1px' }}>
+            <span style={{ fontSize: '9px' }}>🎮</span> 조작법
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+              <span style={{ fontSize: '7px', width: '8px' }}>🖱️</span>
+              <span style={{ fontSize: '7px' }}>드래그로 회전</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+              <span style={{ fontSize: '7px', width: '8px' }}>🔍</span>
+              <span style={{ fontSize: '7px' }}>휠로 줌</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+              <span style={{ fontSize: '7px', width: '8px' }}>✋</span>
+              <span style={{ fontSize: '7px' }}>우클릭으로 이동</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 3D 지도 영역 */}
       <div style={{ 
         width: '100%', 
-        height: '600px', 
-        margin: '2rem 0',
+        height: isMobile ? '70vw' : '600px', 
+        margin: isMobile ? '0' : '2rem 0',
         overflow: 'hidden',
         position: 'relative'
       }}>
@@ -675,74 +835,50 @@ const Location3D: React.FC = () => {
             />
           </Suspense>
         </Canvas>
-        
-        {/* 조작 가이드 오버레이 */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          style={{
-            position: 'absolute',
-            top: '15px',
-            right: '15px',
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95))',
-            padding: '12px 16px',
-            borderRadius: '12px',
-            fontSize: '12px',
-            color: '#4a5568',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)',
-            backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            lineHeight: '1.5',
-            minWidth: '140px'
-          }}
-        >
-          <div style={{ 
-            marginBottom: '8px', 
-            fontWeight: '600', 
-            color: '#2d3748',
-            fontSize: '13px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}>
-            <span style={{ fontSize: '16px' }}>🎮</span>
-            조작법
-          </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px',
-              padding: '2px 0'
-            }}>
-              <span style={{ fontSize: '14px', width: '16px' }}>🖱️</span>
-              <span style={{ fontSize: '11px' }}>드래그로 회전</span>
+        {/* 데스크탑에서만 조작법 오버레이 */}
+        {!isMobile && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            style={{
+              position: 'absolute',
+              top: '15px',
+              right: '15px',
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95))',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              fontSize: '12px',
+              color: '#4a5568',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              lineHeight: '1.5',
+              minWidth: '140px',
+              zIndex: 10
+            }}
+          >
+            <div style={{ marginBottom: '8px', fontWeight: '600', color: '#2d3748', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '16px' }}>🎮</span>
+              조작법
             </div>
-            
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px',
-              padding: '2px 0'
-            }}>
-              <span style={{ fontSize: '14px', width: '16px' }}>🔍</span>
-              <span style={{ fontSize: '11px' }}>휠로 줌</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '2px 0' }}>
+                <span style={{ fontSize: '14px', width: '16px' }}>🖱️</span>
+                <span style={{ fontSize: '11px' }}>드래그로 회전</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '2px 0' }}>
+                <span style={{ fontSize: '14px', width: '16px' }}>🔍</span>
+                <span style={{ fontSize: '11px' }}>휠로 줌</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '2px 0' }}>
+                <span style={{ fontSize: '14px', width: '16px' }}>✋</span>
+                <span style={{ fontSize: '11px' }}>우클릭으로 이동</span>
+              </div>
             </div>
-            
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px',
-              padding: '2px 0'
-            }}>
-              <span style={{ fontSize: '14px', width: '16px' }}>✋</span>
-              <span style={{ fontSize: '11px' }}>우클릭으로 이동</span>
-            </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        )}
       </div>
 
       {/* 원형 버튼들 */}
@@ -756,13 +892,6 @@ const Location3D: React.FC = () => {
             onClick={() => handleCityClick(city.name)}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
-            style={{
-              backgroundColor: selectedCity === city.name ? '#000000' : '#ffffff',
-              color: selectedCity === city.name ? '#ffffff' : '#000000',
-              border: hoveredCity === city.name ? '3px solid #000000' : '2px solid #cccccc',
-              fontSize: '9px',
-              letterSpacing: city.name === 'node tree' ? '-3px' : '-2px'
-            }}
           >
             {index + 1}
           </motion.div>
@@ -848,7 +977,7 @@ const Location3D: React.FC = () => {
 
       {/* 위로 올라가기 버튼 */}
       <AnimatePresence>
-        {showScrollToTop && (
+        {showScrollToTop && !isMobile && (
           <motion.button
             className="scroll-to-top-button"
             onClick={scrollToTop}
@@ -862,7 +991,6 @@ const Location3D: React.FC = () => {
           </motion.button>
         )}
       </AnimatePresence>
-    </div>
     </div>
   );
 };

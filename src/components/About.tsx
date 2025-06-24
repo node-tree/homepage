@@ -19,21 +19,51 @@ const About: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState('');
   const editorRef = useRef<HTMLDivElement>(null);
+  const [title, setTitle] = useState('ABOUT');
+  const [subtitle, setSubtitle] = useState('노드 트리(NODE TREE)');
+  const [isEditingHeader, setIsEditingHeader] = useState(false);
 
   // About 데이터 가져오기
   const fetchAboutData = async () => {
     setIsLoading(true);
     try {
       const response = await aboutAPI.getAbout();
-      
       if (response.success) {
         setAboutData(response.data);
         setEditContent(response.data.htmlContent || response.data.content || '');
+        setTitle(response.data.title || 'ABOUT');
+        setSubtitle(response.data.content || '노드 트리(NODE TREE)');
       } else {
         console.error('About 데이터 가져오기 실패:', response.message);
       }
     } catch (error) {
       console.error('About 데이터 가져오기 오류:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAboutData();
+  }, []);
+
+  // 제목/부제목 저장
+  const handleSaveHeader = async () => {
+    if (!isAuthenticated) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+    try {
+      setIsLoading(true);
+      const response = await aboutAPI.updateAbout({ title, content: subtitle });
+      if (response.success) {
+        setAboutData(response.data);
+        setIsEditingHeader(false);
+      } else {
+        alert(response.message || '저장에 실패했습니다.');
+      }
+    } catch (e) {
+      alert('저장에 실패했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -349,11 +379,6 @@ const About: React.FC = () => {
     }
   }, [isEditing, editContent]);
 
-  // 컴포넌트 마운트 시 데이터 로드
-  useEffect(() => {
-    fetchAboutData();
-  }, []);
-
   if (isLoading) {
     return (
       <div className="page-content">
@@ -381,34 +406,100 @@ const About: React.FC = () => {
   return (
     <div className="page-content">
       <div className="page-header">
-        <h1 className="page-title">
-          ABOUT
-          <motion.div 
-            className="page-subtitle-container"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6, duration: 1 }}
-          ></motion.div>
-          <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>노드 트리(NODE TREE)
-            
+        {isEditingHeader ? (
+          <div style={{
+            background: '#fff',
+            borderRadius: '16px',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+            padding: '24px 20px 16px 20px',
+            marginBottom: 16,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'stretch',
+            gap: 12,
+            maxWidth: 480,
+            width: '100%',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+          }}>
+            <textarea value={title} onChange={e => setTitle(e.target.value)}
+              style={{
+                fontSize: '2rem',
+                fontWeight: 700,
+                border: 'none',
+                borderBottom: '2px solid #eee',
+                outline: 'none',
+                padding: '8px 0',
+                marginBottom: 4,
+                background: 'transparent',
+                textAlign: 'center',
+                borderRadius: 0,
+                transition: 'border-color 0.2s',
+                resize: 'none',
+                minHeight: 40,
+                overflow: 'hidden',
+              }}
+              placeholder="제목 입력"
+              autoFocus
+              rows={1}
+              onInput={e => {
+                const ta = e.target as HTMLTextAreaElement;
+                ta.style.height = 'auto';
+                ta.style.height = ta.scrollHeight + 'px';
+              }}
+            />
+            <textarea value={subtitle} onChange={e => setSubtitle(e.target.value)}
+              style={{
+                fontSize: '1.1rem',
+                border: 'none',
+                borderBottom: '1.5px solid #eee',
+                outline: 'none',
+                padding: '6px 0',
+                background: 'transparent',
+                textAlign: 'center',
+                borderRadius: 0,
+                transition: 'border-color 0.2s',
+                resize: 'none',
+                minHeight: 32,
+                overflow: 'hidden',
+              }}
+              placeholder="부제목 입력"
+              rows={1}
+              onInput={e => {
+                const ta = e.target as HTMLTextAreaElement;
+                ta.style.height = 'auto';
+                ta.style.height = ta.scrollHeight + 'px';
+              }}
+            />
+            <button onClick={handleSaveHeader}
+              style={{
+                background: '#222',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px 0',
+                fontWeight: 600,
+                fontSize: '1rem',
+                marginTop: 8,
+                cursor: 'pointer',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                transition: 'background 0.2s',
+                width: 120,
+                alignSelf: 'center',
+              }}
+            >저장</button>
           </div>
-        </h1>
+        ) : (
+          <>
+            <h1 className="page-title">{title}</h1>
+            <div className="page-subtitle">{subtitle}</div>
+            {isAuthenticated && (
+              <button onClick={() => setIsEditingHeader(true)} className="write-button">편집</button>
+            )}
+          </>
+        )}
       </div>
       
-      {/* 편집 버튼 - Work 페이지와 동일한 스타일로 오른쪽 정렬 */}
-      {isAuthenticated && !isEditing && (
-        <div className="work-header">
-          <motion.button
-            className="write-button"
-            onClick={startEditing}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-                      >
-              내용 편집
-            </motion.button>
-        </div>
-      )}
-
       {/* 편집 모드 */}
       {isEditing ? (
         <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
@@ -552,16 +643,23 @@ const About: React.FC = () => {
           lineHeight: '1.8',
           fontSize: '1.1rem'
         }}>
+          {/* 글 편집 버튼을 본문 위로 이동 */}
+          {!isEditing && isAuthenticated && (
+            <button
+              onClick={startEditing}
+              className="write-button"
+              style={{ margin: '0 auto 2rem auto', display: 'block' }}
+            >
+              글 편집
+            </button>
+          )}
           {aboutData?.htmlContent ? (
             <div 
               dangerouslySetInnerHTML={{ __html: aboutData.htmlContent }}
               style={{ textAlign: 'center' }}
             />
           ) : (
-            <div style={{ textAlign: 'center' }}>
-              <h2>NODE TREE</h2>
-              <p>{aboutData?.content || 'About 내용을 불러올 수 없습니다.'}</p>
-            </div>
+            <div style={{ color: '#aaa', fontStyle: 'italic' }}>아직 소개글이 없습니다.</div>
           )}
         </div>
       )}

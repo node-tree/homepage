@@ -3,6 +3,7 @@ const router = express.Router();
 const Work = require('../models/Work');
 const auth = require('../middleware/auth');
 const mongoose = require('mongoose');
+const WorkHeader = require('../models/Work').WorkHeader;
 
 // 간소화된 DB 연결 확인 함수
 const ensureDBConnection = async () => {
@@ -45,6 +46,36 @@ const ensureDBConnection = async () => {
   
   return true;
 };
+
+// GET /work/header - 상단 제목/부제목 조회
+router.get('/header', async (req, res) => {
+  try {
+    let header = await WorkHeader.findOne({});
+    if (!header) {
+      header = new WorkHeader({ title: 'WORK', subtitle: '작업/프로젝트' });
+      await header.save();
+    }
+    res.json({ success: true, data: header });
+  } catch (e) {
+    res.status(500).json({ success: false, message: '헤더 조회 실패', error: e.message });
+  }
+});
+
+// PUT /work/header - 상단 제목/부제목 수정
+router.put('/header', require('../middleware/auth'), async (req, res) => {
+  try {
+    let header = await WorkHeader.findOne({});
+    if (!header) {
+      header = new WorkHeader({});
+    }
+    if (req.body.title !== undefined) header.title = req.body.title;
+    if (req.body.subtitle !== undefined) header.subtitle = req.body.subtitle;
+    await header.save();
+    res.json({ success: true, data: header });
+  } catch (e) {
+    res.status(500).json({ success: false, message: '헤더 수정 실패', error: e.message });
+  }
+});
 
 // GET /api/work - 모든 work 데이터 조회
 router.get('/', async (req, res) => {
