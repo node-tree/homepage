@@ -22,4 +22,12 @@ const filedSchema = new mongoose.Schema({
   collection: 'workshop'
 });
 
-module.exports = mongoose.model('Filed', filedSchema); 
+const filedHeaderSchema = new mongoose.Schema({
+  title: { type: String, default: 'FILED' },
+  subtitle: { type: String, default: '기록/아카이브' }
+});
+
+const FiledHeader = mongoose.model('FiledHeader', filedHeaderSchema, 'filed_header');
+
+module.exports = mongoose.model('Filed', filedSchema);
+module.exports.FiledHeader = FiledHeader; 

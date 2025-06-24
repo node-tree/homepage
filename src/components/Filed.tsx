@@ -26,6 +26,10 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
   const [showWritePost, setShowWritePost] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
+  const [title, setTitle] = useState('FILED');
+  const [subtitle, setSubtitle] = useState('기록/아카이브');
+  const [isEditingHeader, setIsEditingHeader] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadPosts = useCallback(async () => {
     setLoading(true);
@@ -51,6 +55,24 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
   useEffect(() => {
     loadPosts();
   }, [loadPosts]);
+
+  useEffect(() => {
+    const fetchFiledHeader = async () => {
+      try {
+        setIsLoading(true);
+        const res = await filedAPI.getFiledHeader();
+        if (res.success && res.data) {
+          setTitle(res.data.title || 'FILED');
+          setSubtitle(res.data.subtitle || '기록/아카이브');
+        }
+      } catch (e) {
+        // 에러 무시, 기본값 사용
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchFiledHeader();
+  }, []);
 
   const handleSavePost = (newPost: { title: string; content: string; date: string; images?: string[] }) => {
     setShowWritePost(false);
@@ -84,6 +106,18 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
         console.error('기록 삭제 오류:', err);
         alert(err instanceof Error ? err.message : '기록 삭제에 실패했습니다.');
       }
+    }
+  };
+
+  const handleSaveHeader = async () => {
+    try {
+      setIsLoading(true);
+      await filedAPI.updateFiledHeader({ title, subtitle });
+      setIsEditingHeader(false);
+    } catch (e) {
+      alert('저장에 실패했습니다.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -255,24 +289,100 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
   return (
     <div className="page-content">
       <div className="page-header">
-      <h1 className="page-title">
-        COMMONS
-        <motion.div 
-            className="page-subtitle-container"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6, duration: 1 }}
-          ></motion.div>
-        <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>소리·기억·관계로 이루어진 감각적 자산
-        <br />
-        <br />
-        NODE TREE는 예술을 개인의 소유가 아닌, 관계와 감응 속에서 함께 만들어가는 공공의 장으로   <br />
-        실천한다. 이 카테고리는 마을 주민·농부·청소년 등 다양한 존재가 예술의 주체로 참여해 구축해 온  <br />
-        창작 커먼즈의 기록이다.
+        {isEditingHeader ? (
+          <div style={{
+            background: '#fff',
+            borderRadius: '16px',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+            padding: '24px 20px 16px 20px',
+            marginBottom: 16,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'stretch',
+            gap: 12,
+            maxWidth: 480,
+            width: '100%',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+          }}>
+            <textarea value={title} onChange={e => setTitle(e.target.value)}
+              style={{
+                fontSize: '2rem',
+                fontWeight: 700,
+                border: 'none',
+                borderBottom: '2px solid #eee',
+                outline: 'none',
+                padding: '8px 0',
+                marginBottom: 4,
+                background: 'transparent',
+                textAlign: 'center',
+                borderRadius: 0,
+                transition: 'border-color 0.2s',
+                resize: 'none',
+                minHeight: 40,
+                overflow: 'hidden',
+              }}
+              placeholder="제목 입력"
+              autoFocus
+              rows={1}
+              onInput={e => {
+                const ta = e.target as HTMLTextAreaElement;
+                ta.style.height = 'auto';
+                ta.style.height = ta.scrollHeight + 'px';
+              }}
+            />
+            <textarea value={subtitle} onChange={e => setSubtitle(e.target.value)}
+              style={{
+                fontSize: '1.1rem',
+                border: 'none',
+                borderBottom: '1.5px solid #eee',
+                outline: 'none',
+                padding: '6px 0',
+                background: 'transparent',
+                textAlign: 'center',
+                borderRadius: 0,
+                transition: 'border-color 0.2s',
+                resize: 'none',
+                minHeight: 32,
+                overflow: 'hidden',
+              }}
+              placeholder="부제목 입력"
+              rows={1}
+              onInput={e => {
+                const ta = e.target as HTMLTextAreaElement;
+                ta.style.height = 'auto';
+                ta.style.height = ta.scrollHeight + 'px';
+              }}
+            />
+            <button onClick={handleSaveHeader}
+              style={{
+                background: '#222',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px 0',
+                fontWeight: 600,
+                fontSize: '1rem',
+                marginTop: 8,
+                cursor: 'pointer',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                transition: 'background 0.2s',
+                width: 120,
+                alignSelf: 'center',
+              }}
+            >저장</button>
+          </div>
+        ) : (
+          <>
+            <h1 className="page-title">{title}</h1>
+            <div className="page-subtitle">{subtitle}</div>
+            {isAuthenticated && (
+              <button onClick={() => setIsEditingHeader(true)} className="write-button">편집</button>
+            )}
+          </>
+        )}
+      </div>
 
-        </div>
-      </h1>
-      
       <div className="filed-container">
         <div className="work-header">
           {isAuthenticated && (
@@ -356,7 +466,6 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
           </div>
         )}
       </div>
-    </div>
     </div>
   );
 };

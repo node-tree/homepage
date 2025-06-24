@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const LocationVideo = require('../models/LocationVideo');
 const auth = require('../middleware/auth');
+const LocationHeader = require('../models/LocationVideo').LocationHeader;
 
 const router = express.Router();
 
@@ -38,6 +39,36 @@ const ensureDBConnection = async () => {
   
   return true;
 };
+
+// GET /location-video/header - 상단 제목/부제목 조회
+router.get('/header', async (req, res) => {
+  try {
+    let header = await LocationHeader.findOne({});
+    if (!header) {
+      header = new LocationHeader({ title: 'LOCATION', subtitle: '장소/3D' });
+      await header.save();
+    }
+    res.json({ success: true, data: header });
+  } catch (e) {
+    res.status(500).json({ success: false, message: '헤더 조회 실패', error: e.message });
+  }
+});
+
+// PUT /location-video/header - 상단 제목/부제목 수정
+router.put('/header', require('../middleware/auth'), async (req, res) => {
+  try {
+    let header = await LocationHeader.findOne({});
+    if (!header) {
+      header = new LocationHeader({});
+    }
+    if (req.body.title !== undefined) header.title = req.body.title;
+    if (req.body.subtitle !== undefined) header.subtitle = req.body.subtitle;
+    await header.save();
+    res.json({ success: true, data: header });
+  } catch (e) {
+    res.status(500).json({ success: false, message: '헤더 수정 실패', error: e.message });
+  }
+});
 
 // GET /api/location-video - 모든 위치별 영상 조회
 router.get('/', async (req, res) => {
