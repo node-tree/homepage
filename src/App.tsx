@@ -23,8 +23,8 @@ function AppContent() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [hoveredCircle, setHoveredCircle] = useState<number | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true); // 초기 로드 추적
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768); // 모바일 감지
-  const [isSmallMobile, setIsSmallMobile] = useState(window.innerWidth <= 480); // 소형 모바일 감지
+  const [isMobile, setIsMobile] = useState(false); // SSR 호환 모바일 감지
+  const [isSmallMobile, setIsSmallMobile] = useState(false); // SSR 호환 소형 모바일 감지
   const [audioInitialized, setAudioInitialized] = useState(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const { isAuthenticated, logout, user } = useAuth();
@@ -316,13 +316,8 @@ function AppContent() {
 
   // 화면 크기 변경 감지
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-      setIsSmallMobile(window.innerWidth <= 480);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    setIsMobile(window.innerWidth <= 768);
+    setIsSmallMobile(window.innerWidth <= 480);
   }, []);
 
   // Location 컴포넌트에서 영상 설정 페이지로 이동하는 커스텀 이벤트 리스너
@@ -372,10 +367,8 @@ function AppContent() {
       case 0: // 초기 상태: 모든 원이 중앙 (화면 중간)
         return { x: 0, y: 0, scale: 1 }; // 완전히 중앙에 위치
       case 1: // 메뉴 상태: 가로로 펼쳐짐 (중간) - 모바일 반응형 적용
-        const menuPositions = isSmallMobile 
-          ? [-175, -105, -35, 35, 105, 175] // 소형 모바일에서 6개 원 간격
-          : isMobile 
-          ? [-225, -135, -45, 45, 135, 225] // 모바일에서 6개 원 간격
+        const menuPositions = (isSmallMobile || isMobile)
+          ? [-150, -90, -30, 30, 90, 150] // 모든 모바일에서 6개 원 간격(더 넓게)
           : [-500, -300, -100, 100, 300, 500]; // 데스크탑 6개 원 간격
         const menuScale = isSmallMobile ? 0.7 : isMobile ? 0.8 : 1; // 메뉴 상태에서 모바일 스케일 조정
         const result = { x: menuPositions[index], y: 0, scale: menuScale };
@@ -511,7 +504,6 @@ function AppContent() {
             backdropFilter: 'none',
             border: 'none'
           } : currentStep === 2 ? {
-            // 페이지 상태: navbar가 잘 보이도록 적절한 위치에 고정
             position: 'fixed',
             top: '0px', // 화면 제일 위에 붙임
             left: '0',
@@ -546,7 +538,7 @@ function AppContent() {
                   delay: currentStep === 2 ? 0 : circle.delay,
                 }}
                 style={{
-                  display: currentStep === 0 && (isMobile || isSmallMobile) && index !== 2 ? 'none' : 'block'
+                  // 모바일 첫 화면에서도 모든 원이 중앙에 보이도록 display 조건 제거
                 }}
                 onClick={() => {
                   if (currentStep === 0) {
