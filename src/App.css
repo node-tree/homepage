@@ -308,15 +308,15 @@
 
 /* 작은 텍스트 모드 (두 번째 페이지만) */
 .circle-text-motion.small-text.small-mobile {
-  font-size: 4px;
+  font-size: 2.2px;
 }
 
 .circle-text-motion.small-text.mobile {
-  font-size: 5px;
+  font-size: 3px;
 }
 
 .circle-text-motion.small-text.desktop {
-  font-size: 12px;
+  font-size: 8px;
 }
 
 /* 라벨 모드 (세 번째 페이지) */
@@ -351,7 +351,7 @@
 }
 
 .circle-text-motion:not(.small-text):not(.label-mode).desktop {
-  font-size: 0.8rem; /* 데스크탑에서 폰트 크기 축소 */
+  font-size: 0.65rem;
 }
 
 /* 페이지 콘텐츠 */
@@ -1354,7 +1354,7 @@
   }
   
   .circle-text-motion {
-    font-size: 0.9rem !important; /* 모바일에서 네비게이션 텍스트 크기를 더 줄임 */
+    font-size: 0.6rem !important; /* 모바일에서 네비게이션 텍스트 크기를 더 줄임 */
     letter-spacing: -0.01em !important; /* 모바일에서 글자 간격을 더욱 줄임 */
     opacity: 1 !important;
     visibility: visible !important;
@@ -2591,4 +2591,47 @@
   .posts-container {
     grid-template-columns: 1fr;
   }
+}
+
+.circle-text-motion.mobile {
+  font-size: 0.25rem !important;
+}
+
+.circle-text-motion.small-text.mobile {
+  font-size: 6px;
+}
+
+.circle-text-motion.small-mobile {
+  font-size: 0.35rem;
+}
+
+.circle-text-motion.small-text.small-mobile {
+  font-size: 4px;
+}
+
+.circle-text-motion.label-mode.mobile {
+  font-size: 32px;
+  transform: translate(-50%, calc(-50% + 90px));
+}
+
+.circle-text-motion.label-mode.small-mobile {
+  font-size: 26px;
+  transform: translate(-50%, calc(-50% + 70px));
+}
+
+@media (max-width: 768px) {
+  .circle-text-motion.label-mode {
+    font-size: 17px !important;
+  }
+}
+
+/* 첫 화면(메인)에서 원 안 텍스트 크기 확실히 크게 */
+.circle-motion[data-step="0"] .circle-text-motion.desktop {
+  font-size: 1.2rem !important;
+}
+.circle-motion[data-step="0"] .circle-text-motion.mobile {
+  font-size: 1rem !important;
+}
+.circle-motion[data-step="0"] .circle-text-motion.small-mobile {
+  font-size: 0.8rem !important;
 }
