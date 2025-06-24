@@ -156,14 +156,14 @@ const CVModernContent: React.FC<CVModernContentProps> = ({ text, align }) => {
         }
         // [제목] 스타일
         if (/^\[.*\]$/.test(line.trim())) {
-          return <div key={idx} style={{ fontSize: '1.25rem', fontWeight: 700, margin: '2.2rem 0 1.1rem 0', letterSpacing: '0.01em', borderBottom: '2px solid #eee', paddingBottom: '0.2em' }}>{line.replace(/[\[\]]/g, '')}</div>;
+          return <div key={idx} style={{ fontSize: '1.25rem', fontWeight: 700, margin: '2.2rem 0 1.1rem 0', letterSpacing: '0.01em', borderBottom: '2px solid #eee', paddingBottom: '0.2em' }}>{line.replace(/[[\]]/g, '')}</div>;
         }
         // 연도(4자리)로 시작하는 줄
         if (/^20\d{2}|19\d{2}/.test(line.trim())) {
           return <div key={idx} style={{ fontWeight: 400, color: '#444', fontSize: '1.08rem', margin: '0.2rem 0 0.2rem 0' }}>{line}</div>;
         }
         // 소제목(콜론 포함)
-        if (/^[^\[]+:.+/.test(line.trim())) {
+        if (/^[^[]+:.+/.test(line.trim())) {
           return <div key={idx} style={{ fontWeight: 500, fontSize: '1.08rem', margin: '1.1rem 0 0.3rem 0' }}>{line}</div>;
         }
         // 리스트( - 또는 * )
