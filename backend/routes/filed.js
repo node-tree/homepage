@@ -26,7 +26,7 @@ const ensureDBConnection = async () => {
       serverSelectionTimeoutMS: 5000,
       connectTimeoutMS: 5000,
       socketTimeoutMS: 0,
-      maxPoolSize: 1,
+      maxPoolSize: 5,
       minPoolSize: 0,
       maxIdleTimeMS: 10000,
       bufferCommands: false,

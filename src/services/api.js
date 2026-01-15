@@ -1,9 +1,9 @@
 // nodetree.kr 배포 환경 감지
-const isNodeTreeSite = typeof window !== 'undefined' && 
+const isNodeTreeSite = typeof window !== 'undefined' &&
   (window.location.hostname === 'nodetree.kr' || window.location.hostname === 'www.nodetree.kr');
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 
-  (isNodeTreeSite ? 'https://www.nodetree.kr/api' : 
+const API_BASE_URL = process.env.REACT_APP_API_URL ||
+  (isNodeTreeSite ? 'https://www.nodetree.kr/api' :
    process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api');
 
 // 추가된 디버깅 코드
@@ -21,20 +21,62 @@ const getHeaders = () => {
   const headers = {
     'Content-Type': 'application/json'
   };
-  
+
   const token = getAuthToken();
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  
+
   return headers;
+};
+
+// 재시도 로직이 포함된 fetch 함수
+const fetchWithRetry = async (url, options = {}, retries = 3, timeout = 10000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      // 타임아웃 구현
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      // 서버 에러(503 등)인 경우 재시도
+      if (response.status >= 500 && i < retries - 1) {
+        console.log(`서버 에러 (${response.status}), ${i + 1}/${retries} 재시도 중...`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // 점진적 대기
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      // 타임아웃 또는 네트워크 에러
+      if (error.name === 'AbortError') {
+        console.log(`요청 타임아웃, ${i + 1}/${retries} 재시도 중...`);
+      } else {
+        console.log(`네트워크 에러: ${error.message}, ${i + 1}/${retries} 재시도 중...`);
+      }
+
+      // 마지막 시도였다면 에러 throw
+      if (i === retries - 1) {
+        throw error;
+      }
+
+      // 재시도 전 대기 (점진적으로 증가)
+      await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+    }
+  }
 };
 
 // Work API
 export const workAPI = {
   // 모든 글 조회
   getAllPosts: async () => {
-    const response = await fetch(`${API_BASE_URL}/work`);
+    const response = await fetchWithRetry(`${API_BASE_URL}/work`);
     if (!response.ok) {
       throw new Error('Failed to fetch posts');
     }
@@ -81,7 +123,7 @@ export const workAPI = {
 
   // 상단 제목/부제목 단일 데이터 조회
   getWorkHeader: async () => {
-    const response = await fetch(`${API_BASE_URL}/work/header`);
+    const response = await fetchWithRetry(`${API_BASE_URL}/work/header`);
     if (!response.ok) {
       throw new Error('Failed to fetch work header');
     }
@@ -106,7 +148,7 @@ export const workAPI = {
 export const filedAPI = {
   // 모든 기록 조회
   getAllPosts: async () => {
-    const response = await fetch(`${API_BASE_URL}/filed`);
+    const response = await fetchWithRetry(`${API_BASE_URL}/filed`);
     if (!response.ok) {
       throw new Error('Failed to fetch posts');
     }
@@ -153,7 +195,7 @@ export const filedAPI = {
 
   // 상단 제목/부제목 단일 데이터 조회
   getFiledHeader: async () => {
-    const response = await fetch(`${API_BASE_URL}/filed/header`);
+    const response = await fetchWithRetry(`${API_BASE_URL}/filed/header`);
     if (!response.ok) {
       throw new Error('Failed to fetch filed header');
     }
@@ -177,7 +219,7 @@ export const filedAPI = {
 // About API
 export const aboutAPI = {
   getAbout: async () => {
-    const response = await fetch(`${API_BASE_URL}/about`);
+    const response = await fetchWithRetry(`${API_BASE_URL}/about`);
     if (!response.ok) {
       throw new Error('Failed to fetch about content');
     }
@@ -200,7 +242,7 @@ export const aboutAPI = {
 // CV API
 export const cvAPI = {
   getCV: async () => {
-    const response = await fetch(`${API_BASE_URL}/cv`);
+    const response = await fetchWithRetry(`${API_BASE_URL}/cv`);
     if (!response.ok) {
       throw new Error('Failed to fetch CV');
     }
@@ -222,7 +264,7 @@ export const cvAPI = {
 // Location API (단일 데이터)
 export const locationAPI = {
   getLocation: async () => {
-    const response = await fetch(`${API_BASE_URL}/location-video`);
+    const response = await fetchWithRetry(`${API_BASE_URL}/location-video`);
     if (!response.ok) {
       throw new Error('Failed to fetch location');
     }
@@ -240,7 +282,7 @@ export const locationAPI = {
     return response.json();
   },
   getLocationHeader: async () => {
-    const response = await fetch(`${API_BASE_URL}/location-video/header`);
+    const response = await fetchWithRetry(`${API_BASE_URL}/location-video/header`);
     if (!response.ok) throw new Error('Failed to fetch location header');
     return response.json();
   },
@@ -257,7 +299,7 @@ export const locationAPI = {
 
 export const humanAPI = {
   getHumanHeader: async () => {
-    const response = await fetch(`${API_BASE_URL}/human/header`);
+    const response = await fetchWithRetry(`${API_BASE_URL}/human/header`);
     if (!response.ok) {
       throw new Error('Failed to fetch human header');
     }
