@@ -51,24 +51,44 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
     }
   }, [onPostsLoaded]);
 
+  // 데이터와 헤더를 병렬로 로드하여 성능 향상
   useEffect(() => {
-    loadPosts();
-  }, [loadPosts]);
+    const loadAllData = async () => {
+      setLoading(true);
+      setError(null);
 
-  useEffect(() => {
-    const fetchFiledHeader = async () => {
       try {
-        const res = await filedAPI.getFiledHeader();
-        if (res.success && res.data) {
-          setTitle(res.data.title || 'FILED');
-          setSubtitle(res.data.subtitle || '기록/아카이브');
+        // 병렬로 API 호출
+        const [postsResponse, headerResponse] = await Promise.all([
+          filedAPI.getAllPosts(),
+          filedAPI.getFiledHeader()
+        ]);
+
+        // 포스트 데이터 처리
+        if (postsResponse.success) {
+          setPosts(postsResponse.data);
+          if (onPostsLoaded) {
+            onPostsLoaded(postsResponse.data.length);
+          }
+        } else {
+          setError(postsResponse.message);
         }
-      } catch (e) {
-        // 에러 무시, 기본값 사용
+
+        // 헤더 데이터 처리
+        if (headerResponse.success && headerResponse.data) {
+          setTitle(headerResponse.data.title || 'FILED');
+          setSubtitle(headerResponse.data.subtitle || '기록/아카이브');
+        }
+      } catch (err) {
+        setError('글을 불러오는데 실패했습니다.');
+        console.error('Filed 로딩 오류:', err);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchFiledHeader();
-  }, []);
+
+    loadAllData();
+  }, [onPostsLoaded]);
 
   const handleSavePost = (newPost: { title: string; content: string; date: string; images?: string[] }) => {
     setShowWritePost(false);

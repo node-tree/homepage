@@ -67,7 +67,7 @@ const connectDB = async () => {
       socketTimeoutMS: 0, // 무제한 (0으로 설정)
       
       // 연결 풀 설정 (서버리스에 최적화)
-      maxPoolSize: 1, // 서버리스에서는 1개만 사용
+      maxPoolSize: 5, // 동시 요청 처리 성능 향상
       minPoolSize: 0,
       maxIdleTimeMS: 10000, // 10초 후 연결 해제
       

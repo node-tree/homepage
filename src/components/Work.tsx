@@ -50,24 +50,44 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
     }
   }, [onPostsLoaded]);
 
+  // 데이터와 헤더를 병렬로 로드하여 성능 향상
   useEffect(() => {
-    loadPosts();
-  }, [loadPosts]);
+    const loadAllData = async () => {
+      setLoading(true);
+      setError(null);
 
-  useEffect(() => {
-    const fetchHeader = async () => {
       try {
-        const res = await workAPI.getWorkHeader();
-        if (res.success && res.data) {
-          setTitle(res.data.title || 'ART WORK');
-          setSubtitle(res.data.subtitle || '작업 기록');
+        // 병렬로 API 호출
+        const [postsResponse, headerResponse] = await Promise.all([
+          workAPI.getAllPosts(),
+          workAPI.getWorkHeader()
+        ]);
+
+        // 포스트 데이터 처리
+        if (postsResponse.success) {
+          setPosts(postsResponse.data);
+          if (onPostsLoaded) {
+            onPostsLoaded(postsResponse.data.length);
+          }
+        } else {
+          setError(postsResponse.message);
         }
-      } catch (e) {
-        // 에러 무시, 기본값 사용
+
+        // 헤더 데이터 처리
+        if (headerResponse.success && headerResponse.data) {
+          setTitle(headerResponse.data.title || 'ART WORK');
+          setSubtitle(headerResponse.data.subtitle || '작업 기록');
+        }
+      } catch (err) {
+        setError('글을 불러오는데 실패했습니다.');
+        console.error('Work 로딩 오류:', err);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchHeader();
-  }, []);
+
+    loadAllData();
+  }, [onPostsLoaded]);
 
   const handleSavePost = (newPost: { title: string; content: string; date: string; images?: string[] }) => {
     setShowWritePost(false);
