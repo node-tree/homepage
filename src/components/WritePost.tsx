@@ -25,7 +25,41 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
   const contentRef = useRef<HTMLTextAreaElement>(null);
+
+  // 마크다운 이미지/영상을 HTML로 변환하는 함수
+  const parseMarkdownMedia = (text: string): string => {
+    let result = text;
+
+    // 영상 마크다운 처리: !![alt](url)
+    result = result.replace(/!!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
+      // YouTube URL 처리
+      const youtubeMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+      if (youtubeMatch) {
+        return `<div class="video-container"><iframe src="https://www.youtube.com/embed/${youtubeMatch[1]}" frameborder="0" allowfullscreen></iframe></div>`;
+      }
+
+      // Vimeo URL 처리
+      const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+      if (vimeoMatch) {
+        return `<div class="video-container"><iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}" frameborder="0" allowfullscreen></iframe></div>`;
+      }
+
+      // 일반 비디오 URL
+      return `<div class="video-container"><video controls><source src="${url}" /></video></div>`;
+    });
+
+    // 이미지 마크다운 처리: ![alt](url)
+    result = result.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
+      return `<img src="${url}" alt="${alt}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px;" />`;
+    });
+
+    // 줄바꿈을 <br>로 변환
+    result = result.replace(/\n/g, '<br />');
+
+    return result;
+  };
 
   useEffect(() => {
     if (editPost) {
@@ -179,19 +213,42 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
 
         <div className="form-group">
           <label className="form-label">내용</label>
-          <div className="markdown-toolbar" style={{ marginBottom: '10px', display: 'flex', gap: '10px' }}>
+          <div className="markdown-toolbar" style={{ marginBottom: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
             <button onClick={handleInsertImage} disabled={saving} className="toolbar-button">이미지 추가</button>
             <button onClick={handleInsertVideo} disabled={saving} className="toolbar-button">영상 추가</button>
+            <button
+              onClick={() => setShowPreview(!showPreview)}
+              className="toolbar-button"
+              style={{ marginLeft: 'auto', backgroundColor: showPreview ? '#333' : undefined, color: showPreview ? '#fff' : undefined }}
+            >
+              {showPreview ? '편집' : '미리보기'}
+            </button>
           </div>
-          <textarea
-            ref={contentRef}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="글 내용을 입력하세요. 이미지나 영상은 위 버튼을 사용하거나 마크다운 형식( ![alt](url) 또는 !![alt](url) )으로 직접 입력할 수 있습니다."
-            className="form-textarea"
-            disabled={saving}
-            rows={20}
-          />
+
+          {showPreview ? (
+            <div
+              className="preview-content"
+              style={{
+                minHeight: '400px',
+                padding: '20px',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                backgroundColor: '#fafafa',
+                overflow: 'auto'
+              }}
+              dangerouslySetInnerHTML={{ __html: parseMarkdownMedia(content) }}
+            />
+          ) : (
+            <textarea
+              ref={contentRef}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="글 내용을 입력하세요. 이미지나 영상은 위 버튼을 사용하거나 마크다운 형식( ![alt](url) 또는 !![alt](url) )으로 직접 입력할 수 있습니다."
+              className="form-textarea"
+              disabled={saving}
+              rows={20}
+            />
+          )}
         </div>
       </div>
     </div>
