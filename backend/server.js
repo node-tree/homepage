@@ -3,24 +3,21 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 
-// Vercel 환경에서는 dotenv를 다르게 처리
-if (process.env.NODE_ENV !== 'production') {
-  require('dotenv').config();
-}
-
-// JWT_SECRET 환경변수가 Vercel에 설정되어 있어야 함
+// 환경변수 로드
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 8000;
 
 // 미들웨어
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
+  origin: process.env.NODE_ENV === 'production'
     ? [
-        'https://nodetree-home.vercel.app', 
+        'https://nodetree-home.vercel.app',
         'https://nodetree-home-git-main-your-username.vercel.app',
-        /\.vercel\.app$/
-      ] 
+        /\.vercel\.app$/,
+        /\.onrender\.com$/
+      ]
     : ['http://localhost:3000', 'http://localhost:3001'],
   credentials: true
 }));
@@ -431,18 +428,23 @@ app.use((error, req, res, next) => {
   });
 });
 
-// 서버 시작 (로컬 개발 환경에서만)
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, async () => {
-    console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
-    try {
-      await connectDB();
-    } catch (error) {
-      console.log('초기 DB 연결 실패, 요청 시 재시도합니다.');
-    }
-  });
-}
+// 서버 시작
+const startServer = async () => {
+  try {
+    await connectDB();
+    console.log('MongoDB 연결 완료');
+  } catch (error) {
+    console.log('초기 DB 연결 실패, 요청 시 재시도합니다.');
+  }
 
-// Vercel용 export
+  app.listen(PORT, () => {
+    console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
+    console.log(`환경: ${process.env.NODE_ENV || 'development'}`);
+  });
+};
+
+startServer();
+
+// Export for testing
 module.exports = app;
 module.exports.connectDB = connectDB; 
