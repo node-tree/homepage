@@ -4,7 +4,7 @@
   "description": "노드트리 홈페이지 백엔드",
   "main": "server.js",
   "engines": {
-    "node": "24.x"
+    "node": "20.x"
   },
   "scripts": {
     "start": "node server.js",
