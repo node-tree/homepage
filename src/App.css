@@ -2713,26 +2713,21 @@
 .post-grid-thumbnail img {
   width: 100% !important;
   height: 100% !important;
-  object-fit: cover !important;
+  object-fit: contain !important;
   object-position: center center !important;
   display: block !important;
   border-radius: 0 !important;
 }
 
-/* 썸네일 이미지 윗쪽이 항상 보이도록 강제 */
-.post-grid-thumbnail img {
-  object-position: top center !important;
-}
-
 /* 썸네일 엣지(모서리 둥글기) 제거, 이미지 전체 보이게 */
 .post-grid-thumbnail {
   border-radius: 0 !important;
-  overflow: visible !important;
+  overflow: hidden !important;
   background: #f8f8f8 !important;
 }
 .post-grid-thumbnail img {
   border-radius: 0 !important;
-  object-fit: cover !important;
+  object-fit: contain !important;
   object-position: center center !important;
   width: 100% !important;
   height: 100% !important;
