@@ -43,6 +43,10 @@
       "dest": "/click02.wav"
     },
     {
+      "src": "/pdf/(.*)",
+      "dest": "/pdf/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "/index.html"
     }
