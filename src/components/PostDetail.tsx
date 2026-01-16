@@ -26,11 +26,43 @@ const PostDetail: React.FC<PostDetailProps> = ({
   onDelete
 }) => {
   const { isAuthenticated } = useAuth();
+  // 마크다운 이미지/영상을 HTML로 변환하는 함수
+  const parseMarkdownMedia = (content: string): string => {
+    let result = content;
+
+    // 영상 마크다운 처리: !![alt](url)
+    result = result.replace(/!!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
+      // YouTube URL 처리
+      const youtubeMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+      if (youtubeMatch) {
+        return `<div class="video-container"><iframe src="https://www.youtube.com/embed/${youtubeMatch[1]}" frameborder="0" allowfullscreen></iframe></div>`;
+      }
+
+      // Vimeo URL 처리
+      const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+      if (vimeoMatch) {
+        return `<div class="video-container"><iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}" frameborder="0" allowfullscreen></iframe></div>`;
+      }
+
+      // 일반 비디오 URL
+      return `<div class="video-container"><video controls><source src="${url}" /></video></div>`;
+    });
+
+    // 이미지 마크다운 처리: ![alt](url)
+    result = result.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
+      return `<img src="${url}" alt="${alt}" class="content-image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px;" />`;
+    });
+
+    // 줄바꿈을 <br>로 변환
+    result = result.replace(/\n/g, '<br />');
+
+    return result;
+  };
+
   // 안전한 HTML 렌더링을 위한 함수
   const renderSafeContent = (content: string) => {
-    // 줄바꿈을 <br>로 변환
-    const safeContent = content.replace(/\n/g, '<br />');
-    return { __html: safeContent };
+    const parsedContent = parseMarkdownMedia(content);
+    return { __html: parsedContent };
   };
 
   const handleDelete = () => {
