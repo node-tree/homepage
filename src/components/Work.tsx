@@ -286,11 +286,49 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
                 <span className="post-date">{selectedPost.date}</span>
               </div>
             </header>
-            
+
             <div className="post-content">
               <div className="post-text">
                 {formatContent(selectedPost.content)}
               </div>
+
+              {/* 유기적공명:에디아포닉 글에만 PDF 카탈로그 표시 */}
+              {(selectedPost.title.includes('유기적공명') || selectedPost.title.includes('에디아포닉')) && (
+                <div className="pdf-catalog-section">
+                  <div className="pdf-catalog-card">
+                    <div className="pdf-catalog-icon">
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M14 2V8H20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M9 13H15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                        <path d="M9 17H15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                    <div className="pdf-catalog-info">
+                      <h3 className="pdf-catalog-title">Exhibition Catalog</h3>
+                      <p className="pdf-catalog-subtitle">유기적공명 : 에디아포닉 웹 도록</p>
+                      <p className="pdf-catalog-size">PDF · 8.5MB</p>
+                    </div>
+                    <div className="pdf-catalog-actions">
+                      <a
+                        href="/pdf/웹도록.pdf"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="pdf-view-button"
+                      >
+                        View
+                      </a>
+                      <a
+                        href="/pdf/웹도록.pdf"
+                        download="유기적공명_에디아포닉_웹도록.pdf"
+                        className="pdf-download-button"
+                      >
+                        Download
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </article>
         </div>

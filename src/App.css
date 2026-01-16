@@ -2863,3 +2863,178 @@
     margin: 15px 0;
   }
 }
+
+/* ========================================
+   PDF 카탈로그 카드 스타일
+   ======================================== */
+.pdf-catalog-section {
+  margin: 3rem 0;
+  padding: 2rem 0;
+  border-top: 1px solid #f0f0f0;
+}
+
+.pdf-catalog-card {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem 2rem;
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  border: 1px solid #e8e8e8;
+  border-radius: 16px;
+  transition: all 0.3s ease;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.pdf-catalog-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  border-color: #d0d0d0;
+}
+
+.pdf-catalog-icon {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  color: #666;
+}
+
+.pdf-catalog-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.pdf-catalog-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #222;
+  margin: 0 0 0.3rem 0;
+  letter-spacing: -0.02em;
+}
+
+.pdf-catalog-subtitle {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0 0 0.5rem 0;
+  font-weight: 400;
+}
+
+.pdf-catalog-size {
+  font-size: 0.8rem;
+  color: #999;
+  margin: 0;
+  font-weight: 400;
+}
+
+.pdf-catalog-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.pdf-view-button,
+.pdf-download-button {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.pdf-view-button {
+  background: transparent;
+  border: 1.5px solid #333;
+  color: #333;
+}
+
+.pdf-view-button:hover {
+  background: #333;
+  color: white;
+}
+
+.pdf-download-button {
+  background: #222;
+  border: 1.5px solid #222;
+  color: white;
+}
+
+.pdf-download-button:hover {
+  background: #000;
+  border-color: #000;
+  transform: scale(1.02);
+}
+
+/* PDF 카드 모바일 반응형 */
+@media (max-width: 768px) {
+  .pdf-catalog-card {
+    flex-direction: column;
+    text-align: center;
+    padding: 1.5rem;
+    gap: 1rem;
+  }
+
+  .pdf-catalog-icon {
+    width: 56px;
+    height: 56px;
+  }
+
+  .pdf-catalog-icon svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .pdf-catalog-info {
+    text-align: center;
+  }
+
+  .pdf-catalog-title {
+    font-size: 1rem;
+  }
+
+  .pdf-catalog-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .pdf-catalog-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pdf-view-button,
+  .pdf-download-button {
+    padding: 0.7rem 1.5rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .pdf-catalog-section {
+    margin: 2rem 0;
+    padding: 1.5rem 0;
+  }
+
+  .pdf-catalog-card {
+    padding: 1.25rem;
+    border-radius: 12px;
+  }
+
+  .pdf-catalog-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .pdf-view-button,
+  .pdf-download-button {
+    width: 100%;
+    text-align: center;
+    padding: 0.75rem 1rem;
+  }
+}
