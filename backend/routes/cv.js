@@ -15,10 +15,7 @@ const ensureDBConnection = async () => {
       const separator = mongoUri.includes('?') ? '&' : '?';
       mongoUri += `${separator}retryWrites=true&w=majority`;
     }
-    await mongoose.connect(mongoUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
+    await mongoose.connect(mongoUri);
     console.log('✅ MongoDB 연결 성공');
   }
   return true;

@@ -21,8 +21,6 @@ const ensureDBConnection = async () => {
     }
 
     const options = {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       serverSelectionTimeoutMS: 5000,
       connectTimeoutMS: 5000,
       socketTimeoutMS: 0,

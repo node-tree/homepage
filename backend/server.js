@@ -54,10 +54,6 @@ const connectDB = async () => {
     
     // Vercel 서버리스 환경에 최적화된 연결 옵션
     const options = {
-      // 기본 옵션
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      
       // 타임아웃 설정 (Vercel 10초 제한 고려)
       serverSelectionTimeoutMS: 5000, // 5초로 단축
       connectTimeoutMS: 5000,
