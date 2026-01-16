@@ -458,12 +458,12 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
                 key={index} 
                 className="post-grid-item"
               >
-                <div 
+                <div
                   className="post-grid-thumbnail"
                   onClick={() => handlePostClick(post)}
                 >
                   {post.thumbnail ? (
-                    <img src={post.thumbnail} alt={post.title} />
+                    <img src={post.thumbnail.startsWith('//') ? `https:${post.thumbnail}` : post.thumbnail} alt={post.title} />
                   ) : (
                     <div className="post-grid-no-image">
                       이미지 없음
