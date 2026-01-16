@@ -4,7 +4,7 @@
   "private": true,
   "homepage": "/",
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "dependencies": {
     "@react-three/drei": "9.88.13",
