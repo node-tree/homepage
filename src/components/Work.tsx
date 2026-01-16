@@ -310,21 +310,31 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
                       <p className="pdf-catalog-size">PDF · 8.5MB</p>
                     </div>
                     <div className="pdf-catalog-actions">
-                      <a
-                        href="/pdf/웹도록.pdf"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
                         className="pdf-view-button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          window.open(`${window.location.origin}/pdf/웹도록.pdf`, '_blank');
+                        }}
                       >
                         View
-                      </a>
-                      <a
-                        href="/pdf/웹도록.pdf"
-                        download="유기적공명_에디아포닉_웹도록.pdf"
+                      </button>
+                      <button
                         className="pdf-download-button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const link = document.createElement('a');
+                          link.href = '/pdf/웹도록.pdf';
+                          link.download = '유기적공명_에디아포닉_웹도록.pdf';
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }}
                       >
                         Download
-                      </a>
+                      </button>
                     </div>
                   </div>
                 </div>
