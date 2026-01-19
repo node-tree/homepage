@@ -567,16 +567,28 @@ function AppContent() {
         
         <AnimatePresence mode="wait" initial={false}>
           {currentStep === 2 && currentPage && (
-            <motion.div 
+            <motion.div
               key={currentPage}
               className="page-content-wrapper"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -30 }}
-              transition={{ 
-                duration: 0.4,
-                delay: 0.2,
-                ease: "easeOut"
+              initial={{
+                opacity: 0,
+                y: 60,
+                filter: "blur(10px)"
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                filter: "blur(0px)"
+              }}
+              exit={{
+                opacity: 0,
+                y: -30,
+                filter: "blur(5px)"
+              }}
+              transition={{
+                duration: 0.8,
+                delay: 0.1,
+                ease: [0.25, 0.1, 0.25, 1]
               }}
             >
               {renderPageContent()}

@@ -372,6 +372,55 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
                   </div>
                 </div>
               )}
+
+              {/* 위성악보시리즈:남미농장 글에만 PDF 카탈로그 표시 */}
+              {(selectedPost.title.includes('남미농장') || selectedPost.title.includes('위성악보시리즈:남미농장')) && (
+                <div className="pdf-catalog-section">
+                  <div className="pdf-catalog-card">
+                    <div className="pdf-catalog-thumbnail">
+                      <img
+                        src="//nodetree.cafe24.com/mcwjd/work/%B3%B2%B9%CC/IMG_4788.JPG"
+                        alt="웹도록 표지"
+                      />
+                    </div>
+                    <div className="pdf-catalog-content">
+                      <div className="pdf-catalog-info">
+                        <span className="pdf-catalog-badge">PDF</span>
+                        <h3 className="pdf-catalog-title">Exhibition Catalog</h3>
+                        <p className="pdf-catalog-subtitle">위성악보시리즈 : 남미농장 웹 도록</p>
+                        <p className="pdf-catalog-size">11.6MB</p>
+                      </div>
+                      <div className="pdf-catalog-actions">
+                        <button
+                          className="pdf-view-button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.open(`${window.location.origin}/pdf/남미농장.pdf`, '_blank');
+                          }}
+                        >
+                          View
+                        </button>
+                        <button
+                          className="pdf-download-button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const link = document.createElement('a');
+                            link.href = '/pdf/남미농장.pdf';
+                            link.download = '위성악보시리즈_남미농장_웹도록.pdf';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          }}
+                        >
+                          Download
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </article>
         </div>
@@ -471,10 +520,32 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
               <div style={{ minHeight: '80px' }} />
             ) : (
               <>
-                <h1 className="page-title">{title}</h1>
-                <div className="page-subtitle">{subtitle}</div>
+                <motion.h1
+                  className="page-title"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                >
+                  {title}
+                </motion.h1>
+                <motion.div
+                  className="page-subtitle"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+                >
+                  {subtitle}
+                </motion.div>
                 {isAuthenticated && (
-                  <button onClick={() => setIsEditingHeader(true)} className="write-button">편집</button>
+                  <motion.button
+                    onClick={() => setIsEditingHeader(true)}
+                    className="write-button"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.4, delay: 0.6 }}
+                  >
+                    편집
+                  </motion.button>
                 )}
               </>
             )}
