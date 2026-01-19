@@ -54,45 +54,67 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
 
   // 헤더를 먼저 로드한 후 글 목록 로드
   useEffect(() => {
+    let isMounted = true;
+
     const loadData = async () => {
+      // 에러 및 로딩 상태 리셋
+      setError(null);
+      setPostsLoading(true);
+
       // 1. 헤더 먼저 로드
       try {
         const headerResponse = await workAPI.getWorkHeader();
-        if (headerResponse.success && headerResponse.data) {
-          setTitle(headerResponse.data.title || 'ART WORK');
-          setSubtitle(headerResponse.data.subtitle || '작업 기록');
-        } else {
-          setTitle('ART WORK');
-          setSubtitle('작업 기록');
+        if (isMounted) {
+          if (headerResponse.success && headerResponse.data) {
+            setTitle(headerResponse.data.title || 'ART WORK');
+            setSubtitle(headerResponse.data.subtitle || '작업 기록');
+          } else {
+            setTitle('ART WORK');
+            setSubtitle('작업 기록');
+          }
         }
       } catch (err) {
         console.error('헤더 로딩 오류:', err);
-        setTitle('ART WORK');
-        setSubtitle('작업 기록');
+        if (isMounted) {
+          setTitle('ART WORK');
+          setSubtitle('작업 기록');
+        }
       }
-      setHeaderLoading(false);
+      if (isMounted) {
+        setHeaderLoading(false);
+      }
 
       // 2. 헤더 로드 완료 후 글 목록 로드
       try {
         const postsResponse = await workAPI.getAllPosts();
-        if (postsResponse.success) {
-          setPosts(postsResponse.data);
-          if (onPostsLoaded) {
-            onPostsLoaded(postsResponse.data.length);
+        if (isMounted) {
+          if (postsResponse.success) {
+            setPosts(postsResponse.data);
+            if (onPostsLoaded) {
+              onPostsLoaded(postsResponse.data.length);
+            }
+          } else {
+            setError(postsResponse.message);
           }
-        } else {
-          setError(postsResponse.message);
         }
       } catch (err) {
-        setError('글을 불러오는데 실패했습니다.');
+        if (isMounted) {
+          setError('글을 불러오는데 실패했습니다.');
+        }
         console.error('Work 로딩 오류:', err);
       } finally {
-        setPostsLoading(false);
+        if (isMounted) {
+          setPostsLoading(false);
+        }
       }
     };
 
     loadData();
-  }, [onPostsLoaded]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSavePost = (newPost: { title: string; content: string; date: string; images?: string[] }) => {
     setShowWritePost(false);
