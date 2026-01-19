@@ -48,6 +48,7 @@ const ensureDBConnection = async () => {
 // GET /filed/header - 상단 제목/부제목 조회
 router.get('/header', async (req, res) => {
   try {
+    await ensureDBConnection();
     let header = await FiledHeader.findOne({});
     if (!header) {
       header = new FiledHeader({ title: 'FILED', subtitle: '기록/아카이브' });
@@ -62,6 +63,7 @@ router.get('/header', async (req, res) => {
 // PUT /filed/header - 상단 제목/부제목 수정
 router.put('/header', require('../middleware/auth'), async (req, res) => {
   try {
+    await ensureDBConnection();
     let header = await FiledHeader.findOne({});
     if (!header) {
       header = new FiledHeader({});
