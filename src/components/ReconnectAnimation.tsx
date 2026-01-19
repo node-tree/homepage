@@ -13,6 +13,7 @@ const ReconnectAnimation: React.FC<ReconnectAnimationProps> = ({ width = 300, he
 
   useEffect(() => {
     if (!containerRef.current) return;
+    const container = containerRef.current;
 
     const EXPLODE_DURATION = 2;
     const RANDOM_DURATION = 5;
@@ -30,7 +31,7 @@ const ReconnectAnimation: React.FC<ReconnectAnimationProps> = ({ width = 300, he
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    containerRef.current.appendChild(renderer.domElement);
+    container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
     function createCircleTexture(size = 64) {
@@ -344,8 +345,8 @@ const ReconnectAnimation: React.FC<ReconnectAnimationProps> = ({ width = 300, he
       if (rendererRef.current) {
         rendererRef.current.dispose();
       }
-      if (containerRef.current && renderer.domElement) {
-        containerRef.current.removeChild(renderer.domElement);
+      if (container && renderer.domElement) {
+        container.removeChild(renderer.domElement);
       }
       particlesGeometry.dispose();
       particlesMaterial.dispose();
