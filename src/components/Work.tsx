@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { workAPI } from '../services/api';
 import WritePost from './WritePost';
 import { useAuth } from '../contexts/AuthContext';
+import ReconnectAnimation from './ReconnectAnimation';
 
 interface Post {
   id: string;
@@ -284,6 +285,11 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
           </div>
           
           <article className="post-article">
+            {/* Reconnect: 낙원식당 글에만 애니메이션 표시 */}
+            {(selectedPost.title.includes('Reconnect') || selectedPost.title.includes('낙원식당')) && (
+              <ReconnectAnimation width={280} height={280} />
+            )}
+
             <header className="post-header">
               <h1 className="post-title">{selectedPost.title}</h1>
               <div className="post-meta">
