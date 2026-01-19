@@ -75,10 +75,8 @@ const Login: React.FC = () => {
         return;
       }
 
-      // 백엔드 API 시도 - 같은 변수 재사용
-      const apiUrl = process.env.REACT_APP_API_URL || 
-        (isNodeTreeSite ? 'https://www.nodetree.kr/api' : 
-         process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api');
+      // 백엔드 API 시도 - 상대 경로 사용
+      const apiUrl = process.env.REACT_APP_API_URL || '/api';
       
       console.log('로그인 API URL:', apiUrl);
       
