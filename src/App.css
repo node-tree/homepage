@@ -1892,6 +1892,9 @@
 }
 
 .post-grid-thumbnail img {
+  position: absolute;
+  top: 0;
+  left: 0;
   object-fit: cover !important;
   object-position: center center !important;
   width: 100% !important;
