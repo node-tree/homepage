@@ -487,24 +487,20 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
         {!postsLoading && !error && posts.length > 0 && (
           <div className="posts-grid">
             {posts.map((post, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className="post-grid-item"
+                onClick={() => handlePostClick(post)}
               >
-                <div
-                  className="post-grid-thumbnail"
-                  onClick={() => handlePostClick(post)}
-                >
+                <div className="post-grid-thumbnail">
                   {post.thumbnail ? (
                     <img src={post.thumbnail.startsWith('//') ? `https:${post.thumbnail}` : post.thumbnail} alt={post.title} />
                   ) : (
-                    <div className="post-grid-no-image">
-                      이미지 없음
-                    </div>
+                    <div className="post-grid-no-image" />
                   )}
-                </div>
-                <div className="post-grid-content">
-                  <h3 className="post-grid-title">{post.title}</h3>
+                  <div className="post-grid-overlay">
+                    <span className="post-grid-overlay-title">{post.title}</span>
+                  </div>
                 </div>
               </div>
             ))}
