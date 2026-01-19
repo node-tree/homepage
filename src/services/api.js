@@ -13,6 +13,87 @@ console.log('Current API_BASE_URL:', API_BASE_URL);
 console.log('process.env.NODE_ENV:', process.env.NODE_ENV);
 console.log('isNodeTreeSite:', isNodeTreeSite);
 
+// ============ 캐시 유틸리티 ============
+const CACHE_DURATION = 5 * 60 * 1000; // 5분 캐시
+
+const cacheUtils = {
+  // 캐시에서 데이터 가져오기
+  get: (key) => {
+    try {
+      const cached = sessionStorage.getItem(key);
+      if (!cached) return null;
+
+      const { data, timestamp } = JSON.parse(cached);
+      const isExpired = Date.now() - timestamp > CACHE_DURATION;
+
+      if (isExpired) {
+        sessionStorage.removeItem(key);
+        return null;
+      }
+
+      return data;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  // 캐시에 데이터 저장
+  set: (key, data) => {
+    try {
+      sessionStorage.setItem(key, JSON.stringify({
+        data,
+        timestamp: Date.now()
+      }));
+    } catch (e) {
+      // sessionStorage 용량 초과 시 기존 캐시 정리
+      try {
+        sessionStorage.clear();
+        sessionStorage.setItem(key, JSON.stringify({
+          data,
+          timestamp: Date.now()
+        }));
+      } catch (e2) {
+        console.warn('캐시 저장 실패:', e2);
+      }
+    }
+  },
+
+  // 특정 캐시 삭제
+  remove: (key) => {
+    try {
+      sessionStorage.removeItem(key);
+    } catch (e) {
+      // ignore
+    }
+  },
+
+  // 특정 prefix로 시작하는 캐시 모두 삭제
+  clearByPrefix: (prefix) => {
+    try {
+      const keys = Object.keys(sessionStorage);
+      keys.forEach(key => {
+        if (key.startsWith(prefix)) {
+          sessionStorage.removeItem(key);
+        }
+      });
+    } catch (e) {
+      // ignore
+    }
+  }
+};
+
+const CACHE_KEYS = {
+  WORK_POSTS: 'cache_work_posts',
+  WORK_HEADER: 'cache_work_header',
+  FILED_POSTS: 'cache_filed_posts',
+  FILED_HEADER: 'cache_filed_header',
+  ABOUT: 'cache_about',
+  CV: 'cache_cv',
+  LOCATION: 'cache_location',
+  LOCATION_HEADER: 'cache_location_header',
+  HUMAN_HEADER: 'cache_human_header'
+};
+
 // 토큰을 가져오는 헬퍼 함수
 const getAuthToken = () => {
   return localStorage.getItem('auth_token');
@@ -76,13 +157,31 @@ const fetchWithRetry = async (url, options = {}, retries = 3, timeout = 10000) =
 
 // Work API
 export const workAPI = {
-  // 모든 글 조회
-  getAllPosts: async () => {
+  // 모든 글 조회 (캐시 우선)
+  getAllPosts: async (options = {}) => {
+    const { forceRefresh = false } = options;
+
+    // 캐시 확인 (강제 새로고침이 아닌 경우)
+    if (!forceRefresh) {
+      const cached = cacheUtils.get(CACHE_KEYS.WORK_POSTS);
+      if (cached) {
+        console.log('Work posts: 캐시에서 로드');
+        return cached;
+      }
+    }
+
     const response = await fetchWithRetry(`${API_BASE_URL}/work`);
     if (!response.ok) {
       throw new Error('Failed to fetch posts');
     }
-    return response.json();
+    const data = await response.json();
+
+    // 성공 시 캐시 저장
+    if (data.success) {
+      cacheUtils.set(CACHE_KEYS.WORK_POSTS, data);
+    }
+
+    return data;
   },
 
   // 새 글 작성
@@ -95,7 +194,10 @@ export const workAPI = {
     if (!response.ok) {
       throw new Error('Failed to create post');
     }
-    return response.json();
+    const data = await response.json();
+    // 캐시 무효화
+    cacheUtils.remove(CACHE_KEYS.WORK_POSTS);
+    return data;
   },
 
   // 글 수정
@@ -108,7 +210,10 @@ export const workAPI = {
     if (!response.ok) {
       throw new Error('Failed to update post');
     }
-    return response.json();
+    const data = await response.json();
+    // 캐시 무효화
+    cacheUtils.remove(CACHE_KEYS.WORK_POSTS);
+    return data;
   },
 
   // 글 삭제
@@ -120,16 +225,35 @@ export const workAPI = {
     if (!response.ok) {
       throw new Error('Failed to delete post');
     }
-    return response.json();
+    const data = await response.json();
+    // 캐시 무효화
+    cacheUtils.remove(CACHE_KEYS.WORK_POSTS);
+    return data;
   },
 
-  // 상단 제목/부제목 단일 데이터 조회
-  getWorkHeader: async () => {
+  // 상단 제목/부제목 단일 데이터 조회 (캐시 우선)
+  getWorkHeader: async (options = {}) => {
+    const { forceRefresh = false } = options;
+
+    if (!forceRefresh) {
+      const cached = cacheUtils.get(CACHE_KEYS.WORK_HEADER);
+      if (cached) {
+        console.log('Work header: 캐시에서 로드');
+        return cached;
+      }
+    }
+
     const response = await fetchWithRetry(`${API_BASE_URL}/work/header`);
     if (!response.ok) {
       throw new Error('Failed to fetch work header');
     }
-    return response.json();
+    const data = await response.json();
+
+    if (data.success) {
+      cacheUtils.set(CACHE_KEYS.WORK_HEADER, data);
+    }
+
+    return data;
   },
 
   // 상단 제목/부제목 단일 데이터 수정
@@ -142,19 +266,37 @@ export const workAPI = {
     if (!response.ok) {
       throw new Error('Failed to update work header');
     }
-    return response.json();
+    const data = await response.json();
+    cacheUtils.remove(CACHE_KEYS.WORK_HEADER);
+    return data;
   }
 };
 
 // Filed API
 export const filedAPI = {
-  // 모든 기록 조회
-  getAllPosts: async () => {
+  // 모든 기록 조회 (캐시 우선)
+  getAllPosts: async (options = {}) => {
+    const { forceRefresh = false } = options;
+
+    if (!forceRefresh) {
+      const cached = cacheUtils.get(CACHE_KEYS.FILED_POSTS);
+      if (cached) {
+        console.log('Filed posts: 캐시에서 로드');
+        return cached;
+      }
+    }
+
     const response = await fetchWithRetry(`${API_BASE_URL}/filed`);
     if (!response.ok) {
       throw new Error('Failed to fetch posts');
     }
-    return response.json();
+    const data = await response.json();
+
+    if (data.success) {
+      cacheUtils.set(CACHE_KEYS.FILED_POSTS, data);
+    }
+
+    return data;
   },
 
   // 새 기록 작성
@@ -167,7 +309,9 @@ export const filedAPI = {
     if (!response.ok) {
       throw new Error('Failed to create post');
     }
-    return response.json();
+    const data = await response.json();
+    cacheUtils.remove(CACHE_KEYS.FILED_POSTS);
+    return data;
   },
 
   // 기록 수정
@@ -180,7 +324,9 @@ export const filedAPI = {
     if (!response.ok) {
       throw new Error('Failed to update post');
     }
-    return response.json();
+    const data = await response.json();
+    cacheUtils.remove(CACHE_KEYS.FILED_POSTS);
+    return data;
   },
 
   // 기록 삭제
@@ -192,16 +338,34 @@ export const filedAPI = {
     if (!response.ok) {
       throw new Error('Failed to delete post');
     }
-    return response.json();
+    const data = await response.json();
+    cacheUtils.remove(CACHE_KEYS.FILED_POSTS);
+    return data;
   },
 
-  // 상단 제목/부제목 단일 데이터 조회
-  getFiledHeader: async () => {
+  // 상단 제목/부제목 단일 데이터 조회 (캐시 우선)
+  getFiledHeader: async (options = {}) => {
+    const { forceRefresh = false } = options;
+
+    if (!forceRefresh) {
+      const cached = cacheUtils.get(CACHE_KEYS.FILED_HEADER);
+      if (cached) {
+        console.log('Filed header: 캐시에서 로드');
+        return cached;
+      }
+    }
+
     const response = await fetchWithRetry(`${API_BASE_URL}/filed/header`);
     if (!response.ok) {
       throw new Error('Failed to fetch filed header');
     }
-    return response.json();
+    const data = await response.json();
+
+    if (data.success) {
+      cacheUtils.set(CACHE_KEYS.FILED_HEADER, data);
+    }
+
+    return data;
   },
 
   // 상단 제목/부제목 단일 데이터 수정
@@ -214,18 +378,36 @@ export const filedAPI = {
     if (!response.ok) {
       throw new Error('Failed to update filed header');
     }
-    return response.json();
+    const data = await response.json();
+    cacheUtils.remove(CACHE_KEYS.FILED_HEADER);
+    return data;
   }
 };
 
 // About API
 export const aboutAPI = {
-  getAbout: async () => {
+  getAbout: async (options = {}) => {
+    const { forceRefresh = false } = options;
+
+    if (!forceRefresh) {
+      const cached = cacheUtils.get(CACHE_KEYS.ABOUT);
+      if (cached) {
+        console.log('About: 캐시에서 로드');
+        return cached;
+      }
+    }
+
     const response = await fetchWithRetry(`${API_BASE_URL}/about`);
     if (!response.ok) {
       throw new Error('Failed to fetch about content');
     }
-    return response.json();
+    const data = await response.json();
+
+    if (data.success) {
+      cacheUtils.set(CACHE_KEYS.ABOUT, data);
+    }
+
+    return data;
   },
 
   updateAbout: async (aboutData) => {
@@ -237,18 +419,37 @@ export const aboutAPI = {
     if (!response.ok) {
       throw new Error('Failed to update about content');
     }
-    return response.json();
+    const data = await response.json();
+    cacheUtils.remove(CACHE_KEYS.ABOUT);
+    return data;
   }
 };
 
 // CV API
 export const cvAPI = {
-  getCV: async () => {
+  getCV: async (options = {}) => {
+    const { forceRefresh = false } = options;
+
+    if (!forceRefresh) {
+      const cached = cacheUtils.get(CACHE_KEYS.CV);
+      if (cached) {
+        console.log('CV: 캐시에서 로드');
+        // 백그라운드 갱신 하지 않음 - 깜빡임 방지
+        return cached;
+      }
+    }
+
     const response = await fetchWithRetry(`${API_BASE_URL}/cv`);
     if (!response.ok) {
       throw new Error('Failed to fetch CV');
     }
-    return response.json();
+    const data = await response.json();
+
+    if (data.success) {
+      cacheUtils.set(CACHE_KEYS.CV, data);
+    }
+
+    return data;
   },
   updateCV: async (cvData) => {
     const response = await fetch(`${API_BASE_URL}/cv`, {
@@ -259,18 +460,36 @@ export const cvAPI = {
     if (!response.ok) {
       throw new Error('Failed to update CV');
     }
-    return response.json();
+    const data = await response.json();
+    cacheUtils.remove(CACHE_KEYS.CV);
+    return data;
   }
 };
 
 // Location API (단일 데이터)
 export const locationAPI = {
-  getLocation: async () => {
+  getLocation: async (options = {}) => {
+    const { forceRefresh = false } = options;
+
+    if (!forceRefresh) {
+      const cached = cacheUtils.get(CACHE_KEYS.LOCATION);
+      if (cached) {
+        console.log('Location: 캐시에서 로드');
+        return cached;
+      }
+    }
+
     const response = await fetchWithRetry(`${API_BASE_URL}/location-video`);
     if (!response.ok) {
       throw new Error('Failed to fetch location');
     }
-    return response.json();
+    const data = await response.json();
+
+    if (data.success) {
+      cacheUtils.set(CACHE_KEYS.LOCATION, data);
+    }
+
+    return data;
   },
   updateLocation: async (locationData) => {
     const response = await fetch(`${API_BASE_URL}/location-video`, {
@@ -281,12 +500,30 @@ export const locationAPI = {
     if (!response.ok) {
       throw new Error('Failed to update location');
     }
-    return response.json();
+    const data = await response.json();
+    cacheUtils.remove(CACHE_KEYS.LOCATION);
+    return data;
   },
-  getLocationHeader: async () => {
+  getLocationHeader: async (options = {}) => {
+    const { forceRefresh = false } = options;
+
+    if (!forceRefresh) {
+      const cached = cacheUtils.get(CACHE_KEYS.LOCATION_HEADER);
+      if (cached) {
+        console.log('Location header: 캐시에서 로드');
+        return cached;
+      }
+    }
+
     const response = await fetchWithRetry(`${API_BASE_URL}/location-video/header`);
     if (!response.ok) throw new Error('Failed to fetch location header');
-    return response.json();
+    const data = await response.json();
+
+    if (data.success) {
+      cacheUtils.set(CACHE_KEYS.LOCATION_HEADER, data);
+    }
+
+    return data;
   },
   updateLocationHeader: async (headerData) => {
     const response = await fetch(`${API_BASE_URL}/location-video/header`, {
@@ -295,17 +532,35 @@ export const locationAPI = {
       body: JSON.stringify(headerData)
     });
     if (!response.ok) throw new Error('Failed to update location header');
-    return response.json();
+    const data = await response.json();
+    cacheUtils.remove(CACHE_KEYS.LOCATION_HEADER);
+    return data;
   }
 };
 
 export const humanAPI = {
-  getHumanHeader: async () => {
+  getHumanHeader: async (options = {}) => {
+    const { forceRefresh = false } = options;
+
+    if (!forceRefresh) {
+      const cached = cacheUtils.get(CACHE_KEYS.HUMAN_HEADER);
+      if (cached) {
+        console.log('Human header: 캐시에서 로드');
+        return cached;
+      }
+    }
+
     const response = await fetchWithRetry(`${API_BASE_URL}/human/header`);
     if (!response.ok) {
       throw new Error('Failed to fetch human header');
     }
-    return response.json();
+    const data = await response.json();
+
+    if (data.success) {
+      cacheUtils.set(CACHE_KEYS.HUMAN_HEADER, data);
+    }
+
+    return data;
   },
   updateHumanHeader: async (headerData) => {
     const response = await fetch(`${API_BASE_URL}/human/header`, {
@@ -316,7 +571,9 @@ export const humanAPI = {
     if (!response.ok) {
       throw new Error('Failed to update human header');
     }
-    return response.json();
+    const data = await response.json();
+    cacheUtils.remove(CACHE_KEYS.HUMAN_HEADER);
+    return data;
   }
 };
 

@@ -6,28 +6,45 @@ const initialCV = `노드 트리(NODE TREE)\n이화영, 정강현\n2012 한국�
 
 const CV: React.FC = () => {
   const { isAuthenticated } = useAuth();
-  const [cvText, setCvText] = useState(initialCV);
+  const [cvText, setCvText] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [align, setAlign] = useState<'left' | 'center' | 'right'>('left');
   const [title, setTitle] = useState('CV');
   const [subtitle, setSubtitle] = useState('활동 이력');
   const [isEditingHeader, setIsEditingHeader] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // DB에서 CV 데이터 불러오기
   useEffect(() => {
+    let isMounted = true;
+
     const fetchCV = async () => {
       try {
         const res = await cvAPI.getCV();
-        if (res.success && res.data) {
+        if (isMounted && res.success && res.data) {
           setTitle(res.data.title || 'CV');
           setSubtitle(res.data.subtitle || '활동 이력');
           setCvText(res.data.content || initialCV);
+        } else if (isMounted) {
+          // API 실패 시 기본값 사용
+          setCvText(initialCV);
         }
       } catch (e) {
-        // 에러 무시, 기본값 사용
+        // 에러 시 기본값 사용
+        if (isMounted) {
+          setCvText(initialCV);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
     fetchCV();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // 저장 핸들러 (제목/부제목/본문 모두)
@@ -216,7 +233,7 @@ const CV: React.FC = () => {
         </div>
       )}
 
-      <div className="cv-content" style={{ 
+      <div className="cv-content" style={{
         padding: '2.5rem 2rem',
         maxWidth: '900px',
         margin: '0 auto',
@@ -225,7 +242,17 @@ const CV: React.FC = () => {
         textAlign: align,
         minHeight: '400px',
       }}>
-        {isEditing ? (
+        {isLoading ? (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '200px',
+            color: '#888'
+          }}>
+            불러오는 중...
+          </div>
+        ) : isEditing ? (
           <textarea
             value={cvText}
             onChange={e => setCvText(e.target.value)}
