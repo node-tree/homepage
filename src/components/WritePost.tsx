@@ -23,6 +23,7 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
+  const [thumbnailSize, setThumbnailSize] = useState<{ width: number; height: number } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -191,22 +192,49 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
 
         <div className="form-group">
           <label className="form-label">썸네일 이미지 URL</label>
+          <p style={{ fontSize: '0.85rem', color: '#888', margin: '0 0 8px 0' }}>
+            권장 사이즈: <strong style={{ color: '#555' }}>400 × 250px</strong> (가로 × 세로)
+          </p>
           <input
             type="url"
             value={thumbnailUrl}
-            onChange={(e) => setThumbnailUrl(e.target.value)}
+            onChange={(e) => {
+              setThumbnailUrl(e.target.value);
+              setThumbnailSize(null);
+            }}
             placeholder="썸네일로 사용할 이미지 URL을 입력하세요"
             className="form-input"
             disabled={saving}
           />
           {thumbnailUrl && (
-            <div className="thumbnail-preview">
+            <div className="thumbnail-preview" style={{ marginTop: '12px' }}>
               <img
                 src={thumbnailUrl}
                 alt="썸네일 미리보기"
-                style={{ maxWidth: '200px', maxHeight: '150px', objectFit: 'cover', borderRadius: '8px', marginTop: '10px' }}
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                style={{ maxWidth: '200px', maxHeight: '150px', objectFit: 'contain', borderRadius: '8px', background: '#f5f5f5' }}
+                onLoad={(e) => {
+                  const img = e.currentTarget;
+                  setThumbnailSize({ width: img.naturalWidth, height: img.naturalHeight });
+                }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  setThumbnailSize(null);
+                }}
               />
+              {thumbnailSize && (
+                <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '8px' }}>
+                  현재 이미지 크기: <strong>{thumbnailSize.width} × {thumbnailSize.height}px</strong>
+                  {thumbnailSize.width !== 400 || thumbnailSize.height !== 250 ? (
+                    <span style={{ color: '#e67700', marginLeft: '8px' }}>
+                      (권장 사이즈와 다름)
+                    </span>
+                  ) : (
+                    <span style={{ color: '#2e7d32', marginLeft: '8px' }}>
+                      ✓ 최적 사이즈
+                    </span>
+                  )}
+                </p>
+              )}
             </div>
           )}
         </div>
