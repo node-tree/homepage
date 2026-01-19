@@ -2,9 +2,11 @@
 const isNodeTreeSite = typeof window !== 'undefined' &&
   (window.location.hostname === 'nodetree.kr' || window.location.hostname === 'www.nodetree.kr');
 
-const API_BASE_URL = process.env.REACT_APP_API_URL ||
-  (isNodeTreeSite ? 'https://www.nodetree.kr/api' :
-   process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api');
+// nodetree.kr에서는 환경변수 무시하고 자체 API 사용
+const API_BASE_URL = isNodeTreeSite
+  ? '/api'
+  : (process.env.REACT_APP_API_URL ||
+     (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api'));
 
 // 추가된 디버깅 코드
 console.log('Current API_BASE_URL:', API_BASE_URL);
