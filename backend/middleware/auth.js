@@ -1,13 +1,7 @@
 const jwt = require('jsonwebtoken');
 
-// 개발 환경에서의 폴백 시크릿 (프로덕션에서는 반드시 환경변수 설정 필요)
-const DEFAULT_SECRET = 'nodetree-default-jwt-secret-2024';
-const JWT_SECRET = process.env.JWT_SECRET || DEFAULT_SECRET;
-
-if (!process.env.JWT_SECRET) {
-  console.warn("⚠️ 경고: JWT_SECRET 환경 변수가 설정되지 않았습니다. 기본값을 사용합니다.");
-  console.warn("⚠️ 프로덕션 환경에서는 반드시 JWT_SECRET을 설정하세요!");
-}
+// 고정 JWT 시크릿 (Vercel 서버리스 인스턴스 간 일관성 보장)
+const JWT_SECRET = 'nodetree-jwt-secret-2024-fixed-key';
 
 const auth = (req, res, next) => {
   try {
