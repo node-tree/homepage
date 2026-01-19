@@ -1010,6 +1010,15 @@
   border-radius: 8px;
 }
 
+/* 에디터 줄바꿈 - 실제 표시와 동일하게 */
+.wysiwyg-editor > div {
+  min-height: 1.8em;
+}
+
+.wysiwyg-editor > div:empty {
+  min-height: 1.8em;
+}
+
 /* 글쓰기 페이지 이미지 관련 스타일 */
 .images-header {
   display: flex;
@@ -1239,8 +1248,25 @@
 
 /* HTML 콘텐츠 스타일 */
 .post-text .html-content {
-  text-align: center;
+  text-align: left;
   line-height: 1.8;
+}
+
+/* contentEditable에서 생성된 div 줄바꿈 처리 */
+.post-text .html-content > div {
+  min-height: 1.8em;
+}
+
+.post-text .html-content > div:empty,
+.post-text .html-content > div > br:only-child {
+  min-height: 1.8em;
+}
+
+/* 빈 줄 유지 */
+.post-text .html-content br + br,
+.post-text .html-content div:empty::before {
+  content: "\00a0";
+  display: block;
 }
 
 .post-text .html-content img {
