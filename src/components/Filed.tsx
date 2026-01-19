@@ -163,7 +163,12 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
   const formatContent = (content: string) => {
     // HTML 콘텐츠인지 확인 (태그가 포함되어 있으면 HTML로 처리)
     if (content.includes('<') && content.includes('>') && (content.includes('<div') || content.includes('<br') || content.includes('<img') || content.includes('<p'))) {
-      return <div dangerouslySetInnerHTML={{ __html: content }} />;
+      // 줄바꿈을 <br>로 변환 (이미 <br>이 없는 경우)
+      let htmlContent = content;
+      if (!content.includes('<br')) {
+        htmlContent = content.replace(/\n/g, '<br />');
+      }
+      return <div className="html-content" dangerouslySetInnerHTML={{ __html: htmlContent }} />;
     }
 
     // 마크다운 형식 처리
