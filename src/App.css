@@ -991,11 +991,64 @@
   background-color: white !important;
 }
 
+/* 미디어 블록 스타일 (에디터) */
+.wysiwyg-editor .media-block {
+  margin: 16px 0;
+  text-align: center;
+  cursor: move;
+  transition: opacity 0.2s, border 0.2s;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.wysiwyg-editor .media-block:hover {
+  background: rgba(52, 152, 219, 0.1);
+}
+
+.wysiwyg-editor .media-block img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  display: block;
+  margin: 0 auto;
+}
+
+.wysiwyg-editor .media-block .media-controls {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.wysiwyg-editor .media-block:hover .media-controls {
+  opacity: 1;
+}
+
+.wysiwyg-editor .media-block .media-controls button:hover {
+  background: rgba(0,0,0,0.8) !important;
+}
+
+.wysiwyg-editor .media-block .video-container {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.wysiwyg-editor .media-block .video-container iframe,
+.wysiwyg-editor .media-block .video-container video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+
 .wysiwyg-editor img {
   max-width: 100%;
   height: auto;
   border-radius: 8px;
-  margin: 10px 0;
+  margin: 10px auto;
   display: block;
 }
 
@@ -1017,6 +1070,10 @@
 
 .wysiwyg-editor > div:empty {
   min-height: 1.8em;
+}
+
+.wysiwyg-editor > div.media-block {
+  min-height: auto;
 }
 
 /* 글쓰기 페이지 이미지 관련 스타일 */
@@ -1267,6 +1324,43 @@
 .post-text .html-content div:empty::before {
   content: "\00a0";
   display: block;
+}
+
+/* 미디어 블록 스타일 (표시) */
+.post-text .html-content .media-block {
+  text-align: center;
+  margin: 2rem 0;
+  min-height: auto !important;
+}
+
+.post-text .html-content .media-block img {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  width: auto !important;
+  height: auto !important;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.post-text .html-content .media-block .video-container {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.post-text .html-content .media-block .video-container iframe,
+.post-text .html-content .media-block .video-container video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
 }
 
 .post-text .html-content img {
@@ -1975,26 +2069,11 @@
   border-radius: 50%;
 }
 
-/* aspect-ratio 미지원 브라우저용 fallback */
-@supports not (aspect-ratio: 1 / 1) {
-  .post-grid-thumbnail {
-    height: 0;
-    padding-bottom: 100%;
-  }
-}
-
 .post-grid-thumbnail img {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  object-fit: cover !important;
-  object-position: center center !important;
   width: 100% !important;
   height: 100% !important;
-  min-width: 100%;
-  min-height: 100%;
+  object-fit: cover !important;
+  object-position: center center !important;
   display: block !important;
   border-radius: 50% !important;
   transition: transform 0.3s ease;
@@ -2005,6 +2084,9 @@
 }
 
 .post-grid-no-image {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   background-color: #e8e8e8;
@@ -2100,6 +2182,31 @@
     padding: 0 20px;
   }
 
+  .post-grid-item {
+    width: 100%;
+    position: relative;
+  }
+
+  .post-grid-thumbnail {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    position: relative;
+    overflow: hidden;
+    border-radius: 50%;
+  }
+
+  .post-grid-thumbnail img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center center !important;
+    border-radius: 50%;
+  }
+
+  .post-grid-thumbnail:hover img {
+    transform: scale(1.05);
+  }
+
   .post-grid-overlay-title {
     font-size: 0.75rem;
     -webkit-line-clamp: 2;
@@ -2112,6 +2219,18 @@
     grid-template-columns: repeat(3, 1fr) !important;
     gap: 10px;
     padding: 0 15px;
+  }
+
+  .post-grid-thumbnail img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center center !important;
+    border-radius: 50%;
+  }
+
+  .post-grid-thumbnail:hover img {
+    transform: scale(1.05);
   }
 
   .post-grid-overlay-title {

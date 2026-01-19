@@ -51,22 +51,23 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     result = result.replace(/!!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
       const youtubeMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
       if (youtubeMatch) {
-        return `<div class="media-block" draggable="true" contenteditable="false" style="margin: 10px 0; cursor: move;"><div class="video-container"><iframe src="https://www.youtube.com/embed/${youtubeMatch[1]}" frameborder="0" allowfullscreen></iframe></div></div>`;
+        return `<div class="media-block" draggable="true" contenteditable="false" data-type="video"><div class="video-container"><iframe src="https://www.youtube.com/embed/${youtubeMatch[1]}" frameborder="0" allowfullscreen></iframe></div></div>`;
       }
       const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
       if (vimeoMatch) {
-        return `<div class="media-block" draggable="true" contenteditable="false" style="margin: 10px 0; cursor: move;"><div class="video-container"><iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}" frameborder="0" allowfullscreen></iframe></div></div>`;
+        return `<div class="media-block" draggable="true" contenteditable="false" data-type="video"><div class="video-container"><iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}" frameborder="0" allowfullscreen></iframe></div></div>`;
       }
-      return `<div class="media-block" draggable="true" contenteditable="false" style="margin: 10px 0; cursor: move;"><div class="video-container"><video controls><source src="${url}" /></video></div></div>`;
+      return `<div class="media-block" draggable="true" contenteditable="false" data-type="video"><div class="video-container"><video controls><source src="${url}" /></video></div></div>`;
     });
 
     // 이미지 마크다운 처리: ![alt](url)
     result = result.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
-      return `<div class="media-block" draggable="true" contenteditable="false" style="margin: 10px 0; cursor: move; text-align: center;"><img src="${url}" alt="${alt}" style="max-width: 100%; height: auto; border-radius: 8px;" /></div>`;
+      return `<div class="media-block" draggable="true" contenteditable="false" data-type="image"><img src="${url}" alt="${alt}" draggable="false" /></div>`;
     });
 
-    // 줄바꿈을 <br>로 변환
-    result = result.replace(/\n/g, '<br />');
+    // 줄바꿈을 <div>로 변환 (contentEditable 방식과 일치)
+    const lines = result.split('\n');
+    result = lines.map(line => line ? `<div>${line}</div>` : '<div><br></div>').join('');
 
     return result;
   };
@@ -82,6 +83,13 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
         } else {
           editorRef.current.innerHTML = parseMarkdownMedia(content);
         }
+        // 콘텐츠 로드 후 미디어 블록에 컨트롤 추가
+        setTimeout(() => {
+          const mediaBlocks = editorRef.current?.querySelectorAll('.media-block');
+          mediaBlocks?.forEach((block) => {
+            addMediaControls(block as HTMLElement);
+          });
+        }, 50);
       }
     } else {
       setTitle('');
@@ -131,23 +139,11 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
       imgBlock.className = 'media-block';
       imgBlock.draggable = true;
       imgBlock.contentEditable = 'false';
-      imgBlock.style.cssText = 'margin: 10px 0; cursor: move; text-align: center;';
-      imgBlock.innerHTML = `<img src="${url}" alt="이미지" style="max-width: 100%; height: auto; border-radius: 8px;" />`;
+      imgBlock.setAttribute('data-type', 'image');
+      // 이미지에 draggable="false"를 추가하여 브라우저 기본 드래그 방지
+      imgBlock.innerHTML = `<img src="${url}" alt="이미지" draggable="false" />`;
 
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        if (editorRef.current.contains(range.commonAncestorContainer)) {
-          range.deleteContents();
-          range.insertNode(imgBlock);
-          range.setStartAfter(imgBlock);
-          range.collapse(true);
-          selection.removeAllRanges();
-          selection.addRange(range);
-          return;
-        }
-      }
-      editorRef.current.appendChild(imgBlock);
+      insertMediaBlock(imgBlock);
     }
   };
 
@@ -158,90 +154,128 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
       videoBlock.className = 'media-block';
       videoBlock.draggable = true;
       videoBlock.contentEditable = 'false';
-      videoBlock.style.cssText = 'margin: 10px 0; cursor: move;';
+      videoBlock.setAttribute('data-type', 'video');
 
       const youtubeMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
       if (youtubeMatch) {
-        videoBlock.innerHTML = `<div class="video-container" style="position: relative; padding-bottom: 56.25%; height: 0;"><iframe src="https://www.youtube.com/embed/${youtubeMatch[1]}" frameborder="0" allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 8px;"></iframe></div>`;
+        videoBlock.innerHTML = `<div class="video-container"><iframe src="https://www.youtube.com/embed/${youtubeMatch[1]}" frameborder="0" allowfullscreen></iframe></div>`;
       } else {
         const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
         if (vimeoMatch) {
-          videoBlock.innerHTML = `<div class="video-container" style="position: relative; padding-bottom: 56.25%; height: 0;"><iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}" frameborder="0" allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 8px;"></iframe></div>`;
+          videoBlock.innerHTML = `<div class="video-container"><iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}" frameborder="0" allowfullscreen></iframe></div>`;
         } else {
-          videoBlock.innerHTML = `<div class="video-container"><video controls style="width: 100%; border-radius: 8px;"><source src="${url}" /></video></div>`;
+          videoBlock.innerHTML = `<div class="video-container"><video controls><source src="${url}" /></video></div>`;
         }
       }
 
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        if (editorRef.current.contains(range.commonAncestorContainer)) {
-          range.deleteContents();
-          range.insertNode(videoBlock);
-          range.setStartAfter(videoBlock);
-          range.collapse(true);
-          selection.removeAllRanges();
-          selection.addRange(range);
-          return;
-        }
-      }
-      editorRef.current.appendChild(videoBlock);
+      insertMediaBlock(videoBlock);
     }
   };
 
-  // 드래그앤드롭 핸들러
-  const handleDragStart = (e: React.DragEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.classList.contains('media-block')) {
-      e.dataTransfer.setData('text/html', target.outerHTML);
-      e.dataTransfer.effectAllowed = 'move';
-      setTimeout(() => {
-        target.style.opacity = '0.5';
-      }, 0);
-    }
-  };
+  const insertMediaBlock = (block: HTMLElement) => {
+    if (!editorRef.current) return;
 
-  const handleDragEnd = (e: React.DragEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.classList.contains('media-block')) {
-      target.style.opacity = '1';
-    }
-  };
+    // 먼저 컨트롤 추가
+    addMediaControls(block);
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const html = e.dataTransfer.getData('text/html');
-    if (html && html.includes('media-block')) {
-      // 기존 요소 찾아서 제거
-      const editor = editorRef.current;
-      if (editor) {
-        const draggedElement = editor.querySelector('.media-block[style*="opacity: 0.5"]');
-        if (draggedElement) {
-          draggedElement.remove();
-        }
-
-        // 드롭 위치에 삽입
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = document.caretRangeFromPoint(e.clientX, e.clientY);
-          if (range && editor.contains(range.commonAncestorContainer)) {
-            const temp = document.createElement('div');
-            temp.innerHTML = html;
-            const newElement = temp.firstChild as HTMLElement;
-            if (newElement) {
-              newElement.style.opacity = '1';
-              range.insertNode(newElement);
-            }
-          }
-        }
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      if (editorRef.current.contains(range.commonAncestorContainer)) {
+        range.deleteContents();
+        range.insertNode(block);
+        // 미디어 블록 다음에 새 줄 추가
+        const newLine = document.createElement('div');
+        newLine.innerHTML = '<br>';
+        block.after(newLine);
+        range.setStartAfter(newLine);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        return;
       }
     }
+    editorRef.current.appendChild(block);
+    // 미디어 블록 다음에 새 줄 추가
+    const newLine = document.createElement('div');
+    newLine.innerHTML = '<br>';
+    editorRef.current.appendChild(newLine);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+  // 미디어 블록에 컨트롤 버튼 추가
+  const addMediaControls = (mediaBlock: HTMLElement) => {
+    // 이미 컨트롤이 있으면 스킵
+    if (mediaBlock.querySelector('.media-controls')) return;
+
+    const controls = document.createElement('div');
+    controls.className = 'media-controls';
+    controls.contentEditable = 'false';
+    controls.style.cssText = 'position: absolute; top: 5px; right: 5px; display: flex; gap: 4px; z-index: 10; opacity: 1;';
+
+    const btnStyle = 'padding: 4px 8px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;';
+
+    // 위로 이동 버튼
+    const upBtn = document.createElement('button');
+    upBtn.type = 'button';
+    upBtn.innerHTML = '↑';
+    upBtn.title = '위로 이동';
+    upBtn.style.cssText = btnStyle;
+    upBtn.onmousedown = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    upBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const prev = mediaBlock.previousElementSibling;
+      if (prev && !prev.classList.contains('media-controls')) {
+        mediaBlock.parentNode?.insertBefore(mediaBlock, prev);
+      }
+    };
+
+    // 아래로 이동 버튼
+    const downBtn = document.createElement('button');
+    downBtn.type = 'button';
+    downBtn.innerHTML = '↓';
+    downBtn.title = '아래로 이동';
+    downBtn.style.cssText = btnStyle;
+    downBtn.onmousedown = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    downBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const next = mediaBlock.nextElementSibling;
+      if (next) {
+        mediaBlock.parentNode?.insertBefore(next, mediaBlock);
+      }
+    };
+
+    // 삭제 버튼
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.innerHTML = '×';
+    deleteBtn.title = '삭제';
+    deleteBtn.style.cssText = btnStyle + 'background: rgba(220,53,69,0.8);';
+    deleteBtn.onmousedown = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    deleteBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      mediaBlock.remove();
+    };
+
+    controls.appendChild(upBtn);
+    controls.appendChild(downBtn);
+    controls.appendChild(deleteBtn);
+
+    mediaBlock.style.position = 'relative';
+    mediaBlock.insertBefore(controls, mediaBlock.firstChild);
   };
+
 
   const handleSubmit = async () => {
     const content = editorRef.current?.innerHTML || '';
@@ -492,7 +526,7 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
             </button>
 
             <span style={{ marginLeft: 'auto', fontSize: '12px', color: '#999' }}>
-              이미지/영상은 드래그로 이동 가능
+              이미지/영상: ↑↓ 버튼으로 이동
             </span>
           </div>
 
@@ -512,10 +546,6 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
               lineHeight: '1.8'
             }}
             data-placeholder="내용을 입력하세요. 이미지나 영상은 드래그하여 위치를 변경할 수 있습니다."
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
             onFocus={(e) => {
               if (e.currentTarget.innerHTML === '' || e.currentTarget.innerHTML === '<br>') {
                 e.currentTarget.innerHTML = '';
