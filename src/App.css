@@ -206,7 +206,7 @@
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  box-shadow: 
+  box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   position: absolute;
@@ -278,7 +278,7 @@
 
 .circle-motion:hover {
   border-color: #333333;
-  box-shadow: 
+  box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.3),
     0 0 0 10px rgba(0, 0, 0, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -977,6 +977,37 @@
   outline: none;
   border-color: #666666;
   background-color: white;
+}
+
+/* WYSIWYG 에디터 스타일 */
+.wysiwyg-editor:empty:before {
+  content: attr(data-placeholder);
+  color: #999;
+  pointer-events: none;
+}
+
+.wysiwyg-editor:focus {
+  border-color: #666666 !important;
+  background-color: white !important;
+}
+
+.wysiwyg-editor img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 10px 0;
+  display: block;
+}
+
+.wysiwyg-editor .video-container {
+  margin: 10px 0;
+}
+
+.wysiwyg-editor .video-container iframe,
+.wysiwyg-editor .video-container video {
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: 8px;
 }
 
 /* 글쓰기 페이지 이미지 관련 스타일 */
@@ -1882,15 +1913,21 @@
 
 .post-grid-thumbnail {
   width: 100%;
-  padding-bottom: 100%; /* 1:1 aspect ratio fallback */
   aspect-ratio: 1 / 1;
-  height: 0;
   background-color: #e0e0e0;
   border: none;
   position: relative;
   cursor: pointer;
   overflow: hidden;
   border-radius: 50%;
+}
+
+/* aspect-ratio 미지원 브라우저용 fallback */
+@supports not (aspect-ratio: 1 / 1) {
+  .post-grid-thumbnail {
+    height: 0;
+    padding-bottom: 100%;
+  }
 }
 
 .post-grid-thumbnail img {

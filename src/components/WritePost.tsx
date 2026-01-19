@@ -21,34 +21,27 @@ interface Post {
 
 const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postType = 'work', editPost = null }) => {
   const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [thumbnailSize, setThumbnailSize] = useState<{ width: number; height: number } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
-  const contentRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
 
-  // 마크다운 이미지/영상을 HTML로 변환하는 함수
+  // 마크다운을 HTML로 변환 (기존 콘텐츠 로드용)
   const parseMarkdownMedia = (text: string): string => {
     let result = text;
 
     // 영상 마크다운 처리: !![alt](url)
     result = result.replace(/!!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
-      // YouTube URL 처리
       const youtubeMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
       if (youtubeMatch) {
-        return `<div class="video-container"><iframe src="https://www.youtube.com/embed/${youtubeMatch[1]}" frameborder="0" allowfullscreen></iframe></div>`;
+        return `<div class="video-container" contenteditable="false"><iframe src="https://www.youtube.com/embed/${youtubeMatch[1]}" frameborder="0" allowfullscreen></iframe></div>`;
       }
-
-      // Vimeo URL 처리
       const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
       if (vimeoMatch) {
-        return `<div class="video-container"><iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}" frameborder="0" allowfullscreen></iframe></div>`;
+        return `<div class="video-container" contenteditable="false"><iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}" frameborder="0" allowfullscreen></iframe></div>`;
       }
-
-      // 일반 비디오 URL
-      return `<div class="video-container"><video controls><source src="${url}" /></video></div>`;
+      return `<div class="video-container" contenteditable="false"><video controls><source src="${url}" /></video></div>`;
     });
 
     // 이미지 마크다운 처리: ![alt](url)
@@ -65,46 +58,88 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
   useEffect(() => {
     if (editPost) {
       setTitle(editPost.title || '');
-      setContent(editPost.content || '');
       setThumbnailUrl(editPost.thumbnail || '');
+      // 에디터에 기존 콘텐츠 로드
+      if (editorRef.current) {
+        const content = editPost.content || '';
+        // HTML인지 마크다운인지 확인
+        if (content.includes('<') && content.includes('>')) {
+          editorRef.current.innerHTML = content;
+        } else {
+          editorRef.current.innerHTML = parseMarkdownMedia(content);
+        }
+      }
     } else {
       setTitle('');
-      setContent('');
       setThumbnailUrl('');
+      if (editorRef.current) {
+        editorRef.current.innerHTML = '';
+      }
     }
   }, [editPost]);
 
   const isEditMode = !!editPost;
 
-  const insertMarkdown = (markdown: string) => {
-    const textarea = contentRef.current;
-    if (textarea) {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const newContent = `${content.substring(0, start)}${markdown}${content.substring(end)}`;
-      setContent(newContent);
-      setTimeout(() => {
-        textarea.focus();
-        textarea.selectionStart = textarea.selectionEnd = start + markdown.length;
-      }, 0);
-    }
-  };
-
   const handleInsertImage = () => {
     const url = prompt('이미지 URL을 입력하세요:');
-    if (url) {
-      insertMarkdown(`![이미지](${url})`);
+    if (url && editorRef.current) {
+      const img = `<img src="${url}" alt="이미지" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; display: block;" />`;
+
+      // 현재 커서 위치에 삽입
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        if (editorRef.current.contains(range.commonAncestorContainer)) {
+          range.deleteContents();
+          const div = document.createElement('div');
+          div.innerHTML = img;
+          range.insertNode(div.firstChild!);
+          range.collapse(false);
+          return;
+        }
+      }
+      // 커서가 에디터 안에 없으면 끝에 추가
+      editorRef.current.innerHTML += img;
     }
   };
 
   const handleInsertVideo = () => {
     const url = prompt('영상 URL (YouTube, Vimeo 또는 직접 링크)을 입력하세요:');
-    if (url) {
-      insertMarkdown(`!![영상](${url})`);
+    if (url && editorRef.current) {
+      let videoHtml = '';
+
+      const youtubeMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+      if (youtubeMatch) {
+        videoHtml = `<div class="video-container" contenteditable="false" style="margin: 10px 0;"><iframe src="https://www.youtube.com/embed/${youtubeMatch[1]}" frameborder="0" allowfullscreen style="width: 100%; aspect-ratio: 16/9; border-radius: 8px;"></iframe></div>`;
+      } else {
+        const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+        if (vimeoMatch) {
+          videoHtml = `<div class="video-container" contenteditable="false" style="margin: 10px 0;"><iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}" frameborder="0" allowfullscreen style="width: 100%; aspect-ratio: 16/9; border-radius: 8px;"></iframe></div>`;
+        } else {
+          videoHtml = `<div class="video-container" contenteditable="false" style="margin: 10px 0;"><video controls style="width: 100%; border-radius: 8px;"><source src="${url}" /></video></div>`;
+        }
+      }
+
+      // 현재 커서 위치에 삽입
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        if (editorRef.current.contains(range.commonAncestorContainer)) {
+          range.deleteContents();
+          const div = document.createElement('div');
+          div.innerHTML = videoHtml;
+          range.insertNode(div.firstChild!);
+          range.collapse(false);
+          return;
+        }
+      }
+      editorRef.current.innerHTML += videoHtml;
     }
   };
 
   const handleSubmit = async () => {
+    const content = editorRef.current?.innerHTML || '';
+
     if (!title.trim() || !content.trim()) {
       setError('제목과 내용을 모두 입력해주세요.');
       return;
@@ -118,7 +153,7 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
         title: title.trim(),
         content: content.trim(),
         thumbnail: thumbnailUrl.trim() || undefined,
-        htmlContent: '' // htmlContent는 더 이상 사용하지 않음
+        htmlContent: ''
       };
 
       let response;
@@ -135,8 +170,10 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
         onSavePost(response.data);
         if (!isEditMode) {
           setTitle('');
-          setContent('');
           setThumbnailUrl('');
+          if (editorRef.current) {
+            editorRef.current.innerHTML = '';
+          }
         }
       } else {
         throw new Error(response.message || '저장에 실패했습니다.');
@@ -148,7 +185,7 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
       setSaving(false);
     }
   };
-  
+
   return (
     <div className="write-container">
       <div className="write-header">
@@ -161,7 +198,7 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
         >
           ← 돌아가기
         </motion.button>
-        
+
         <button
           onClick={handleSubmit}
           className="save-button"
@@ -244,43 +281,34 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
           <div className="markdown-toolbar" style={{ marginBottom: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
             <button onClick={handleInsertImage} disabled={saving} className="toolbar-button">이미지 추가</button>
             <button onClick={handleInsertVideo} disabled={saving} className="toolbar-button">영상 추가</button>
-            <button
-              onClick={() => setShowPreview(!showPreview)}
-              className="toolbar-button"
-              style={{ marginLeft: 'auto', backgroundColor: showPreview ? '#333' : undefined, color: showPreview ? '#fff' : undefined }}
-            >
-              {showPreview ? '편집' : '미리보기'}
-            </button>
           </div>
 
-          {showPreview ? (
-            <div
-              className="preview-content"
-              style={{
-                minHeight: '400px',
-                padding: '20px',
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                backgroundColor: '#fafafa',
-                overflow: 'auto'
-              }}
-              dangerouslySetInnerHTML={{ __html: parseMarkdownMedia(content) }}
-            />
-          ) : (
-            <textarea
-              ref={contentRef}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="글 내용을 입력하세요. 이미지나 영상은 위 버튼을 사용하거나 마크다운 형식( ![alt](url) 또는 !![alt](url) )으로 직접 입력할 수 있습니다."
-              className="form-textarea"
-              disabled={saving}
-              rows={20}
-            />
-          )}
+          {/* WYSIWYG 에디터 */}
+          <div
+            ref={editorRef}
+            contentEditable={!saving}
+            className="form-textarea wysiwyg-editor"
+            style={{
+              minHeight: '400px',
+              padding: '16px',
+              border: '1px solid #ddd',
+              borderRadius: '8px',
+              backgroundColor: '#fff',
+              overflow: 'auto',
+              outline: 'none',
+              lineHeight: '1.8'
+            }}
+            data-placeholder="내용을 입력하세요. 이미지나 영상은 위 버튼으로 추가할 수 있습니다."
+            onFocus={(e) => {
+              if (e.currentTarget.innerHTML === '' || e.currentTarget.innerHTML === '<br>') {
+                e.currentTarget.innerHTML = '';
+              }
+            }}
+          />
         </div>
       </div>
     </div>
   );
 };
 
-export default WritePost; 
+export default WritePost;
