@@ -445,4 +445,4 @@ startServer();
 
 // Export for testing
 module.exports = app;
-module.exports.connectDB = connectDB; 
+module.exports.connectDB = connectDB; // Force redeploy Mon Jan 19 20:31:44 KST 2026
