@@ -285,11 +285,6 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
           </div>
           
           <article className="post-article">
-            {/* Reconnect: 낙원식당 글에만 애니메이션 표시 */}
-            {(selectedPost.title.includes('Reconnect') || selectedPost.title.includes('낙원식당')) && (
-              <ReconnectAnimation width={280} height={280} />
-            )}
-
             <header className="post-header">
               <h1 className="post-title">{selectedPost.title}</h1>
               <div className="post-meta">
@@ -298,6 +293,11 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
             </header>
 
             <div className="post-content">
+              {/* Reconnect: 낙원식당 글에만 애니메이션 표시 */}
+              {(selectedPost.title.includes('Reconnect') || selectedPost.title.includes('낙원식당')) && (
+                <ReconnectAnimation width={280} height={280} />
+              )}
+
               <div className="post-text">
                 {formatContent(selectedPost.content)}
               </div>
