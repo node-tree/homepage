@@ -168,6 +168,11 @@ app.get('/api/env-test', (req, res) => {
       vercelEnv: process.env.VERCEL_ENV || 'NOT_SET',
       vercelUrl: process.env.VERCEL_URL || 'NOT_SET'
     },
+    jwt: {
+      envVarExists: !!process.env.JWT_SECRET,
+      envVarLength: process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0,
+      usingHardcoded: 'nodetree-jwt-secret-2024-fixed-key'
+    },
     mongodb: {
       uriExists: !!process.env.MONGODB_URI,
       uriLength: process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0,
@@ -175,8 +180,8 @@ app.get('/api/env-test', (req, res) => {
       uriContainsAtlas: process.env.MONGODB_URI ? process.env.MONGODB_URI.includes('mongodb+srv') : false,
       uriContainsHomepage: process.env.MONGODB_URI ? process.env.MONGODB_URI.includes('homepage') : false
     },
-    allEnvKeys: Object.keys(process.env).filter(key => 
-      key.includes('MONGO') || key.includes('VERCEL') || key.includes('NODE_ENV')
+    allEnvKeys: Object.keys(process.env).filter(key =>
+      key.includes('MONGO') || key.includes('VERCEL') || key.includes('NODE_ENV') || key.includes('JWT')
     ).sort()
   });
 });
