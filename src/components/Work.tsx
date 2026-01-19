@@ -152,6 +152,12 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
   };
 
   const formatContent = (content: string) => {
+    // HTML 콘텐츠인지 확인 (태그가 포함되어 있으면 HTML로 처리)
+    if (content.includes('<') && content.includes('>') && (content.includes('<div') || content.includes('<br') || content.includes('<img') || content.includes('<p'))) {
+      return <div dangerouslySetInnerHTML={{ __html: content }} />;
+    }
+
+    // 마크다운 형식 처리
     return content.split('\n').map((line, index) => {
       // 이미지 및 비디오 마크다운 처리를 위한 정규식
       const mediaRegex = /(!{1,2})\[([^\]]*)\]\(([^)]+)\)/g;
