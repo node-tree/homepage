@@ -296,45 +296,46 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
               {(selectedPost.title.includes('유기적공명') || selectedPost.title.includes('에디아포닉')) && (
                 <div className="pdf-catalog-section">
                   <div className="pdf-catalog-card">
-                    <div className="pdf-catalog-icon">
-                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M14 2V8H20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M9 13H15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                        <path d="M9 17H15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                      </svg>
+                    <div className="pdf-catalog-thumbnail">
+                      <img
+                        src="//nodetree.cafe24.com/mcwjd/work/%BF%A1%B5%F0%BE%C6%C6%F7%B4%D0/webdorok01.png"
+                        alt="웹도록 표지"
+                      />
                     </div>
-                    <div className="pdf-catalog-info">
-                      <h3 className="pdf-catalog-title">Exhibition Catalog</h3>
-                      <p className="pdf-catalog-subtitle">유기적공명 : 에디아포닉 웹 도록</p>
-                      <p className="pdf-catalog-size">PDF · 8.5MB</p>
-                    </div>
-                    <div className="pdf-catalog-actions">
-                      <button
-                        className="pdf-view-button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          window.open(`${window.location.origin}/pdf/웹도록.pdf`, '_blank');
-                        }}
-                      >
-                        View
-                      </button>
-                      <button
-                        className="pdf-download-button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const link = document.createElement('a');
-                          link.href = '/pdf/웹도록.pdf';
-                          link.download = '유기적공명_에디아포닉_웹도록.pdf';
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-                        }}
-                      >
-                        Download
-                      </button>
+                    <div className="pdf-catalog-content">
+                      <div className="pdf-catalog-info">
+                        <span className="pdf-catalog-badge">PDF</span>
+                        <h3 className="pdf-catalog-title">Exhibition Catalog</h3>
+                        <p className="pdf-catalog-subtitle">유기적공명 : 에디아포닉 웹 도록</p>
+                        <p className="pdf-catalog-size">8.5MB</p>
+                      </div>
+                      <div className="pdf-catalog-actions">
+                        <button
+                          className="pdf-view-button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.open(`${window.location.origin}/pdf/웹도록.pdf`, '_blank');
+                          }}
+                        >
+                          View
+                        </button>
+                        <button
+                          className="pdf-download-button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const link = document.createElement('a');
+                            link.href = '/pdf/웹도록.pdf';
+                            link.download = '유기적공명_에디아포닉_웹도록.pdf';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          }}
+                        >
+                          Download
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

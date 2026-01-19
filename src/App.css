@@ -2851,7 +2851,7 @@
 }
 
 /* ========================================
-   PDF 카탈로그 카드 스타일
+   PDF 카탈로그 카드 스타일 (썸네일 포함)
    ======================================== */
 .pdf-catalog-section {
   margin: 3rem 0;
@@ -2861,58 +2861,92 @@
 
 .pdf-catalog-card {
   display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  padding: 1.5rem 2rem;
-  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
-  border: 1px solid #e8e8e8;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  background: #fff;
+  border: 1px solid #e0e0e0;
   border-radius: 16px;
   transition: all 0.3s ease;
-  max-width: 600px;
+  max-width: 520px;
   margin: 0 auto;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
 }
 
 .pdf-catalog-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
   border-color: #d0d0d0;
 }
 
-.pdf-catalog-icon {
+.pdf-catalog-thumbnail {
   flex-shrink: 0;
-  width: 64px;
-  height: 64px;
+  width: 160px;
+  background: #f8f8f8;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  color: #666;
+  overflow: hidden;
+}
+
+.pdf-catalog-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.pdf-catalog-card:hover .pdf-catalog-thumbnail img {
+  transform: scale(1.05);
+}
+
+.pdf-catalog-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1.5rem;
+  gap: 1rem;
 }
 
 .pdf-catalog-info {
-  flex: 1;
-  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.pdf-catalog-badge {
+  display: inline-block;
+  width: fit-content;
+  padding: 0.25rem 0.6rem;
+  background: #f0f0f0;
+  color: #666;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  border-radius: 4px;
+  text-transform: uppercase;
 }
 
 .pdf-catalog-title {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 600;
   color: #222;
-  margin: 0 0 0.3rem 0;
+  margin: 0.3rem 0 0 0;
   letter-spacing: -0.02em;
 }
 
 .pdf-catalog-subtitle {
   font-size: 0.9rem;
-  color: #666;
-  margin: 0 0 0.5rem 0;
+  color: #555;
+  margin: 0;
   font-weight: 400;
+  line-height: 1.4;
 }
 
 .pdf-catalog-size {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #999;
   margin: 0;
   font-weight: 400;
@@ -2920,15 +2954,14 @@
 
 .pdf-catalog-actions {
   display: flex;
-  gap: 0.75rem;
-  flex-shrink: 0;
+  gap: 0.6rem;
 }
 
 .pdf-view-button,
 .pdf-download-button {
-  padding: 0.6rem 1.2rem;
+  padding: 0.55rem 1rem;
   border-radius: 8px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 500;
   text-decoration: none;
   transition: all 0.2s ease;
@@ -2955,34 +2988,32 @@
 .pdf-download-button:hover {
   background: #000;
   border-color: #000;
-  transform: scale(1.02);
 }
 
 /* PDF 카드 모바일 반응형 */
 @media (max-width: 768px) {
   .pdf-catalog-card {
     flex-direction: column;
+    max-width: 320px;
+  }
+
+  .pdf-catalog-thumbnail {
+    width: 100%;
+    height: 180px;
+  }
+
+  .pdf-catalog-content {
+    padding: 1.25rem;
     text-align: center;
-    padding: 1.5rem;
-    gap: 1rem;
-  }
-
-  .pdf-catalog-icon {
-    width: 56px;
-    height: 56px;
-  }
-
-  .pdf-catalog-icon svg {
-    width: 36px;
-    height: 36px;
+    align-items: center;
   }
 
   .pdf-catalog-info {
-    text-align: center;
+    align-items: center;
   }
 
   .pdf-catalog-title {
-    font-size: 1rem;
+    font-size: 1.05rem;
   }
 
   .pdf-catalog-subtitle {
@@ -2996,8 +3027,8 @@
 
   .pdf-view-button,
   .pdf-download-button {
-    padding: 0.7rem 1.5rem;
-    font-size: 0.9rem;
+    padding: 0.65rem 1.25rem;
+    font-size: 0.85rem;
   }
 }
 
@@ -3008,8 +3039,16 @@
   }
 
   .pdf-catalog-card {
-    padding: 1.25rem;
     border-radius: 12px;
+    max-width: 280px;
+  }
+
+  .pdf-catalog-thumbnail {
+    height: 150px;
+  }
+
+  .pdf-catalog-content {
+    padding: 1rem;
   }
 
   .pdf-catalog-actions {
@@ -3021,6 +3060,6 @@
   .pdf-download-button {
     width: 100%;
     text-align: center;
-    padding: 0.75rem 1rem;
+    padding: 0.7rem 1rem;
   }
 }
