@@ -41,6 +41,7 @@ const ensureDBConnection = async () => {
 // GET /location-video/header - 상단 제목/부제목 조회
 router.get('/header', async (req, res) => {
   try {
+    await ensureDBConnection();
     let header = await LocationHeader.findOne({});
     if (!header) {
       header = new LocationHeader({ title: 'LOCATION', subtitle: '장소/3D' });
@@ -55,6 +56,7 @@ router.get('/header', async (req, res) => {
 // PUT /location-video/header - 상단 제목/부제목 수정
 router.put('/header', require('../middleware/auth'), async (req, res) => {
   try {
+    await ensureDBConnection();
     let header = await LocationHeader.findOne({});
     if (!header) {
       header = new LocationHeader({});

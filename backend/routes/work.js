@@ -48,6 +48,7 @@ const ensureDBConnection = async () => {
 // GET /work/header - 상단 제목/부제목 조회
 router.get('/header', async (req, res) => {
   try {
+    await ensureDBConnection();
     let header = await WorkHeader.findOne({});
     if (!header) {
       header = new WorkHeader({ title: 'WORK', subtitle: '작업/프로젝트' });
@@ -62,6 +63,7 @@ router.get('/header', async (req, res) => {
 // PUT /work/header - 상단 제목/부제목 수정
 router.put('/header', require('../middleware/auth'), async (req, res) => {
   try {
+    await ensureDBConnection();
     let header = await WorkHeader.findOne({});
     if (!header) {
       header = new WorkHeader({});
