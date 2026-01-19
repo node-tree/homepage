@@ -1934,7 +1934,7 @@
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-color: #F8F8F8;
+  background-color: #ffffff;
   border: none;
   margin-bottom: 15px;
   position: relative;
@@ -1954,7 +1954,7 @@
   height: 100% !important;
   display: block !important;
   border-radius: 0 !important;
-  background: #f8f8f8 !important;
+  background: #ffffff !important;
 }
 
 .post-grid-no-image {
@@ -2704,11 +2704,12 @@
   }
 }
 
+/* 썸네일: 이미지 전체 보이게, 여백은 흰색 */
 .post-grid-thumbnail {
-  border-radius: 20px !important;
+  border-radius: 0 !important;
   overflow: hidden !important;
   position: relative !important;
-  background: #f8f8f8 !important;
+  background: #ffffff !important;
 }
 .post-grid-thumbnail img {
   width: 100% !important;
@@ -2717,22 +2718,7 @@
   object-position: center center !important;
   display: block !important;
   border-radius: 0 !important;
-}
-
-/* 썸네일 엣지(모서리 둥글기) 제거, 이미지 전체 보이게 */
-.post-grid-thumbnail {
-  border-radius: 0 !important;
-  overflow: hidden !important;
-  background: #f8f8f8 !important;
-}
-.post-grid-thumbnail img {
-  border-radius: 0 !important;
-  object-fit: contain !important;
-  object-position: center center !important;
-  width: 100% !important;
-  height: 100% !important;
-  display: block !important;
-  background: #f8f8f8 !important;
+  background: #ffffff !important;
 }
 
 @media (max-width: 768px) {
