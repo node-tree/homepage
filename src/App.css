@@ -1863,36 +1863,32 @@
   background-color: white;
 }
 
-/* 글 목록 그리드 스타일 (yousukefuyama 스타일) */
+/* 글 목록 그리드 스타일 (원형 썸네일) */
 .posts-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  gap: 30px;
   max-width: 1200px;
   margin: 3rem auto;
-  padding: 0 20px;
+  padding: 0 40px;
 }
 
 .post-grid-item {
   background-color: transparent;
   border: none;
-  border-radius: 0;
   overflow: visible;
-  cursor: default;
+  cursor: pointer;
 }
 
 .post-grid-thumbnail {
   width: 100%;
   aspect-ratio: 1 / 1;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-color: #f0f0f0;
+  background-color: #e0e0e0;
   border: none;
-  margin-bottom: 12px;
   position: relative;
   cursor: pointer;
   overflow: hidden;
+  border-radius: 50%;
 }
 
 .post-grid-thumbnail img {
@@ -1901,52 +1897,58 @@
   width: 100% !important;
   height: 100% !important;
   display: block !important;
-  border-radius: 0 !important;
-  transition: opacity 0.3s ease;
+  border-radius: 50% !important;
+  transition: transform 0.3s ease;
 }
 
-/* 호버 오버레이 */
-.post-grid-thumbnail::after {
-  content: '+';
+.post-grid-thumbnail:hover img {
+  transform: scale(1.05);
+}
+
+.post-grid-no-image {
+  width: 100%;
+  height: 100%;
+  background-color: #e8e8e8;
+  border-radius: 50%;
+}
+
+/* 호버 시 제목 오버레이 */
+.post-grid-overlay {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  color: #ffffff;
-  font-size: 3rem;
-  font-weight: 300;
+  background-color: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
   transition: opacity 0.3s ease;
+  border-radius: 50%;
+  padding: 15px;
 }
 
-.post-grid-thumbnail:hover::after {
+.post-grid-thumbnail:hover .post-grid-overlay {
   opacity: 1;
 }
 
-.post-grid-thumbnail:hover img {
-  opacity: 0.9;
-}
-
-.post-grid-no-image {
-  color: #999999;
-  font-size: 0.85rem;
+.post-grid-overlay-title {
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 400;
   text-align: center;
-  font-weight: 300;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #f5f5f5;
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  word-break: keep-all;
 }
 
+/* 기존 post-grid-content 숨김 */
 .post-grid-content {
-  padding: 0;
-  text-align: left;
+  display: none;
 }
 
 .post-grid-title {
@@ -1985,42 +1987,40 @@
 @media (max-width: 1024px) {
   .posts-grid {
     grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
+    gap: 25px;
+    padding: 0 30px;
   }
 }
 
-/* 반응형: 모바일 2열 */
+/* 반응형: 모바일 3열 */
 @media (max-width: 768px) {
   .posts-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 12px;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 15px;
     margin: 2rem auto;
+    padding: 0 20px;
+  }
+
+  .post-grid-overlay-title {
+    font-size: 0.75rem;
+    -webkit-line-clamp: 2;
+  }
+}
+
+/* 매우 작은 화면 3열 유지 */
+@media (max-width: 480px) {
+  .posts-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 10px;
     padding: 0 15px;
   }
 
-  .post-grid-title {
-    font-size: 0.85rem;
+  .post-grid-overlay-title {
+    font-size: 0.65rem;
   }
 
-  .post-grid-thumbnail::after {
-    font-size: 2.5rem;
-  }
-}
-
-/* 매우 작은 화면 2열 유지 */
-@media (max-width: 480px) {
-  .posts-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 10px;
-    padding: 0 10px;
-  }
-
-  .post-grid-title {
-    font-size: 0.8rem;
-  }
-
-  .post-grid-thumbnail::after {
-    font-size: 2rem;
+  .post-grid-overlay {
+    padding: 8px;
   }
 }
 
