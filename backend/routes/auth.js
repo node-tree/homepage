@@ -1,11 +1,69 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const HumanHeader = require('../models/User').HumanHeader;
 
 const router = express.Router();
+
+// DB 연결 확인 함수
+const ensureDBConnection = async () => {
+  if (mongoose.connection.readyState === 1) {
+    return true;
+  }
+
+  if (mongoose.connection.readyState === 2) {
+    console.log('⏳ MongoDB 연결 중... 대기');
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('MongoDB 연결 대기 타임아웃'));
+      }, 10000);
+
+      mongoose.connection.once('connected', () => {
+        clearTimeout(timeout);
+        resolve();
+      });
+      mongoose.connection.once('error', (err) => {
+        clearTimeout(timeout);
+        reject(err);
+      });
+    });
+    return true;
+  }
+
+  if (mongoose.connection.readyState === 0) {
+    console.log('🔄 MongoDB 연결 시도...');
+
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI 환경변수가 설정되지 않았습니다.');
+    }
+
+    const options = {
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
+      socketTimeoutMS: 0,
+      maxPoolSize: 5,
+      minPoolSize: 0,
+      maxIdleTimeMS: 10000,
+      bufferCommands: false,
+      family: 4,
+      heartbeatFrequencyMS: 30000,
+    };
+
+    let mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri.includes('retryWrites')) {
+      const separator = mongoUri.includes('?') ? '&' : '?';
+      mongoUri += `${separator}retryWrites=true&w=majority`;
+    }
+
+    await mongoose.connect(mongoUri, options);
+    console.log('✅ MongoDB 연결 성공');
+  }
+
+  return true;
+};
 
 // 인메모리 테스트 사용자 (MongoDB 연결 실패 시 사용)
 let testUsers = [
@@ -40,8 +98,13 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // MongoDB 연결 상태 확인
-    const mongoose = require('mongoose');
+    // MongoDB 연결 시도
+    try {
+      await ensureDBConnection();
+    } catch (dbError) {
+      console.error('MongoDB 연결 실패:', dbError.message);
+    }
+
     if (mongoose.connection.readyState !== 1) {
       // MongoDB 연결 실패 시 인메모리 테스트 시스템 사용
       const existingUser = testUsers.find(u => u.email === email || u.username === username);
@@ -143,11 +206,16 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // MongoDB 연결 상태 확인
-    const mongoose = require('mongoose');
+    // MongoDB 연결 시도
     console.log('🔍 로그인 시도 - MongoDB 연결 상태:', mongoose.connection.readyState);
     console.log('🔍 로그인 정보:', { emailOrUsername, passwordLength: password.length });
-    
+
+    try {
+      await ensureDBConnection();
+    } catch (dbError) {
+      console.error('MongoDB 연결 실패:', dbError.message);
+    }
+
     if (mongoose.connection.readyState !== 1) {
       // MongoDB 연결 실패 시 인메모리 테스트 시스템 사용
       const user = testUsers.find(u => 
@@ -240,8 +308,13 @@ router.post('/login', async (req, res) => {
 // 토큰 검증
 router.get('/verify', auth, async (req, res) => {
   try {
-    // MongoDB 연결 상태 확인
-    const mongoose = require('mongoose');
+    // MongoDB 연결 시도
+    try {
+      await ensureDBConnection();
+    } catch (dbError) {
+      console.error('MongoDB 연결 실패:', dbError.message);
+    }
+
     if (mongoose.connection.readyState !== 1) {
       // MongoDB 연결 실패 시 req.user 정보만 반환 (미들웨어에서 검증됨)
       return res.json({
@@ -280,8 +353,8 @@ router.get('/verify', auth, async (req, res) => {
 // 관리자 사용자 생성 (초기 설정용)
 router.post('/create-admin', async (req, res) => {
   try {
-    // MongoDB 연결 상태 확인
-    const mongoose = require('mongoose');
+    await ensureDBConnection();
+
     if (mongoose.connection.readyState !== 1) {
       return res.status(503).json({
         success: false,
@@ -339,8 +412,8 @@ router.post('/create-admin', async (req, res) => {
 // 관리자 비밀번호 재설정 (디버그용)
 router.post('/reset-admin-password', async (req, res) => {
   try {
-    // MongoDB 연결 상태 확인
-    const mongoose = require('mongoose');
+    await ensureDBConnection();
+
     if (mongoose.connection.readyState !== 1) {
       return res.status(503).json({
         success: false,
@@ -393,6 +466,7 @@ router.post('/logout', (req, res) => {
 // GET /human/header - 상단 제목/부제목 조회
 router.get('/human/header', async (req, res) => {
   try {
+    await ensureDBConnection();
     let header = await HumanHeader.findOne({});
     if (!header) {
       header = new HumanHeader({ title: 'ART NETWORK', subtitle: '예술의 장을 구성하는 여러 지점들-‘누구와 함께’, ‘무엇이 연결되는가’' });
@@ -407,6 +481,7 @@ router.get('/human/header', async (req, res) => {
 // PUT /human/header - 상단 제목/부제목 수정
 router.put('/human/header', require('../middleware/auth'), async (req, res) => {
   try {
+    await ensureDBConnection();
     let header = await HumanHeader.findOne({});
     if (!header) {
       header = new HumanHeader({});
