@@ -20,24 +20,25 @@ interface WorkProps {
 const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
   const { isAuthenticated } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [headerLoading, setHeaderLoading] = useState(true);
+  const [postsLoading, setPostsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showWritePost, setShowWritePost] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
-  const [title, setTitle] = useState('ART WORK');
-  const [subtitle, setSubtitle] = useState('작업 기록');
+  const [title, setTitle] = useState('');
+  const [subtitle, setSubtitle] = useState('');
   const [isEditingHeader, setIsEditingHeader] = useState(false);
 
   const loadPosts = useCallback(async () => {
-    setLoading(true);
+    setPostsLoading(true);
     setError(null);
     try {
       const response = await workAPI.getAllPosts();
       if (response.success) {
         setPosts(response.data);
         if (onPostsLoaded) {
-          onPostsLoaded(response.data.length);  
+          onPostsLoaded(response.data.length);
         }
       } else {
         setError(response.message);
@@ -46,24 +47,40 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
       setError('글을 불러오는데 실패했습니다.');
       console.error('Work 로딩 오류:', err);
     } finally {
-      setLoading(false);
+      setPostsLoading(false);
     }
   }, [onPostsLoaded]);
 
-  // 데이터와 헤더를 병렬로 로드하여 성능 향상
+  // 헤더를 먼저 로드
   useEffect(() => {
-    const loadAllData = async () => {
-      setLoading(true);
-      setError(null);
-
+    const loadHeader = async () => {
       try {
-        // 병렬로 API 호출
-        const [postsResponse, headerResponse] = await Promise.all([
-          workAPI.getAllPosts(),
-          workAPI.getWorkHeader()
-        ]);
+        const headerResponse = await workAPI.getWorkHeader();
+        if (headerResponse.success && headerResponse.data) {
+          setTitle(headerResponse.data.title || 'ART WORK');
+          setSubtitle(headerResponse.data.subtitle || '작업 기록');
+        } else {
+          setTitle('ART WORK');
+          setSubtitle('작업 기록');
+        }
+      } catch (err) {
+        console.error('헤더 로딩 오류:', err);
+        setTitle('ART WORK');
+        setSubtitle('작업 기록');
+      } finally {
+        setHeaderLoading(false);
+      }
+    };
+    loadHeader();
+  }, []);
 
-        // 포스트 데이터 처리
+  // 글 목록 로드
+  useEffect(() => {
+    const loadPostsData = async () => {
+      setPostsLoading(true);
+      setError(null);
+      try {
+        const postsResponse = await workAPI.getAllPosts();
         if (postsResponse.success) {
           setPosts(postsResponse.data);
           if (onPostsLoaded) {
@@ -72,21 +89,14 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
         } else {
           setError(postsResponse.message);
         }
-
-        // 헤더 데이터 처리
-        if (headerResponse.success && headerResponse.data) {
-          setTitle(headerResponse.data.title || 'ART WORK');
-          setSubtitle(headerResponse.data.subtitle || '작업 기록');
-        }
       } catch (err) {
         setError('글을 불러오는데 실패했습니다.');
         console.error('Work 로딩 오류:', err);
       } finally {
-        setLoading(false);
+        setPostsLoading(false);
       }
     };
-
-    loadAllData();
+    loadPostsData();
   }, [onPostsLoaded]);
 
   const handleSavePost = (newPost: { title: string; content: string; date: string; images?: string[] }) => {
@@ -435,10 +445,16 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
           </div>
         ) : (
           <>
-            <h1 className="page-title">{title}</h1>
-            <div className="page-subtitle">{subtitle}</div>
-            {isAuthenticated && (
-              <button onClick={() => setIsEditingHeader(true)} className="write-button">편집</button>
+            {headerLoading ? (
+              <div style={{ minHeight: '80px' }} />
+            ) : (
+              <>
+                <h1 className="page-title">{title}</h1>
+                <div className="page-subtitle">{subtitle}</div>
+                {isAuthenticated && (
+                  <button onClick={() => setIsEditingHeader(true)} className="write-button">편집</button>
+                )}
+              </>
             )}
           </>
         )}
@@ -461,9 +477,9 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
           )}
         </div>
 
-        {loading && (
+        {postsLoading && (
           <div className="loading-container">
-            <motion.div 
+            <motion.div
               className="loading-spinner"
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -477,7 +493,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
         {error && (
           <div className="error-container">
             <p className="error-message">오류: {error}</p>
-            <motion.button 
+            <motion.button
               className="retry-button"
               onClick={loadPosts}
               whileHover={{ scale: 1.05 }}
@@ -488,8 +504,8 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
           </div>
         )}
 
-        {!loading && !error && posts.length === 0 && (
-          <motion.div 
+        {!postsLoading && !error && posts.length === 0 && (
+          <motion.div
             className="empty-state"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -500,7 +516,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
           </motion.div>
         )}
 
-        {!loading && !error && posts.length > 0 && (
+        {!postsLoading && !error && posts.length > 0 && (
           <div className="posts-grid">
             {posts.map((post, index) => (
               <div 
