@@ -52,9 +52,10 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
     }
   }, [onPostsLoaded]);
 
-  // 헤더를 먼저 로드
+  // 헤더를 먼저 로드한 후 글 목록 로드
   useEffect(() => {
-    const loadHeader = async () => {
+    const loadData = async () => {
+      // 1. 헤더 먼저 로드
       try {
         const headerResponse = await filedAPI.getFiledHeader();
         if (headerResponse.success && headerResponse.data) {
@@ -68,18 +69,10 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
         console.error('헤더 로딩 오류:', err);
         setTitle('FILED');
         setSubtitle('기록/아카이브');
-      } finally {
-        setHeaderLoading(false);
       }
-    };
-    loadHeader();
-  }, []);
+      setHeaderLoading(false);
 
-  // 글 목록 로드
-  useEffect(() => {
-    const loadPostsData = async () => {
-      setPostsLoading(true);
-      setError(null);
+      // 2. 헤더 로드 완료 후 글 목록 로드
       try {
         const postsResponse = await filedAPI.getAllPosts();
         if (postsResponse.success) {
@@ -97,7 +90,8 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
         setPostsLoading(false);
       }
     };
-    loadPostsData();
+
+    loadData();
   }, [onPostsLoaded]);
 
   const handleSavePost = (newPost: { title: string; content: string; date: string; images?: string[] }) => {
