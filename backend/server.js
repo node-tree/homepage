@@ -13,6 +13,8 @@ const PORT = process.env.PORT || 8000;
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
     ? [
+        'https://nodetree.kr',
+        'https://www.nodetree.kr',
         'https://nodetree-home.vercel.app',
         'https://nodetree-home-git-main-your-username.vercel.app',
         /\.vercel\.app$/,
