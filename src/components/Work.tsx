@@ -295,7 +295,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
             <div className="post-content">
               {/* Reconnect: 낙원식당 글에만 애니메이션 표시 */}
               {(selectedPost.title.includes('Reconnect') || selectedPost.title.includes('낙원식당')) && (
-                <ReconnectAnimation width={280} height={280} />
+                <ReconnectAnimation width={400} height={400} />
               )}
 
               <div className="post-text">

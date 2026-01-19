@@ -209,6 +209,8 @@ const ReconnectAnimation: React.FC<ReconnectAnimationProps> = ({ width = 300, he
     }
 
     const startTime = Date.now();
+    let rotationAtVortexEnd = 0;
+    let lastPhase = '';
 
     function animate() {
       animationRef.current = requestAnimationFrame(animate);
@@ -216,6 +218,34 @@ const ReconnectAnimation: React.FC<ReconnectAnimationProps> = ({ width = 300, he
       const elapsed = (Date.now() - startTime) / 1000;
       const cycleTime = elapsed % TOTAL_DURATION;
       const positions = particlesGeometry.attributes.position.array as Float32Array;
+
+      // 현재 단계 파악
+      let currentPhase = '';
+      if (cycleTime < EXPLODE_DURATION) {
+        currentPhase = 'explode';
+      } else if (cycleTime < EXPLODE_DURATION + RANDOM_DURATION) {
+        currentPhase = 'random';
+      } else if (cycleTime < EXPLODE_DURATION + RANDOM_DURATION + VORTEX_DURATION) {
+        currentPhase = 'vortex';
+      } else if (cycleTime < EXPLODE_DURATION + RANDOM_DURATION + VORTEX_DURATION + TRANSITION_DURATION) {
+        currentPhase = 'transition';
+      } else {
+        currentPhase = 'hold';
+      }
+
+      // vortex -> transition 전환 시 현재 회전값 저장
+      if (lastPhase === 'vortex' && currentPhase === 'transition') {
+        rotationAtVortexEnd = particlesMesh.rotation.y;
+      }
+
+      // 새 사이클 시작 시 회전 리셋
+      if (lastPhase === 'hold' && currentPhase === 'explode') {
+        particlesMesh.rotation.y = 0;
+        linesMesh.rotation.y = 0;
+        rotationAtVortexEnd = 0;
+      }
+
+      lastPhase = currentPhase;
 
       if (cycleTime < EXPLODE_DURATION) {
         const explodeProgress = cycleTime / EXPLODE_DURATION;
@@ -289,6 +319,11 @@ const ReconnectAnimation: React.FC<ReconnectAnimationProps> = ({ width = 300, he
         const progress = transitionTime / TRANSITION_DURATION;
         const easedProgress = easeInOutQuad(progress);
 
+        // 회전을 자연스럽게 0으로 복귀
+        const targetRotation = 0;
+        particlesMesh.rotation.y = rotationAtVortexEnd + (targetRotation - rotationAtVortexEnd) * easedProgress;
+        linesMesh.rotation.y = rotationAtVortexEnd + (targetRotation - rotationAtVortexEnd) * easedProgress;
+
         for (let i = 0; i < particleCount; i++) {
           const i3 = i * 3;
           const p = particleData[i];
@@ -303,6 +338,7 @@ const ReconnectAnimation: React.FC<ReconnectAnimationProps> = ({ width = 300, he
         updateLines(positions, 0, textMaxDist);
 
       } else {
+        // hold 상태에서는 이미 회전이 0
         particlesMesh.rotation.y = 0;
         linesMesh.rotation.y = 0;
 
