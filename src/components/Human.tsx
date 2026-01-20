@@ -5,9 +5,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { humanAPI } from '../services/api';
 
 const Human: React.FC = () => {
-  const [title, setTitle] = useState('ART NETWORK');
-  const [subtitle, setSubtitle] = useState('예술의 장을 구성하는 여러 지점들-‘누구와 함께’, ‘무엇이 연결되는가’');
+  const [title, setTitle] = useState('');
+  const [subtitle, setSubtitle] = useState('');
   const [isEditingHeader, setIsEditingHeader] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
@@ -16,10 +17,17 @@ const Human: React.FC = () => {
         const res = await humanAPI.getHumanHeader();
         if (res.success && res.data) {
           setTitle(res.data.title || 'ART NETWORK');
-          setSubtitle(res.data.subtitle || '예술의 장을 구성하는 여러 지점들-‘누구와 함께’, ‘무엇이 연결되는가’');
+          setSubtitle(res.data.subtitle || "예술의 장을 구성하는 여러 지점들-'누구와 함께', '무엇이 연결되는가'");
+        } else {
+          setTitle('ART NETWORK');
+          setSubtitle("예술의 장을 구성하는 여러 지점들-'누구와 함께', '무엇이 연결되는가'");
         }
       } catch (e) {
-        // 에러 무시, 기본값 사용
+        // 에러 시 기본값 사용
+        setTitle('ART NETWORK');
+        setSubtitle("예술의 장을 구성하는 여러 지점들-'누구와 함께', '무엇이 연결되는가'");
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchHeader();
@@ -114,32 +122,36 @@ const Human: React.FC = () => {
           </div>
         ) : (
           <>
-            <motion.h1
-              className="page-title"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-            >
-              {title}
-            </motion.h1>
-            <motion.div
-              className="page-subtitle"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-            >
-              {subtitle}
-            </motion.div>
-            {isAuthenticated && (
-              <motion.button
-                onClick={() => setIsEditingHeader(true)}
-                className="write-button"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4, delay: 0.6 }}
-              >
-                편집
-              </motion.button>
+            {!isLoading && (
+              <>
+                <motion.h1
+                  className="page-title"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                >
+                  {title}
+                </motion.h1>
+                <motion.div
+                  className="page-subtitle"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+                >
+                  {subtitle}
+                </motion.div>
+                {isAuthenticated && (
+                  <motion.button
+                    onClick={() => setIsEditingHeader(true)}
+                    className="write-button"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.4, delay: 0.6 }}
+                  >
+                    편집
+                  </motion.button>
+                )}
+              </>
             )}
           </>
         )}

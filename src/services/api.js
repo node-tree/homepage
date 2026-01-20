@@ -91,7 +91,8 @@ const CACHE_KEYS = {
   CV: 'cache_cv',
   LOCATION: 'cache_location',
   LOCATION_HEADER: 'cache_location_header',
-  HUMAN_HEADER: 'cache_human_header'
+  HUMAN_HEADER: 'cache_human_header',
+  CONTACT: 'cache_contact'
 };
 
 // 토큰을 가져오는 헬퍼 함수
@@ -269,6 +270,21 @@ export const workAPI = {
     const data = await response.json();
     cacheUtils.remove(CACHE_KEYS.WORK_HEADER);
     return data;
+  },
+
+  // 글 순서 변경
+  reorderPosts: async (orders) => {
+    const response = await fetch(`${API_BASE_URL}/work/reorder`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ orders })
+    });
+    if (!response.ok) {
+      throw new Error('Failed to reorder posts');
+    }
+    const data = await response.json();
+    cacheUtils.remove(CACHE_KEYS.WORK_POSTS);
+    return data;
   }
 };
 
@@ -380,6 +396,21 @@ export const filedAPI = {
     }
     const data = await response.json();
     cacheUtils.remove(CACHE_KEYS.FILED_HEADER);
+    return data;
+  },
+
+  // 글 순서 변경
+  reorderPosts: async (orders) => {
+    const response = await fetch(`${API_BASE_URL}/filed/reorder`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ orders })
+    });
+    if (!response.ok) {
+      throw new Error('Failed to reorder posts');
+    }
+    const data = await response.json();
+    cacheUtils.remove(CACHE_KEYS.FILED_POSTS);
     return data;
   }
 };
@@ -574,6 +605,65 @@ export const humanAPI = {
     const data = await response.json();
     cacheUtils.remove(CACHE_KEYS.HUMAN_HEADER);
     return data;
+  }
+};
+
+// Contact API
+export const contactAPI = {
+  // Contact 설정 조회
+  getContact: async (options = {}) => {
+    const { forceRefresh = false } = options;
+
+    if (!forceRefresh) {
+      const cached = cacheUtils.get(CACHE_KEYS.CONTACT);
+      if (cached) {
+        console.log('Contact: 캐시에서 로드');
+        return cached;
+      }
+    }
+
+    const response = await fetchWithRetry(`${API_BASE_URL}/contact`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch contact');
+    }
+    const data = await response.json();
+
+    if (data.success) {
+      cacheUtils.set(CACHE_KEYS.CONTACT, data);
+    }
+
+    return data;
+  },
+
+  // Contact 설정 수정
+  updateContact: async (contactData) => {
+    const response = await fetch(`${API_BASE_URL}/contact`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(contactData)
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update contact');
+    }
+    const data = await response.json();
+    cacheUtils.remove(CACHE_KEYS.CONTACT);
+    return data;
+  },
+
+  // 문의 메일 전송
+  sendMessage: async (messageData) => {
+    const response = await fetch(`${API_BASE_URL}/contact/send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(messageData)
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to send message');
+    }
+    return response.json();
   }
 };
 

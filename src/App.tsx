@@ -5,7 +5,7 @@ import './App.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import Location3D from './components/Location3D';
-import Human from './components/Human';
+import Contact from './components/Contact';
 import Filed from './components/Filed';
 import CV from './components/CV';
 import LocationVideoSettings from './components/LocationVideoSettings';
@@ -271,11 +271,11 @@ function AppContent() {
   
   const circles = useMemo(() => [
     { id: 1, text: 'CROSS CITY', delay: 0, page: 'LOCATION' },
-    { id: 2, text: 'ART NETWORK', delay: 0.1, page: 'HUMAN' },
-    { id: 3, text: 'NODE TREE', delay: 0.2, page: 'ABOUT' },
-    { id: 4, text: 'ART WORK', delay: 0.3, page: 'WORK' },
-    { id: 5, text: 'COMMONS', delay: 0.4, page: 'FILED' },
-    { id: 6, text: 'CV', delay: 0.5, page: 'CV' }
+    { id: 2, text: 'NODE TREE', delay: 0.1, page: 'ABOUT' },
+    { id: 3, text: 'ART WORK', delay: 0.2, page: 'WORK' },
+    { id: 4, text: 'COMMONS', delay: 0.3, page: 'FILED' },
+    { id: 5, text: 'CV', delay: 0.4, page: 'CV' },
+    { id: 6, text: 'CONTACT', delay: 0.5, page: 'CONTACT' }
   ], []);
 
   useEffect(() => {
@@ -411,8 +411,8 @@ function AppContent() {
       case 'LOCATION':
       case 'LOCATION3D':
         return <Location3D />;
-      case 'HUMAN':
-        return <Human />;
+      case 'CONTACT':
+        return <Contact />;
       case 'ABOUT':
         return <About />;
       case 'WORK':
@@ -537,9 +537,8 @@ function AppContent() {
                   ...springTransition,
                   delay: currentStep === 2 ? 0 : circle.delay,
                 }}
-                style={{
-                  // 모바일 첫 화면에서도 모든 원이 중앙에 보이도록 display 조건 제거
-                }}
+                style={{}}
+
                 onClick={() => {
                   if (currentStep === 0) {
                     handleCenterClick();

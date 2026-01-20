@@ -16,6 +16,10 @@ const filedSchema = new mongoose.Schema({
   thumbnail: {
     type: String,
     required: false
+  },
+  sortOrder: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true,

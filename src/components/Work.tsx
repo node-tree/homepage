@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { useSearchParams } from 'react-router-dom';
 import { workAPI } from '../services/api';
 import WritePost from './WritePost';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,6 +13,7 @@ interface Post {
   date: string;
   images?: string[];
   thumbnail?: string | null;
+  sortOrder?: number;
 }
 
 interface WorkProps {
@@ -20,6 +22,7 @@ interface WorkProps {
 
 const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
   const { isAuthenticated } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [posts, setPosts] = useState<Post[]>([]);
   const [headerLoading, setHeaderLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(true);
@@ -30,6 +33,8 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [isEditingHeader, setIsEditingHeader] = useState(false);
+  const [isReorderMode, setIsReorderMode] = useState(false);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
 
   const loadPosts = useCallback(async () => {
     setPostsLoading(true);
@@ -116,6 +121,17 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // URL 파라미터로 포스트 선택 (새로고침 시 상세 페이지 유지)
+  useEffect(() => {
+    const postId = searchParams.get('post');
+    if (postId && posts.length > 0 && !selectedPost) {
+      const post = posts.find((p: Post) => p.id === postId);
+      if (post) {
+        setSelectedPost(post);
+      }
+    }
+  }, [searchParams, posts, selectedPost]);
+
   const handleSavePost = (newPost: { title: string; content: string; date: string; images?: string[] }) => {
     setShowWritePost(false);
     // 새 데이터를 다시 로드하여 최신 상태 유지
@@ -124,10 +140,12 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
 
   const handlePostClick = (post: Post) => {
     setSelectedPost(post);
+    setSearchParams({ post: post.id });
   };
 
   const handleBackToList = () => {
     setSelectedPost(null);
+    setSearchParams({});
   };
 
   const handleEditPost = (post: Post) => {
@@ -256,6 +274,46 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
     }
   };
 
+  // 순서 위로 이동
+  const handleMoveUp = (index: number) => {
+    if (index === 0) return;
+    const newPosts = [...posts];
+    [newPosts[index - 1], newPosts[index]] = [newPosts[index], newPosts[index - 1]];
+    setPosts(newPosts);
+  };
+
+  // 순서 아래로 이동
+  const handleMoveDown = (index: number) => {
+    if (index === posts.length - 1) return;
+    const newPosts = [...posts];
+    [newPosts[index], newPosts[index + 1]] = [newPosts[index + 1], newPosts[index]];
+    setPosts(newPosts);
+  };
+
+  // 순서 저장
+  const handleSaveOrder = async () => {
+    setIsSavingOrder(true);
+    try {
+      const orders = posts.map((post, index) => ({
+        id: post.id,
+        sortOrder: index
+      }));
+      await workAPI.reorderPosts(orders);
+      setIsReorderMode(false);
+      alert('순서가 저장되었습니다.');
+    } catch (e) {
+      alert('순서 저장에 실패했습니다.');
+    } finally {
+      setIsSavingOrder(false);
+    }
+  };
+
+  // 순서 편집 취소
+  const handleCancelReorder = () => {
+    setIsReorderMode(false);
+    loadPosts(); // 원래 순서로 복원
+  };
+
   if (showWritePost) {
     return (
       <WritePost 
@@ -268,12 +326,25 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
 
   if (editingPost) {
     return (
-      <WritePost 
+      <WritePost
         onSavePost={(newPostData) => {
+          // 수정된 글의 상세 페이지로 돌아가기
+          const updatedPost: Post = {
+            id: editingPost.id,
+            title: newPostData.title,
+            content: newPostData.content,
+            date: editingPost.date,
+            images: newPostData.images,
+            thumbnail: editingPost.thumbnail
+          };
           setEditingPost(null);
-          loadPosts();
+          setSelectedPost(updatedPost);
+          loadPosts(); // 백그라운드에서 목록 갱신
         }}
-        onBackToWork={() => setEditingPost(null)}
+        onBackToWork={() => {
+          setEditingPost(null);
+          setSelectedPost(editingPost); // 수정 취소 시 상세 페이지로 돌아가기
+        }}
         postType="work"
         editPost={editingPost}
       />
@@ -567,17 +638,57 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
       <div className="work-container">
         <div className="work-header">
           {isAuthenticated && (
-            <motion.button 
-              className="write-button"
-              onClick={() => setShowWritePost(true)}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              새 글 작성
-            </motion.button>
+            <div className="work-header-buttons">
+              {isReorderMode ? (
+                <>
+                  <motion.button
+                    className="write-button reorder-save-button"
+                    onClick={handleSaveOrder}
+                    disabled={isSavingOrder}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {isSavingOrder ? '저장 중...' : '순서 저장'}
+                  </motion.button>
+                  <motion.button
+                    className="write-button reorder-cancel-button"
+                    onClick={handleCancelReorder}
+                    disabled={isSavingOrder}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    취소
+                  </motion.button>
+                </>
+              ) : (
+                <>
+                  <motion.button
+                    className="write-button"
+                    onClick={() => setShowWritePost(true)}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    새 글 작성
+                  </motion.button>
+                  {posts.length > 1 && (
+                    <motion.button
+                      className="write-button reorder-button"
+                      onClick={() => setIsReorderMode(true)}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4 }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      순서 편집
+                    </motion.button>
+                  )}
+                </>
+              )}
+            </div>
           )}
         </div>
 
@@ -621,12 +732,12 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
         )}
 
         {!postsLoading && !error && posts.length > 0 && (
-          <div className="posts-grid">
+          <div className={`posts-grid ${isReorderMode ? 'reorder-mode' : ''}`}>
             {posts.map((post, index) => (
               <div
-                key={index}
-                className="post-grid-item"
-                onClick={() => handlePostClick(post)}
+                key={post.id}
+                className={`post-grid-item ${isReorderMode ? 'reorder-item' : ''}`}
+                onClick={() => !isReorderMode && handlePostClick(post)}
               >
                 <div className="post-grid-thumbnail">
                   {post.thumbnail ? (
@@ -638,6 +749,27 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
                     <span className="post-grid-overlay-title">{post.title}</span>
                   </div>
                 </div>
+                {isReorderMode && (
+                  <div className="reorder-controls">
+                    <button
+                      className="reorder-btn reorder-up"
+                      onClick={(e) => { e.stopPropagation(); handleMoveUp(index); }}
+                      disabled={index === 0}
+                      title="위로 이동"
+                    >
+                      ▲
+                    </button>
+                    <span className="reorder-index">{index + 1}</span>
+                    <button
+                      className="reorder-btn reorder-down"
+                      onClick={(e) => { e.stopPropagation(); handleMoveDown(index); }}
+                      disabled={index === posts.length - 1}
+                      title="아래로 이동"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
