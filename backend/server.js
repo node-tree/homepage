@@ -132,6 +132,7 @@ const aboutRoutes = require('./routes/about');
 const filedRoutes = require('./routes/filed');
 const cvRouter = require('./routes/cv');
 const humanRoutes = require('./routes/human');
+const contactRoutes = require('./routes/contact');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/work', workRoutes);
@@ -140,6 +141,7 @@ app.use('/api/about', aboutRoutes);
 app.use('/api/filed', filedRoutes);
 app.use('/api/cv', cvRouter);
 app.use('/api/human', humanRoutes);
+app.use('/api/contact', contactRoutes);
 
 // 기본 라우트
 app.get('/', (req, res) => {

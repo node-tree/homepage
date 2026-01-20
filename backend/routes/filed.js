@@ -97,6 +97,44 @@ router.put('/header', require('../middleware/auth'), async (req, res) => {
   }
 });
 
+// PUT /filed/reorder - 글 순서 변경
+router.put('/reorder', auth, async (req, res) => {
+  try {
+    await ensureDBConnection();
+
+    const { orders } = req.body; // [{ id: '...', sortOrder: 0 }, { id: '...', sortOrder: 1 }, ...]
+
+    if (!orders || !Array.isArray(orders)) {
+      return res.status(400).json({
+        success: false,
+        message: '순서 데이터가 필요합니다.'
+      });
+    }
+
+    // 각 항목의 sortOrder 업데이트
+    const updatePromises = orders.map(item =>
+      Filed.findByIdAndUpdate(item.id, { sortOrder: item.sortOrder })
+    );
+
+    await Promise.all(updatePromises);
+
+    console.log('Filed 순서 업데이트 완료:', orders.length, '개 항목');
+
+    res.json({
+      success: true,
+      message: '순서가 성공적으로 변경되었습니다.'
+    });
+
+  } catch (error) {
+    console.error('Filed 순서 변경 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '순서 변경에 실패했습니다.',
+      error: error.message
+    });
+  }
+});
+
 // GET /api/filed - 모든 filed 데이터 조회
 router.get('/', async (req, res) => {
   try {
@@ -106,7 +144,7 @@ router.get('/', async (req, res) => {
     await ensureDBConnection();
     console.log('DB 연결 확인 완료');
     
-    const fileds = await Filed.find().sort({ _id: -1 });
+    const fileds = await Filed.find().sort({ sortOrder: 1, _id: -1 });
     console.log(`DB에서 ${fileds.length}개의 Filed 데이터 조회 완료`);
     
     // 프론트엔드에서 사용하는 형식으로 변환
@@ -134,7 +172,8 @@ router.get('/', async (req, res) => {
         htmlContent: filed.htmlContent || '',
         date: dateString,
         images: [],
-        thumbnail: filed.thumbnail || null
+        thumbnail: filed.thumbnail || null,
+        sortOrder: filed.sortOrder || 0
       };
     });
 
