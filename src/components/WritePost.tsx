@@ -124,12 +124,20 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     cleaned = cleaned.replace(/<xml>[\s\S]*?<\/xml>/gi, '');
     cleaned = cleaned.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
 
+    // meta, link 태그 제거 (Word에서 추가하는 메타데이터)
+    cleaned = cleaned.replace(/<meta[^>]*>/gi, '');
+    cleaned = cleaned.replace(/<link[^>]*>/gi, '');
+
+    // Word Fragment 주석 제거
+    cleaned = cleaned.replace(/<!--StartFragment-->/gi, '');
+    cleaned = cleaned.replace(/<!--EndFragment-->/gi, '');
+
     // class 속성 제거
     cleaned = cleaned.replace(/\s*class="[^"]*"/gi, '');
     cleaned = cleaned.replace(/\s*class='[^']*'/gi, '');
 
-    // style 속성에서 유지할 스타일만 추출 (색상, 배경색, 테두리, 크기 등)
-    const preserveStyles = ['color', 'background-color', 'background', 'border', 'border-color', 'border-width', 'border-style', 'width', 'height', 'text-align', 'vertical-align', 'font-weight', 'font-size'];
+    // style 속성에서 유지할 스타일만 추출 (색상, 배경색, 테두리, 크기, 여백, 정렬 등)
+    const preserveStyles = ['color', 'background-color', 'background', 'border', 'border-color', 'border-width', 'border-style', 'width', 'height', 'text-align', 'vertical-align', 'font-weight', 'font-size', 'font-family', 'margin', 'padding'];
 
     cleaned = cleaned.replace(/\s*style="([^"]*)"/gi, (match, styleContent) => {
       const styles = styleContent.split(';').filter((s: string) => s.trim());
