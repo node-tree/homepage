@@ -507,6 +507,44 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
               )}
             </div>
           </article>
+
+          {/* 이전글/다음글 네비게이션 */}
+          {posts.length > 1 && (() => {
+            const currentIndex = posts.findIndex(p => p.id === selectedPost.id);
+            const prevPost = currentIndex > 0 ? posts[currentIndex - 1] : null;
+            const nextPost = currentIndex < posts.length - 1 ? posts[currentIndex + 1] : null;
+
+            return (
+              <div className="post-navigation">
+                <div
+                  className={`post-nav-item post-nav-prev ${!prevPost ? 'disabled' : ''}`}
+                  onClick={() => prevPost && handlePostClick(prevPost)}
+                >
+                  {prevPost ? (
+                    <>
+                      <span className="post-nav-label">← 이전 글</span>
+                      <span className="post-nav-title">{prevPost.title}</span>
+                    </>
+                  ) : (
+                    <span className="post-nav-label">이전 글 없음</span>
+                  )}
+                </div>
+                <div
+                  className={`post-nav-item post-nav-next ${!nextPost ? 'disabled' : ''}`}
+                  onClick={() => nextPost && handlePostClick(nextPost)}
+                >
+                  {nextPost ? (
+                    <>
+                      <span className="post-nav-label">다음 글 →</span>
+                      <span className="post-nav-title">{nextPost.title}</span>
+                    </>
+                  ) : (
+                    <span className="post-nav-label">다음 글 없음</span>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
     );
