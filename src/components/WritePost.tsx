@@ -124,17 +124,33 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     cleaned = cleaned.replace(/<xml>[\s\S]*?<\/xml>/gi, '');
     cleaned = cleaned.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
 
-    // class와 style 속성 제거 (mso- 스타일 포함)
+    // class 속성 제거
     cleaned = cleaned.replace(/\s*class="[^"]*"/gi, '');
     cleaned = cleaned.replace(/\s*class='[^']*'/gi, '');
-    cleaned = cleaned.replace(/\s*style="[^"]*"/gi, '');
-    cleaned = cleaned.replace(/\s*style='[^']*'/gi, '');
+
+    // style 속성에서 유지할 스타일만 추출 (색상, 배경색, 테두리, 크기 등)
+    const preserveStyles = ['color', 'background-color', 'background', 'border', 'border-color', 'border-width', 'border-style', 'width', 'height', 'text-align', 'vertical-align', 'font-weight', 'font-size'];
+
+    cleaned = cleaned.replace(/\s*style="([^"]*)"/gi, (match, styleContent) => {
+      const styles = styleContent.split(';').filter((s: string) => s.trim());
+      const keepStyles: string[] = [];
+
+      styles.forEach((style: string) => {
+        const [prop] = style.split(':').map((s: string) => s.trim().toLowerCase());
+        // mso- 로 시작하는 Microsoft 전용 스타일은 제외
+        if (prop && !prop.startsWith('mso-') && preserveStyles.some(p => prop.startsWith(p))) {
+          keepStyles.push(style.trim());
+        }
+      });
+
+      return keepStyles.length > 0 ? ` style="${keepStyles.join('; ')}"` : '';
+    });
 
     // Microsoft 전용 속성 제거
     cleaned = cleaned.replace(/\s*lang="[^"]*"/gi, '');
     cleaned = cleaned.replace(/\s*data-[^=]*="[^"]*"/gi, '');
 
-    // 빈 span 태그 정리
+    // 빈 span 태그 정리 (스타일 없는 것만)
     cleaned = cleaned.replace(/<span\s*>([^<]*)<\/span>/gi, '$1');
     cleaned = cleaned.replace(/<span\s*\/>/gi, '');
 
@@ -145,8 +161,8 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     cleaned = cleaned.replace(/\s+/g, ' ');
     cleaned = cleaned.replace(/>\s+</g, '><');
 
-    // 빈 태그 제거
-    cleaned = cleaned.replace(/<(\w+)[^>]*>\s*<\/\1>/gi, '');
+    // 빈 태그 제거 (스타일 없는 것만)
+    cleaned = cleaned.replace(/<(\w+)>\s*<\/\1>/gi, '');
 
     // &nbsp; 처리
     cleaned = cleaned.replace(/&nbsp;/gi, ' ');
