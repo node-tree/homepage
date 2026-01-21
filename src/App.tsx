@@ -86,7 +86,7 @@ function BackgroundMusic() {
       document.removeEventListener('click', tryPlay);
       document.removeEventListener('touchstart', tryPlay);
     };
-  }, []);
+  }, [bgVolume]);
 
   useEffect(() => {
     if (audioRef.current) {
