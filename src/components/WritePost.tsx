@@ -28,8 +28,11 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
   const [error, setError] = useState<string | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [category, setCategory] = useState<string>('문화예술교육');
+  const [isToolbarFixed, setIsToolbarFixed] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
   const colorPickerRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const toolbarPlaceholderRef = useRef<HTMLDivElement>(null);
 
   const colors = [
     '#000000', '#333333', '#666666', '#999999',
@@ -74,13 +77,29 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     return result;
   };
 
+  // 에디터 로드 시 기존 버튼 HTML 제거 (이벤트 핸들러 없는 정적 버튼)
+  const cleanExistingButtons = (html: string): string => {
+    let cleaned = html;
+    // media-controls div 제거
+    cleaned = cleaned.replace(/<div class="media-controls"[^>]*>[\s\S]*?<\/div>/gi, '');
+    // 개별 버튼들 제거
+    cleaned = cleaned.replace(/<button[^>]*title="위로 이동"[^>]*>[\s\S]*?<\/button>/gi, '');
+    cleaned = cleaned.replace(/<button[^>]*title="아래로 이동"[^>]*>[\s\S]*?<\/button>/gi, '');
+    cleaned = cleaned.replace(/<button[^>]*title="삭제"[^>]*>[\s\S]*?<\/button>/gi, '');
+    // 빈 wrapper div 제거
+    cleaned = cleaned.replace(/<div[^>]*contenteditable="false"[^>]*>\s*<\/div>/gi, '');
+    return cleaned;
+  };
+
   useEffect(() => {
     if (editPost) {
       setTitle(editPost.title || '');
       setThumbnailUrl(editPost.thumbnail || '');
       setCategory(editPost.category || '문화예술교육');
       if (editorRef.current) {
-        const content = editPost.content || '';
+        let content = editPost.content || '';
+        // 기존 버튼 HTML 제거 (새로 추가할 것이므로)
+        content = cleanExistingButtons(content);
         if (content.includes('<') && content.includes('>')) {
           editorRef.current.innerHTML = content;
         } else {
@@ -88,11 +107,83 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
         }
         // 콘텐츠 로드 후 미디어 블록에 컨트롤 추가
         setTimeout(() => {
-          const mediaBlocks = editorRef.current?.querySelectorAll('.media-block');
-          mediaBlocks?.forEach((block) => {
+          if (!editorRef.current) return;
+
+          // 1. 기존 .media-block에 컨트롤 추가
+          const mediaBlocks = editorRef.current.querySelectorAll('.media-block');
+          mediaBlocks.forEach((block) => {
             addMediaControls(block as HTMLElement);
           });
-        }, 50);
+
+          // 2. .media-block이 아닌 독립적인 이미지들 처리
+          const standaloneImages = editorRef.current.querySelectorAll('img:not(.media-block img)');
+          standaloneImages.forEach((img) => {
+            const parent = img.parentElement;
+            // 이미 media-block 안에 있으면 스킵
+            if (parent?.classList.contains('media-block')) return;
+
+            // 새 media-block wrapper 생성
+            const wrapper = document.createElement('div');
+            wrapper.className = 'media-block';
+            wrapper.draggable = true;
+            wrapper.contentEditable = 'false';
+            wrapper.setAttribute('data-type', 'image');
+            wrapper.style.cssText = 'position: relative; margin: 10px 0;';
+
+            // 이미지를 wrapper로 감싸기
+            img.parentNode?.insertBefore(wrapper, img);
+            wrapper.appendChild(img);
+
+            addMediaControls(wrapper);
+          });
+
+          // 3. .media-block이 아닌 독립적인 비디오/iframe 처리
+          const standaloneVideos = editorRef.current.querySelectorAll('iframe:not(.media-block iframe):not(.video-container iframe), video:not(.media-block video):not(.video-container video)');
+          standaloneVideos.forEach((video) => {
+            const parent = video.parentElement;
+            // 이미 media-block 안에 있거나 video-container 안에 있으면 스킵
+            if (parent?.classList.contains('media-block') || parent?.classList.contains('video-container')) return;
+
+            // 새 media-block wrapper 생성
+            const wrapper = document.createElement('div');
+            wrapper.className = 'media-block';
+            wrapper.draggable = true;
+            wrapper.contentEditable = 'false';
+            wrapper.setAttribute('data-type', 'video');
+            wrapper.style.cssText = 'position: relative; margin: 10px 0;';
+
+            // video-container 생성
+            const videoContainer = document.createElement('div');
+            videoContainer.className = 'video-container';
+
+            // 비디오를 video-container로 감싸고, 그걸 media-block으로 감싸기
+            video.parentNode?.insertBefore(wrapper, video);
+            videoContainer.appendChild(video);
+            wrapper.appendChild(videoContainer);
+
+            addMediaControls(wrapper);
+          });
+
+          // 4. video-container가 media-block 없이 있는 경우 처리
+          const standaloneVideoContainers = editorRef.current.querySelectorAll('.video-container:not(.media-block .video-container)');
+          standaloneVideoContainers.forEach((container) => {
+            const parent = container.parentElement;
+            if (parent?.classList.contains('media-block')) return;
+
+            // 새 media-block wrapper 생성
+            const wrapper = document.createElement('div');
+            wrapper.className = 'media-block';
+            wrapper.draggable = true;
+            wrapper.contentEditable = 'false';
+            wrapper.setAttribute('data-type', 'video');
+            wrapper.style.cssText = 'position: relative; margin: 10px 0;';
+
+            container.parentNode?.insertBefore(wrapper, container);
+            wrapper.appendChild(container);
+
+            addMediaControls(wrapper);
+          });
+        }, 100);
       }
     } else {
       setTitle('');
@@ -113,6 +204,33 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // 툴바 스크롤 고정 처리 - requestAnimationFrame 사용
+  useEffect(() => {
+    let animationFrameId: number;
+    let isFixedRef = false;
+
+    const checkPosition = () => {
+      if (toolbarPlaceholderRef.current) {
+        const rect = toolbarPlaceholderRef.current.getBoundingClientRect();
+        const navHeight = 120; // 상단 네비게이션 높이
+        const shouldBeFixed = rect.top < navHeight;
+
+        // 상태가 변경될 때만 업데이트
+        if (shouldBeFixed !== isFixedRef) {
+          isFixedRef = shouldBeFixed;
+          setIsToolbarFixed(shouldBeFixed);
+        }
+      }
+      animationFrameId = requestAnimationFrame(checkPosition);
+    };
+
+    animationFrameId = requestAnimationFrame(checkPosition);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
   }, []);
 
   // Word/Office에서 복사한 HTML 정리 함수
@@ -569,8 +687,17 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
         <div className="form-group">
           <label className="form-label">내용</label>
 
+          {/* 툴바 위치 기준점 */}
+          <div
+            ref={toolbarPlaceholderRef}
+            style={isToolbarFixed && toolbarRef.current ? { height: `${toolbarRef.current.offsetHeight}px` } : { height: '1px' }}
+          />
+
           {/* 툴바 */}
-          <div className="editor-toolbar" style={{ borderRadius: '8px 8px 0 0', borderBottom: 'none' }}>
+          <div
+            ref={toolbarRef}
+            className={`editor-toolbar ${isToolbarFixed ? 'editor-toolbar-fixed' : ''}`}
+          >
             {/* 텍스트 서식 */}
             <button type="button" onClick={handleBold} disabled={saving} className="toolbar-btn" title="굵게">
               <strong>B</strong>
