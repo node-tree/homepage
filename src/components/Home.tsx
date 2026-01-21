@@ -46,10 +46,11 @@ const getPositionStyles = (isMobile: boolean): Record<string, React.CSSPropertie
 const Home: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const [settings, setSettings] = useState<HomeSettings>({
-    title: 'Node Tree',
-    subtitle: '서사 교차점의 기록',
+    title: '',
+    subtitle: '',
     titlePosition: 'bottom-left'
   });
+  const [isLoaded, setIsLoaded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<HomeSettings>(settings);
   const [isSaving, setIsSaving] = useState(false);
@@ -136,6 +137,13 @@ const Home: React.FC = () => {
         }
       } catch (error) {
         console.log('Home settings not found, using defaults');
+        setSettings({
+          title: 'Node Tree',
+          subtitle: '서사 교차점의 기록',
+          titlePosition: 'bottom-left'
+        });
+      } finally {
+        setIsLoaded(true);
       }
     };
     fetchSettings();
@@ -197,54 +205,56 @@ const Home: React.FC = () => {
       >
         <GeometricParticles height="100%" />
 
-        {/* 타이틀 오버레이 */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.2, delay: 0.8, ease: 'easeOut' }}
-          style={{
-            position: 'absolute',
-            ...positionStyle,
-            pointerEvents: 'none',
-            zIndex: 10,
-          }}
-        >
-          <div style={{
-            background: 'radial-gradient(ellipse at center, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0) 100%)',
-            backdropFilter: 'blur(4px)',
-            WebkitBackdropFilter: 'blur(4px)',
-            padding: isMobile ? '1.5rem 1.5rem' : '2.5rem 4rem',
-            border: 'none',
-            maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 80%)',
-            WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 80%)',
-          }}>
-            <h1 style={{
-              fontSize: isMobile ? '1.2rem' : 'clamp(1.5rem, 3vw, 2.5rem)',
-              fontWeight: 100,
-              letterSpacing: isMobile ? '0.1em' : '0.2em',
-              color: '#111',
-              margin: 0,
-              textTransform: 'uppercase',
-              lineHeight: 1.2,
-              whiteSpace: isMobile ? 'normal' : 'nowrap',
-              wordBreak: isMobile ? 'keep-all' : 'normal',
+        {/* 타이틀 오버레이 - 데이터 로드 후 표시 */}
+        {isLoaded && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1.2, delay: 0.3, ease: 'easeOut' }}
+            style={{
+              position: 'absolute',
+              ...positionStyle,
+              pointerEvents: 'none',
+              zIndex: 10,
+            }}
+          >
+            <div style={{
+              background: 'radial-gradient(ellipse at center, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0) 100%)',
+              backdropFilter: 'blur(4px)',
+              WebkitBackdropFilter: 'blur(4px)',
+              padding: isMobile ? '1.5rem 1.5rem' : '2.5rem 4rem',
+              border: 'none',
+              maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 80%)',
+              WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 80%)',
             }}>
-              {settings.title}
-            </h1>
-            <p style={{
-              fontSize: isMobile ? '0.7rem' : 'clamp(0.75rem, 1.2vw, 0.95rem)',
-              fontWeight: 300,
-              letterSpacing: '0.05em',
-              color: '#555',
-              marginTop: isMobile ? '0.5rem' : '1rem',
-              lineHeight: 1.5,
-              whiteSpace: isMobile ? 'normal' : 'nowrap',
-              wordBreak: isMobile ? 'keep-all' : 'normal',
-            }}>
-              {settings.subtitle}
-            </p>
-          </div>
-        </motion.div>
+              <h1 style={{
+                fontSize: isMobile ? '1.2rem' : 'clamp(1.5rem, 3vw, 2.5rem)',
+                fontWeight: 100,
+                letterSpacing: isMobile ? '0.1em' : '0.2em',
+                color: '#111',
+                margin: 0,
+                textTransform: 'uppercase',
+                lineHeight: 1.2,
+                whiteSpace: isMobile ? 'normal' : 'nowrap',
+                wordBreak: isMobile ? 'keep-all' : 'normal',
+              }}>
+                {settings.title}
+              </h1>
+              <p style={{
+                fontSize: isMobile ? '0.7rem' : 'clamp(0.75rem, 1.2vw, 0.95rem)',
+                fontWeight: 300,
+                letterSpacing: '0.05em',
+                color: '#555',
+                marginTop: isMobile ? '0.5rem' : '1rem',
+                lineHeight: 1.5,
+                whiteSpace: isMobile ? 'normal' : 'nowrap',
+                wordBreak: isMobile ? 'keep-all' : 'normal',
+              }}>
+                {settings.subtitle}
+              </p>
+            </div>
+          </motion.div>
+        )}
 
         {/* 편집 버튼 (로그인 시) */}
         {isAuthenticated && !isEditing && (
