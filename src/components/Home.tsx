@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import GeometricParticles from './GeometricParticles';
 import { homeAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -66,13 +66,8 @@ const Home: React.FC = () => {
   // 프레임 패닝 관련 (프레임이 움직이는 효과)
   const containerRef = useRef<HTMLDivElement>(null);
   const frameX = useMotionValue(0);
-  const smoothFrameX = useSpring(frameX, { stiffness: 30, damping: 20 });
   const [isUserInteracting, setIsUserInteracting] = useState(false);
   const interactionTimeout = useRef<NodeJS.Timeout | null>(null);
-
-  // 프레임 이동 범위 (% 단위)
-  const frameRange = 15; // 좌우 15%씩 이동
-  const canvasX = useTransform(smoothFrameX, [-1, 1], [frameRange, -frameRange]);
 
   // 랜덤 프레임 이동
   useEffect(() => {
