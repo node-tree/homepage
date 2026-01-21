@@ -174,7 +174,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Suspense fallback={<div className="loading-spinner">...</div>}>
+        <Suspense fallback={null}>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="*" element={<AppContent />} />
