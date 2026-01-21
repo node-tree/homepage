@@ -63,39 +63,28 @@ function BackgroundMusic() {
   const [bgVolume, setBgVolumeState] = useState(getBgVolume());
   const [clickVolume, setClickVolumeState] = useState(getClickVolume());
 
-  // 자동 재생 시도 + 실패 시 클릭으로 재생
+  // 오디오 재생 (클릭/터치 시)
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    audio.volume = getBgVolume();
-
-    // 자동 재생 시도
-    const attemptAutoplay = () => {
-      audio.play().then(() => {
-        setIsPlaying(true);
-      }).catch(() => {
-        // 자동 재생 실패 시 클릭/터치로 재생
-        const tryPlay = () => {
-          if (audio.paused) {
-            audio.volume = getBgVolume();
-            audio.play().then(() => {
-              setIsPlaying(true);
-              document.removeEventListener('click', tryPlay);
-              document.removeEventListener('touchstart', tryPlay);
-            }).catch(() => {});
-          }
-        };
-        document.addEventListener('click', tryPlay);
-        document.addEventListener('touchstart', tryPlay);
-      });
+    const tryPlay = () => {
+      audio.volume = getBgVolume();
+      audio.play()
+        .then(() => setIsPlaying(true))
+        .catch((e) => console.log('Play failed:', e));
     };
 
-    // 페이지 로드 후 약간의 딜레이를 두고 시도
-    const timer = setTimeout(attemptAutoplay, 500);
+    // 자동 재생 시도
+    tryPlay();
+
+    // 클릭/터치 시에도 재생 시도
+    document.addEventListener('click', tryPlay);
+    document.addEventListener('touchstart', tryPlay);
 
     return () => {
-      clearTimeout(timer);
+      document.removeEventListener('click', tryPlay);
+      document.removeEventListener('touchstart', tryPlay);
     };
   }, []);
 
