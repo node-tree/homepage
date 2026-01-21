@@ -63,31 +63,32 @@ function BackgroundMusic() {
   const [bgVolume, setBgVolumeState] = useState(getBgVolume());
   const [clickVolume, setClickVolumeState] = useState(getClickVolume());
 
+  // 첫 클릭/터치 시 재생 시작 (한 번만 설정)
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    audio.volume = bgVolume;
-
-    // 사용자 인터랙션 후 자동 재생 시도
     const tryPlay = () => {
       if (audio.paused) {
+        audio.volume = getBgVolume();
         audio.play().then(() => {
           setIsPlaying(true);
-        }).catch(() => {});
+        }).catch((err) => {
+          console.log('Audio play failed:', err);
+        });
       }
     };
 
-    // 첫 클릭/터치 시 재생 시작
-    document.addEventListener('click', tryPlay, { once: true });
-    document.addEventListener('touchstart', tryPlay, { once: true });
+    document.addEventListener('click', tryPlay);
+    document.addEventListener('touchstart', tryPlay);
 
     return () => {
       document.removeEventListener('click', tryPlay);
       document.removeEventListener('touchstart', tryPlay);
     };
-  }, [bgVolume]);
+  }, []);
 
+  // 볼륨 변경 시 적용
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = bgVolume;
