@@ -1,415 +1,291 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
+import Home from './components/Home';
 import Location3D from './components/Location3D';
 import Contact from './components/Contact';
 import Filed from './components/Filed';
 import CV from './components/CV';
 import LocationVideoSettings from './components/LocationVideoSettings';
 import About from './components/About';
+import { playHoverSound, playClickSound, getBgVolume, setBgVolume, getClickVolume, setClickVolume } from './utils/sound';
 
 const Work = lazy(() => import('./components/Work'));
 
-// 이 컴포넌트는 App 내부의 라우팅과 상태 관리를 담당합니다.
+// 네비게이션 항목
+const NAV_ITEMS = [
+  { id: 1, text: 'NODE TREE', page: 'ABOUT' },
+  { id: 2, text: 'CROSS CITY', page: 'LOCATION' },
+  { id: 3, text: 'ART WORK', page: 'WORK' },
+  { id: 4, text: 'COMMONS', page: 'FILED' },
+  { id: 5, text: 'CV', page: 'CV' },
+  { id: 6, text: 'CONTACT', page: 'CONTACT' }
+];
+
+// 네비게이션 컴포넌트 - 원형 노드 + 아래 텍스트
+function Navigation({ currentPage, onPageChange }: { currentPage: string; onPageChange: (page: string) => void }) {
+  const allNavItems = [
+    { id: 0, text: 'HOME', page: 'HOME' },
+    ...NAV_ITEMS
+  ];
+
+  return (
+    <nav className="fixed-navigation">
+      <div className="nav-container">
+        {allNavItems.map((item) => (
+          <motion.div
+            key={item.id}
+            className={`nav-node ${currentPage === item.page ? 'active' : ''}`}
+            onMouseEnter={playHoverSound}
+            onClick={() => {
+              playClickSound();
+              onPageChange(item.page);
+            }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <div className="nav-dot" />
+            <span className="nav-label">{item.text}</span>
+          </motion.div>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+// 배경음악 컴포넌트
+function BackgroundMusic() {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [showControls, setShowControls] = useState(false);
+  const [bgVolume, setBgVolumeState] = useState(getBgVolume());
+  const [clickVolume, setClickVolumeState] = useState(getClickVolume());
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audio.volume = bgVolume;
+
+    // 사용자 인터랙션 후 자동 재생 시도
+    const tryPlay = () => {
+      if (audio.paused) {
+        audio.play().then(() => {
+          setIsPlaying(true);
+        }).catch(() => {});
+      }
+    };
+
+    // 첫 클릭/터치 시 재생 시작
+    document.addEventListener('click', tryPlay, { once: true });
+    document.addEventListener('touchstart', tryPlay, { once: true });
+
+    return () => {
+      document.removeEventListener('click', tryPlay);
+      document.removeEventListener('touchstart', tryPlay);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = bgVolume;
+    }
+    setBgVolume(bgVolume);
+  }, [bgVolume]);
+
+  useEffect(() => {
+    setClickVolume(clickVolume);
+  }, [clickVolume]);
+
+  const togglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (audio.paused) {
+      audio.play().then(() => setIsPlaying(true)).catch(() => {});
+    } else {
+      audio.pause();
+      setIsPlaying(false);
+    }
+  };
+
+  return (
+    <>
+      <audio ref={audioRef} src="/backsound.mp3" loop preload="auto" />
+
+      {/* 사운드 컨트롤 패널 */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          left: '20px',
+          zIndex: 1000,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+        }}
+      >
+        {/* 볼륨 슬라이더 (펼쳐졌을 때) */}
+        {showControls && (
+          <div
+            style={{
+              background: 'rgba(0, 0, 0, 0.85)',
+              borderRadius: '12px',
+              padding: '14px 16px',
+              minWidth: '180px',
+            }}
+          >
+            <div style={{ marginBottom: '14px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <span style={{ color: '#aaa', fontSize: '11px' }}>배경음</span>
+                <span style={{ color: '#fff', fontSize: '11px', fontWeight: 500 }}>{Math.round(bgVolume * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={bgVolume}
+                onChange={(e) => setBgVolumeState(parseFloat(e.target.value))}
+                style={{ width: '100%', cursor: 'pointer', accentColor: '#fff' }}
+              />
+            </div>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <span style={{ color: '#aaa', fontSize: '11px' }}>클릭음</span>
+                <span style={{ color: '#fff', fontSize: '11px', fontWeight: 500 }}>{Math.round(clickVolume * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={clickVolume}
+                onChange={(e) => setClickVolumeState(parseFloat(e.target.value))}
+                style={{ width: '100%', cursor: 'pointer', accentColor: '#fff' }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* 메인 컨트롤 바 */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            background: 'rgba(0, 0, 0, 0.7)',
+            borderRadius: '20px',
+            padding: '8px 14px',
+          }}
+        >
+          {/* 재생/정지 버튼 */}
+          <button
+            onClick={togglePlay}
+            style={{
+              width: '28px',
+              height: '28px',
+              borderRadius: '50%',
+              border: 'none',
+              background: isPlaying ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+              color: '#fff',
+              cursor: 'pointer',
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background 0.2s',
+            }}
+            title={isPlaying ? '음악 끄기' : '음악 켜기'}
+          >
+            {isPlaying ? '❚❚' : '▶'}
+          </button>
+
+          {/* 상태 텍스트 */}
+          <div style={{
+            color: '#fff',
+            fontSize: '11px',
+            letterSpacing: '0.05em',
+            minWidth: '70px',
+          }}>
+            <span style={{ opacity: isPlaying ? 1 : 0.5 }}>
+              SOUND {isPlaying ? 'ON' : 'OFF'}
+            </span>
+            {isPlaying && (
+              <span style={{ opacity: 0.6, marginLeft: '6px' }}>
+                {Math.round(bgVolume * 100)}%
+              </span>
+            )}
+          </div>
+
+          {/* 설정 버튼 */}
+          <button
+            onClick={() => setShowControls(!showControls)}
+            style={{
+              width: '24px',
+              height: '24px',
+              borderRadius: '50%',
+              border: 'none',
+              background: showControls ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+              color: '#fff',
+              cursor: 'pointer',
+              fontSize: '11px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background 0.2s',
+            }}
+            title="볼륨 설정"
+          >
+            ⚙
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// 메인 콘텐츠 컴포넌트
 function AppContent() {
   const location = useLocation();
-  // 모든 상태를 최상위에서 선언
-  const [currentStep, setCurrentStep] = useState(0); // 0: 초기, 1: 메뉴 펼침, 2: 페이지 표시
-  const [currentPage, setCurrentPage] = useState<string | null>(null); // 현재 페이지
-  const [showLabels, setShowLabels] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [hoveredCircle, setHoveredCircle] = useState<number | null>(null);
-  const [isInitialLoad, setIsInitialLoad] = useState(true); // 초기 로드 추적
-  const [isMobile, setIsMobile] = useState(false); // SSR 호환 모바일 감지
-  const [isSmallMobile, setIsSmallMobile] = useState(false); // SSR 호환 소형 모바일 감지
-  const [audioInitialized, setAudioInitialized] = useState(false);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const navigate = useNavigate();
   const { isAuthenticated, logout, user } = useAuth();
+  const [currentPage, setCurrentPage] = useState<string>('HOME');
 
-  // 오디오 초기화 및 프리로딩
-  useEffect(() => {
-    const initializeAudio = () => {
-      try {
-        // 배포 환경에서 더 안전한 오디오 초기화
-        const isNodeTreeSite = window.location.hostname === 'nodetree.kr' || window.location.hostname === 'www.nodetree.kr';
-        const audioPath = isNodeTreeSite ? '/click.wav' : '/click.wav';
-        
-        const audio = new Audio(audioPath);
-        audio.volume = 0.3;
-        audio.preload = 'auto';
-        audio.crossOrigin = 'anonymous'; // CORS 문제 방지
-        
-        // 오디오 로드 완료 시
-        audio.addEventListener('canplaythrough', () => {
-          setAudioElement(audio);
-          console.log('App 오디오 프리로딩 완료');
-        });
-        
-        // 오디오 로드 에러 시
-        audio.addEventListener('error', (e) => {
-          console.log('App 오디오 로드 실패:', e);
-          // 폴백으로 상대 경로 시도
-          if (isNodeTreeSite) {
-            const fallbackAudio = new Audio('/click.wav');
-            fallbackAudio.volume = 0.3;
-            fallbackAudio.preload = 'auto';
-            fallbackAudio.addEventListener('canplaythrough', () => {
-              setAudioElement(fallbackAudio);
-              console.log('App 폴백 오디오 프리로딩 완료');
-            });
-            fallbackAudio.load();
-          }
-        });
-        
-        // 오디오 로드 시작
-        audio.load();
-      } catch (error) {
-        console.log('App 오디오 초기화 실패:', error);
-      }
-    };
-
-    initializeAudio();
-  }, []);
-
-  // 사용자 첫 상호작용 감지 및 오디오 컨텍스트 활성화
-  useEffect(() => {
-    const enableAudio = async () => {
-      if (audioInitialized || !audioElement) return;
-      
-      try {
-        // HTTPS 체크 (배포 환경에서 중요)
-        const isSecureContext = window.isSecureContext || window.location.protocol === 'https:';
-        if (!isSecureContext && window.location.hostname !== 'localhost') {
-          console.log('HTTPS가 아닌 환경에서는 오디오 기능이 제한될 수 있습니다.');
-        }
-
-        // AudioContext 생성 및 활성화
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioContextClass) {
-          console.log('이 브라우저는 Web Audio API를 지원하지 않습니다.');
-          setAudioInitialized(true); // 오디오 없이도 계속 진행
-          return;
-        }
-
-        const audioContext = new AudioContextClass();
-        
-        if (audioContext.state === 'suspended') {
-          await audioContext.resume();
-        }
-        
-        // 더미 오디오 재생으로 브라우저 정책 우회
-        const originalVolume = audioElement.volume;
-        audioElement.volume = 0;
-        
-        try {
-          const playPromise = audioElement.play();
-          if (playPromise !== undefined) {
-            await playPromise;
-            audioElement.pause();
-            audioElement.currentTime = 0;
-            audioElement.volume = originalVolume; // 원래 볼륨 복원
-            setAudioInitialized(true);
-            console.log('App 오디오 컨텍스트 활성화 완료');
-          }
-        } catch (playError) {
-          console.log('App 오디오 활성화 실패:', playError);
-          // 실패해도 일단 초기화된 것으로 표시 (폴백 사용)
-          audioElement.volume = originalVolume;
-          setAudioInitialized(true);
-        }
-      } catch (error) {
-        console.log('App 오디오 컨텍스트 생성 실패:', error);
-        // 실패해도 일단 초기화된 것으로 표시 (폴백 사용)
-        setAudioInitialized(true);
-      }
-    };
-
-    // 다양한 사용자 상호작용 이벤트 리스너
-    const handleFirstInteraction = (event: Event) => {
-      console.log('App 사용자 첫 상호작용 감지:', event.type);
-      enableAudio();
-      // 이벤트 리스너 제거 (한 번만 실행)
-      removeEventListeners();
-    };
-
-    const removeEventListeners = () => {
-      document.removeEventListener('click', handleFirstInteraction);
-      document.removeEventListener('touchstart', handleFirstInteraction);
-      document.removeEventListener('touchend', handleFirstInteraction);
-      document.removeEventListener('keydown', handleFirstInteraction);
-      document.removeEventListener('mousedown', handleFirstInteraction);
-      document.removeEventListener('pointerdown', handleFirstInteraction);
-    };
-
-    // 더 많은 이벤트 타입 등록
-    document.addEventListener('click', handleFirstInteraction, { passive: true, once: true });
-    document.addEventListener('touchstart', handleFirstInteraction, { passive: true, once: true });
-    document.addEventListener('touchend', handleFirstInteraction, { passive: true, once: true });
-    document.addEventListener('keydown', handleFirstInteraction, { passive: true, once: true });
-    document.addEventListener('mousedown', handleFirstInteraction, { passive: true, once: true });
-    document.addEventListener('pointerdown', handleFirstInteraction, { passive: true, once: true });
-
-    return removeEventListeners;
-  }, [audioElement, audioInitialized]);
-
-  // 개선된 클릭 사운드 재생 함수
-  const playClickSound = useCallback(async () => {
-    // 배포 환경에서 추가 체크
-    const isProduction = process.env.NODE_ENV === 'production';
-    const isSecureContext = window.isSecureContext || window.location.protocol === 'https:';
-    
-    if (isProduction && !isSecureContext) {
-      console.log('배포 환경에서는 HTTPS가 필요합니다. 사운드를 재생할 수 없습니다.');
-      return;
-    }
-
-    // 오디오가 초기화되지 않았어도 시도해보기
-    if (!audioElement) {
-      console.log('App 오디오 엘리먼트가 없습니다.');
-      // 폴백으로 새로운 Audio 인스턴스 생성
-      try {
-        const fallbackAudio = new Audio('/click.wav');
-        fallbackAudio.volume = 0.3;
-        
-        // 배포 환경에서는 사용자 제스처가 필요
-        if (isProduction) {
-          // 사용자 제스처 없이는 재생하지 않음
-          fallbackAudio.muted = false;
-        }
-        
-        await fallbackAudio.play();
-        console.log('App 폴백 사운드 재생 성공');
-      } catch (fallbackError) {
-        console.log('App 폴백 사운드 재생 실패:', fallbackError);
-        // 배포 환경에서는 조용히 실패
-        if (!isProduction) {
-          console.warn('사운드 재생 실패, 사용자 상호작용이 필요할 수 있습니다.');
-        }
-      }
-      return;
-    }
-
-    try {
-      // 현재 재생 중인 사운드 정지
-      audioElement.pause();
-      audioElement.currentTime = 0;
-      
-      // 배포 환경에서 추가 체크
-      if (isProduction && audioElement.muted) {
-        audioElement.muted = false;
-      }
-      
-      // 새로운 사운드 재생
-      const playPromise = audioElement.play();
-      
-      if (playPromise !== undefined) {
-        await playPromise;
-        console.log('App 클릭 사운드 재생 성공');
-      }
-    } catch (error) {
-      console.log('App 사운드 재생 실패:', error);
-      
-      // 폴백: 새로운 Audio 인스턴스로 재시도
-      try {
-        const fallbackAudio = new Audio('/click.wav');
-        fallbackAudio.volume = 0.3;
-        
-        // 배포 환경에서는 더 신중하게
-        if (isProduction) {
-          fallbackAudio.muted = false;
-          // 사용자 제스처 체크
-          if (!document.hasFocus()) {
-            console.log('페이지가 포커스되지 않아 사운드를 재생할 수 없습니다.');
-            return;
-          }
-        }
-        
-        await fallbackAudio.play();
-        console.log('App 폴백 사운드 재생 성공');
-      } catch (fallbackError) {
-        console.log('App 폴백 사운드 재생도 실패:', fallbackError);
-        // 배포 환경에서는 사용자에게 알리지 않음
-      }
-    }
-  }, [audioElement]);
-
-  // 안정적인 핸들러 함수들 - 컴포넌트 최상위에서 선언
-  const handleMouseEnter = useCallback((index: number) => {
-    setHoveredCircle(prev => prev !== index ? index : prev);
-  }, []);
-
-  const handleMouseLeave = useCallback((index: number) => {
-    setHoveredCircle(prev => prev === index ? null : prev);
-  }, []);
-
-  const handleCircleClickStable = useCallback((page: string) => {
-    // 클릭 사운드 재생
-    playClickSound();
-    
-    setCurrentStep((prevStep) => {
-      if (prevStep === 0) {
-        // 첫 번째 클릭: 원들만 펼치기 (y축 이동 없음)
-        return 1;
-      } else if (prevStep === 1) {
-        // 두 번째 클릭: 해당 페이지로 이동 (navbar 위치로 y축 이동)
-        setCurrentPage(page);
-        return 2;
-      } else if (prevStep === 2) {
-        // 이미 페이지 상태에서 다른 원 클릭: 페이지만 변경
-        setCurrentPage(page);
-        return 2;
-      }
-      return prevStep;
-    });
-  }, [playClickSound]); // playClickSound 의존성 추가
-
-  // URL 경로 확인
-  const currentPath = window.location.pathname;
-  
-  const circles = useMemo(() => [
-    { id: 1, text: 'CROSS CITY', delay: 0, page: 'LOCATION' },
-    { id: 2, text: 'NODE TREE', delay: 0.1, page: 'ABOUT' },
-    { id: 3, text: 'ART WORK', delay: 0.2, page: 'WORK' },
-    { id: 4, text: 'COMMONS', delay: 0.3, page: 'FILED' },
-    { id: 5, text: 'CV', delay: 0.4, page: 'CV' },
-    { id: 6, text: 'CONTACT', delay: 0.5, page: 'CONTACT' }
-  ], []);
-
-  useEffect(() => {
-    if (currentStep === 2) {
-      // 페이지로 전환 후 1.5초 뒤에 라벨 표시
-      const timer = setTimeout(() => {
-        setShowLabels(true);
-      }, 1500);
-      return () => clearTimeout(timer);
-    } else {
-      setShowLabels(false);
-    }
-  }, [currentStep]);
-
-  // 페이지 변경 시 라벨 상태 유지
-  useEffect(() => {
-    if (currentStep === 2 && currentPage) {
-      setShowLabels(true);
-    }
-  }, [currentPage, currentStep]);
-
-  // 페이지 변경 시 스크롤 위치 리셋
-  useEffect(() => {
-    if (currentPage) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, [currentPage]);
-
-  useEffect(() => {
-    if (isInitialLoad) {
-      // 첫 로드 이후 상태 변경
-      const timer = setTimeout(() => {
-        setIsInitialLoad(false);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [isInitialLoad]);
-
-  // 화면 크기 변경 감지
-  useEffect(() => {
-    setIsMobile(window.innerWidth <= 768);
-    setIsSmallMobile(window.innerWidth <= 480);
-  }, []);
-
-  // Location 컴포넌트에서 영상 설정 페이지로 이동하는 커스텀 이벤트 리스너
-  useEffect(() => {
-    const handleNavigateToLocationSettings = () => {
-      handleCircleClickStable('LOCATION_SETTINGS');
-    };
-
-    window.addEventListener('navigateToLocationSettings', handleNavigateToLocationSettings);
-    
-    return () => {
-      window.removeEventListener('navigateToLocationSettings', handleNavigateToLocationSettings);
-    };
-  }, [handleCircleClickStable]);
-
-  // URL 경로에 따라 초기 상태를 설정하는 useEffect
+  // URL 경로에 따라 페이지 설정
   useEffect(() => {
     const path = location.pathname.toUpperCase().replace('/', '');
-    if (path && circles.some(c => c.page === path)) {
-      setCurrentPage(path);
-      setCurrentStep(2);
+    if (path === '' || path === 'HOME') {
+      setCurrentPage('HOME');
     } else if (path === 'LOGIN') {
       // 로그인 페이지는 별도 처리
+    } else if (NAV_ITEMS.some(item => item.page === path)) {
+      setCurrentPage(path);
     } else {
-      setCurrentPage(null);
-      setCurrentStep(0);
+      // 알 수 없는 경로면 홈으로
+      setCurrentPage('HOME');
     }
-  }, [location.pathname, circles]);
+  }, [location.pathname]);
+
+  // 페이지 변경 핸들러
+  const handlePageChange = useCallback((page: string) => {
+    setCurrentPage(page);
+    navigate(page === 'HOME' ? '/' : `/${page.toLowerCase()}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [navigate]);
 
   // 로그인 페이지일 때는 별도 렌더링
-  if (currentPath === '/login') {
+  if (location.pathname === '/login') {
     return <Login />;
   }
 
-  const handleCenterClick = () => {
-    if (currentStep === 0) {
-      console.log('중앙 원 클릭: currentStep 0 → 1로 변경');
-      // 클릭 사운드 재생
-      playClickSound();
-      setCurrentStep(1); // 메뉴 펼침
-    }
-  };
-
-  const getCirclePosition = (index: number) => {
-    console.log(`getCirclePosition - currentStep: ${currentStep}, index: ${index}`);
-    switch(currentStep) {
-      case 0: // 초기 상태: 모든 원이 중앙 (화면 중간)
-        return { x: 0, y: 0, scale: 1 }; // 완전히 중앙에 위치
-      case 1: // 메뉴 상태: 가로로 펼쳐짐 (중간) - 모바일 반응형 적용
-        const menuPositions = (isSmallMobile || isMobile)
-          ? [-150, -90, -30, 30, 90, 150] // 모든 모바일에서 6개 원 간격(더 넓게)
-          : [-500, -300, -100, 100, 300, 500]; // 데스크탑 6개 원 간격
-        const menuScale = isSmallMobile ? 0.7 : isMobile ? 0.8 : 1; // 메뉴 상태에서 모바일 스케일 조정
-        const result = { x: menuPositions[index], y: 0, scale: menuScale };
-        console.log(`메뉴 상태 - index ${index}, 계산된 위치:`, result);
-        return result;
-      case 2: // 페이지 상태: 작아지며 상단으로 (모든 페이지 공통)
-        // 화면 크기에 따라 간격 조정
-        const pagePositions = isSmallMobile 
-          ? [-150, -90, -30, 30, 90, 150] // 소형 모바일에서 6개 원 간격
-          : isMobile 
-          ? [-200, -120, -40, 40, 120, 200] // 모바일에서 6개 원 간격
-          : [-350, -210, -70, 70, 210, 350]; // 데스크톱에서 6개 원 간격
-        const mobileScale = isSmallMobile ? 0.45 : isMobile ? 0.35 : 0.23; // 화면 크기별 스케일
-        
-        // y축 위치도 화면 크기에 따라 조정 - 원들을 아래로 내림
-        const yPosition = isSmallMobile 
-          ? 0 // 소형 모바일에서 중앙 위치
-          : isMobile 
-          ? 0 // 모바일에서 중앙 위치
-          : -20; // 데스크톱에서만 위로 올림
-        
-        return { x: pagePositions[index], y: yPosition, scale: mobileScale };
-      default:
-        return { x: 0, y: 0, scale: 1 };
-    }
-  };
-
-  // 공용 트랜지션
-  const springTransition = {
-    type: "spring" as const, // 타입을 명시적으로 지정
-    damping: 20,
-    stiffness: 150,
-    mass: 0.5
-  };
-
   const renderPageContent = () => {
-    if (!currentPage) return null;
-
-    switch (currentPage.toUpperCase()) {
+    switch (currentPage) {
+      case 'HOME':
+        return <Home />;
       case 'LOCATION':
-      case 'LOCATION3D':
         return <Location3D />;
       case 'CONTACT':
         return <Contact />;
@@ -424,22 +300,27 @@ function AppContent() {
       case 'LOCATION_SETTINGS':
         return <LocationVideoSettings />;
       default:
-        return null;
+        return <Home />;
     }
   };
 
   return (
-    <div className={`App ${currentStep === 2 ? 'page-mode' : ''}`}>
-      <div className={`main-container ${currentStep === 2 ? 'page-mode' : ''}`}>
-        {/* 로그인/로그아웃 링크 */}
+    <div className="App">
+      {/* 배경음악 */}
+      <BackgroundMusic />
+
+      {/* 고정 네비게이션 */}
+      <Navigation currentPage={currentPage} onPageChange={handlePageChange} />
+
+      {/* 로그인/로그아웃 링크 */}
+      <div className="auth-container">
         {!isAuthenticated ? (
           <motion.a
             href="/login"
             className="login-link"
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.6 }}
-            whileHover={{ opacity: 1, scale: 1.05 }}
-            transition={{ duration: 0.2 }}
+            whileHover={{ opacity: 1 }}
           >
             로그인
           </motion.a>
@@ -449,157 +330,40 @@ function AppContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.6 }}
             whileHover={{ opacity: 1 }}
-            transition={{ duration: 0.2 }}
           >
             <span className="user-info">{user?.username}님</span>
             <button
-              onClick={() => handleCircleClickStable('LOCATION_SETTINGS')}
+              onClick={() => handlePageChange('LOCATION_SETTINGS')}
               className="settings-button"
-              style={{
-                marginRight: '10px',
-                padding: '5px 10px',
-                backgroundColor: '#ff4444',
-                color: 'white',
-                border: '1px solid #000',
-                borderRadius: '4px',
-                fontSize: '12px',
-                cursor: 'pointer'
-              }}
             >
-              🎬 설정
+              설정
             </button>
-            <button
-              onClick={logout}
-              className="logout-button"
-            >
+            <button onClick={logout} className="logout-button">
               로그아웃
             </button>
           </motion.div>
         )}
-        
-        {/* 홈페이지 리뉴얼중 팝업: 로그인 안 된 경우만 */}
-        {/* {!isAuthenticated && (
-          <Popup 
-            open={true}
-            message="NODE TREE
-            홈페이지 리뉴얼중입니다. 곧 새로운 모습으로 찾아뵙겠습니다!"
-          />
-        )} */}
-        <div 
-          className="circle-container-motion"
-          style={currentStep === 0 || currentStep === 1 ? {
-            // 첫 페이지와 메뉴 펼침 상태: 모든 기기에서 강력한 중앙 정렬
-            position: 'fixed',
-            top: '0',
-            left: '0',
-            width: '100vw',
-            height: '100vh',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            margin: '0',
-            padding: '0',
-            zIndex: 2000,
-            background: 'transparent',
-            backdropFilter: 'none',
-            border: 'none'
-          } : currentStep === 2 ? {
-            position: 'fixed',
-            top: '0px', // 화면 제일 위에 붙임
-            left: '0',
-            right: '0',
-            width: '100%',
-            height: '80px',
-            zIndex: 1000,
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            borderBottom: 'none'
-          } : {}}
-        >
-          {circles.map((circle, index) => {
-            const position = getCirclePosition(index);
-            
-            return (
-              <motion.div
-                key={circle.id}
-                layoutId={`circle-${circle.id}`}
-                layout
-                className="circle-motion"
-                data-step={currentStep.toString()}
-                initial={isInitialLoad ? { opacity: 0, scale: 0 } : false}
-                animate={{
-                  opacity: 1,
-                  scale: position.scale,
-                  x: position.x,
-                  y: position.y
-                }}
-                transition={{
-                  ...springTransition,
-                  delay: currentStep === 2 ? 0 : circle.delay,
-                }}
-                style={{}}
-
-                onClick={() => {
-                  if (currentStep === 0) {
-                    handleCenterClick();
-                  } else {
-                    handleCircleClickStable(circle.page);
-                  }
-                }}
-                whileHover={{
-                  scale: currentStep === 2 ? position.scale * 1.05 : position.scale * 1.1,
-                  transition: { type: "spring", damping: 20, stiffness: 150 }
-                }}
-                whileTap={{ scale: position.scale * 0.95 }}
-                onMouseEnter={() => handleMouseEnter(index)}
-                onMouseLeave={() => handleMouseLeave(index)}
-              >
-                <span 
-                  className={`circle-text-motion ${currentStep === 2 && showLabels ? 'label-mode' : ''} ${currentStep === 1 ? 'small-text' : ''} ${isSmallMobile ? 'small-mobile' : isMobile ? 'mobile' : 'desktop'}`}
-                >
-                  {circle.text}
-                </span>
-              </motion.div>
-            );
-          })}
-        </div>
-        
-        <AnimatePresence mode="wait" initial={false}>
-          {currentStep === 2 && currentPage && (
-            <motion.div
-              key={currentPage}
-              className="page-content-wrapper"
-              initial={{
-                opacity: 0,
-                y: 60,
-                filter: "blur(10px)"
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-                filter: "blur(0px)"
-              }}
-              exit={{
-                opacity: 0,
-                y: -30,
-                filter: "blur(5px)"
-              }}
-              transition={{
-                duration: 0.8,
-                delay: 0.1,
-                ease: [0.25, 0.1, 0.25, 1]
-              }}
-            >
-              {renderPageContent()}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
+
+      {/* 페이지 콘텐츠 */}
+      <main className="main-content">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentPage}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+          >
+            {renderPageContent()}
+          </motion.div>
+        </AnimatePresence>
+      </main>
     </div>
   );
 }
 
-// App 컴포넌트는 라우터와 인증 공급자만 설정합니다.
+// App 컴포넌트
 function App() {
   return (
     <AuthProvider>

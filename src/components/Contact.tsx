@@ -189,30 +189,51 @@ const Contact: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="contact-container">
-        <div className="contact-loading">Loading...</div>
+      <div className="page-content">
+        <div className="page-header">
+          <motion.h1
+            className="page-title"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+          >
+            CONTACT
+          </motion.h1>
+        </div>
+        <div className="contact-container">
+          <div className="contact-loading">Loading...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="contact-container">
-      {/* 관리자 편집 버튼 */}
-      {isAuthenticated && !isEditing && (
-        <motion.button
-          className="contact-edit-button"
-          onClick={handleStartEdit}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+    <div className="page-content">
+      <div className="page-header">
+        <motion.h1
+          className="page-title"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
         >
-          편집
-        </motion.button>
-      )}
+          CONTACT
+        </motion.h1>
+        {isAuthenticated && !isEditing && (
+          <motion.button
+            className="write-button"
+            onClick={handleStartEdit}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.6 }}
+          >
+            편집
+          </motion.button>
+        )}
+      </div>
 
-      <motion.div
-        className="contact-content"
+      <div className="contact-container">
+        <motion.div
+          className="contact-content"
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
@@ -459,6 +480,7 @@ const Contact: React.FC = () => {
           </form>
         </motion.div>
       </motion.div>
+      </div>
     </div>
   );
 };

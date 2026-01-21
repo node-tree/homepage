@@ -1,671 +1,388 @@
-import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Text, Sphere, Line } from '@react-three/drei';
-import { motion, AnimatePresence } from 'framer-motion';
-import * as THREE from 'three';
-import fontUrl from '../assets/fonts/SCDream4.otf';
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { useSearchParams } from 'react-router-dom';
+import { locationPostAPI } from '../services/api';
+import WritePost from './WritePost';
 import { useAuth } from '../contexts/AuthContext';
-import { locationAPI } from '../services/api';
 
-// Location 영상 데이터 타입 정의
-interface LocationVideo {
-  _id: string;
-  cityName: string;
-  videoUrl: string;
-  videoTitle?: string;
-  videoDescription?: string;
-  isActive: boolean;
-}
-
-// 도시 데이터 타입 정의
-interface City {
-  name: string;
-  lat: number;
-  lng: number;
-  x: number;
-  y: number;
-  z: number; // 3D용 z축 추가
-}
-
-// 3D 도시 구체 컴포넌트
-function CityNode({ 
-  city, 
-  index, 
-  isSelected, 
-  isHovered, 
-  onClick, 
-  onHover,
-  onPositionUpdate
-}: {
-  city: City;
-  index: number;
-  isSelected: boolean;
-  isHovered: boolean;
-  onClick: () => void;
-  onHover: (hovered: boolean) => void;
-  onPositionUpdate: (cityName: string, position: THREE.Vector3) => void;
-}) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const nameTextRef = useRef<THREE.Mesh>(null);
-  const coordTextRef = useRef<THREE.Mesh>(null);
-  const { camera } = useThree();
-
-  useFrame((state) => {
-    if (meshRef.current) {
-      // 부드러운 회전 애니메이션
-      meshRef.current.rotation.y += 0.01;
-      
-      // 선택되거나 호버된 경우 위아래로 부드럽게 움직임
-      let currentY = city.y;
-      if (isSelected || isHovered) {
-        currentY = city.y + Math.sin(state.clock.elapsedTime * 2) * 0.1;
-      }
-      
-      meshRef.current.position.y = currentY;
-      
-      // 실시간 위치를 부모 컴포넌트에 전달
-      onPositionUpdate(city.name, new THREE.Vector3(city.x, currentY, city.z));
-    }
-
-    // 텍스트들이 카메라를 바라보도록 설정
-    if (nameTextRef.current && camera) {
-      nameTextRef.current.lookAt(camera.position);
-    }
-    if (coordTextRef.current && camera) {
-      coordTextRef.current.lookAt(camera.position);
-    }
-  });
-
-  const scale = isSelected ? 0.4 : isHovered ? 0.25 : 0.15; // 기본 크기를 0.15로 매우 작게, 선택 시 0.4로 확대
-  const color = isSelected ? '#ff4444' : isHovered ? '#4444ff' : '#000000';
-
-  return (
-    <group>
-      <Sphere
-        ref={meshRef}
-        position={[city.x, city.y, city.z]}
-        scale={scale}
-        onClick={onClick}
-        onPointerOver={() => {
-          onHover(true);
-        }}
-        onPointerOut={() => {
-          onHover(false);
-        }}
-      >
-        <meshStandardMaterial color={color} />
-      </Sphere>
-      
-      {/* 도시 이름 텍스트 */}
-      <Text
-        ref={nameTextRef}
-        position={[city.x, city.y + (isSelected ? 0.6 : 0.25), city.z]}
-        fontSize={isSelected ? 0.18 : 0.08}
-        color="#333333"
-        anchorX="center"
-        anchorY="middle"
-        font={fontUrl}
-      >
-        {city.name}
-      </Text>
-      
-      {/* 좌표 텍스트 */}
-      <Text
-        ref={coordTextRef}
-        position={[city.x, city.y - (isSelected ? 0.6 : 0.25), city.z]}
-        fontSize={isSelected ? 0.08 : 0.04}
-        color="#666666"
-        anchorX="center"
-        anchorY="middle"
-        font={fontUrl}
-      >
-        {city.lat.toFixed(2)}°, {city.lng.toFixed(2)}°
-      </Text>
-    </group>
-  );
-}
-
-// 3D 연결선 컴포넌트
-function ConnectionLine({ 
-  from, 
-  to, 
-  cityPositions 
-}: { 
-  from: City; 
-  to: City; 
-  cityPositions: Map<string, THREE.Vector3>;
-}) {
-  const [points, setPoints] = useState<THREE.Vector3[]>([
-    new THREE.Vector3(from.x, from.y, from.z),
-    new THREE.Vector3(to.x, to.y, to.z)
-  ]);
-
-  useFrame(() => {
-    const fromPos = cityPositions.get(from.name) || new THREE.Vector3(from.x, from.y, from.z);
-    const toPos = cityPositions.get(to.name) || new THREE.Vector3(to.x, to.y, to.z);
-    
-    setPoints([fromPos, toPos]);
-  });
-
-  return (
-    <Line
-      points={points}
-      color="#cccccc"
-      lineWidth={2}
-      transparent
-      opacity={0.6}
-    />
-  );
-}
-
-// 3D 장면 컴포넌트
-function Scene3D({ 
-  cities, 
-  connections, 
-  selectedCity, 
-  hoveredCity, 
-  onCityClick, 
-  onCityHover 
-}: {
-  cities: City[];
-  connections: { from: string; to: string }[];
-  selectedCity: string | null;
-  hoveredCity: string | null;
-  onCityClick: (cityName: string) => void;
-  onCityHover: (cityName: string | null) => void;
-}) {
-  const { camera } = useThree();
-  const [cityPositions, setCityPositions] = useState<Map<string, THREE.Vector3>>(new Map());
-  const controlsRef = useRef<any>(null);
-
-  useEffect(() => {
-    // 카메라 초기 위치 설정
-    camera.position.set(0, 5, 10);
-    camera.lookAt(0, 0, 0);
-  }, [camera]);
-
-  // 선택된 도시로 카메라 이동
-  useEffect(() => {
-    if (controlsRef.current) {
-      if (selectedCity) {
-        // 도시가 선택된 경우 - 해당 도시로 이동
-        const selectedCityData = cities.find(city => city.name === selectedCity);
-        if (selectedCityData) {
-          console.log(`🎯 ${selectedCity} 선택됨 - 카메라 이동 시작`);
-          
-          // 선택된 도시 위치로 카메라 이동 (3D 좌표 사용)
-          const targetPosition = new THREE.Vector3(
-            selectedCityData.x,
-            selectedCityData.y + 2, // 도시 위에서 내려다보도록
-            selectedCityData.z + 3  // 적절한 거리 유지
-          );
-          
-          const lookAtTarget = new THREE.Vector3(
-            selectedCityData.x,
-            selectedCityData.y,
-            selectedCityData.z
-          );
-          
-          // 카메라 이동 애니메이션
-          const startPosition = camera.position.clone();
-          const startTarget = controlsRef.current.target.clone();
-          const startTime = Date.now();
-          const duration = 1500; // 1.5초 애니메이션
-          
-          const animateCamera = () => {
-            if (!controlsRef.current) return;
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            
-            // easeInOutCubic 이징 함수
-            const easeProgress = progress < 0.5 
-              ? 4 * progress * progress * progress
-              : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-            
-            // 카메라 위치 보간
-            camera.position.lerpVectors(startPosition, targetPosition, easeProgress);
-            
-            // 타겟 위치 보간
-            const currentTarget = new THREE.Vector3();
-            currentTarget.lerpVectors(startTarget, lookAtTarget, easeProgress);
-            controlsRef.current.target.copy(currentTarget);
-            controlsRef.current.update();
-            
-            if (progress < 1) {
-              requestAnimationFrame(animateCamera);
-            } else {
-              console.log(`🗺️ ${selectedCity} 카메라 이동 완료`);
-            }
-          };
-          
-          requestAnimationFrame(animateCamera);
-        }
-      } else {
-        // 도시 선택 해제된 경우 - 원래 위치로 복귀
-        console.log(`🔄 원래 위치로 복귀 시작`);
-        
-        const originalPosition = new THREE.Vector3(0, 5, 10);
-        const originalTarget = new THREE.Vector3(0, 0, 0);
-        
-        // 카메라 복귀 애니메이션
-        const startPosition = camera.position.clone();
-        const startTarget = controlsRef.current.target.clone();
-        const startTime = Date.now();
-        const duration = 1200; // 1.2초 애니메이션
-        
-        const animateCamera = () => {
-          if (!controlsRef.current) return;
-          const elapsed = Date.now() - startTime;
-          const progress = Math.min(elapsed / duration, 1);
-          
-          // easeInOutCubic 이징 함수
-          const easeProgress = progress < 0.5 
-            ? 4 * progress * progress * progress
-            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-          
-          // 카메라 위치 보간
-          camera.position.lerpVectors(startPosition, originalPosition, easeProgress);
-          
-          // 타겟 위치 보간
-          const currentTarget = new THREE.Vector3();
-          currentTarget.lerpVectors(startTarget, originalTarget, easeProgress);
-          controlsRef.current.target.copy(currentTarget);
-          controlsRef.current.update();
-          
-          if (progress < 1) {
-            requestAnimationFrame(animateCamera);
-          } else {
-            console.log(`🗺️ 원래 위치 복귀 완료`);
-          }
-        };
-        
-        requestAnimationFrame(animateCamera);
-      }
-    }
-  }, [selectedCity, cities, camera]);
-
-  // 도시 위치 업데이트 핸들러
-  const handlePositionUpdate = useCallback((cityName: string, position: THREE.Vector3) => {
-    setCityPositions(prev => {
-      const newMap = new Map(prev);
-      newMap.set(cityName, position.clone());
-      return newMap;
-    });
-  }, []);
-
-  return (
-    <>
-      {/* 조명 설정 */}
-      <ambientLight intensity={0.6} />
-      <pointLight position={[10, 10, 10]} intensity={1} />
-      <pointLight position={[-10, -10, -10]} intensity={0.5} />
-
-      {/* 도시 노드들 */}
-      {cities.map((city, index) => (
-        <CityNode
-          key={city.name}
-          city={city}
-          index={index}
-          isSelected={selectedCity === city.name}
-          isHovered={hoveredCity === city.name}
-          onClick={() => onCityClick(city.name)}
-          onHover={(hovered) => onCityHover(hovered ? city.name : null)}
-          onPositionUpdate={handlePositionUpdate}
-        />
-      ))}
-
-      {/* 연결선들 */}
-      {connections.map((connection, index) => {
-        const fromCity = cities.find(city => city.name === connection.from);
-        const toCity = cities.find(city => city.name === connection.to);
-        
-        if (!fromCity || !toCity) return null;
-        
-        return (
-          <ConnectionLine
-            key={index}
-            from={fromCity}
-            to={toCity}
-            cityPositions={cityPositions}
-          />
-        );
-      })}
-
-      {/* 카메라 컨트롤 */}
-      <OrbitControls
-        ref={controlsRef}
-        enablePan={true}
-        enableZoom={true}
-        enableRotate={true}
-        minDistance={5}
-        maxDistance={20}
-        maxPolarAngle={Math.PI / 2}
-      />
-    </>
-  );
+interface Post {
+  id: string;
+  title: string;
+  content: string;
+  date: string;
+  images?: string[];
+  thumbnail?: string | null;
+  sortOrder?: number;
 }
 
 const Location3D: React.FC = () => {
-  const [selectedCity, setSelectedCity] = useState<string | null>(null);
-  const [hoveredCity, setHoveredCity] = useState<string | null>(null);
-  const [currentVideo, setCurrentVideo] = useState<LocationVideo | null>(null);
-  const [isVideoLoading, setIsVideoLoading] = useState(false);
-  const [audioInitialized, setAudioInitialized] = useState(false);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
-  const [showScrollToTop, setShowScrollToTop] = useState(false);
-  const videoSectionRef = useRef<HTMLDivElement>(null);
-  const cityInfoRef = useRef<HTMLDivElement>(null);
-  const [title, setTitle] = useState('CROSS CITY');
-  const [subtitle, setSubtitle] = useState('서사 교차점의 기록장소');
-  const [isEditingHeader, setIsEditingHeader] = useState(false);
   const { isAuthenticated } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [headerLoading, setHeaderLoading] = useState(true);
+  const [postsLoading, setPostsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showWritePost, setShowWritePost] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
+  const [title, setTitle] = useState('');
+  const [subtitle, setSubtitle] = useState('');
+  const [isEditingHeader, setIsEditingHeader] = useState(false);
+  const [isReorderMode, setIsReorderMode] = useState(false);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
 
-  // 도시 데이터 (기존 Location 컴포넌트와 동일한 도시들을 3D 좌표로 변환, Y축 다양화)
-  const cities: City[] = [
-    { name: '서울', lat: 37.5665, lng: 126.9780, x: 0, y: 0.5, z: 2 },
-    { name: '용인', lat: 37.2411, lng: 127.1776, x: 1, y: -0.3, z: 2.5 },
-    { name: '부여', lat: 36.2756, lng: 126.9100, x: -0.5, y: 0, z: 1.5 },
-    { name: '서산', lat: 36.7848, lng: 126.4503, x: -1.5, y: 0.8, z: 1 },
-    { name: '태안', lat: 36.7456, lng: 126.2978, x: -2, y: -0.5, z: 0.5 },
-    { name: '서천', lat: 36.0788, lng: 126.6919, x: -1, y: 0.3, z: 0.5 },
-    { name: '강경', lat: 36.1619, lng: 126.7975, x: -0.5, y: -0.2, z: 0.8 },
-    { name: '전주', lat: 35.8242, lng: 127.1480, x: 0.5, y: 0.6, z: 0 },
-    { name: '칸타요프스', lat: 41.6167, lng: 1.4833, x: -4, y: 1.2, z: 3 },
-    { name: '마인츠', lat: 50.0000, lng: 8.2711, x: -3, y: 1.5, z: 4 },
-    { name: '야따마우까', lat: -32.5000, lng: -60.5000, x: -6, y: -1.0, z: -2 },
-    { name: '울룰루', lat: -25.3444, lng: 131.0369, x: 5, y: -0.8, z: -3 },
-    { name: '뉴욕', lat: 40.7128, lng: -74.0060, x: -5, y: 1.0, z: 2 }
-  ];
-
-  // 연결선 데이터 (기존 Location 컴포넌트와 동일)
-  const connections = [
-    // 한국 도시들 연결 (근접한 도시들끼리)
-    { from: '서울', to: '부여' },
-    { from: '부여', to: '서산' },
-    { from: '서산', to: '태안' },
-    { from: '용인', to: '부여' },
-    { from: '부여', to: '서천' },
-    { from: '부여', to: '강경' },
-    { from: '부여', to: '전주' },
-    
-    // 대륙간 주요 연결 (부여를 중심으로)
-    { from: '부여', to: '마인츠' },
-    { from: '용인', to: '칸타요프스' },
-    { from: '부여', to: '울룰루' },
-    { from: '부여', to: '야따마우까' },
-    { from: '부여', to: '뉴욕' }
-  ];
-
-  // 스크롤 이벤트 처리
-  const handleScroll = useCallback(() => {
-    setShowScrollToTop(window.scrollY > 500);
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
-
-  // 오디오 초기화 및 프리로딩
-  useEffect(() => {
-    const initializeAudio = () => {
-      try {
-        const audio = new Audio('/click02.wav');
-        audio.volume = 0.3;
-        audio.preload = 'auto';
-        
-        // 오디오 로드 완료 시
-        audio.addEventListener('canplaythrough', () => {
-          setAudioElement(audio);
-          console.log('오디오 프리로딩 완료');
-        });
-        
-        // 오디오 로드 에러 시
-        audio.addEventListener('error', (e) => {
-          console.log('오디오 로드 실패:', e);
-        });
-        
-        // 오디오 로드 시작
-        audio.load();
-      } catch (error) {
-        console.log('오디오 초기화 실패:', error);
+  const loadPosts = useCallback(async () => {
+    setPostsLoading(true);
+    setError(null);
+    try {
+      const response = await locationPostAPI.getAllPosts();
+      if (response.success) {
+        setPosts(response.data);
+      } else {
+        setError(response.message);
       }
-    };
-
-    initializeAudio();
+    } catch (err) {
+      setError('글을 불러오는데 실패했습니다.');
+      console.error('Location 로딩 오류:', err);
+    } finally {
+      setPostsLoading(false);
+    }
   }, []);
 
-  // 사용자 첫 상호작용 감지 및 오디오 컨텍스트 활성화
   useEffect(() => {
-    const enableAudio = async () => {
-      if (audioInitialized) return;
-      
+    let isMounted = true;
+
+    const loadData = async () => {
+      setError(null);
+      setPostsLoading(true);
+
+      // 1. 헤더 먼저 로드
       try {
-        // HTTPS 체크 (배포 환경에서 중요)
-        const isSecureContext = window.isSecureContext || window.location.protocol === 'https:';
-        if (!isSecureContext) {
-          console.log('HTTPS가 아닌 환경에서는 오디오 기능이 제한될 수 있습니다.');
-        }
-
-        // AudioContext 생성 및 활성화
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioContextClass) {
-          console.log('이 브라우저는 Web Audio API를 지원하지 않습니다.');
-          return;
-        }
-
-        const audioContext = new AudioContextClass();
-        
-        if (audioContext.state === 'suspended') {
-          await audioContext.resume();
-        }
-        
-        // 더미 오디오 재생으로 브라우저 정책 우회
-        if (audioElement) {
-          // 볼륨을 0으로 설정하여 무음으로 테스트
-          const originalVolume = audioElement.volume;
-          audioElement.volume = 0;
-          
-          const playPromise = audioElement.play();
-          if (playPromise !== undefined) {
-            playPromise.then(() => {
-              audioElement.pause();
-              audioElement.currentTime = 0;
-              audioElement.volume = originalVolume; // 원래 볼륨 복원
-              setAudioInitialized(true);
-              console.log('오디오 컨텍스트 활성화 완료');
-            }).catch((error) => {
-              console.log('오디오 활성화 실패:', error);
-              // 실패해도 일단 초기화된 것으로 표시 (폴백 사용)
-              setAudioInitialized(true);
-            });
+        const headerResponse = await locationPostAPI.getHeader();
+        if (isMounted) {
+          if (headerResponse.success && headerResponse.data) {
+            setTitle(headerResponse.data.title || 'CROSS CITY');
+            setSubtitle(headerResponse.data.subtitle || '서사 교차점의 기록장소');
+          } else {
+            setTitle('CROSS CITY');
+            setSubtitle('서사 교차점의 기록장소');
           }
         }
-      } catch (error) {
-        console.log('오디오 컨텍스트 생성 실패:', error);
-        // 실패해도 일단 초기화된 것으로 표시 (폴백 사용)
-        setAudioInitialized(true);
+      } catch (err) {
+        console.error('헤더 로딩 오류:', err);
+        if (isMounted) {
+          setTitle('CROSS CITY');
+          setSubtitle('서사 교차점의 기록장소');
+        }
+      }
+      if (isMounted) {
+        setHeaderLoading(false);
+      }
+
+      // 2. 헤더 로드 완료 후 글 목록 로드
+      try {
+        const postsResponse = await locationPostAPI.getAllPosts();
+        if (isMounted) {
+          if (postsResponse.success) {
+            setPosts(postsResponse.data);
+          } else {
+            setError(postsResponse.message);
+          }
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError('글을 불러오는데 실패했습니다.');
+        }
+        console.error('Location 로딩 오류:', err);
+      } finally {
+        if (isMounted) {
+          setPostsLoading(false);
+        }
       }
     };
 
-    // 다양한 사용자 상호작용 이벤트 리스너
-    const handleFirstInteraction = (event: Event) => {
-      console.log('사용자 첫 상호작용 감지:', event.type);
-      enableAudio();
-      // 이벤트 리스너 제거 (한 번만 실행)
-      document.removeEventListener('click', handleFirstInteraction);
-      document.removeEventListener('touchstart', handleFirstInteraction);
-      document.removeEventListener('touchend', handleFirstInteraction);
-      document.removeEventListener('keydown', handleFirstInteraction);
-      document.removeEventListener('mousedown', handleFirstInteraction);
-    };
-
-    document.addEventListener('click', handleFirstInteraction, { passive: true });
-    document.addEventListener('touchstart', handleFirstInteraction, { passive: true });
-    document.addEventListener('touchend', handleFirstInteraction, { passive: true });
-    document.addEventListener('keydown', handleFirstInteraction, { passive: true });
-    document.addEventListener('mousedown', handleFirstInteraction, { passive: true });
+    loadData();
 
     return () => {
-      document.removeEventListener('click', handleFirstInteraction);
-      document.removeEventListener('touchstart', handleFirstInteraction);
-      document.removeEventListener('touchend', handleFirstInteraction);
-      document.removeEventListener('keydown', handleFirstInteraction);
-      document.removeEventListener('mousedown', handleFirstInteraction);
+      isMounted = false;
     };
-  }, [audioElement, audioInitialized]);
-
-  // 개선된 클릭 사운드 재생 함수
-  const playClickSound = async () => {
-    if (!audioElement || !audioInitialized) {
-      console.log('오디오가 아직 초기화되지 않았습니다.');
-      return;
-    }
-
-    try {
-      // 현재 재생 중인 사운드 정지
-      audioElement.pause();
-      audioElement.currentTime = 0;
-      
-      // 새로운 사운드 재생
-      const playPromise = audioElement.play();
-      
-      if (playPromise !== undefined) {
-        await playPromise;
-        console.log('클릭 사운드 재생 성공');
-      }
-    } catch (error) {
-      console.log('사운드 재생 실패:', error);
-      
-      // 폴백: 새로운 Audio 인스턴스로 재시도
-      try {
-        const fallbackAudio = new Audio('/click02.wav');
-        fallbackAudio.volume = 0.3;
-        await fallbackAudio.play();
-      } catch (fallbackError) {
-        console.log('폴백 사운드 재생도 실패:', fallbackError);
-      }
-    }
-  };
-
-  // 도시 클릭 핸들러
-  const handleCityClick = (cityName: string) => {
-    console.log(`🎯 ${cityName} 클릭됨! - 3D 카메라 이동 시작`);
-    
-    // 클릭 사운드 재생
-    playClickSound();
-    
-    // 다른 도시를 클릭하면 이전 영상 닫기
-    if (selectedCity !== cityName) {
-      setCurrentVideo(null);
-    }
-    
-    // 같은 도시를 다시 클릭하면 원래 위치로 복귀
-    if (selectedCity === cityName) {
-      setSelectedCity(null);
-      console.log(`🔄 ${cityName} 선택 해제 - 원래 위치로 복귀`);
-    } else {
-      setSelectedCity(cityName);
-    }
-    
-    setTimeout(() => {
-      scrollToCityInfo();
-    }, 300);
-  };
-
-  // 도시 호버 핸들러
-  const handleCityHover = (cityName: string | null) => {
-    setHoveredCity(cityName);
-  };
-
-  // 이동하기 버튼 클릭 핸들러
-  const handleMoveClick = async (cityName: string) => {
-    console.log(`${cityName}로 이동하기 클릭됨`);
-    setIsVideoLoading(true);
-    
-    try {
-      const response = await fetch(`/api/location-video/${encodeURIComponent(cityName)}`);
-      const data = await response.json();
-      
-      if (data.success && data.data) {
-        setCurrentVideo(data.data);
-        setTimeout(() => {
-          scrollToVideo();
-        }, 100);
-      } else {
-        console.log('영상 데이터를 찾을 수 없습니다.');
-      }
-    } catch (error) {
-      console.error('영상 데이터 가져오기 오류:', error);
-    } finally {
-      setIsVideoLoading(false);
-    }
-  };
-
-  // 스크롤 함수들
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const scrollToCityInfo = () => {
-    if (cityInfoRef.current) {
-      const offset = -50;
-      const elementPosition = cityInfoRef.current.offsetTop + offset;
-      window.scrollTo({ top: elementPosition, behavior: 'smooth' });
-    }
-  };
-
-  const scrollToVideo = () => {
-    if (videoSectionRef.current) {
-      videoSectionRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-      });
-    }
-  };
-
-  // YouTube URL을 임베드 형식으로 변환하는 함수
-  const convertToEmbedUrl = (url: string): string => {
-    if (url.includes('youtube.com/embed/')) {
-      return url;
-    }
-    
-    const youtubeRegex = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/;
-    const match = url.match(youtubeRegex);
-    
-    if (match && match[1]) {
-      return `https://www.youtube.com/embed/${match[1]}`;
-    }
-    
-    return url;
-  };
-
-  // 모바일 감지
-  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-
-  useEffect(() => {
-    const fetchHeader = async () => {
-      try {
-        const res = await locationAPI.getLocationHeader();
-        if (res.success && res.data) {
-          setTitle(res.data.title || 'LOCATION');
-          setSubtitle(res.data.subtitle || '장소/3D');
-        }
-      } catch (e) {
-        // 에러 무시, 기본값 사용
-      }
-    };
-    fetchHeader();
   }, []);
+
+  // URL 파라미터로 포스트 선택
+  useEffect(() => {
+    const postId = searchParams.get('post');
+    if (postId && posts.length > 0 && !selectedPost) {
+      const post = posts.find((p: Post) => p.id === postId);
+      if (post) {
+        setSelectedPost(post);
+      }
+    }
+  }, [searchParams, posts, selectedPost]);
+
+  const handleSavePost = () => {
+    setShowWritePost(false);
+    loadPosts();
+  };
+
+  const handlePostClick = (post: Post) => {
+    setSelectedPost(post);
+    setSearchParams({ post: post.id });
+  };
+
+  const handleBackToList = () => {
+    setSelectedPost(null);
+    setSearchParams({});
+  };
+
+  const handleEditPost = (post: Post) => {
+    setEditingPost(post);
+    setSelectedPost(null);
+  };
+
+  const handleDeletePost = async (post: Post) => {
+    if (window.confirm(`"${post.title}" 기록을 정말 삭제하시겠습니까?`)) {
+      try {
+        const response = await locationPostAPI.deletePost(post.id);
+        if (response.success) {
+          alert(response.message);
+          setSelectedPost(null);
+          loadPosts();
+        }
+      } catch (err) {
+        console.error('기록 삭제 오류:', err);
+        alert(err instanceof Error ? err.message : '기록 삭제에 실패했습니다.');
+      }
+    }
+  };
+
+  const formatContent = (content: string) => {
+    // HTML 태그 감지 (더 포괄적인 패턴)
+    const htmlTagPattern = /<[a-z][\s\S]*?>/i;
+    if (htmlTagPattern.test(content)) {
+      let htmlContent = content;
+      if (!content.includes('<br')) {
+        htmlContent = content.replace(/\n/g, '<br />');
+      }
+      return <div className="html-content" dangerouslySetInnerHTML={{ __html: htmlContent }} />;
+    }
+
+    return content.split('\n').map((line, index) => {
+      const mediaRegex = /(!{1,2})\[([^\]]*)\]\(([^)]+)\)/g;
+      let lastIndex = 0;
+      const elements: (string | JSX.Element)[] = [];
+
+      line.replace(mediaRegex, (match, type, alt, url, offset) => {
+        elements.push(line.substring(lastIndex, offset));
+
+        if (type === '!!') {
+          let videoElement;
+          if (url.includes('youtube.com') || url.includes('youtu.be')) {
+            const videoIdMatch = url.match(/(?:v=|vi\/|embed\/|\.be\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+            const videoId = videoIdMatch ? videoIdMatch[1] : null;
+            if (videoId) {
+              videoElement = (
+                <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', maxWidth: '100%', background: '#000' }}>
+                  <iframe
+                    src={`https://www.youtube.com/embed/${videoId}`}
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title={alt || 'YouTube video player'}
+                  ></iframe>
+                </div>
+              );
+            }
+          } else if (url.includes('vimeo.com')) {
+            const videoIdMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+            const videoId = videoIdMatch ? videoIdMatch[1] : null;
+            if(videoId) {
+              videoElement = (
+                <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', maxWidth: '100%', background: '#000' }}>
+                   <iframe
+                     src={`https://player.vimeo.com/video/${videoId}`}
+                     style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}
+                     frameBorder="0"
+                     allow="autoplay; fullscreen; picture-in-picture"
+                     allowFullScreen
+                     title={alt || 'Vimeo video player'}>
+                   </iframe>
+                </div>
+              );
+            }
+          } else {
+            videoElement = <video src={url} controls style={{ maxWidth: '100%', borderRadius: '8px' }} title={alt} />;
+          }
+
+          if(videoElement) {
+              elements.push(
+                <div key={`${index}-${offset}`} style={{ margin: '20px 0' }}>
+                  {videoElement}
+                </div>
+              );
+          } else {
+             elements.push(match);
+          }
+
+        } else if (type === '!') {
+          elements.push(
+            <div key={`${index}-${offset}`} style={{ textAlign: 'center', margin: '20px 0' }}>
+              <img src={url} alt={alt || '이미지'} style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }} />
+            </div>
+          );
+        }
+
+        lastIndex = offset + match.length;
+        return match;
+      });
+
+      elements.push(line.substring(lastIndex));
+
+      return (
+        <React.Fragment key={index}>
+          {elements.map((el, i) => <React.Fragment key={i}>{el}</React.Fragment>)}
+          {index < content.split('\n').length - 1 && <br />}
+        </React.Fragment>
+      );
+    });
+  };
 
   const handleSaveHeader = async () => {
     try {
-      await locationAPI.updateLocationHeader({ title, subtitle });
+      await locationPostAPI.updateHeader({ title, subtitle });
       setIsEditingHeader(false);
     } catch (e) {
       alert('저장에 실패했습니다.');
     }
   };
+
+  const handleMoveUp = (index: number) => {
+    if (index === 0) return;
+    const newPosts = [...posts];
+    [newPosts[index - 1], newPosts[index]] = [newPosts[index], newPosts[index - 1]];
+    setPosts(newPosts);
+  };
+
+  const handleMoveDown = (index: number) => {
+    if (index === posts.length - 1) return;
+    const newPosts = [...posts];
+    [newPosts[index], newPosts[index + 1]] = [newPosts[index + 1], newPosts[index]];
+    setPosts(newPosts);
+  };
+
+  const handleSaveOrder = async () => {
+    setIsSavingOrder(true);
+    try {
+      const orders = posts.map((post, index) => ({
+        id: post.id,
+        sortOrder: index
+      }));
+      await locationPostAPI.reorderPosts(orders);
+      setIsReorderMode(false);
+      alert('순서가 저장되었습니다.');
+    } catch (e) {
+      alert('순서 저장에 실패했습니다.');
+    } finally {
+      setIsSavingOrder(false);
+    }
+  };
+
+  const handleCancelReorder = () => {
+    setIsReorderMode(false);
+    loadPosts();
+  };
+
+  if (showWritePost) {
+    return (
+      <WritePost
+        onSavePost={handleSavePost}
+        onBackToWork={() => setShowWritePost(false)}
+        postType="location"
+      />
+    );
+  }
+
+  if (editingPost) {
+    return (
+      <WritePost
+        onSavePost={(newPostData) => {
+          const updatedPost: Post = {
+            id: editingPost.id,
+            title: newPostData.title,
+            content: newPostData.content,
+            date: editingPost.date,
+            images: newPostData.images,
+            thumbnail: editingPost.thumbnail
+          };
+          setEditingPost(null);
+          setSelectedPost(updatedPost);
+          loadPosts();
+        }}
+        onBackToWork={() => {
+          setEditingPost(null);
+          setSelectedPost(editingPost);
+        }}
+        postType="location"
+        editPost={editingPost}
+      />
+    );
+  }
+
+  // 상세페이지 표시
+  if (selectedPost) {
+    return (
+      <div className="page-content">
+        <div className="post-detail-container">
+          <div className="post-detail-header">
+            <motion.button
+              className="back-button"
+              onClick={handleBackToList}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              ← 목록으로
+            </motion.button>
+
+            {isAuthenticated && (
+              <div className="post-actions">
+                <motion.button
+                  className="edit-button"
+                  onClick={() => handleEditPost(selectedPost)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  수정
+                </motion.button>
+                <motion.button
+                  className="delete-button"
+                  onClick={() => handleDeletePost(selectedPost)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  삭제
+                </motion.button>
+              </div>
+            )}
+          </div>
+
+          <article className="post-article">
+            <header className="post-header">
+              <h1 className="post-title">{selectedPost.title}</h1>
+              <div className="post-meta">
+                <span className="post-date">{selectedPost.date}</span>
+              </div>
+            </header>
+
+            <div className="post-content">
+              <div className="post-text">
+                {formatContent(selectedPost.content)}
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-content">
@@ -737,277 +454,202 @@ const Location3D: React.FC = () => {
             />
             <button onClick={handleSaveHeader}
               style={{
-                background: '#222',
+                background: 'rgba(0, 0, 0, 0.8)',
                 color: '#fff',
                 border: 'none',
-                borderRadius: '8px',
-                padding: '10px 0',
-                fontWeight: 600,
-                fontSize: '1rem',
+                borderRadius: '25px',
+                padding: '10px 24px',
+                fontWeight: 400,
+                fontSize: '0.85rem',
+                letterSpacing: '0.05em',
                 marginTop: 8,
                 cursor: 'pointer',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                transition: 'background 0.2s',
-                width: 120,
+                transition: 'all 0.2s ease',
                 alignSelf: 'center',
               }}
             >저장</button>
           </div>
         ) : (
           <>
-            <motion.h1
-              className="page-title"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-            >
-              {title}
-            </motion.h1>
-            <motion.div
-              className="page-subtitle"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-            >
-              {subtitle}
-            </motion.div>
-            {isAuthenticated && (
-              <motion.button
-                onClick={() => setIsEditingHeader(true)}
-                className="write-button"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4, delay: 0.6 }}
-              >
-                편집
-              </motion.button>
+            {headerLoading ? (
+              <div style={{ minHeight: '80px' }} />
+            ) : (
+              <>
+                <motion.h1
+                  className="page-title"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                >
+                  {title}
+                </motion.h1>
+                <motion.div
+                  className="page-subtitle"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+                >
+                  {subtitle}
+                </motion.div>
+                {isAuthenticated && (
+                  <motion.button
+                    onClick={() => setIsEditingHeader(true)}
+                    className="write-button"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.4, delay: 0.6 }}
+                  >
+                    편집
+                  </motion.button>
+                )}
+              </>
             )}
           </>
         )}
       </div>
 
-      {/* 3D 지도 영역 위에 조작법 안내 (모바일) */}
-      {isMobile && (
-        <div
-          style={{
-            position: 'static',
-            margin: '0 0 6px 0',
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(248,250,252,0.95))',
-            padding: '2px 4px',
-            borderRadius: '8px',
-            fontSize: '8px',
-            color: '#4a5568',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            lineHeight: '1.2',
-            minWidth: '50px',
-            maxWidth: '90vw',
-            zIndex: 10,
-            textAlign: 'left',
-            marginLeft: 'auto',
-            marginRight: 'auto',
-            width: 'fit-content'
-          }}
-        >
-          <div style={{ fontWeight: 600, color: '#2d3748', fontSize: '8px', display: 'flex', alignItems: 'center', gap: '1px' }}>
-            <span style={{ fontSize: '9px' }}>🎮</span> 조작법
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-              <span style={{ fontSize: '7px', width: '8px' }}>🖱️</span>
-              <span style={{ fontSize: '7px' }}>드래그로 회전</span>
+      <div className="work-container">
+        <div className="work-header">
+          {isAuthenticated && (
+            <div className="work-header-buttons">
+              {isReorderMode ? (
+                <>
+                  <motion.button
+                    className="write-button reorder-save-button"
+                    onClick={handleSaveOrder}
+                    disabled={isSavingOrder}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {isSavingOrder ? '저장 중...' : '순서 저장'}
+                  </motion.button>
+                  <motion.button
+                    className="write-button reorder-cancel-button"
+                    onClick={handleCancelReorder}
+                    disabled={isSavingOrder}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    취소
+                  </motion.button>
+                </>
+              ) : (
+                <>
+                  <motion.button
+                    className="write-button"
+                    onClick={() => setShowWritePost(true)}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    새 글 작성
+                  </motion.button>
+                  {posts.length > 1 && (
+                    <motion.button
+                      className="write-button reorder-button"
+                      onClick={() => setIsReorderMode(true)}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4 }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      순서 편집
+                    </motion.button>
+                  )}
+                </>
+              )}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-              <span style={{ fontSize: '7px', width: '8px' }}>🔍</span>
-              <span style={{ fontSize: '7px' }}>휠로 줌</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-              <span style={{ fontSize: '7px', width: '8px' }}>✋</span>
-              <span style={{ fontSize: '7px' }}>우클릭으로 이동</span>
-            </div>
-          </div>
+          )}
         </div>
-      )}
 
-      {/* 3D 지도 영역 */}
-      <div style={{ 
-        width: '100%', 
-        height: isMobile ? '70vw' : '600px', 
-        margin: isMobile ? '0' : '2rem 0',
-        overflow: 'hidden',
-        position: 'relative'
-      }}>
-        <Canvas>
-          <Suspense fallback={null}>
-            <Scene3D
-              cities={cities}
-              connections={connections}
-              selectedCity={selectedCity}
-              hoveredCity={hoveredCity}
-              onCityClick={handleCityClick}
-              onCityHover={handleCityHover}
-            />
-          </Suspense>
-        </Canvas>
-        {/* 데스크탑에서만 조작법 오버레이 */}
-        {!isMobile && (
+        {postsLoading && (
+          <div className="loading-container">
+            <motion.div
+              className="loading-spinner"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            >
+              ⟳
+            </motion.div>
+            <p>기록을 불러오는 중...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="error-container">
+            <p className="error-message">오류: {error}</p>
+            <motion.button
+              className="retry-button"
+              onClick={loadPosts}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              다시 시도
+            </motion.button>
+          </div>
+        )}
+
+        {!postsLoading && !error && posts.length === 0 && (
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            style={{
-              position: 'absolute',
-              top: '15px',
-              right: '15px',
-              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95))',
-              padding: '12px 16px',
-              borderRadius: '12px',
-              fontSize: '12px',
-              color: '#4a5568',
-              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              lineHeight: '1.5',
-              minWidth: '140px',
-              zIndex: 10
-            }}
+            className="empty-state"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
           >
-            <div style={{ marginBottom: '8px', fontWeight: '600', color: '#2d3748', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '16px' }}>🎮</span>
-              조작법
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '2px 0' }}>
-                <span style={{ fontSize: '14px', width: '16px' }}>🖱️</span>
-                <span style={{ fontSize: '11px' }}>드래그로 회전</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '2px 0' }}>
-                <span style={{ fontSize: '14px', width: '16px' }}>🔍</span>
-                <span style={{ fontSize: '11px' }}>휠로 줌</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '2px 0' }}>
-                <span style={{ fontSize: '14px', width: '16px' }}>✋</span>
-                <span style={{ fontSize: '11px' }}>우클릭으로 이동</span>
-              </div>
-            </div>
+            <p>아직 기록된 내용이 없습니다.</p>
+            <p>새 기록을 작성해보세요!</p>
           </motion.div>
         )}
-      </div>
 
-      {/* 원형 버튼들 */}
-      <div className="location-controls">
-        {cities.map((city, index) => (
-          <motion.div
-            key={city.name}
-            className="location-button"
-            onMouseEnter={() => setHoveredCity(city.name)}
-            onMouseLeave={() => setHoveredCity(null)}
-            onClick={() => handleCityClick(city.name)}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            {index + 1}
-          </motion.div>
-        ))}
-      </div>
-
-      {/* 선택된 도시 정보 */}
-      {selectedCity && (
-        <div ref={cityInfoRef} className="location-city-info" style={{ textAlign: 'center', marginTop: '1rem' }}>
-          <h3 className="page-body-text" style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', fontWeight: '500' }}>선택된 위치</h3>
-          <p className="page-body-text" style={{ margin: '0 0 1rem 0' }}>{selectedCity}</p>
-          <motion.button
-            className="location-move-button"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => handleMoveClick(selectedCity!)}
-            disabled={isVideoLoading}
-          >
-            {isVideoLoading ? '로딩 중...' : '이동하기'}
-          </motion.button>
-        </div>
-      )}
-
-      {/* 영상 표시 영역 */}
-      <div ref={videoSectionRef}>
-        {currentVideo && (
-          <motion.div 
-            className="location-video-container"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            style={{ 
-              marginTop: '2rem', 
-              textAlign: 'center',
-              maxWidth: '800px',
-              margin: '2rem auto 0'
-            }}
-          >
-            <h3 className="page-body-text" style={{ 
-              margin: '0 0 1rem 0', 
-              fontSize: '1.2rem', 
-              fontWeight: '600' 
-            }}>
-              {currentVideo.videoTitle || `${currentVideo.cityName} 영상`}
-            </h3>
-            
-            {currentVideo.videoDescription && (
-              <p className="page-body-text" style={{ 
-                margin: '0 0 1.5rem 0',
-                color: '#666',
-                fontSize: '0.9rem'
-              }}>
-                {currentVideo.videoDescription}
-              </p>
-            )}
-            
-            <div style={{ 
-              position: 'relative', 
-              paddingBottom: '56.25%', 
-              height: 0, 
-              overflow: 'hidden',
-              borderRadius: '8px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-            }}>
-              <iframe
-                src={convertToEmbedUrl(currentVideo.videoUrl)}
-                title={currentVideo.videoTitle || `${currentVideo.cityName} 영상`}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  border: 'none'
-                }}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
-          </motion.div>
+        {!postsLoading && !error && posts.length > 0 && (
+          <div className={`posts-grid ${isReorderMode ? 'reorder-mode' : ''}`}>
+            {posts.map((post, index) => (
+              <div
+                key={post.id}
+                className={`post-grid-item ${isReorderMode ? 'reorder-item' : ''}`}
+                onClick={() => !isReorderMode && handlePostClick(post)}
+              >
+                <div className="post-grid-thumbnail">
+                  {post.thumbnail ? (
+                    <img src={post.thumbnail.startsWith('//') ? `https:${post.thumbnail}` : post.thumbnail} alt={post.title} />
+                  ) : (
+                    <div className="post-grid-no-image" />
+                  )}
+                  <div className="post-grid-overlay">
+                    <span className="post-grid-overlay-title">{post.title}</span>
+                  </div>
+                </div>
+                {isReorderMode && (
+                  <div className="reorder-controls">
+                    <button
+                      className="reorder-btn reorder-up"
+                      onClick={(e) => { e.stopPropagation(); handleMoveUp(index); }}
+                      disabled={index === 0}
+                      title="위로 이동"
+                    >
+                      ▲
+                    </button>
+                    <span className="reorder-index">{index + 1}</span>
+                    <button
+                      className="reorder-btn reorder-down"
+                      onClick={(e) => { e.stopPropagation(); handleMoveDown(index); }}
+                      disabled={index === posts.length - 1}
+                      title="아래로 이동"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </div>
-
-      {/* 위로 올라가기 버튼 */}
-      <AnimatePresence>
-        {showScrollToTop && !isMobile && (
-          <motion.button
-            className="scroll-to-top-button"
-            onClick={scrollToTop}
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0 }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-          >
-            ↑
-          </motion.button>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
 
-export default Location3D; 
+export default Location3D;

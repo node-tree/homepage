@@ -133,18 +133,17 @@ const CV: React.FC = () => {
             />
             <button onClick={handleSaveAll}
               style={{
-                background: '#222',
+                background: 'rgba(0, 0, 0, 0.8)',
                 color: '#fff',
                 border: 'none',
-                borderRadius: '8px',
-                padding: '10px 0',
-                fontWeight: 600,
-                fontSize: '1rem',
+                borderRadius: '25px',
+                padding: '10px 24px',
+                fontWeight: 400,
+                fontSize: '0.85rem',
+                letterSpacing: '0.05em',
                 marginTop: 8,
                 cursor: 'pointer',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                transition: 'background 0.2s',
-                width: 120,
+                transition: 'all 0.2s ease',
                 alignSelf: 'center',
               }}
             >저장</button>
@@ -191,17 +190,18 @@ const CV: React.FC = () => {
             {isEditing ? '취소' : '글 편집'}
           </button>
           {isEditing && (
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: '#f7f7f7', borderRadius: '18px', padding: '4px 12px', marginLeft: '1rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: 'rgba(0,0,0,0.05)', borderRadius: '25px', padding: '4px 12px', marginLeft: '1rem' }}>
               <button
                 onClick={() => setAlign('left')}
                 style={{
-                  background: align === 'left' ? '#222' : '#fff',
-                  color: align === 'left' ? '#fff' : '#222',
+                  background: align === 'left' ? 'rgba(0,0,0,0.8)' : 'transparent',
+                  color: align === 'left' ? '#fff' : 'rgba(0,0,0,0.6)',
                   border: 'none',
-                  borderRadius: '16px',
-                  padding: '6px 16px',
-                  fontWeight: 600,
-                  fontSize: '0.98rem',
+                  borderRadius: '20px',
+                  padding: '6px 14px',
+                  fontWeight: 400,
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.03em',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
                 }}
@@ -209,13 +209,14 @@ const CV: React.FC = () => {
               <button
                 onClick={() => setAlign('center')}
                 style={{
-                  background: align === 'center' ? '#222' : '#fff',
-                  color: align === 'center' ? '#fff' : '#222',
+                  background: align === 'center' ? 'rgba(0,0,0,0.8)' : 'transparent',
+                  color: align === 'center' ? '#fff' : 'rgba(0,0,0,0.6)',
                   border: 'none',
-                  borderRadius: '16px',
-                  padding: '6px 16px',
-                  fontWeight: 600,
-                  fontSize: '0.98rem',
+                  borderRadius: '20px',
+                  padding: '6px 14px',
+                  fontWeight: 400,
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.03em',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
                 }}
@@ -223,13 +224,14 @@ const CV: React.FC = () => {
               <button
                 onClick={() => setAlign('right')}
                 style={{
-                  background: align === 'right' ? '#222' : '#fff',
-                  color: align === 'right' ? '#fff' : '#222',
+                  background: align === 'right' ? 'rgba(0,0,0,0.8)' : 'transparent',
+                  color: align === 'right' ? '#fff' : 'rgba(0,0,0,0.6)',
                   border: 'none',
-                  borderRadius: '16px',
-                  padding: '6px 16px',
-                  fontWeight: 600,
-                  fontSize: '0.98rem',
+                  borderRadius: '20px',
+                  padding: '6px 14px',
+                  fontWeight: 400,
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.03em',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
                 }}
@@ -237,19 +239,18 @@ const CV: React.FC = () => {
               <button
                 onClick={handleSaveAll}
                 style={{
-                  padding: '6px 18px',
-                  fontSize: '1rem',
-                  borderRadius: '18px',
-                  border: '1px solid #007bff',
-                  background: 'transparent',
-                  color: '#007bff',
-                  fontWeight: 600,
+                  padding: '6px 16px',
+                  fontSize: '0.8rem',
+                  borderRadius: '20px',
+                  border: 'none',
+                  background: 'rgba(0,0,0,0.8)',
+                  color: '#fff',
+                  fontWeight: 400,
+                  letterSpacing: '0.05em',
                   marginLeft: '8px',
                   cursor: 'pointer',
-                  transition: 'background 0.2s, color 0.2s',
+                  transition: 'all 0.2s',
                 }}
-                onMouseOver={e => { e.currentTarget.style.background = '#007bff'; e.currentTarget.style.color = '#fff'; }}
-                onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#007bff'; }}
               >저장</button>
             </div>
           )}

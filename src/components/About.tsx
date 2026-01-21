@@ -391,7 +391,7 @@ const About: React.FC = () => {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6, duration: 1 }}
             ></motion.div>
-            <div className="page-subtitle" style={{position: 'relative', top: 'auto', left: 'auto', transform: 'none', marginTop: '0'}}>노드 트리(NODE TREE)
+            <div className="page-subtitle">노드 트리(NODE TREE)
               
             </div>
           </h1>
@@ -473,18 +473,17 @@ const About: React.FC = () => {
             />
             <button onClick={handleSaveHeader}
               style={{
-                background: '#222',
+                background: 'rgba(0, 0, 0, 0.8)',
                 color: '#fff',
                 border: 'none',
-                borderRadius: '8px',
-                padding: '10px 0',
-                fontWeight: 600,
-                fontSize: '1rem',
+                borderRadius: '25px',
+                padding: '10px 24px',
+                fontWeight: 400,
+                fontSize: '0.85rem',
+                letterSpacing: '0.05em',
                 marginTop: 8,
                 cursor: 'pointer',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                transition: 'background 0.2s',
-                width: 120,
+                transition: 'all 0.2s ease',
                 alignSelf: 'center',
               }}
             >저장</button>

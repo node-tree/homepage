@@ -128,20 +128,24 @@ mongoose.connection.on('error', (err) => {
 const authRoutes = require('./routes/auth');
 const workRoutes = require('./routes/work');
 const locationVideoRoutes = require('./routes/locationVideo');
+const locationRoutes = require('./routes/location');
 const aboutRoutes = require('./routes/about');
 const filedRoutes = require('./routes/filed');
 const cvRouter = require('./routes/cv');
 const humanRoutes = require('./routes/human');
 const contactRoutes = require('./routes/contact');
+const homeRoutes = require('./routes/home');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/work', workRoutes);
 app.use('/api/location-video', locationVideoRoutes);
+app.use('/api/location', locationRoutes);
 app.use('/api/about', aboutRoutes);
 app.use('/api/filed', filedRoutes);
 app.use('/api/cv', cvRouter);
 app.use('/api/human', humanRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/home', homeRoutes);
 
 // 기본 라우트
 app.get('/', (req, res) => {
