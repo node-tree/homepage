@@ -407,86 +407,30 @@ const About: React.FC = () => {
     <div className="page-content">
       <div className="page-header">
         {isEditingHeader ? (
-          <div style={{
-            background: '#fff',
-            borderRadius: '16px',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-            padding: '24px 20px 16px 20px',
-            marginBottom: 16,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'stretch',
-            gap: 12,
-            maxWidth: 480,
-            width: '100%',
-            marginLeft: 'auto',
-            marginRight: 'auto',
-          }}>
-            <textarea value={title} onChange={e => setTitle(e.target.value)}
-              style={{
-                fontSize: '2rem',
-                fontWeight: 700,
-                border: 'none',
-                borderBottom: '2px solid #eee',
-                outline: 'none',
-                padding: '8px 0',
-                marginBottom: 4,
-                background: 'transparent',
-                textAlign: 'center',
-                borderRadius: 0,
-                transition: 'border-color 0.2s',
-                resize: 'none',
-                minHeight: 40,
-                overflow: 'hidden',
-              }}
+          <div className="header-edit-form">
+            <input
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              className="form-input"
               placeholder="제목 입력"
               autoFocus
-              rows={1}
-              onInput={e => {
-                const ta = e.target as HTMLTextAreaElement;
-                ta.style.height = 'auto';
-                ta.style.height = ta.scrollHeight + 'px';
-              }}
             />
-            <textarea value={subtitle} onChange={e => setSubtitle(e.target.value)}
-              style={{
-                fontSize: '1.1rem',
-                border: 'none',
-                borderBottom: '1.5px solid #eee',
-                outline: 'none',
-                padding: '6px 0',
-                background: 'transparent',
-                textAlign: 'center',
-                borderRadius: 0,
-                transition: 'border-color 0.2s',
-                resize: 'none',
-                minHeight: 32,
-                overflow: 'hidden',
-              }}
+            <input
+              type="text"
+              value={subtitle}
+              onChange={e => setSubtitle(e.target.value)}
+              className="form-input"
               placeholder="부제목 입력"
-              rows={1}
-              onInput={e => {
-                const ta = e.target as HTMLTextAreaElement;
-                ta.style.height = 'auto';
-                ta.style.height = ta.scrollHeight + 'px';
-              }}
             />
-            <button onClick={handleSaveHeader}
-              style={{
-                background: 'rgba(0, 0, 0, 0.8)',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '25px',
-                padding: '10px 24px',
-                fontWeight: 400,
-                fontSize: '0.85rem',
-                letterSpacing: '0.05em',
-                marginTop: 8,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                alignSelf: 'center',
-              }}
-            >저장</button>
+            <div className="header-edit-buttons">
+              <button onClick={() => setIsEditingHeader(false)} className="back-button">
+                취소
+              </button>
+              <button onClick={handleSaveHeader} className="save-button">
+                저장
+              </button>
+            </div>
           </div>
         ) : (
           <>
@@ -523,180 +467,112 @@ const About: React.FC = () => {
       
       {/* 편집 모드 */}
       {isEditing ? (
-        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-          {/* 편집 도구 모음 */}
-          <div style={{
-            backgroundColor: '#f5f5f5',
-            padding: '1rem',
-            borderRadius: '8px 8px 0 0',
-            border: '1px solid #ddd',
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '0.5rem',
-            alignItems: 'center'
-          }}>
-            {/* 텍스트 포맷팅 */}
-            <button onClick={() => formatText('bold')} style={toolbarButtonStyle}>
-              <strong>B</strong>
+        <div className="write-container">
+          <div className="write-header">
+            <button onClick={cancelEditing} className="back-button">
+              ← 취소
             </button>
-            <button onClick={() => formatText('italic')} style={toolbarButtonStyle}>
-              <em>I</em>
-            </button>
-            <button onClick={() => formatText('underline')} style={toolbarButtonStyle}>
-              <u>U</u>
-            </button>
-            
-            <div style={{ width: '1px', height: '20px', backgroundColor: '#ccc', margin: '0 0.5rem' }} />
-            
-            {/* 정렬 */}
-            <button onClick={() => formatText('justifyLeft')} style={toolbarButtonStyle}>
-              왼쪽
-            </button>
-            <button onClick={() => formatText('justifyCenter')} style={toolbarButtonStyle}>
-              중앙
-            </button>
-            <button onClick={() => formatText('justifyRight')} style={toolbarButtonStyle}>
-              오른쪽
-            </button>
-            
-            <div style={{ width: '1px', height: '20px', backgroundColor: '#ccc', margin: '0 0.5rem' }} />
-            
-            {/* 제목 크기 */}
-            <select 
-              onChange={(e) => formatText('formatBlock', e.target.value)}
-              style={{ padding: '0.25rem', borderRadius: '4px', border: '1px solid #ccc' }}
-            >
-              <option value="">텍스트 크기</option>
-              <option value="h1">제목 1</option>
-              <option value="h2">제목 2</option>
-              <option value="h3">제목 3</option>
-              <option value="p">본문</option>
-            </select>
-            
-            {/* 글꼴 크기 */}
-            <select 
-              onChange={(e) => formatText('fontSize', e.target.value)}
-              style={{ padding: '0.25rem', borderRadius: '4px', border: '1px solid #ccc' }}
-            >
-              <option value="">글꼴 크기</option>
-              <option value="1">매우 작게</option>
-              <option value="2">작게</option>
-              <option value="3">보통</option>
-              <option value="4">크게</option>
-              <option value="5">매우 크게</option>
-              <option value="6">거대하게</option>
-              <option value="7">최대</option>
-            </select>
-            
-            <div style={{ width: '1px', height: '20px', backgroundColor: '#ccc', margin: '0 0.5rem' }} />
-            
-            {/* 이미지 */}
-            <button onClick={insertImage} style={toolbarButtonStyle}>
-              🖼️ 이미지
-            </button>
-            <button onClick={insertImageGallery} style={toolbarButtonStyle}>
-              🖼️ 갤러리
+            <button onClick={saveContent} className="save-button">
+              저장하기
             </button>
           </div>
-          
-          {/* 편집 영역 */}
-          <div
-            ref={editorRef}
-            contentEditable
-            suppressContentEditableWarning
-            onInput={(e) => {
-              const target = e.target as HTMLDivElement;
-              setEditContent(target.innerHTML);
-            }}
-            onBlur={(e) => {
-              const target = e.target as HTMLDivElement;
-              setEditContent(target.innerHTML);
-            }}
-            style={{
-              minHeight: '400px',
-              padding: '2rem',
-              border: '1px solid #ddd',
-              borderTop: 'none',
-              borderRadius: '0 0 8px 8px',
-              backgroundColor: '#fff',
-              outline: 'none',
-              lineHeight: '1.6',
-              fontSize: '1rem',
-              textAlign: 'center'
-            }}
-          />
-          
-          {/* 저장/취소 버튼 */}
-          <div style={{ textAlign: 'center', marginTop: '1rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <button
-              onClick={cancelEditing}
-              style={{
-                padding: '0.75rem 1.5rem',
-                backgroundColor: '#f0f0f0',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              취소
-            </button>
-            <button
-              onClick={saveContent}
-              style={{
-                padding: '0.75rem 1.5rem',
-                backgroundColor: '#000',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              저장
-            </button>
+
+          <div className="write-form">
+            <div className="form-group">
+              <label className="form-label">내용</label>
+
+              {/* 편집 도구 모음 */}
+              <div className="editor-toolbar" style={{ borderRadius: '8px 8px 0 0', borderBottom: 'none' }}>
+                {/* 텍스트 포맷팅 */}
+                <button type="button" onClick={() => formatText('bold')} className="toolbar-btn">
+                  <strong>B</strong>
+                </button>
+                <button type="button" onClick={() => formatText('italic')} className="toolbar-btn">
+                  <em>I</em>
+                </button>
+                <button type="button" onClick={() => formatText('underline')} className="toolbar-btn">
+                  <u>U</u>
+                </button>
+
+                <div className="toolbar-divider" />
+
+                {/* 정렬 */}
+                <button type="button" onClick={() => formatText('justifyLeft')} className="toolbar-btn">
+                  좌측
+                </button>
+                <button type="button" onClick={() => formatText('justifyCenter')} className="toolbar-btn">
+                  중앙
+                </button>
+                <button type="button" onClick={() => formatText('justifyRight')} className="toolbar-btn">
+                  우측
+                </button>
+
+                <div className="toolbar-divider" />
+
+                {/* 글꼴 크기 */}
+                <select
+                  onChange={(e) => formatText('fontSize', e.target.value)}
+                  className="toolbar-btn"
+                  defaultValue=""
+                >
+                  <option value="" disabled>크기</option>
+                  <option value="2">작게</option>
+                  <option value="3">보통</option>
+                  <option value="4">크게</option>
+                  <option value="5">매우 크게</option>
+                </select>
+
+                <div className="toolbar-divider" />
+
+                {/* 이미지 */}
+                <button type="button" onClick={insertImage} className="toolbar-btn">
+                  이미지
+                </button>
+                <button type="button" onClick={insertImageGallery} className="toolbar-btn">
+                  갤러리
+                </button>
+              </div>
+
+              {/* 편집 영역 */}
+              <div
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                className="form-textarea wysiwyg-editor"
+                onInput={(e) => {
+                  const target = e.target as HTMLDivElement;
+                  setEditContent(target.innerHTML);
+                }}
+                onBlur={(e) => {
+                  const target = e.target as HTMLDivElement;
+                  setEditContent(target.innerHTML);
+                }}
+              />
+            </div>
           </div>
         </div>
       ) : (
         /* 보기 모드 */
-        <div style={{ 
-          maxWidth: '1000px', 
-          margin: '0 auto', 
-          textAlign: 'center',
-          lineHeight: '1.8',
-          fontSize: '1.1rem'
-        }}>
-          {/* 글 편집 버튼을 본문 위로 이동 */}
-          {!isEditing && isAuthenticated && (
-            <button
-              onClick={startEditing}
-              className="write-button"
-              style={{ margin: '0 auto 2rem auto', display: 'block' }}
-            >
-              글 편집
-            </button>
+        <>
+          {isAuthenticated && (
+            <div className="work-header">
+              <button onClick={startEditing} className="write-button">
+                글 편집
+              </button>
+            </div>
           )}
-          {aboutData?.htmlContent ? (
-            <div 
-              dangerouslySetInnerHTML={{ __html: aboutData.htmlContent }}
-              style={{ textAlign: 'center' }}
-            />
-          ) : (
-            <div style={{ color: '#aaa', fontStyle: 'italic' }}>아직 소개글이 없습니다.</div>
-          )}
-        </div>
+
+          <div className="about-content">
+            {aboutData?.htmlContent ? (
+              <div dangerouslySetInnerHTML={{ __html: aboutData.htmlContent }} />
+            ) : (
+              <div style={{ color: '#aaa', fontStyle: 'italic' }}>아직 소개글이 없습니다.</div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
-};
-
-// 도구 모음 버튼 스타일
-const toolbarButtonStyle: React.CSSProperties = {
-  padding: '0.5rem 0.75rem',
-  backgroundColor: '#fff',
-  border: '1px solid #ccc',
-  borderRadius: '4px',
-  cursor: 'pointer',
-  fontSize: '0.9rem',
-  minWidth: '40px'
 };
 
 export default About; 
