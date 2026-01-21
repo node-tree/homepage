@@ -229,14 +229,33 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
     loadPosts(); // 원래 순서로 복원
   };
 
+  // 미디어 컨트롤 버튼 제거 (표시용)
+  const cleanMediaControls = (html: string): string => {
+    let cleaned = html;
+    // media-controls div 제거 (새 형식)
+    cleaned = cleaned.replace(/<div class="media-controls"[^>]*>[\s\S]*?<\/div>/gi, '');
+    // 컨트롤 버튼들 직접 제거 (위로/아래로/삭제 버튼)
+    cleaned = cleaned.replace(/<button[^>]*title="위로 이동"[^>]*>[\s\S]*?<\/button>/gi, '');
+    cleaned = cleaned.replace(/<button[^>]*title="아래로 이동"[^>]*>[\s\S]*?<\/button>/gi, '');
+    cleaned = cleaned.replace(/<button[^>]*title="삭제"[^>]*>[\s\S]*?<\/button>/gi, '');
+    // 빈 컨트롤 wrapper div 제거
+    cleaned = cleaned.replace(/<div[^>]*contenteditable="false"[^>]*>\s*<\/div>/gi, '');
+    // contenteditable 속성 제거
+    cleaned = cleaned.replace(/\s*contenteditable="[^"]*"/gi, '');
+    // draggable 속성 제거
+    cleaned = cleaned.replace(/\s*draggable="[^"]*"/gi, '');
+    return cleaned;
+  };
+
   const formatContent = (content: string) => {
     // HTML 태그 감지 (더 포괄적인 패턴)
     const htmlTagPattern = /<[a-z][\s\S]*?>/i;
     if (htmlTagPattern.test(content)) {
+      // 미디어 컨트롤 버튼 제거
+      let htmlContent = cleanMediaControls(content);
       // 줄바꿈을 <br>로 변환 (이미 <br>이 없는 경우)
-      let htmlContent = content;
-      if (!content.includes('<br')) {
-        htmlContent = content.replace(/\n/g, '<br />');
+      if (!htmlContent.includes('<br')) {
+        htmlContent = htmlContent.replace(/\n/g, '<br />');
       }
       return <div className="html-content" dangerouslySetInnerHTML={{ __html: htmlContent }} />;
     }

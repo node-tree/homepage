@@ -382,6 +382,17 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
   };
 
 
+  // 저장 전 미디어 컨트롤 버튼 제거
+  const removeMediaControls = (html: string): string => {
+    // media-controls div 제거
+    let cleaned = html.replace(/<div class="media-controls"[^>]*>[\s\S]*?<\/div>/gi, '');
+    // contenteditable 속성 제거
+    cleaned = cleaned.replace(/\s*contenteditable="[^"]*"/gi, '');
+    // draggable 속성 제거 (media-block에서)
+    cleaned = cleaned.replace(/\s*draggable="[^"]*"/gi, '');
+    return cleaned;
+  };
+
   const handleSubmit = async () => {
     let content = editorRef.current?.innerHTML || '';
 
@@ -389,6 +400,9 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
       setError('제목과 내용을 모두 입력해주세요.');
       return;
     }
+
+    // 저장 전 미디어 컨트롤 버튼 제거
+    content = removeMediaControls(content);
 
     // 저장 전 Word HTML 정리 (안전장치)
     content = cleanWordHTML(content);
