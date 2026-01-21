@@ -1726,6 +1726,7 @@
 
 .post-text {
   width: 100%;
+  max-width: 100%;
   min-height: 100px;
   text-align: center;
   line-height: 1.8;
@@ -1733,13 +1734,30 @@
   margin-bottom: 3rem;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  word-break: break-word;
   box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 /* HTML 콘텐츠 스타일 */
 .post-text .html-content {
   text-align: left;
   line-height: 1.8;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.post-text .html-content * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.post-text .html-content div,
+.post-text .html-content p,
+.post-text .html-content span {
+  max-width: 100%;
 }
 
 /* contentEditable에서 생성된 div 줄바꿈 처리 */
@@ -2129,12 +2147,14 @@
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
+    overflow-x: hidden !important;
   }
 
   .post-content {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
+    overflow-x: hidden !important;
   }
 
   .post-text {
@@ -2143,11 +2163,17 @@
     box-sizing: border-box !important;
     word-break: break-word !important;
     overflow-wrap: break-word !important;
+    overflow-x: hidden !important;
   }
 
   .post-text * {
     max-width: 100% !important;
     box-sizing: border-box !important;
+  }
+
+  .post-text > * {
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   .post-text img {
@@ -2164,17 +2190,31 @@
 
   .post-text .video-container {
     max-width: 100% !important;
+    width: 100% !important;
   }
 
   .post-text .html-content {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
+    overflow-x: hidden !important;
   }
 
   .post-text .html-content * {
     max-width: 100% !important;
     box-sizing: border-box !important;
+  }
+
+  .post-text .html-content > * {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .post-text .html-content div,
+  .post-text .html-content p,
+  .post-text .html-content span {
+    width: auto !important;
+    max-width: 100% !important;
   }
 
   .post-text .html-content img {
@@ -2540,6 +2580,7 @@
     max-width: 100% !important;
     padding: 0 10px !important;
     box-sizing: border-box !important;
+    overflow-x: hidden !important;
   }
 
   .post-article {
@@ -2547,12 +2588,14 @@
     max-width: 100% !important;
     padding: 1rem 0 !important;
     box-sizing: border-box !important;
+    overflow-x: hidden !important;
   }
 
   .post-content {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
+    overflow-x: hidden !important;
   }
 
   .post-text {
@@ -2561,11 +2604,17 @@
     box-sizing: border-box !important;
     word-break: break-word !important;
     overflow-wrap: break-word !important;
+    overflow-x: hidden !important;
   }
 
   .post-text * {
     max-width: 100% !important;
     box-sizing: border-box !important;
+  }
+
+  .post-text > * {
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   .post-text img {
@@ -2582,17 +2631,31 @@
 
   .post-text .video-container {
     max-width: 100% !important;
+    width: 100% !important;
   }
 
   .post-text .html-content {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
+    overflow-x: hidden !important;
   }
 
   .post-text .html-content * {
     max-width: 100% !important;
     box-sizing: border-box !important;
+  }
+
+  .post-text .html-content > * {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .post-text .html-content div,
+  .post-text .html-content p,
+  .post-text .html-content span {
+    width: auto !important;
+    max-width: 100% !important;
   }
 
   .post-text .html-content img {
