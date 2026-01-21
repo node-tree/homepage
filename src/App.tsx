@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense, useRef } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
@@ -11,7 +11,7 @@ import Filed from './components/Filed';
 import CV from './components/CV';
 import LocationVideoSettings from './components/LocationVideoSettings';
 import About from './components/About';
-import { playHoverSound, playClickSound, getBgVolume, setBgVolume, getClickVolume, setClickVolume } from './utils/sound';
+import { playHoverSound, playClickSound } from './utils/sound';
 
 const Work = lazy(() => import('./components/Work'));
 
@@ -55,198 +55,6 @@ function Navigation({ currentPage, onPageChange }: { currentPage: string; onPage
   );
 }
 
-// 배경음악 컴포넌트
-function BackgroundMusic() {
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [showControls, setShowControls] = useState(false);
-  const [bgVolume, setBgVolumeState] = useState(getBgVolume());
-  const [clickVolume, setClickVolumeState] = useState(getClickVolume());
-
-  // 오디오 재생 (클릭/터치 시)
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const tryPlay = () => {
-      audio.volume = getBgVolume();
-      audio.play()
-        .then(() => setIsPlaying(true))
-        .catch((e) => console.log('Play failed:', e));
-    };
-
-    // 자동 재생 시도
-    tryPlay();
-
-    // 클릭/터치 시에도 재생 시도
-    document.addEventListener('click', tryPlay);
-    document.addEventListener('touchstart', tryPlay);
-
-    return () => {
-      document.removeEventListener('click', tryPlay);
-      document.removeEventListener('touchstart', tryPlay);
-    };
-  }, []);
-
-  // 볼륨 변경 시 적용
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = bgVolume;
-    }
-    setBgVolume(bgVolume);
-  }, [bgVolume]);
-
-  useEffect(() => {
-    setClickVolume(clickVolume);
-  }, [clickVolume]);
-
-  const togglePlay = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (audio.paused) {
-      audio.play().then(() => setIsPlaying(true)).catch(() => {});
-    } else {
-      audio.pause();
-      setIsPlaying(false);
-    }
-  };
-
-  return (
-    <>
-      <audio ref={audioRef} src="/backsound.mp3" loop preload="auto" autoPlay />
-
-      {/* 사운드 컨트롤 패널 */}
-      <div
-        style={{
-          position: 'fixed',
-          bottom: '20px',
-          left: '20px',
-          zIndex: 1000,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-        }}
-      >
-        {/* 볼륨 슬라이더 (펼쳐졌을 때) */}
-        {showControls && (
-          <div
-            style={{
-              background: 'rgba(0, 0, 0, 0.85)',
-              borderRadius: '12px',
-              padding: '14px 16px',
-              minWidth: '180px',
-            }}
-          >
-            <div style={{ marginBottom: '14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <span style={{ color: '#aaa', fontSize: '11px' }}>배경음</span>
-                <span style={{ color: '#fff', fontSize: '11px', fontWeight: 500 }}>{Math.round(bgVolume * 100)}%</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={bgVolume}
-                onChange={(e) => setBgVolumeState(parseFloat(e.target.value))}
-                style={{ width: '100%', cursor: 'pointer', accentColor: '#fff' }}
-              />
-            </div>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <span style={{ color: '#aaa', fontSize: '11px' }}>클릭음</span>
-                <span style={{ color: '#fff', fontSize: '11px', fontWeight: 500 }}>{Math.round(clickVolume * 100)}%</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={clickVolume}
-                onChange={(e) => setClickVolumeState(parseFloat(e.target.value))}
-                style={{ width: '100%', cursor: 'pointer', accentColor: '#fff' }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* 메인 컨트롤 바 */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            background: 'rgba(0, 0, 0, 0.7)',
-            borderRadius: '20px',
-            padding: '8px 14px',
-          }}
-        >
-          {/* 재생/정지 버튼 */}
-          <button
-            onClick={togglePlay}
-            style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '50%',
-              border: 'none',
-              background: isPlaying ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
-              color: '#fff',
-              cursor: 'pointer',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'background 0.2s',
-            }}
-            title={isPlaying ? '음악 끄기' : '음악 켜기'}
-          >
-            {isPlaying ? '❚❚' : '▶'}
-          </button>
-
-          {/* 상태 텍스트 */}
-          <div style={{
-            color: '#fff',
-            fontSize: '11px',
-            letterSpacing: '0.05em',
-            minWidth: '70px',
-          }}>
-            <span style={{ opacity: isPlaying ? 1 : 0.5 }}>
-              SOUND {isPlaying ? 'ON' : 'OFF'}
-            </span>
-            {isPlaying && (
-              <span style={{ opacity: 0.6, marginLeft: '6px' }}>
-                {Math.round(bgVolume * 100)}%
-              </span>
-            )}
-          </div>
-
-          {/* 설정 버튼 */}
-          <button
-            onClick={() => setShowControls(!showControls)}
-            style={{
-              width: '24px',
-              height: '24px',
-              borderRadius: '50%',
-              border: 'none',
-              background: showControls ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
-              color: '#fff',
-              cursor: 'pointer',
-              fontSize: '11px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'background 0.2s',
-            }}
-            title="볼륨 설정"
-          >
-            ⚙
-          </button>
-        </div>
-      </div>
-    </>
-  );
-}
 
 // 메인 콘텐츠 컴포넌트
 function AppContent() {
@@ -307,9 +115,6 @@ function AppContent() {
 
   return (
     <div className="App">
-      {/* 배경음악 */}
-      <BackgroundMusic />
-
       {/* 고정 네비게이션 */}
       <Navigation currentPage={currentPage} onPageChange={handlePageChange} />
 
