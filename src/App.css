@@ -2654,10 +2654,10 @@
 /* 반응형: 모바일 3열 */
 @media (max-width: 768px) {
   .posts-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
+    grid-template-columns: repeat(2, 1fr) !important;
     gap: 15px;
     margin: 2rem auto;
-    padding: 0 20px;
+    padding: 0 15px;
   }
 
   .post-grid-item {
@@ -2675,47 +2675,49 @@
 
   .post-grid-thumbnail img {
     position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 220% !important;
+    height: 190% !important;
     object-fit: cover !important;
     object-position: center center !important;
     border-radius: 50%;
   }
 
   .post-grid-thumbnail:hover img {
-    transform: scale(1.05);
+    transform: translate(-50%, -50%) scale(1.05) !important;
   }
 
   .post-grid-overlay-title {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     -webkit-line-clamp: 2;
   }
 }
 
-/* 매우 작은 화면 3열 유지 */
+/* 매우 작은 화면 2열 유지 */
 @media (max-width: 480px) {
   .posts-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 10px;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px;
     margin: 1.5rem auto;
-    padding: 0 15px;
+    padding: 0 10px;
   }
 
   .post-grid-thumbnail img {
     position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 220% !important;
+    height: 190% !important;
     object-fit: cover !important;
     object-position: center center !important;
     border-radius: 50%;
   }
 
   .post-grid-thumbnail:hover img {
-    transform: scale(1.05);
+    transform: translate(-50%, -50%) scale(1.05) !important;
   }
 
   .post-grid-overlay-title {
