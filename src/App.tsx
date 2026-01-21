@@ -25,7 +25,7 @@ const NAV_ITEMS = [
   { id: 6, text: 'CONTACT', page: 'CONTACT' }
 ];
 
-// 네비게이션 컴포넌트 - 원형 노드 + 아래 텍스트
+// 데스크톱 네비게이션 컴포넌트 - 원형 노드 + 아래 텍스트
 function Navigation({ currentPage, onPageChange }: { currentPage: string; onPageChange: (page: string) => void }) {
   const allNavItems = [
     { id: 0, text: 'HOME', page: 'HOME' },
@@ -33,7 +33,7 @@ function Navigation({ currentPage, onPageChange }: { currentPage: string; onPage
   ];
 
   return (
-    <nav className="fixed-navigation">
+    <nav className="fixed-navigation desktop-nav">
       <div className="nav-container">
         {allNavItems.map((item) => (
           <motion.div
@@ -52,6 +52,83 @@ function Navigation({ currentPage, onPageChange }: { currentPage: string; onPage
         ))}
       </div>
     </nav>
+  );
+}
+
+// 모바일 햄버거 메뉴 컴포넌트
+function MobileNavigation({ currentPage, onPageChange }: { currentPage: string; onPageChange: (page: string) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const allNavItems = [
+    { id: 0, text: 'HOME', page: 'HOME' },
+    ...NAV_ITEMS
+  ];
+
+  const handleItemClick = (page: string) => {
+    playClickSound();
+    onPageChange(page);
+    setIsOpen(false);
+  };
+
+  return (
+    <>
+      {/* 햄버거 버튼 */}
+      <motion.button
+        className="hamburger-button"
+        onClick={() => {
+          playClickSound();
+          setIsOpen(!isOpen);
+        }}
+        whileTap={{ scale: 0.95 }}
+      >
+        <motion.div
+          className="hamburger-icon"
+          animate={isOpen ? "open" : "closed"}
+        >
+          <span className={`hamburger-line ${isOpen ? 'open' : ''}`} />
+          <span className={`hamburger-line ${isOpen ? 'open' : ''}`} />
+          <span className={`hamburger-line ${isOpen ? 'open' : ''}`} />
+        </motion.div>
+      </motion.button>
+
+      {/* 사이드바 오버레이 */}
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              className="sidebar-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsOpen(false)}
+            />
+            <motion.nav
+              className="mobile-sidebar"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'tween', duration: 0.3 }}
+            >
+              <div className="sidebar-header">
+                <span>MENU</span>
+              </div>
+              <div className="sidebar-items">
+                {allNavItems.map((item) => (
+                  <motion.div
+                    key={item.id}
+                    className={`sidebar-item ${currentPage === item.page ? 'active' : ''}`}
+                    onClick={() => handleItemClick(item.page)}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className="sidebar-dot" />
+                    <span>{item.text}</span>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.nav>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 
@@ -115,8 +192,11 @@ function AppContent() {
 
   return (
     <div className="App">
-      {/* 고정 네비게이션 */}
+      {/* 데스크톱 네비게이션 */}
       <Navigation currentPage={currentPage} onPageChange={handlePageChange} />
+
+      {/* 모바일 햄버거 메뉴 */}
+      <MobileNavigation currentPage={currentPage} onPageChange={handlePageChange} />
 
       {/* 로그인/로그아웃 링크 */}
       <div className="auth-container">
