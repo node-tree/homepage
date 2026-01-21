@@ -17,6 +17,7 @@ interface Post {
   images?: string[];
   thumbnail?: string | null;
   htmlContent?: string;
+  category?: string;
 }
 
 const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postType = 'work', editPost = null }) => {
@@ -26,6 +27,7 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [category, setCategory] = useState<string>('문화예술교육');
   const editorRef = useRef<HTMLDivElement>(null);
   const colorPickerRef = useRef<HTMLDivElement>(null);
 
@@ -76,6 +78,7 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     if (editPost) {
       setTitle(editPost.title || '');
       setThumbnailUrl(editPost.thumbnail || '');
+      setCategory(editPost.category || '문화예술교육');
       if (editorRef.current) {
         const content = editPost.content || '';
         if (content.includes('<') && content.includes('>')) {
@@ -94,6 +97,7 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     } else {
       setTitle('');
       setThumbnailUrl('');
+      setCategory('문화예술교육');
       if (editorRef.current) {
         editorRef.current.innerHTML = '';
       }
@@ -393,12 +397,23 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     setError(null);
 
     try {
-      const postData = {
+      const postData: {
+        title: string;
+        content: string;
+        thumbnail?: string;
+        htmlContent: string;
+        category?: string;
+      } = {
         title: title.trim(),
         content: content.trim(),
         thumbnail: thumbnailUrl.trim() || undefined,
         htmlContent: ''
       };
+
+      // filed 타입인 경우 카테고리 추가
+      if (postType === 'filed') {
+        postData.category = category;
+      }
 
       let response;
       const apiEndpoint = postType === 'work' ? api.work : postType === 'location' ? locationPostAPI : api.filed;
@@ -471,6 +486,22 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
             disabled={saving}
           />
         </div>
+
+        {postType === 'filed' && (
+          <div className="form-group">
+            <label className="form-label">카테고리</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="form-input"
+              disabled={saving}
+              style={{ cursor: 'pointer' }}
+            >
+              <option value="문화예술교육">문화예술교육</option>
+              <option value="커뮤니티">커뮤니티</option>
+            </select>
+          </div>
+        )}
 
         <div className="form-group">
           <label className="form-label">썸네일 이미지 URL</label>

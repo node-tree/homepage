@@ -135,16 +135,20 @@ router.put('/reorder', auth, async (req, res) => {
   }
 });
 
-// GET /api/filed - 모든 filed 데이터 조회
+// GET /api/filed - 모든 filed 데이터 조회 (카테고리 필터 지원)
 router.get('/', async (req, res) => {
   try {
     console.log('Filed 데이터 조회 시작...');
-    
+
     // DB 연결 상태 확인 및 연결
     await ensureDBConnection();
     console.log('DB 연결 확인 완료');
-    
-    const fileds = await Filed.find().sort({ sortOrder: 1, _id: -1 });
+
+    // 카테고리 필터 (선택적)
+    const { category } = req.query;
+    const filter = category ? { category } : {};
+
+    const fileds = await Filed.find(filter).sort({ sortOrder: 1, _id: -1 });
     console.log(`DB에서 ${fileds.length}개의 Filed 데이터 조회 완료`);
     
     // 프론트엔드에서 사용하는 형식으로 변환
@@ -173,6 +177,7 @@ router.get('/', async (req, res) => {
         date: dateString,
         images: [],
         thumbnail: filed.thumbnail || null,
+        category: filed.category || '문화예술교육',
         sortOrder: filed.sortOrder || 0
       };
     });
@@ -232,9 +237,9 @@ router.get('/', async (req, res) => {
 router.post('/', auth, async (req, res) => {
   try {
     await ensureDBConnection();
-    
-    const { title, content, htmlContent, thumbnail } = req.body;
-    
+
+    const { title, content, htmlContent, thumbnail, category } = req.body;
+
     if (!title || !content) {
       return res.status(400).json({
         success: false,
@@ -246,12 +251,13 @@ router.post('/', auth, async (req, res) => {
       title: title.trim(),
       contents: content.trim(), // content를 contents로 매핑
       htmlContent: htmlContent || '',
-      thumbnail: thumbnail ? thumbnail.trim() : null
+      thumbnail: thumbnail ? thumbnail.trim() : null,
+      category: category || '문화예술교육'
     });
 
     const savedFiled = await newFiled.save();
     console.log('새 Filed 데이터 저장 완료:', savedFiled._id);
-    
+
     res.json({
       success: true,
       message: '워크샵 글이 성공적으로 저장되었습니다.',
@@ -261,6 +267,7 @@ router.post('/', auth, async (req, res) => {
         content: savedFiled.contents,
         htmlContent: savedFiled.htmlContent,
         thumbnail: savedFiled.thumbnail,
+        category: savedFiled.category,
         date: savedFiled.createdAt ? savedFiled.createdAt.toLocaleDateString('ko-KR') : new Date().toLocaleDateString('ko-KR')
       }
     });
@@ -280,10 +287,10 @@ router.post('/', auth, async (req, res) => {
 router.put('/:id', auth, async (req, res) => {
   try {
     await ensureDBConnection();
-    
+
     const { id } = req.params;
-    const { title, content, htmlContent, thumbnail } = req.body;
-    
+    const { title, content, htmlContent, thumbnail, category } = req.body;
+
     if (!title || !content) {
       return res.status(400).json({
         success: false,
@@ -297,7 +304,8 @@ router.put('/:id', auth, async (req, res) => {
         title: title.trim(),
         contents: content.trim(),
         htmlContent: htmlContent || '',
-        thumbnail: thumbnail ? thumbnail.trim() : null
+        thumbnail: thumbnail ? thumbnail.trim() : null,
+        category: category || '문화예술교육'
       },
       { new: true }
     );
@@ -308,9 +316,9 @@ router.put('/:id', auth, async (req, res) => {
         message: '워크샵 글을 찾을 수 없습니다.'
       });
     }
-    
+
     console.log('Filed 데이터 수정 완료:', updatedFiled._id);
-    
+
     res.json({
       success: true,
       message: '워크샵 글이 성공적으로 수정되었습니다.',
@@ -320,6 +328,7 @@ router.put('/:id', auth, async (req, res) => {
         content: updatedFiled.contents,
         htmlContent: updatedFiled.htmlContent,
         thumbnail: updatedFiled.thumbnail,
+        category: updatedFiled.category,
         date: updatedFiled.createdAt ? updatedFiled.createdAt.toLocaleDateString('ko-KR') : new Date().toLocaleDateString('ko-KR')
       }
     });
@@ -410,7 +419,8 @@ router.get('/:id', async (req, res) => {
         htmlContent: filed.htmlContent || '',
         date: dateString,
         images: [],
-        thumbnail: filed.thumbnail || null
+        thumbnail: filed.thumbnail || null,
+        category: filed.category || '문화예술교육'
       },
       source: 'database'
     });
