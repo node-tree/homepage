@@ -4,25 +4,7 @@
   box-sizing: border-box;
 }
 
-.page-header {
-  text-align: left;
-  padding: 0 8px;
-  margin: 0 auto 4rem auto;
-  width: 100%;
-  max-width: 1200px;
-  box-sizing: border-box;
-}
-
-.page-title,
-.page-subtitle {
-  padding-left: 0;
-  padding-right: 0;
-  padding-bottom: 10px;
-  margin-left: 0;
-  margin-right: 0;
-  width: 100%;
-  box-sizing: border-box;
-}
+/* Human.css - page-header는 App.css 공통 스타일 사용 */
 
 .human-content {
   margin-top: 0.5rem; /* margin을 2rem에서 0.5rem으로 줄임 */
@@ -39,37 +21,5 @@
 @media (max-width: 768px) {
   .human-container {
     padding: 0 !important;
-  }
-  .page-header {
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-  .page-title,
-  .page-subtitle {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-  .page-content,
-  .page-content-wrapper {
-    width: 100% !important;
-    max-width: 100vw !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    box-sizing: border-box !important;
-  }
-  .page-body-text,
-  .page-text {
-    max-width: 100vw !important;
-    padding-left: 10px !important;
-    padding-right: 10px !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    box-sizing: border-box !important;
   }
 } 

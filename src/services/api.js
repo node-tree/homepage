@@ -92,7 +92,8 @@ const CACHE_KEYS = {
   LOCATION: 'cache_location',
   LOCATION_HEADER: 'cache_location_header',
   HUMAN_HEADER: 'cache_human_header',
-  CONTACT: 'cache_contact'
+  CONTACT: 'cache_contact',
+  HOME: 'cache_home'
 };
 
 // 토큰을 가져오는 헬퍼 함수
@@ -522,6 +523,38 @@ export const locationAPI = {
 
     return data;
   },
+  // 특정 도시 데이터 조회
+  getCityData: async (cityName, options = {}) => {
+    const { forceRefresh = false } = options;
+    const cacheKey = `${CACHE_KEYS.LOCATION}_city_${cityName}`;
+
+    if (!forceRefresh) {
+      const cached = cacheUtils.get(cacheKey);
+      if (cached) {
+        console.log(`Location city (${cityName}): 캐시에서 로드`);
+        return cached;
+      }
+    }
+
+    try {
+      const response = await fetchWithRetry(`${API_BASE_URL}/location-video/${encodeURIComponent(cityName)}`);
+      if (!response.ok) {
+        // 404 등의 경우 기본 데이터 반환
+        return { success: true, data: null };
+      }
+      const data = await response.json();
+
+      if (data.success) {
+        cacheUtils.set(cacheKey, data);
+      }
+
+      return data;
+    } catch (error) {
+      console.log(`도시 데이터 로드 실패 (${cityName}):`, error.message);
+      // 에러 시 기본 데이터 반환 (페이지는 정상 로드)
+      return { success: true, data: null };
+    }
+  },
   updateLocation: async (locationData) => {
     const response = await fetch(`${API_BASE_URL}/location-video`, {
       method: 'PUT',
@@ -569,6 +602,139 @@ export const locationAPI = {
   }
 };
 
+// Location Posts API (글 목록 시스템)
+export const locationPostAPI = {
+  // 모든 글 조회 (캐시 우선)
+  getAllPosts: async (options = {}) => {
+    const { forceRefresh = false } = options;
+    const cacheKey = 'cache_location_posts';
+
+    if (!forceRefresh) {
+      const cached = cacheUtils.get(cacheKey);
+      if (cached) {
+        console.log('Location posts: 캐시에서 로드');
+        return cached;
+      }
+    }
+
+    const response = await fetchWithRetry(`${API_BASE_URL}/location`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch location posts');
+    }
+    const data = await response.json();
+
+    if (data.success) {
+      cacheUtils.set(cacheKey, data);
+    }
+
+    return data;
+  },
+
+  // 특정 글 조회
+  getPost: async (id) => {
+    const response = await fetchWithRetry(`${API_BASE_URL}/location/${id}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch location post');
+    }
+    return response.json();
+  },
+
+  // 새 글 작성
+  createPost: async (postData) => {
+    const response = await fetch(`${API_BASE_URL}/location`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(postData)
+    });
+    if (!response.ok) {
+      throw new Error('Failed to create location post');
+    }
+    const data = await response.json();
+    cacheUtils.remove('cache_location_posts');
+    return data;
+  },
+
+  // 글 수정
+  updatePost: async (id, postData) => {
+    const response = await fetch(`${API_BASE_URL}/location/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(postData)
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update location post');
+    }
+    const data = await response.json();
+    cacheUtils.remove('cache_location_posts');
+    return data;
+  },
+
+  // 글 삭제
+  deletePost: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/location/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    if (!response.ok) {
+      throw new Error('Failed to delete location post');
+    }
+    const data = await response.json();
+    cacheUtils.remove('cache_location_posts');
+    return data;
+  },
+
+  // 상단 제목/부제목 조회 (기존 locationAPI.getLocationHeader 사용)
+  getHeader: async (options = {}) => {
+    const { forceRefresh = false } = options;
+
+    if (!forceRefresh) {
+      const cached = cacheUtils.get(CACHE_KEYS.LOCATION_HEADER);
+      if (cached) {
+        console.log('Location header: 캐시에서 로드');
+        return cached;
+      }
+    }
+
+    const response = await fetchWithRetry(`${API_BASE_URL}/location/header`);
+    if (!response.ok) throw new Error('Failed to fetch location header');
+    const data = await response.json();
+
+    if (data.success) {
+      cacheUtils.set(CACHE_KEYS.LOCATION_HEADER, data);
+    }
+
+    return data;
+  },
+
+  // 상단 제목/부제목 수정
+  updateHeader: async (headerData) => {
+    const response = await fetch(`${API_BASE_URL}/location/header`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(headerData)
+    });
+    if (!response.ok) throw new Error('Failed to update location header');
+    const data = await response.json();
+    cacheUtils.remove(CACHE_KEYS.LOCATION_HEADER);
+    return data;
+  },
+
+  // 글 순서 변경
+  reorderPosts: async (orders) => {
+    const response = await fetch(`${API_BASE_URL}/location/reorder`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ orders })
+    });
+    if (!response.ok) {
+      throw new Error('Failed to reorder location posts');
+    }
+    const data = await response.json();
+    cacheUtils.remove('cache_location_posts');
+    return data;
+  }
+};
+
 export const humanAPI = {
   getHumanHeader: async (options = {}) => {
     const { forceRefresh = false } = options;
@@ -604,6 +770,49 @@ export const humanAPI = {
     }
     const data = await response.json();
     cacheUtils.remove(CACHE_KEYS.HUMAN_HEADER);
+    return data;
+  }
+};
+
+// Home API
+export const homeAPI = {
+  // Home 설정 조회
+  getHome: async (options = {}) => {
+    const { forceRefresh = false } = options;
+
+    if (!forceRefresh) {
+      const cached = cacheUtils.get(CACHE_KEYS.HOME);
+      if (cached) {
+        console.log('Home: 캐시에서 로드');
+        return cached;
+      }
+    }
+
+    const response = await fetchWithRetry(`${API_BASE_URL}/home`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch home settings');
+    }
+    const data = await response.json();
+
+    if (data.success) {
+      cacheUtils.set(CACHE_KEYS.HOME, data);
+    }
+
+    return data;
+  },
+
+  // Home 설정 수정
+  updateHome: async (homeData) => {
+    const response = await fetch(`${API_BASE_URL}/home`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(homeData)
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update home settings');
+    }
+    const data = await response.json();
+    cacheUtils.remove(CACHE_KEYS.HOME);
     return data;
   }
 };

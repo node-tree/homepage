@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import api from '../services/api';
+import api, { locationPostAPI } from '../services/api';
 
 interface WritePostProps {
   onSavePost: (postData: { title: string; content: string; date: string; images?: string[]; thumbnail?: string }) => void;
   onBackToWork: () => void;
-  postType?: 'work' | 'workshop' | 'filed';
+  postType?: 'work' | 'workshop' | 'filed' | 'location';
   editPost?: Post | null;
 }
 
@@ -297,7 +297,7 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
       };
 
       let response;
-      const apiEndpoint = postType === 'work' ? api.work : api.filed;
+      const apiEndpoint = postType === 'work' ? api.work : postType === 'location' ? locationPostAPI : api.filed;
 
       if (isEditMode && editPost) {
         response = await apiEndpoint.updatePost(editPost.id, postData);

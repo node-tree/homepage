@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { filedAPI } from '../services/api';
 import WritePost from './WritePost';
 import { useAuth } from '../contexts/AuthContext';
+import { playHoverSound, playClickSound } from '../utils/sound';
 
 // Post interface
 interface Post {
@@ -219,8 +220,9 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
   };
 
   const formatContent = (content: string) => {
-    // HTML 콘텐츠인지 확인 (태그가 포함되어 있으면 HTML로 처리)
-    if (content.includes('<') && content.includes('>') && (content.includes('<div') || content.includes('<br') || content.includes('<img') || content.includes('<p'))) {
+    // HTML 태그 감지 (더 포괄적인 패턴)
+    const htmlTagPattern = /<[a-z][\s\S]*?>/i;
+    if (htmlTagPattern.test(content)) {
       // 줄바꿈을 <br>로 변환 (이미 <br>이 없는 경우)
       let htmlContent = content;
       if (!content.includes('<br')) {
@@ -477,18 +479,17 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
             />
             <button onClick={handleSaveHeader}
               style={{
-                background: '#222',
+                background: 'rgba(0, 0, 0, 0.8)',
                 color: '#fff',
                 border: 'none',
-                borderRadius: '8px',
-                padding: '10px 0',
-                fontWeight: 600,
-                fontSize: '1rem',
+                borderRadius: '25px',
+                padding: '10px 24px',
+                fontWeight: 400,
+                fontSize: '0.85rem',
+                letterSpacing: '0.05em',
                 marginTop: 8,
                 cursor: 'pointer',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                transition: 'background 0.2s',
-                width: 120,
+                transition: 'all 0.2s ease',
                 alignSelf: 'center',
               }}
             >저장</button>
@@ -634,7 +635,13 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
               <div
                 key={post.id}
                 className={`post-grid-item ${isReorderMode ? 'reorder-item' : ''}`}
-                onClick={() => !isReorderMode && handlePostClick(post)}
+                onMouseEnter={() => !isReorderMode && playHoverSound()}
+                onClick={() => {
+                  if (!isReorderMode) {
+                    playClickSound();
+                    handlePostClick(post);
+                  }
+                }}
               >
                 <div className="post-grid-thumbnail">
                   {post.thumbnail ? (
