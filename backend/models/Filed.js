@@ -17,6 +17,11 @@ const filedSchema = new mongoose.Schema({
     type: String,
     required: false
   },
+  category: {
+    type: String,
+    enum: ['문화예술교육', '커뮤니티'],
+    default: '문화예술교육'
+  },
   sortOrder: {
     type: Number,
     default: 0

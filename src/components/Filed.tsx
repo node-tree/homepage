@@ -6,6 +6,9 @@ import WritePost from './WritePost';
 import { useAuth } from '../contexts/AuthContext';
 import { playHoverSound, playClickSound } from '../utils/sound';
 
+// 카테고리 타입
+type CategoryType = '전체' | '문화예술교육' | '커뮤니티';
+
 // Post interface
 interface Post {
   id: string;
@@ -14,6 +17,7 @@ interface Post {
   date: string;
   images?: string[];
   thumbnail?: string | null;
+  category?: string;
   sortOrder?: number;
 }
 
@@ -36,6 +40,12 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
   const [isEditingHeader, setIsEditingHeader] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<CategoryType>('전체');
+
+  // 카테고리별 필터링된 포스트
+  const filteredPosts = selectedCategory === '전체'
+    ? posts
+    : posts.filter(post => post.category === selectedCategory);
 
   const loadPosts = useCallback(async () => {
     setPostsLoading(true);
@@ -572,6 +582,35 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
       </div>
 
       <div className="filed-container">
+        {/* 카테고리 필터 탭 */}
+        <div className="category-tabs" style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '8px',
+          marginBottom: '24px',
+          flexWrap: 'wrap'
+        }}>
+          {(['전체', '문화예술교육', '커뮤니티'] as CategoryType[]).map((category) => (
+            <button
+              key={category}
+              onClick={() => setSelectedCategory(category)}
+              style={{
+                padding: '8px 20px',
+                border: 'none',
+                borderRadius: '20px',
+                background: selectedCategory === category ? '#333' : '#f0f0f0',
+                color: selectedCategory === category ? '#fff' : '#666',
+                fontSize: '0.9rem',
+                fontWeight: selectedCategory === category ? 500 : 400,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+
         <div className="work-header">
           {isAuthenticated && (
             <div className="work-header-buttons">
@@ -609,7 +648,7 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
                   >
                     새 글 작성
                   </motion.button>
-                  {posts.length > 1 && (
+                  {posts.length > 1 && selectedCategory === '전체' && (
                     <motion.button
                       className="write-button reorder-button"
                       onClick={() => setIsReorderMode(true)}
@@ -667,9 +706,20 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
           </motion.div>
         )}
 
-        {!postsLoading && !error && posts.length > 0 && (
+        {!postsLoading && !error && posts.length > 0 && filteredPosts.length === 0 && (
+          <motion.div
+            className="empty-state"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            <p>'{selectedCategory}' 카테고리에 해당하는 글이 없습니다.</p>
+          </motion.div>
+        )}
+
+        {!postsLoading && !error && filteredPosts.length > 0 && (
           <div className={`posts-grid ${isReorderMode ? 'reorder-mode' : ''}`}>
-            {posts.map((post, index) => (
+            {filteredPosts.map((post, index) => (
               <div
                 key={post.id}
                 className={`post-grid-item ${isReorderMode ? 'reorder-item' : ''}`}
@@ -705,7 +755,7 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
                     <button
                       className="reorder-btn reorder-down"
                       onClick={(e) => { e.stopPropagation(); handleMoveDown(index); }}
-                      disabled={index === posts.length - 1}
+                      disabled={index === filteredPosts.length - 1}
                       title="아래로 이동"
                     >
                       ▼
