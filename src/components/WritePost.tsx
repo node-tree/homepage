@@ -111,6 +111,83 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Word/Office에서 복사한 HTML 정리 함수
+  const cleanWordHTML = (html: string): string => {
+    let cleaned = html;
+
+    // Microsoft Office 전용 태그 제거
+    cleaned = cleaned.replace(/<o:p[^>]*>[\s\S]*?<\/o:p>/gi, '');
+    cleaned = cleaned.replace(/<w:[^>]*>[\s\S]*?<\/w:[^>]*>/gi, '');
+    cleaned = cleaned.replace(/<m:[^>]*>[\s\S]*?<\/m:[^>]*>/gi, '');
+    cleaned = cleaned.replace(/<!\[if[^>]*>[\s\S]*?<!\[endif\]>/gi, '');
+    cleaned = cleaned.replace(/<!--\[if[^>]*>[\s\S]*?<!\[endif\]-->/gi, '');
+    cleaned = cleaned.replace(/<xml>[\s\S]*?<\/xml>/gi, '');
+    cleaned = cleaned.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+
+    // class와 style 속성 제거 (mso- 스타일 포함)
+    cleaned = cleaned.replace(/\s*class="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s*class='[^']*'/gi, '');
+    cleaned = cleaned.replace(/\s*style="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s*style='[^']*'/gi, '');
+
+    // Microsoft 전용 속성 제거
+    cleaned = cleaned.replace(/\s*lang="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s*data-[^=]*="[^"]*"/gi, '');
+
+    // 빈 span 태그 정리
+    cleaned = cleaned.replace(/<span\s*>([^<]*)<\/span>/gi, '$1');
+    cleaned = cleaned.replace(/<span\s*\/>/gi, '');
+
+    // 불필요한 font 태그 제거
+    cleaned = cleaned.replace(/<font[^>]*>([\s\S]*?)<\/font>/gi, '$1');
+
+    // 연속된 공백과 줄바꿈 정리
+    cleaned = cleaned.replace(/\s+/g, ' ');
+    cleaned = cleaned.replace(/>\s+</g, '><');
+
+    // 빈 태그 제거
+    cleaned = cleaned.replace(/<(\w+)[^>]*>\s*<\/\1>/gi, '');
+
+    // &nbsp; 처리
+    cleaned = cleaned.replace(/&nbsp;/gi, ' ');
+
+    return cleaned.trim();
+  };
+
+  // 붙여넣기 이벤트 핸들러
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    e.preventDefault();
+
+    const clipboardData = e.clipboardData;
+    let pastedContent = '';
+
+    // HTML 데이터가 있으면 정리해서 사용
+    if (clipboardData.types.includes('text/html')) {
+      const html = clipboardData.getData('text/html');
+      pastedContent = cleanWordHTML(html);
+    } else {
+      // 일반 텍스트만 있으면 그대로 사용
+      pastedContent = clipboardData.getData('text/plain');
+      // 줄바꿈을 <br>로 변환
+      pastedContent = pastedContent.replace(/\n/g, '<br>');
+    }
+
+    // 커서 위치에 삽입
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+
+      const fragment = document.createRange().createContextualFragment(pastedContent);
+      range.insertNode(fragment);
+
+      // 커서를 삽입된 내용 뒤로 이동
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  };
+
   const isEditMode = !!editPost;
 
   // 텍스트 서식 적용
@@ -278,12 +355,15 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
 
 
   const handleSubmit = async () => {
-    const content = editorRef.current?.innerHTML || '';
+    let content = editorRef.current?.innerHTML || '';
 
     if (!title.trim() || !content.trim()) {
       setError('제목과 내용을 모두 입력해주세요.');
       return;
     }
+
+    // 저장 전 Word HTML 정리 (안전장치)
+    content = cleanWordHTML(content);
 
     setSaving(true);
     setError(null);
@@ -511,6 +591,7 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
             contentEditable={!saving}
             className="form-textarea wysiwyg-editor"
             data-placeholder="내용을 입력하세요. 이미지나 영상은 드래그하여 위치를 변경할 수 있습니다."
+            onPaste={handlePaste}
             onFocus={(e) => {
               if (e.currentTarget.innerHTML === '' || e.currentTarget.innerHTML === '<br>') {
                 e.currentTarget.innerHTML = '';
