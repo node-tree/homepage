@@ -63,90 +63,107 @@ const CV: React.FC = () => {
     }
   };
 
+  // 편집 모드일 때는 별도 레이아웃
+  if (isEditing) {
+    return (
+      <div className="page-content" style={{ width: '100%', padding: '0 20px', boxSizing: 'border-box' }}>
+        <div className="write-container" style={{ width: '100%', maxWidth: '100%', padding: '0' }}>
+          <div className="write-header">
+            <button onClick={() => setIsEditing(false)} className="back-button">
+              ← 취소
+            </button>
+            <button onClick={handleSaveAll} className="save-button">
+              저장하기
+            </button>
+          </div>
+
+          <div className="write-form" style={{ width: '100%' }}>
+            <div className="form-group" style={{ width: '100%' }}>
+              <label className="form-label">정렬</label>
+              <div className="editor-toolbar">
+                <button
+                  type="button"
+                  onClick={() => setAlign('left')}
+                  className={`toolbar-btn ${align === 'left' ? 'active' : ''}`}
+                >
+                  좌측
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAlign('center')}
+                  className={`toolbar-btn ${align === 'center' ? 'active' : ''}`}
+                >
+                  중앙
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAlign('right')}
+                  className={`toolbar-btn ${align === 'right' ? 'active' : ''}`}
+                >
+                  우측
+                </button>
+              </div>
+            </div>
+
+            <div style={{ width: '100%' }}>
+              <label className="form-label">CV 내용</label>
+              <textarea
+                value={cvText}
+                onChange={e => setCvText(e.target.value)}
+                placeholder="CV 내용을 입력하세요"
+                cols={1000}
+                style={{
+                  minHeight: '70vh',
+                  width: 'calc(100vw - 60px)',
+                  minWidth: 'calc(100vw - 60px)',
+                  maxWidth: 'calc(100vw - 60px)',
+                  padding: '18px',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
+                  resize: 'vertical',
+                  lineHeight: '1.8',
+                  backgroundColor: '#fafafa',
+                  boxSizing: 'border-box',
+                  display: 'block'
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="page-content">
       <div className="page-header">
         {isEditingHeader ? (
-          <div style={{
-            background: '#fff',
-            borderRadius: '16px',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-            padding: '24px 20px 16px 20px',
-            marginBottom: 16,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'stretch',
-            gap: 12,
-            maxWidth: 480,
-            width: '100%',
-            marginLeft: 'auto',
-            marginRight: 'auto',
-          }}>
-            <textarea value={title} onChange={e => setTitle(e.target.value)}
-              style={{
-                fontSize: '2rem',
-                fontWeight: 700,
-                border: 'none',
-                borderBottom: '2px solid #eee',
-                outline: 'none',
-                padding: '8px 0',
-                marginBottom: 4,
-                background: 'transparent',
-                textAlign: 'center',
-                borderRadius: 0,
-                transition: 'border-color 0.2s',
-                resize: 'none',
-                minHeight: 40,
-                overflow: 'hidden',
-              }}
+          <div className="header-edit-form">
+            <input
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              className="form-input"
               placeholder="제목 입력"
               autoFocus
-              rows={1}
-              onInput={e => {
-                const ta = e.target as HTMLTextAreaElement;
-                ta.style.height = 'auto';
-                ta.style.height = ta.scrollHeight + 'px';
-              }}
             />
-            <textarea value={subtitle} onChange={e => setSubtitle(e.target.value)}
-              style={{
-                fontSize: '1.1rem',
-                border: 'none',
-                borderBottom: '1.5px solid #eee',
-                outline: 'none',
-                padding: '6px 0',
-                background: 'transparent',
-                textAlign: 'center',
-                borderRadius: 0,
-                transition: 'border-color 0.2s',
-                resize: 'none',
-                minHeight: 32,
-                overflow: 'hidden',
-              }}
+            <input
+              type="text"
+              value={subtitle}
+              onChange={e => setSubtitle(e.target.value)}
+              className="form-input"
               placeholder="부제목 입력"
-              rows={1}
-              onInput={e => {
-                const ta = e.target as HTMLTextAreaElement;
-                ta.style.height = 'auto';
-                ta.style.height = ta.scrollHeight + 'px';
-              }}
             />
-            <button onClick={handleSaveAll}
-              style={{
-                background: 'rgba(0, 0, 0, 0.8)',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '25px',
-                padding: '10px 24px',
-                fontWeight: 400,
-                fontSize: '0.85rem',
-                letterSpacing: '0.05em',
-                marginTop: 8,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                alignSelf: 'center',
-              }}
-            >저장</button>
+            <div className="header-edit-buttons">
+              <button onClick={() => setIsEditingHeader(false)} className="back-button">
+                취소
+              </button>
+              <button onClick={handleSaveAll} className="save-button">
+                저장
+              </button>
+            </div>
           </div>
         ) : (
           <>
@@ -183,89 +200,13 @@ const CV: React.FC = () => {
 
       {isAuthenticated && (
         <div className="work-header">
-          <button
-            className="write-button"
-            onClick={() => setIsEditing(!isEditing)}
-          >
-            {isEditing ? '취소' : '글 편집'}
+          <button className="write-button" onClick={() => setIsEditing(true)}>
+            글 편집
           </button>
-          {isEditing && (
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: 'rgba(0,0,0,0.05)', borderRadius: '25px', padding: '4px 12px', marginLeft: '1rem' }}>
-              <button
-                onClick={() => setAlign('left')}
-                style={{
-                  background: align === 'left' ? 'rgba(0,0,0,0.8)' : 'transparent',
-                  color: align === 'left' ? '#fff' : 'rgba(0,0,0,0.6)',
-                  border: 'none',
-                  borderRadius: '20px',
-                  padding: '6px 14px',
-                  fontWeight: 400,
-                  fontSize: '0.8rem',
-                  letterSpacing: '0.03em',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-              >좌</button>
-              <button
-                onClick={() => setAlign('center')}
-                style={{
-                  background: align === 'center' ? 'rgba(0,0,0,0.8)' : 'transparent',
-                  color: align === 'center' ? '#fff' : 'rgba(0,0,0,0.6)',
-                  border: 'none',
-                  borderRadius: '20px',
-                  padding: '6px 14px',
-                  fontWeight: 400,
-                  fontSize: '0.8rem',
-                  letterSpacing: '0.03em',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-              >중앙</button>
-              <button
-                onClick={() => setAlign('right')}
-                style={{
-                  background: align === 'right' ? 'rgba(0,0,0,0.8)' : 'transparent',
-                  color: align === 'right' ? '#fff' : 'rgba(0,0,0,0.6)',
-                  border: 'none',
-                  borderRadius: '20px',
-                  padding: '6px 14px',
-                  fontWeight: 400,
-                  fontSize: '0.8rem',
-                  letterSpacing: '0.03em',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-              >우</button>
-              <button
-                onClick={handleSaveAll}
-                style={{
-                  padding: '6px 16px',
-                  fontSize: '0.8rem',
-                  borderRadius: '20px',
-                  border: 'none',
-                  background: 'rgba(0,0,0,0.8)',
-                  color: '#fff',
-                  fontWeight: 400,
-                  letterSpacing: '0.05em',
-                  marginLeft: '8px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-              >저장</button>
-            </div>
-          )}
         </div>
       )}
 
-      <div className="cv-content" style={{
-        padding: '2.5rem 2rem',
-        maxWidth: '900px',
-        margin: '0 auto',
-        lineHeight: '1.7',
-        fontSize: '1.05rem',
-        textAlign: align,
-        minHeight: '400px',
-      }}>
+      <div className="cv-content" style={{ textAlign: align }}>
         {isLoading ? (
           <div style={{
             display: 'flex',
@@ -276,28 +217,6 @@ const CV: React.FC = () => {
           }}>
             불러오는 중...
           </div>
-        ) : isEditing ? (
-          <textarea
-            value={cvText}
-            onChange={e => setCvText(e.target.value)}
-            style={{
-              width: '100%',
-              height: '600px',
-              fontSize: '1.05rem',
-              lineHeight: '1.7',
-              fontFamily: 'inherit',
-              resize: 'vertical',
-              borderRadius: '12px',
-              border: '1.5px solid #bbb',
-              padding: '1.2rem',
-              background: '#fafbfc',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-              outline: 'none',
-              transition: 'border 0.2s',
-            }}
-            onFocus={e => e.currentTarget.style.border = '1.5px solid #007bff'}
-            onBlur={e => e.currentTarget.style.border = '1.5px solid #bbb'}
-          />
         ) : (
           <CVModernContent text={cvText} align={align} />
         )}

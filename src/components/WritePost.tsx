@@ -326,15 +326,6 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     }
   };
 
-  const toolbarButtonStyle: React.CSSProperties = {
-    padding: '6px 12px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    background: '#fff',
-    cursor: 'pointer',
-    fontSize: '14px',
-    transition: 'all 0.2s'
-  };
 
   return (
     <div className="write-container">
@@ -430,36 +421,25 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
           <label className="form-label">내용</label>
 
           {/* 툴바 */}
-          <div style={{
-            marginBottom: '10px',
-            padding: '10px',
-            background: '#f8f8f8',
-            borderRadius: '8px 8px 0 0',
-            border: '1px solid #ddd',
-            borderBottom: 'none',
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '8px',
-            alignItems: 'center'
-          }}>
+          <div className="editor-toolbar" style={{ borderRadius: '8px 8px 0 0', borderBottom: 'none' }}>
             {/* 텍스트 서식 */}
-            <button onClick={handleBold} disabled={saving} style={toolbarButtonStyle} title="굵게">
+            <button type="button" onClick={handleBold} disabled={saving} className="toolbar-btn" title="굵게">
               <strong>B</strong>
             </button>
-            <button onClick={handleItalic} disabled={saving} style={toolbarButtonStyle} title="기울임">
+            <button type="button" onClick={handleItalic} disabled={saving} className="toolbar-btn" title="기울임">
               <em>I</em>
             </button>
-            <button onClick={handleUnderline} disabled={saving} style={toolbarButtonStyle} title="밑줄">
+            <button type="button" onClick={handleUnderline} disabled={saving} className="toolbar-btn" title="밑줄">
               <u>U</u>
             </button>
 
-            <div style={{ width: '1px', height: '24px', background: '#ddd', margin: '0 4px' }} />
+            <div className="toolbar-divider" />
 
             {/* 글자 크기 */}
             <select
               onChange={(e) => handleFontSize(e.target.value)}
               disabled={saving}
-              style={{ ...toolbarButtonStyle, padding: '6px 8px' }}
+              className="toolbar-btn"
               defaultValue=""
             >
               <option value="" disabled>크기</option>
@@ -471,43 +451,25 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
             {/* 글자 색상 */}
             <div style={{ position: 'relative' }} ref={colorPickerRef}>
               <button
+                type="button"
                 onClick={() => setShowColorPicker(!showColorPicker)}
                 disabled={saving}
-                style={{ ...toolbarButtonStyle, display: 'flex', alignItems: 'center', gap: '4px' }}
+                className="toolbar-btn"
                 title="글자 색상"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
               >
-                <span style={{ width: '16px', height: '16px', background: 'linear-gradient(135deg, #e74c3c, #3498db, #2ecc71)', borderRadius: '2px' }} />
+                <span style={{ width: '14px', height: '14px', background: 'linear-gradient(135deg, #e74c3c, #3498db, #2ecc71)', borderRadius: '3px' }} />
                 색상
               </button>
               {showColorPicker && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: '0',
-                  marginTop: '4px',
-                  padding: '8px',
-                  background: '#fff',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
-                  gap: '4px',
-                  zIndex: 100
-                }}>
+                <div className="color-picker-popup">
                   {colors.map(color => (
                     <button
                       key={color}
+                      type="button"
                       onClick={() => handleTextColor(color)}
-                      style={{
-                        width: '28px',
-                        height: '28px',
-                        background: color,
-                        border: '2px solid #fff',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        boxShadow: '0 0 0 1px #ddd'
-                      }}
+                      className="color-btn"
+                      style={{ background: color }}
                       title={color}
                     />
                   ))}
@@ -515,17 +477,30 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
               )}
             </div>
 
-            <div style={{ width: '1px', height: '24px', background: '#ddd', margin: '0 4px' }} />
+            <div className="toolbar-divider" />
 
             {/* 미디어 삽입 */}
-            <button onClick={handleInsertImage} disabled={saving} style={toolbarButtonStyle}>
+            <button type="button" onClick={handleInsertImage} disabled={saving} className="toolbar-btn">
               이미지
             </button>
-            <button onClick={handleInsertVideo} disabled={saving} style={toolbarButtonStyle}>
+            <button type="button" onClick={handleInsertVideo} disabled={saving} className="toolbar-btn">
               영상
             </button>
 
-            <span style={{ marginLeft: 'auto', fontSize: '12px', color: '#999' }}>
+            <div className="toolbar-divider" />
+
+            {/* 정렬 */}
+            <button type="button" onClick={() => execCommand('justifyLeft')} disabled={saving} className="toolbar-btn" title="좌측 정렬">
+              좌측
+            </button>
+            <button type="button" onClick={() => execCommand('justifyCenter')} disabled={saving} className="toolbar-btn" title="중앙 정렬">
+              중앙
+            </button>
+            <button type="button" onClick={() => execCommand('justifyRight')} disabled={saving} className="toolbar-btn" title="우측 정렬">
+              우측
+            </button>
+
+            <span className="toolbar-hint">
               이미지/영상: ↑↓ 버튼으로 이동
             </span>
           </div>
@@ -535,16 +510,6 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
             ref={editorRef}
             contentEditable={!saving}
             className="form-textarea wysiwyg-editor"
-            style={{
-              minHeight: '400px',
-              padding: '16px',
-              border: '1px solid #ddd',
-              borderRadius: '0 0 8px 8px',
-              backgroundColor: '#fff',
-              overflow: 'auto',
-              outline: 'none',
-              lineHeight: '1.8'
-            }}
             data-placeholder="내용을 입력하세요. 이미지나 영상은 드래그하여 위치를 변경할 수 있습니다."
             onFocus={(e) => {
               if (e.currentTarget.innerHTML === '' || e.currentTarget.innerHTML === '<br>') {
