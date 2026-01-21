@@ -1760,6 +1760,23 @@
   max-width: 100%;
 }
 
+/* 표 스타일 - 모바일에서 가로 스크롤 */
+.post-text .html-content table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.post-text table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* contentEditable에서 생성된 div 줄바꿈 처리 */
 .post-text .html-content > div {
   min-height: 1.8em;
@@ -2223,6 +2240,15 @@
     height: auto !important;
   }
 
+  .post-text .html-content table,
+  .post-text table {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
   .post-detail-body {
     width: 100% !important;
     max-width: 100% !important;
@@ -2662,6 +2688,15 @@
     width: 100% !important;
     max-width: 100% !important;
     height: auto !important;
+  }
+
+  .post-text .html-content table,
+  .post-text table {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 
   .post-detail-body {
