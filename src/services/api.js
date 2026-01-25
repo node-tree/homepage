@@ -228,8 +228,8 @@ export const workAPI = {
     }
     const data = await response.json();
 
-    // 성공 시 캐시 저장
-    if (data.success) {
+    // 성공 시 캐시 저장 (데이터가 실제로 있을 때만 캐싱)
+    if (data.success && Array.isArray(data.data) && data.data.length > 0) {
       cacheUtils.set(CACHE_KEYS.WORK_POSTS, data);
     }
 
@@ -242,7 +242,7 @@ export const workAPI = {
       const response = await fetchWithRetry(`${API_BASE_URL}/work`);
       if (response.ok) {
         const data = await response.json();
-        if (data.success) {
+        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
           cacheUtils.set(CACHE_KEYS.WORK_POSTS, data);
           console.log('Work posts: 백그라운드 갱신 완료');
         }
@@ -395,7 +395,8 @@ export const filedAPI = {
     }
     const data = await response.json();
 
-    if (data.success) {
+    // 성공 시 캐시 저장 (데이터가 실제로 있을 때만 캐싱)
+    if (data.success && Array.isArray(data.data) && data.data.length > 0) {
       cacheUtils.set(CACHE_KEYS.FILED_POSTS, data);
     }
 
@@ -407,7 +408,7 @@ export const filedAPI = {
       const response = await fetchWithRetry(`${API_BASE_URL}/filed`);
       if (response.ok) {
         const data = await response.json();
-        if (data.success) {
+        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
           cacheUtils.set(CACHE_KEYS.FILED_POSTS, data);
           console.log('Filed posts: 백그라운드 갱신 완료');
         }
