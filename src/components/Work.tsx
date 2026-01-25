@@ -62,9 +62,6 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
   // 헤더를 먼저 로드한 후 글 목록 로드
   useEffect(() => {
     let isMounted = true;
-    let retryCount = 0;
-    const maxRetries = 3;
-    const retryDelay = 1500; // 1.5초
 
     const loadData = async () => {
       // 에러 및 로딩 상태 리셋
@@ -94,49 +91,54 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
         setHeaderLoading(false);
       }
 
-      // 2. 헤더 로드 완료 후 글 목록 로드
-      const loadPosts = async (): Promise<void> => {
+      // 2. 헤더 로드 완료 후 글 목록 로드 (재시도 로직 포함)
+      const maxRetries = 3;
+      const retryDelay = 1500;
+
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
-          const postsResponse = await workAPI.getAllPosts();
-          if (isMounted) {
-            if (postsResponse.success) {
-              // 빈 배열이 반환되면 재시도 (서버 cold start 대응)
-              if (postsResponse.data.length === 0 && retryCount < maxRetries) {
-                retryCount++;
-                console.log(`Work posts: 빈 응답, ${retryCount}/${maxRetries} 재시도 중...`);
-                await new Promise(resolve => setTimeout(resolve, retryDelay));
-                return loadPosts();
-              }
+          const postsResponse = await workAPI.getAllPosts({ forceRefresh: attempt > 0 });
+          if (!isMounted) return;
+
+          if (postsResponse.success) {
+            // 데이터가 있으면 성공
+            if (postsResponse.data.length > 0) {
               setPosts(postsResponse.data);
               if (onPostsLoaded) {
                 onPostsLoaded(postsResponse.data.length);
               }
-            } else {
-              setError(postsResponse.message);
+              setPostsLoading(false);
+              return; // 성공, 루프 종료
             }
+
+            // 빈 배열이고 재시도 가능하면 대기 후 재시도
+            if (attempt < maxRetries) {
+              console.log(`Work posts: 빈 응답, ${attempt + 1}/${maxRetries} 재시도 중...`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+              continue;
+            }
+
+            // 마지막 시도였으면 빈 배열이라도 설정
+            setPosts(postsResponse.data);
+            if (onPostsLoaded) {
+              onPostsLoaded(0);
+            }
+          } else {
+            setError(postsResponse.message);
           }
         } catch (err) {
-          // 에러 시 재시도
-          if (retryCount < maxRetries && isMounted) {
-            retryCount++;
-            console.log(`Work posts: 에러 발생, ${retryCount}/${maxRetries} 재시도 중...`);
+          if (attempt < maxRetries && isMounted) {
+            console.log(`Work posts: 에러 발생, ${attempt + 1}/${maxRetries} 재시도 중...`);
             await new Promise(resolve => setTimeout(resolve, retryDelay));
-            return loadPosts();
+            continue;
           }
           if (isMounted) {
             setError('글을 불러오는데 실패했습니다.');
           }
           console.error('Work 로딩 오류:', err);
-        } finally {
-          if (isMounted && retryCount >= maxRetries) {
-            setPostsLoading(false);
-          } else if (isMounted && retryCount === 0) {
-            setPostsLoading(false);
-          }
         }
-      };
+      }
 
-      await loadPosts();
       if (isMounted) {
         setPostsLoading(false);
       }
