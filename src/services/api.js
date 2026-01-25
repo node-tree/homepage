@@ -15,6 +15,10 @@ console.log('isNodeTreeSite:', isNodeTreeSite);
 
 // ============ 캐시 유틸리티 ============
 const CACHE_DURATION = 5 * 60 * 1000; // 5분 캐시
+const STALE_DURATION = 30 * 60 * 1000; // 30분 동안은 stale 데이터 사용 가능
+
+// [async-parallel] 진행 중인 요청 추적 (중복 요청 방지)
+const pendingRequests = new Map();
 
 const cacheUtils = {
   // 캐시에서 데이터 가져오기
@@ -34,6 +38,28 @@ const cacheUtils = {
       return data;
     } catch (e) {
       return null;
+    }
+  },
+
+  // [SWR 패턴] stale 데이터도 반환 (만료되었지만 30분 이내)
+  getWithStale: (key) => {
+    try {
+      const cached = sessionStorage.getItem(key);
+      if (!cached) return { data: null, isStale: false };
+
+      const { data, timestamp } = JSON.parse(cached);
+      const age = Date.now() - timestamp;
+      const isStale = age > CACHE_DURATION;
+      const isTooOld = age > STALE_DURATION;
+
+      if (isTooOld) {
+        sessionStorage.removeItem(key);
+        return { data: null, isStale: false };
+      }
+
+      return { data, isStale };
+    } catch (e) {
+      return { data: null, isStale: false };
     }
   },
 
@@ -115,6 +141,26 @@ const getHeaders = () => {
   return headers;
 };
 
+// [async-parallel] 중복 요청 방지 래퍼 - 같은 URL 요청이 진행 중이면 기존 Promise 재사용
+const deduplicatedFetch = async (url, options = {}) => {
+  const key = `${options.method || 'GET'}:${url}`;
+
+  // 이미 진행 중인 요청이 있으면 그 Promise를 재사용
+  if (pendingRequests.has(key)) {
+    return pendingRequests.get(key);
+  }
+
+  // 새 요청 시작
+  const requestPromise = fetchWithRetry(url, options)
+    .finally(() => {
+      // 요청 완료 후 Map에서 제거
+      pendingRequests.delete(key);
+    });
+
+  pendingRequests.set(key, requestPromise);
+  return requestPromise;
+};
+
 // 재시도 로직이 포함된 fetch 함수
 const fetchWithRetry = async (url, options = {}, retries = 3, timeout = 10000) => {
   for (let i = 0; i < retries; i++) {
@@ -159,20 +205,24 @@ const fetchWithRetry = async (url, options = {}, retries = 3, timeout = 10000) =
 
 // Work API
 export const workAPI = {
-  // 모든 글 조회 (캐시 우선)
+  // 모든 글 조회 (SWR 패턴 적용)
   getAllPosts: async (options = {}) => {
     const { forceRefresh = false } = options;
 
-    // 캐시 확인 (강제 새로고침이 아닌 경우)
+    // 캐시 확인 (SWR 패턴)
     if (!forceRefresh) {
-      const cached = cacheUtils.get(CACHE_KEYS.WORK_POSTS);
+      const { data: cached, isStale } = cacheUtils.getWithStale(CACHE_KEYS.WORK_POSTS);
       if (cached) {
-        console.log('Work posts: 캐시에서 로드');
+        console.log(`Work posts: 캐시에서 로드 (${isStale ? 'stale' : 'fresh'})`);
+        // stale 데이터인 경우 백그라운드에서 갱신
+        if (isStale) {
+          workAPI._backgroundRefreshPosts();
+        }
         return cached;
       }
     }
 
-    const response = await fetchWithRetry(`${API_BASE_URL}/work`);
+    const response = await deduplicatedFetch(`${API_BASE_URL}/work`);
     if (!response.ok) {
       throw new Error('Failed to fetch posts');
     }
@@ -184,6 +234,22 @@ export const workAPI = {
     }
 
     return data;
+  },
+
+  // 백그라운드 갱신
+  _backgroundRefreshPosts: async () => {
+    try {
+      const response = await fetchWithRetry(`${API_BASE_URL}/work`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          cacheUtils.set(CACHE_KEYS.WORK_POSTS, data);
+          console.log('Work posts: 백그라운드 갱신 완료');
+        }
+      }
+    } catch (e) {
+      // 무시
+    }
   },
 
   // 새 글 작성
@@ -233,19 +299,22 @@ export const workAPI = {
     return data;
   },
 
-  // 상단 제목/부제목 단일 데이터 조회 (캐시 우선)
+  // 상단 제목/부제목 단일 데이터 조회 (SWR 패턴)
   getWorkHeader: async (options = {}) => {
     const { forceRefresh = false } = options;
 
     if (!forceRefresh) {
-      const cached = cacheUtils.get(CACHE_KEYS.WORK_HEADER);
+      const { data: cached, isStale } = cacheUtils.getWithStale(CACHE_KEYS.WORK_HEADER);
       if (cached) {
-        console.log('Work header: 캐시에서 로드');
+        console.log(`Work header: 캐시에서 로드 (${isStale ? 'stale' : 'fresh'})`);
+        if (isStale) {
+          workAPI._backgroundRefreshHeader();
+        }
         return cached;
       }
     }
 
-    const response = await fetchWithRetry(`${API_BASE_URL}/work/header`);
+    const response = await deduplicatedFetch(`${API_BASE_URL}/work/header`);
     if (!response.ok) {
       throw new Error('Failed to fetch work header');
     }
@@ -256,6 +325,20 @@ export const workAPI = {
     }
 
     return data;
+  },
+
+  _backgroundRefreshHeader: async () => {
+    try {
+      const response = await fetchWithRetry(`${API_BASE_URL}/work/header`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          cacheUtils.set(CACHE_KEYS.WORK_HEADER, data);
+        }
+      }
+    } catch (e) {
+      // 무시
+    }
   },
 
   // 상단 제목/부제목 단일 데이터 수정
@@ -291,19 +374,22 @@ export const workAPI = {
 
 // Filed API
 export const filedAPI = {
-  // 모든 기록 조회 (캐시 우선)
+  // 모든 기록 조회 (SWR 패턴 적용)
   getAllPosts: async (options = {}) => {
     const { forceRefresh = false } = options;
 
     if (!forceRefresh) {
-      const cached = cacheUtils.get(CACHE_KEYS.FILED_POSTS);
+      const { data: cached, isStale } = cacheUtils.getWithStale(CACHE_KEYS.FILED_POSTS);
       if (cached) {
-        console.log('Filed posts: 캐시에서 로드');
+        console.log(`Filed posts: 캐시에서 로드 (${isStale ? 'stale' : 'fresh'})`);
+        if (isStale) {
+          filedAPI._backgroundRefreshPosts();
+        }
         return cached;
       }
     }
 
-    const response = await fetchWithRetry(`${API_BASE_URL}/filed`);
+    const response = await deduplicatedFetch(`${API_BASE_URL}/filed`);
     if (!response.ok) {
       throw new Error('Failed to fetch posts');
     }
@@ -314,6 +400,21 @@ export const filedAPI = {
     }
 
     return data;
+  },
+
+  _backgroundRefreshPosts: async () => {
+    try {
+      const response = await fetchWithRetry(`${API_BASE_URL}/filed`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          cacheUtils.set(CACHE_KEYS.FILED_POSTS, data);
+          console.log('Filed posts: 백그라운드 갱신 완료');
+        }
+      }
+    } catch (e) {
+      // 무시
+    }
   },
 
   // 새 기록 작성
@@ -360,19 +461,22 @@ export const filedAPI = {
     return data;
   },
 
-  // 상단 제목/부제목 단일 데이터 조회 (캐시 우선)
+  // 상단 제목/부제목 단일 데이터 조회 (SWR 패턴)
   getFiledHeader: async (options = {}) => {
     const { forceRefresh = false } = options;
 
     if (!forceRefresh) {
-      const cached = cacheUtils.get(CACHE_KEYS.FILED_HEADER);
+      const { data: cached, isStale } = cacheUtils.getWithStale(CACHE_KEYS.FILED_HEADER);
       if (cached) {
-        console.log('Filed header: 캐시에서 로드');
+        console.log(`Filed header: 캐시에서 로드 (${isStale ? 'stale' : 'fresh'})`);
+        if (isStale) {
+          filedAPI._backgroundRefreshHeader();
+        }
         return cached;
       }
     }
 
-    const response = await fetchWithRetry(`${API_BASE_URL}/filed/header`);
+    const response = await deduplicatedFetch(`${API_BASE_URL}/filed/header`);
     if (!response.ok) {
       throw new Error('Failed to fetch filed header');
     }
@@ -383,6 +487,20 @@ export const filedAPI = {
     }
 
     return data;
+  },
+
+  _backgroundRefreshHeader: async () => {
+    try {
+      const response = await fetchWithRetry(`${API_BASE_URL}/filed/header`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          cacheUtils.set(CACHE_KEYS.FILED_HEADER, data);
+        }
+      }
+    } catch (e) {
+      // 무시
+    }
   },
 
   // 상단 제목/부제목 단일 데이터 수정
@@ -422,14 +540,17 @@ export const aboutAPI = {
     const { forceRefresh = false } = options;
 
     if (!forceRefresh) {
-      const cached = cacheUtils.get(CACHE_KEYS.ABOUT);
+      const { data: cached, isStale } = cacheUtils.getWithStale(CACHE_KEYS.ABOUT);
       if (cached) {
-        console.log('About: 캐시에서 로드');
+        console.log(`About: 캐시에서 로드 (${isStale ? 'stale' : 'fresh'})`);
+        if (isStale) {
+          aboutAPI._backgroundRefresh();
+        }
         return cached;
       }
     }
 
-    const response = await fetchWithRetry(`${API_BASE_URL}/about`);
+    const response = await deduplicatedFetch(`${API_BASE_URL}/about`);
     if (!response.ok) {
       throw new Error('Failed to fetch about content');
     }
@@ -440,6 +561,20 @@ export const aboutAPI = {
     }
 
     return data;
+  },
+
+  _backgroundRefresh: async () => {
+    try {
+      const response = await fetchWithRetry(`${API_BASE_URL}/about`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          cacheUtils.set(CACHE_KEYS.ABOUT, data);
+        }
+      }
+    } catch (e) {
+      // 무시
+    }
   },
 
   updateAbout: async (aboutData) => {
@@ -463,15 +598,17 @@ export const cvAPI = {
     const { forceRefresh = false } = options;
 
     if (!forceRefresh) {
-      const cached = cacheUtils.get(CACHE_KEYS.CV);
+      const { data: cached, isStale } = cacheUtils.getWithStale(CACHE_KEYS.CV);
       if (cached) {
-        console.log('CV: 캐시에서 로드');
-        // 백그라운드 갱신 하지 않음 - 깜빡임 방지
+        console.log(`CV: 캐시에서 로드 (${isStale ? 'stale' : 'fresh'})`);
+        if (isStale) {
+          cvAPI._backgroundRefresh();
+        }
         return cached;
       }
     }
 
-    const response = await fetchWithRetry(`${API_BASE_URL}/cv`);
+    const response = await deduplicatedFetch(`${API_BASE_URL}/cv`);
     if (!response.ok) {
       throw new Error('Failed to fetch CV');
     }
@@ -482,6 +619,20 @@ export const cvAPI = {
     }
 
     return data;
+  },
+
+  _backgroundRefresh: async () => {
+    try {
+      const response = await fetchWithRetry(`${API_BASE_URL}/cv`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          cacheUtils.set(CACHE_KEYS.CV, data);
+        }
+      }
+    } catch (e) {
+      // 무시
+    }
   },
   updateCV: async (cvData) => {
     const response = await fetch(`${API_BASE_URL}/cv`, {
@@ -776,19 +927,22 @@ export const humanAPI = {
 
 // Home API
 export const homeAPI = {
-  // Home 설정 조회
+  // Home 설정 조회 (SWR 패턴)
   getHome: async (options = {}) => {
     const { forceRefresh = false } = options;
 
     if (!forceRefresh) {
-      const cached = cacheUtils.get(CACHE_KEYS.HOME);
+      const { data: cached, isStale } = cacheUtils.getWithStale(CACHE_KEYS.HOME);
       if (cached) {
-        console.log('Home: 캐시에서 로드');
+        console.log(`Home: 캐시에서 로드 (${isStale ? 'stale' : 'fresh'})`);
+        if (isStale) {
+          homeAPI._backgroundRefresh();
+        }
         return cached;
       }
     }
 
-    const response = await fetchWithRetry(`${API_BASE_URL}/home`);
+    const response = await deduplicatedFetch(`${API_BASE_URL}/home`);
     if (!response.ok) {
       throw new Error('Failed to fetch home settings');
     }
@@ -799,6 +953,20 @@ export const homeAPI = {
     }
 
     return data;
+  },
+
+  _backgroundRefresh: async () => {
+    try {
+      const response = await fetchWithRetry(`${API_BASE_URL}/home`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          cacheUtils.set(CACHE_KEYS.HOME, data);
+        }
+      }
+    } catch (e) {
+      // 무시
+    }
   },
 
   // Home 설정 수정
@@ -877,14 +1045,54 @@ export const contactAPI = {
 };
 
 // Guestbook API
+const GUESTBOOK_CACHE_KEY = 'cache_guestbook';
+
 export const guestbookAPI = {
-  // 모든 방명록 조회
-  getAll: async () => {
-    const response = await fetchWithRetry(`${API_BASE_URL}/guestbook`);
+  // 모든 방명록 조회 (SWR 패턴 적용)
+  getAll: async (options = {}) => {
+    const { forceRefresh = false } = options;
+
+    // 캐시 확인 (SWR 패턴)
+    if (!forceRefresh) {
+      const { data: cached, isStale } = cacheUtils.getWithStale(GUESTBOOK_CACHE_KEY);
+      if (cached) {
+        console.log(`Guestbook: 캐시에서 로드 (${isStale ? 'stale' : 'fresh'})`);
+        // stale 데이터인 경우 백그라운드에서 갱신
+        if (isStale) {
+          guestbookAPI._backgroundRefresh();
+        }
+        return cached;
+      }
+    }
+
+    const response = await deduplicatedFetch(`${API_BASE_URL}/guestbook`);
     if (!response.ok) {
       throw new Error('Failed to fetch guestbook entries');
     }
-    return response.json();
+    const data = await response.json();
+
+    // 성공 시 캐시 저장
+    if (data.success) {
+      cacheUtils.set(GUESTBOOK_CACHE_KEY, data);
+    }
+
+    return data;
+  },
+
+  // 백그라운드 갱신 (UI 블로킹 없이)
+  _backgroundRefresh: async () => {
+    try {
+      const response = await fetchWithRetry(`${API_BASE_URL}/guestbook`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          cacheUtils.set(GUESTBOOK_CACHE_KEY, data);
+          console.log('Guestbook: 백그라운드 갱신 완료');
+        }
+      }
+    } catch (e) {
+      console.log('Guestbook: 백그라운드 갱신 실패 (무시)');
+    }
   },
 
   // 새 방명록 작성
@@ -899,7 +1107,10 @@ export const guestbookAPI = {
     if (!response.ok) {
       throw new Error('Failed to create guestbook entry');
     }
-    return response.json();
+    const data = await response.json();
+    // 캐시 무효화
+    cacheUtils.remove(GUESTBOOK_CACHE_KEY);
+    return data;
   },
 
   // 방명록 삭제 (관리자 전용)
@@ -911,7 +1122,10 @@ export const guestbookAPI = {
     if (!response.ok) {
       throw new Error('Failed to delete guestbook entry');
     }
-    return response.json();
+    const data = await response.json();
+    // 캐시 무효화
+    cacheUtils.remove(GUESTBOOK_CACHE_KEY);
+    return data;
   }
 };
 
@@ -919,6 +1133,63 @@ const api = {
   work: workAPI,
   filed: filedAPI,
   about: aboutAPI
+};
+
+// [async-parallel] 프리페칭 유틸리티 - 페이지 진입 전 데이터 미리 로드
+export const prefetchAPI = {
+  // 홈페이지 데이터 프리페치
+  home: () => {
+    homeAPI.getHome().catch(() => {});
+  },
+
+  // Work 페이지 데이터 프리페치
+  work: () => {
+    Promise.all([
+      workAPI.getAllPosts(),
+      workAPI.getWorkHeader()
+    ]).catch(() => {});
+  },
+
+  // Filed 페이지 데이터 프리페치
+  filed: () => {
+    Promise.all([
+      filedAPI.getAllPosts(),
+      filedAPI.getFiledHeader()
+    ]).catch(() => {});
+  },
+
+  // About 페이지 데이터 프리페치
+  about: () => {
+    aboutAPI.getAbout().catch(() => {});
+  },
+
+  // CV 페이지 데이터 프리페치
+  cv: () => {
+    cvAPI.getCV().catch(() => {});
+  },
+
+  // Location 페이지 데이터 프리페치
+  location: () => {
+    Promise.all([
+      locationPostAPI.getAllPosts(),
+      locationPostAPI.getHeader()
+    ]).catch(() => {});
+  },
+
+  // Guestbook 페이지 데이터 프리페치
+  guestbook: () => {
+    guestbookAPI.getAll().catch(() => {});
+  },
+
+  // 자주 방문하는 페이지 데이터를 병렬로 프리페치
+  critical: () => {
+    Promise.all([
+      homeAPI.getHome(),
+      workAPI.getAllPosts(),
+      filedAPI.getAllPosts(),
+      aboutAPI.getAbout()
+    ]).catch(() => {});
+  }
 };
 
 export const utilAPI = {

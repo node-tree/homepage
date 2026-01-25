@@ -1,9 +1,45 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { guestbookAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import './Guestbook.css';
+
+// [js-hoist-regexp] 상수를 컴포넌트 외부로 호이스팅
+const PARTICLE_COUNT = 2000;
+const FORMATION_PARTICLE_COUNT = 1200;
+
+const STATE_DURATION = {
+  free: 300,
+  text: 900,
+  shape: 1600
+} as const;
+
+const FLASH_DURATION = 16;
+
+const VIEW_CONFIGS = [
+  { rx: 0, ry: 0, rz: 0, zoom: 2.5 },
+  { rx: 0.6, ry: 0.3, rz: 0, zoom: 12.0 },
+  { rx: -0.4, ry: -0.5, rz: 0.1, zoom: 5.0 },
+  { rx: 0.2, ry: 1.2, rz: 0, zoom: 18.0 },
+  { rx: 0.1, ry: -0.8, rz: -0.1, zoom: 8.0 },
+  { rx: 0.9, ry: 0.6, rz: 0.2, zoom: 15.0 },
+] as const;
+
+const GOOD_SHAPES = [3, 5, 6, 7, 8, 9, 10, 11, 12] as const;
+
+// [rerender-lazy-state-init] 날짜 포맷 옵션 호이스팅
+const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit'
+};
+
+// [rendering-hoist-jsx] 정적 JSX 호이스팅
+const LoadingOrb = <div className="loading-orb" />;
+const EmptyIcon = <div className="empty-icon">&#9734;</div>;
 
 interface GuestbookEntry {
   id: string;
@@ -24,6 +60,58 @@ interface Particle {
   opacity: number;
   life: number;
 }
+
+// [rerender-memo] 방명록 카드 컴포넌트 메모이제이션
+interface GuestbookCardProps {
+  entry: GuestbookEntry;
+  index: number;
+  isAuthenticated: boolean;
+  deleting: string | null;
+  onSelect: (entry: GuestbookEntry) => void;
+  onDelete: (id: string, name: string) => void;
+}
+
+const GuestbookCard = memo<GuestbookCardProps>(({
+  entry,
+  index,
+  isAuthenticated,
+  deleting,
+  onSelect,
+  onDelete
+}) => (
+  <motion.article
+    className="guestbook-card clickable"
+    initial={{ opacity: 0, scale: 0.8 }}
+    animate={{ opacity: 1, scale: 1 }}
+    transition={{
+      delay: index * 0.03,
+      duration: 0.4,
+      ease: [0.25, 0.1, 0.25, 1]
+    }}
+    whileHover={{
+      scale: 1.08,
+      transition: { duration: 0.2 }
+    }}
+    onClick={() => onSelect(entry)}
+  >
+    <span className="card-name">{entry.name}</span>
+    {isAuthenticated && (
+      <button
+        className="card-delete-btn"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(entry.id, entry.name);
+        }}
+        disabled={deleting === entry.id}
+        title="삭제"
+      >
+        {deleting === entry.id ? '...' : '×'}
+      </button>
+    )}
+  </motion.article>
+));
+
+GuestbookCard.displayName = 'GuestbookCard';
 
 const Guestbook: React.FC = () => {
   const navigate = useNavigate();
@@ -73,14 +161,6 @@ const Guestbook: React.FC = () => {
     };
   }, []);
 
-  // 이케다 료지 스타일 - 흑백 미니멀
-  const colorPalettes = [
-    { primary: '#ffffff', secondary: '#888888', bg: 'rgba(255, 255, 255, 0.02)' },
-    { primary: '#ffffff', secondary: '#666666', bg: 'rgba(255, 255, 255, 0.02)' },
-    { primary: '#ffffff', secondary: '#aaaaaa', bg: 'rgba(255, 255, 255, 0.02)' },
-    { primary: '#ffffff', secondary: '#999999', bg: 'rgba(255, 255, 255, 0.02)' },
-    { primary: '#ffffff', secondary: '#777777', bg: 'rgba(255, 255, 255, 0.02)' },
-  ];
 
   // 방명록 불러오기
   useEffect(() => {
@@ -107,25 +187,14 @@ const Guestbook: React.FC = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const PARTICLE_COUNT = 2000;
-    const FORMATION_PARTICLE_COUNT = 1200; // 형성에 참여하는 파티클 수 (텍스트용 증가)
-
     // 상태: 'free' | 'text' | 'shape'
     type FormationState = 'free' | 'text' | 'shape';
     let currentState: FormationState = 'free';
     let stateTimer = 0;
-    const STATE_DURATION = {
-      free: 300,      // 배경 상태 (짧게)
-      text: 900,      // 텍스트 형성 (오래 보여주기)
-      shape: 1600     // 도형 형성 (두배로 오래 보여주기)
-    };
     let currentShapeIndex = 0;
     let textTargets: { x: number; y: number }[] = [];
     let currentTextIndex = 0; // 0: Reconnect, 1: 낙원식당
-
-    // 플래시 효과 (두 번 깜박임)
     let flashTimer = 0;
-    const FLASH_DURATION = 16; // 플래시 총 프레임 (4프레임씩 4단계: 켜-꺼-켜-꺼)
 
     // 텍스트에서 좌표 추출 (번갈아가며 표시)
     const getTextCoordinates = (centerX: number, centerY: number, textIndex: number) => {
@@ -166,15 +235,7 @@ const Guestbook: React.FC = () => {
       return coords;
     };
 
-    // 6개 뷰포트 설정 (극단적으로 다른 줌)
-    const viewConfigs = [
-      { rx: 0, ry: 0, rz: 0, zoom: 2.5 },           // 전체 보기 - 정면
-      { rx: 0.6, ry: 0.3, rz: 0, zoom: 12.0 },      // 극단적 클로즈업 - 위에서
-      { rx: -0.4, ry: -0.5, rz: 0.1, zoom: 5.0 },   // 중간 - 아래에서
-      { rx: 0.2, ry: 1.2, rz: 0, zoom: 18.0 },      // 초극단 클로즈업 - 오른쪽에서
-      { rx: 0.1, ry: -0.8, rz: -0.1, zoom: 8.0 },   // 가까이 - 왼쪽에서
-      { rx: 0.9, ry: 0.6, rz: 0.2, zoom: 15.0 },    // 매우 가까이 - 대각선
-    ];
+    // VIEW_CONFIGS는 컴포넌트 외부에 호이스팅됨
 
     // 3D 회전만 적용 (투영 전)
     const rotate3D = (x: number, y: number, z: number, rotX: number, rotY: number, rotZ: number) => {
@@ -208,7 +269,7 @@ const Guestbook: React.FC = () => {
       const pointCount = FORMATION_PARTICLE_COUNT;
 
       // 기본 회전 + 뷰별 추가 회전
-      const view = viewConfigs[viewIndex];
+      const view = VIEW_CONFIGS[viewIndex];
       const rotX = time * 0.15 + view.rx;
       const rotY = time * 0.2 + view.ry;
       const rotZ = time * 0.1 + view.rz;
@@ -460,9 +521,8 @@ const Guestbook: React.FC = () => {
         if (currentState === 'free') {
           currentState = Math.random() > 0.5 ? 'text' : 'shape';
           if (currentState === 'shape') {
-            // 중앙 정렬이 잘 되는 도형만 선택 (10가지)
-            const goodShapes = [3, 5, 6, 7, 8, 9, 10, 11, 12]; // 클러스터, 구, 큐브, 하트, 꽃, 물결구체, DNA, 별, 소용돌이
-            currentShapeIndex = goodShapes[Math.floor(Math.random() * goodShapes.length)];
+            // GOOD_SHAPES는 컴포넌트 외부에 호이스팅됨
+            currentShapeIndex = GOOD_SHAPES[Math.floor(Math.random() * GOOD_SHAPES.length)];
             flashTimer = FLASH_DURATION; // 도형 형성 시 플래시!
           } else {
             // 텍스트 번갈아 표시 (Reconnect <-> 낙원식당)
@@ -649,13 +709,15 @@ const Guestbook: React.FC = () => {
         ctx.fillRect(vpX, vpY, vpW, vpH);
 
         // 뷰포트별 줌 설정
-        const viewZoom = viewConfigs[viewIdx].zoom;
+        const viewZoom = VIEW_CONFIGS[viewIdx].zoom;
 
         // 파티클 업데이트 (첫 번째 뷰포트에서만)
+        const stateSnapshot = currentState;
         if (viewIdx === 0) {
+          // eslint-disable-next-line no-loop-func
           particles.forEach((p, i) => {
             const isFormationParticle = i < FORMATION_PARTICLE_COUNT;
-            if (isFormationParticle && targets && targets.length > 0 && currentState !== 'free') {
+            if (isFormationParticle && targets && targets.length > 0 && stateSnapshot !== 'free') {
               const targetIndex = i % targets.length;
               const target = targets[targetIndex];
               const oscillation = 3;
@@ -709,12 +771,13 @@ const Guestbook: React.FC = () => {
         };
 
         // 파티클 렌더링 - 모든 뷰포트에서
+        // eslint-disable-next-line no-loop-func
         particles.forEach((p, i) => {
           const isFormationParticle = i < FORMATION_PARTICLE_COUNT;
           const pulse = Math.sin(time * 2 + p.life * 0.01) * 0.3 + 0.7;
 
           // 도형 상태: 각 뷰포트별로 다른 각도로 렌더링
-          if (currentState === 'shape' && isFormationParticle && targets && targets.length > 0) {
+          if (stateSnapshot === 'shape' && isFormationParticle && targets && targets.length > 0) {
             const targetIndex = i % targets.length;
             const target = targets[targetIndex];
             const oscillation = 2;
@@ -878,17 +941,11 @@ const Guestbook: React.FC = () => {
     }
   };
 
-  // 날짜 포맷
-  const formatDate = (dateString: string) => {
+  // [rerender-memo] 날짜 포맷 - useCallback으로 메모이제이션
+  const formatDate = useCallback((dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+    return date.toLocaleDateString('ko-KR', DATE_FORMAT_OPTIONS);
+  }, []);
 
   return (
     <div className="guestbook-container">
@@ -1087,7 +1144,7 @@ const Guestbook: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            <div className="loading-orb" />
+            {LoadingOrb}
             <p>Loading...</p>
           </motion.div>
         ) : entries.length === 0 ? (
@@ -1097,7 +1154,7 @@ const Guestbook: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <div className="empty-icon">&#9734;</div>
+            {EmptyIcon}
             <p>아직 방명록이 없습니다</p>
             <p className="empty-sub">첫 번째 방문 기록을 남겨주세요</p>
           </motion.div>
@@ -1109,37 +1166,15 @@ const Guestbook: React.FC = () => {
             transition={{ delay: 0.2 }}
           >
             {entries.map((entry, index) => (
-              <motion.article
+              <GuestbookCard
                 key={entry.id}
-                className="guestbook-card clickable"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{
-                  delay: index * 0.03,
-                  duration: 0.4,
-                  ease: [0.25, 0.1, 0.25, 1]
-                }}
-                whileHover={{
-                  scale: 1.08,
-                  transition: { duration: 0.2 }
-                }}
-                onClick={() => setSelectedEntry(entry)}
-              >
-                <span className="card-name">{entry.name}</span>
-                {isAuthenticated && (
-                  <button
-                    className="card-delete-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(entry.id, entry.name);
-                    }}
-                    disabled={deleting === entry.id}
-                    title="삭제"
-                  >
-                    {deleting === entry.id ? '...' : '×'}
-                  </button>
-                )}
-              </motion.article>
+                entry={entry}
+                index={index}
+                isAuthenticated={isAuthenticated}
+                deleting={deleting}
+                onSelect={setSelectedEntry}
+                onDelete={handleDelete}
+              />
             ))}
           </motion.div>
         )}
