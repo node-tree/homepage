@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { workAPI } from '../services/api';
 import WritePost from './WritePost';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,6 +23,7 @@ interface WorkProps {
 
 const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [posts, setPosts] = useState<Post[]>([]);
   const [headerLoading, setHeaderLoading] = useState(true);
@@ -473,6 +474,24 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
                       </div>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Reconnect: 낙원식당 글에만 방명록 버튼 표시 */}
+              {(selectedPost.title.includes('Reconnect') || selectedPost.title.includes('낙원식당')) && (
+                <div className="guestbook-link-section">
+                  <motion.button
+                    className="guestbook-link-button"
+                    onClick={() => navigate('/guestbook')}
+                    whileHover={{ x: 4 }}
+                    whileTap={{ scale: 0.98 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <span className="guestbook-text">방명록</span>
+                    <span className="guestbook-arrow">&rarr;</span>
+                  </motion.button>
                 </div>
               )}
 

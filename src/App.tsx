@@ -13,6 +13,7 @@ import LocationVideoSettings from './components/LocationVideoSettings';
 import About from './components/About';
 import Guestbook from './components/Guestbook';
 import { playHoverSound, playClickSound } from './utils/sound';
+import { prefetchAPI } from './services/api';
 
 const Work = lazy(() => import('./components/Work'));
 
@@ -134,12 +135,28 @@ function MobileNavigation({ currentPage, onPageChange }: { currentPage: string; 
 }
 
 
+// [async-parallel] 페이지별 프리페치 매핑
+const prefetchMap: Record<string, () => void> = {
+  HOME: prefetchAPI.home,
+  WORK: prefetchAPI.work,
+  FILED: prefetchAPI.filed,
+  ABOUT: prefetchAPI.about,
+  CV: prefetchAPI.cv,
+  LOCATION: prefetchAPI.location,
+};
+
 // 메인 콘텐츠 컴포넌트
 function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, logout, user } = useAuth();
   const [currentPage, setCurrentPage] = useState<string>('HOME');
+
+  // [async-parallel] 앱 마운트 시 중요 데이터 프리페칭
+  useEffect(() => {
+    // 초기 로드 시 자주 사용하는 데이터 병렬 프리페칭
+    prefetchAPI.critical();
+  }, []);
 
   // URL 경로에 따라 페이지 설정
   useEffect(() => {
@@ -158,6 +175,11 @@ function AppContent() {
 
   // 페이지 변경 핸들러
   const handlePageChange = useCallback((page: string) => {
+    // [async-parallel] 페이지 전환 전 해당 페이지 데이터 프리페칭
+    const prefetch = prefetchMap[page];
+    if (prefetch) {
+      prefetch();
+    }
     setCurrentPage(page);
     navigate(page === 'HOME' ? '/' : `/${page.toLowerCase()}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
