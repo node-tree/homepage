@@ -62,6 +62,9 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
   // 헤더를 먼저 로드한 후 글 목록 로드
   useEffect(() => {
     let isMounted = true;
+    let retryCount = 0;
+    const maxRetries = 3;
+    const retryDelay = 1500; // 1.5초
 
     const loadData = async () => {
       // 에러 및 로딩 상태 리셋
@@ -92,27 +95,50 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
       }
 
       // 2. 헤더 로드 완료 후 글 목록 로드
-      try {
-        const postsResponse = await workAPI.getAllPosts();
-        if (isMounted) {
-          if (postsResponse.success) {
-            setPosts(postsResponse.data);
-            if (onPostsLoaded) {
-              onPostsLoaded(postsResponse.data.length);
+      const loadPosts = async (): Promise<void> => {
+        try {
+          const postsResponse = await workAPI.getAllPosts();
+          if (isMounted) {
+            if (postsResponse.success) {
+              // 빈 배열이 반환되면 재시도 (서버 cold start 대응)
+              if (postsResponse.data.length === 0 && retryCount < maxRetries) {
+                retryCount++;
+                console.log(`Work posts: 빈 응답, ${retryCount}/${maxRetries} 재시도 중...`);
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+                return loadPosts();
+              }
+              setPosts(postsResponse.data);
+              if (onPostsLoaded) {
+                onPostsLoaded(postsResponse.data.length);
+              }
+            } else {
+              setError(postsResponse.message);
             }
-          } else {
-            setError(postsResponse.message);
+          }
+        } catch (err) {
+          // 에러 시 재시도
+          if (retryCount < maxRetries && isMounted) {
+            retryCount++;
+            console.log(`Work posts: 에러 발생, ${retryCount}/${maxRetries} 재시도 중...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            return loadPosts();
+          }
+          if (isMounted) {
+            setError('글을 불러오는데 실패했습니다.');
+          }
+          console.error('Work 로딩 오류:', err);
+        } finally {
+          if (isMounted && retryCount >= maxRetries) {
+            setPostsLoading(false);
+          } else if (isMounted && retryCount === 0) {
+            setPostsLoading(false);
           }
         }
-      } catch (err) {
-        if (isMounted) {
-          setError('글을 불러오는데 실패했습니다.');
-        }
-        console.error('Work 로딩 오류:', err);
-      } finally {
-        if (isMounted) {
-          setPostsLoading(false);
-        }
+      };
+
+      await loadPosts();
+      if (isMounted) {
+        setPostsLoading(false);
       }
     };
 
