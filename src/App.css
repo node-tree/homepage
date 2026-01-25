@@ -3968,6 +3968,50 @@
 }
 
 /* ========================================
+   전시 방명록 링크 버튼 스타일
+   ======================================== */
+.guestbook-link-section {
+  margin: 3rem 0;
+  padding: 2rem 0;
+  border-top: 1px solid #eee;
+  text-align: center;
+}
+
+.guestbook-link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #333;
+  letter-spacing: 0.02em;
+  transition: all 0.25s ease;
+}
+
+.guestbook-link-button:hover {
+  background: #111;
+  border-color: #111;
+  color: #fff;
+}
+
+.guestbook-text {
+  font-weight: 500;
+}
+
+.guestbook-arrow {
+  font-size: 1rem;
+  transition: transform 0.25s ease;
+}
+
+.guestbook-link-button:hover .guestbook-arrow {
+  transform: translateX(4px);
+}
+
+/* ========================================
    PDF 카탈로그 카드 스타일 (썸네일 포함)
    ======================================== */
 .pdf-catalog-section {

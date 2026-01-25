@@ -11,6 +11,7 @@ import Filed from './components/Filed';
 import CV from './components/CV';
 import LocationVideoSettings from './components/LocationVideoSettings';
 import About from './components/About';
+import Guestbook from './components/Guestbook';
 import { playHoverSound, playClickSound } from './utils/sound';
 
 const Work = lazy(() => import('./components/Work'));
@@ -257,6 +258,7 @@ function App() {
         <Suspense fallback={null}>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/guestbook" element={<Guestbook />} />
             <Route path="*" element={<AppContent />} />
           </Routes>
         </Suspense>

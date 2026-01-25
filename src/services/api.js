@@ -876,6 +876,45 @@ export const contactAPI = {
   }
 };
 
+// Guestbook API
+export const guestbookAPI = {
+  // 모든 방명록 조회
+  getAll: async () => {
+    const response = await fetchWithRetry(`${API_BASE_URL}/guestbook`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch guestbook entries');
+    }
+    return response.json();
+  },
+
+  // 새 방명록 작성
+  create: async (entryData) => {
+    const response = await fetch(`${API_BASE_URL}/guestbook`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(entryData)
+    });
+    if (!response.ok) {
+      throw new Error('Failed to create guestbook entry');
+    }
+    return response.json();
+  },
+
+  // 방명록 삭제 (관리자 전용)
+  delete: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/guestbook/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    if (!response.ok) {
+      throw new Error('Failed to delete guestbook entry');
+    }
+    return response.json();
+  }
+};
+
 const api = {
   work: workAPI,
   filed: filedAPI,
