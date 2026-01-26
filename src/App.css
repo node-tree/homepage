@@ -2942,6 +2942,8 @@
 }
 
 .post-grid-item {
+  width: 100%;
+  min-width: 0;
   background-color: transparent;
   border: none;
   overflow: visible;
