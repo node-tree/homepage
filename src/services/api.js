@@ -142,23 +142,28 @@ const getHeaders = () => {
 };
 
 // [async-parallel] 중복 요청 방지 래퍼 - 같은 URL 요청이 진행 중이면 기존 Promise 재사용
+// Response를 clone하여 반환해야 여러 곳에서 .json() 호출 가능
 const deduplicatedFetch = async (url, options = {}) => {
   const key = `${options.method || 'GET'}:${url}`;
 
-  // 이미 진행 중인 요청이 있으면 그 Promise를 재사용
+  // 이미 진행 중인 요청이 있으면 clone된 Response 반환
   if (pendingRequests.has(key)) {
-    return pendingRequests.get(key);
+    const response = await pendingRequests.get(key);
+    return response.clone();
   }
 
   // 새 요청 시작
-  const requestPromise = fetchWithRetry(url, options)
-    .finally(() => {
-      // 요청 완료 후 Map에서 제거
-      pendingRequests.delete(key);
-    });
+  const requestPromise = fetchWithRetry(url, options);
 
   pendingRequests.set(key, requestPromise);
-  return requestPromise;
+
+  try {
+    const response = await requestPromise;
+    return response.clone();
+  } finally {
+    // 요청 완료 후 Map에서 제거
+    pendingRequests.delete(key);
+  }
 };
 
 // 재시도 로직이 포함된 fetch 함수
