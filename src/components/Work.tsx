@@ -70,35 +70,22 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
       setError(null);
       setPostsLoading(true);
 
-      // 1. 헤더 로드 (재시도 로직 포함)
-      let headerLoaded = false;
-      for (let attempt = 0; attempt <= maxRetries && !headerLoaded; attempt++) {
-        try {
-          const headerResponse = await workAPI.getWorkHeader({ forceRefresh: attempt > 0 });
-          if (isMounted && headerResponse.success && headerResponse.data) {
-            const loadedTitle = headerResponse.data.title;
-            const loadedSubtitle = headerResponse.data.subtitle;
-            if (loadedTitle && loadedTitle !== 'ART WORK') {
-              setTitle(loadedTitle);
-              setSubtitle(loadedSubtitle || '작업 기록');
-              headerLoaded = true;
-            } else if (attempt < maxRetries) {
-              console.log(`Work header: 기본값 응답, ${attempt + 1}/${maxRetries} 재시도 중...`);
-              await new Promise(resolve => setTimeout(resolve, retryDelay));
-              continue;
-            }
-          }
-        } catch (err) {
-          console.error('헤더 로딩 오류:', err);
-          if (attempt < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
-            continue;
-          }
+      // 1. 헤더 로드
+      try {
+        const headerResponse = await workAPI.getWorkHeader();
+        if (isMounted && headerResponse.success && headerResponse.data) {
+          setTitle(headerResponse.data.title || 'ART WORK');
+          setSubtitle(headerResponse.data.subtitle || '작업 기록');
+        } else if (isMounted) {
+          setTitle('ART WORK');
+          setSubtitle('작업 기록');
         }
-      }
-      if (isMounted && !headerLoaded) {
-        setTitle('ART WORK');
-        setSubtitle('작업 기록');
+      } catch (err) {
+        console.error('헤더 로딩 오류:', err);
+        if (isMounted) {
+          setTitle('ART WORK');
+          setSubtitle('작업 기록');
+        }
       }
       if (isMounted) {
         setHeaderLoading(false);

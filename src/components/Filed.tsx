@@ -79,37 +79,22 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
       setError(null);
       setPostsLoading(true);
 
-      // 1. 헤더 로드 (재시도 로직 포함)
-      let headerLoaded = false;
-      for (let attempt = 0; attempt <= maxRetries && !headerLoaded; attempt++) {
-        try {
-          const headerResponse = await filedAPI.getFiledHeader({ forceRefresh: attempt > 0 });
-          if (isMounted && headerResponse.success && headerResponse.data) {
-            const loadedTitle = headerResponse.data.title;
-            const loadedSubtitle = headerResponse.data.subtitle;
-            // 실제 데이터가 있는지 확인 (빈 문자열이 아닌지)
-            if (loadedTitle && loadedTitle !== 'FILED') {
-              setTitle(loadedTitle);
-              setSubtitle(loadedSubtitle || '기록/아카이브');
-              headerLoaded = true;
-            } else if (attempt < maxRetries) {
-              console.log(`Filed header: 기본값 응답, ${attempt + 1}/${maxRetries} 재시도 중...`);
-              await new Promise(resolve => setTimeout(resolve, retryDelay));
-              continue;
-            }
-          }
-        } catch (err) {
-          console.error('헤더 로딩 오류:', err);
-          if (attempt < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
-            continue;
-          }
+      // 1. 헤더 로드
+      try {
+        const headerResponse = await filedAPI.getFiledHeader();
+        if (isMounted && headerResponse.success && headerResponse.data) {
+          setTitle(headerResponse.data.title || 'FILED');
+          setSubtitle(headerResponse.data.subtitle || '기록/아카이브');
+        } else if (isMounted) {
+          setTitle('FILED');
+          setSubtitle('기록/아카이브');
         }
-      }
-      // 헤더 로드 실패 시 기본값
-      if (isMounted && !headerLoaded) {
-        setTitle('FILED');
-        setSubtitle('기록/아카이브');
+      } catch (err) {
+        console.error('헤더 로딩 오류:', err);
+        if (isMounted) {
+          setTitle('FILED');
+          setSubtitle('기록/아카이브');
+        }
       }
       if (isMounted) {
         setHeaderLoading(false);
