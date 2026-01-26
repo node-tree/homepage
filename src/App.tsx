@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
@@ -12,10 +12,9 @@ import CV from './components/CV';
 import LocationVideoSettings from './components/LocationVideoSettings';
 import About from './components/About';
 import Guestbook from './components/Guestbook';
+import Work from './components/Work';
 import { playHoverSound, playClickSound } from './utils/sound';
 import { prefetchAPI } from './services/api';
-
-const Work = lazy(() => import('./components/Work'));
 
 // 네비게이션 항목
 const NAV_ITEMS = [
@@ -277,13 +276,11 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Suspense fallback={null}>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/guestbook" element={<Guestbook />} />
-            <Route path="*" element={<AppContent />} />
-          </Routes>
-        </Suspense>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/guestbook" element={<Guestbook />} />
+          <Route path="*" element={<AppContent />} />
+        </Routes>
       </BrowserRouter>
     </AuthProvider>
   );
