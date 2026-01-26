@@ -62,23 +62,23 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
   // 헤더를 먼저 로드한 후 글 목록 로드
   useEffect(() => {
     let isMounted = true;
-    const maxRetries = 3;
-    const retryDelay = 1500;
 
     const loadData = async () => {
       // 에러 및 로딩 상태 리셋
       setError(null);
       setPostsLoading(true);
 
-      // 1. 헤더 로드
+      // 1. 헤더 먼저 로드
       try {
         const headerResponse = await workAPI.getWorkHeader();
-        if (isMounted && headerResponse.success && headerResponse.data) {
-          setTitle(headerResponse.data.title || 'ART WORK');
-          setSubtitle(headerResponse.data.subtitle || '작업 기록');
-        } else if (isMounted) {
-          setTitle('ART WORK');
-          setSubtitle('작업 기록');
+        if (isMounted) {
+          if (headerResponse.success && headerResponse.data) {
+            setTitle(headerResponse.data.title || 'ART WORK');
+            setSubtitle(headerResponse.data.subtitle || '작업 기록');
+          } else {
+            setTitle('ART WORK');
+            setSubtitle('작업 기록');
+          }
         }
       } catch (err) {
         console.error('헤더 로딩 오류:', err);
@@ -91,54 +91,28 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
         setHeaderLoading(false);
       }
 
-      // 2. 글 목록 로드 (재시도 로직 포함)
-
-      for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        try {
-          const postsResponse = await workAPI.getAllPosts({ forceRefresh: attempt > 0 });
-          if (!isMounted) return;
-
+      // 2. 헤더 로드 완료 후 글 목록 로드
+      try {
+        const postsResponse = await workAPI.getAllPosts();
+        if (isMounted) {
           if (postsResponse.success) {
-            // 데이터가 있으면 성공
-            if (postsResponse.data.length > 0) {
-              setPosts(postsResponse.data);
-              if (onPostsLoaded) {
-                onPostsLoaded(postsResponse.data.length);
-              }
-              setPostsLoading(false);
-              return; // 성공, 루프 종료
-            }
-
-            // 빈 배열이고 재시도 가능하면 대기 후 재시도
-            if (attempt < maxRetries) {
-              console.log(`Work posts: 빈 응답, ${attempt + 1}/${maxRetries} 재시도 중...`);
-              await new Promise(resolve => setTimeout(resolve, retryDelay));
-              continue;
-            }
-
-            // 마지막 시도였으면 빈 배열이라도 설정
             setPosts(postsResponse.data);
             if (onPostsLoaded) {
-              onPostsLoaded(0);
+              onPostsLoaded(postsResponse.data.length);
             }
           } else {
             setError(postsResponse.message);
           }
-        } catch (err) {
-          if (attempt < maxRetries && isMounted) {
-            console.log(`Work posts: 에러 발생, ${attempt + 1}/${maxRetries} 재시도 중...`);
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
-            continue;
-          }
-          if (isMounted) {
-            setError('글을 불러오는데 실패했습니다.');
-          }
-          console.error('Work 로딩 오류:', err);
         }
-      }
-
-      if (isMounted) {
-        setPostsLoading(false);
+      } catch (err) {
+        if (isMounted) {
+          setError('글을 불러오는데 실패했습니다.');
+        }
+        console.error('Work 로딩 오류:', err);
+      } finally {
+        if (isMounted) {
+          setPostsLoading(false);
+        }
       }
     };
 
@@ -835,7 +809,10 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
         )}
 
         {!postsLoading && !error && posts.length > 0 && (
-          <div className={`posts-grid ${isReorderMode ? 'reorder-mode' : ''}`} style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '30px', maxWidth: '900px', margin: '2rem auto', padding: '0 2rem' }}>
+          <div
+            className={`posts-grid ${isReorderMode ? 'reorder-mode' : ''}`}
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '30px', maxWidth: '900px', margin: '2rem auto', padding: '0 2rem' }}
+          >
             {posts.map((post, index) => (
               <div
                 key={post.id}
@@ -849,9 +826,16 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
                   }
                 }}
               >
-                <div className="post-grid-thumbnail" style={{ width: '100%', aspectRatio: '1 / 1', position: 'relative', overflow: 'hidden', borderRadius: '50%', backgroundColor: '#e0e0e0' }}>
+                <div
+                  className="post-grid-thumbnail"
+                  style={{ width: '100%', aspectRatio: '1 / 1', position: 'relative', overflow: 'hidden', borderRadius: '50%', backgroundColor: '#e0e0e0' }}
+                >
                   {post.thumbnail ? (
-                    <img src={post.thumbnail.startsWith('//') ? `https:${post.thumbnail}` : post.thumbnail} alt={post.title} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                    <img
+                      src={post.thumbnail.startsWith('//') ? `https:${post.thumbnail}` : post.thumbnail}
+                      alt={post.title}
+                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                    />
                   ) : (
                     <div className="post-grid-no-image" />
                   )}
