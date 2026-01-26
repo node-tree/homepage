@@ -837,11 +837,12 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
         )}
 
         {!postsLoading && !error && posts.length > 0 && (
-          <div className={`posts-grid ${isReorderMode ? 'reorder-mode' : ''}`}>
+          <div className={`posts-grid ${isReorderMode ? 'reorder-mode' : ''}`} style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '30px', maxWidth: '900px', margin: '2rem auto', padding: '0 2rem' }}>
             {posts.map((post, index) => (
               <div
                 key={post.id}
                 className={`post-grid-item ${isReorderMode ? 'reorder-item' : ''}`}
+                style={{ width: '100%' }}
                 onMouseEnter={() => !isReorderMode && playHoverSound()}
                 onClick={() => {
                   if (!isReorderMode) {
@@ -850,9 +851,9 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
                   }
                 }}
               >
-                <div className="post-grid-thumbnail">
+                <div className="post-grid-thumbnail" style={{ width: '100%', aspectRatio: '1 / 1', position: 'relative', overflow: 'hidden', borderRadius: '50%', backgroundColor: '#e0e0e0' }}>
                   {post.thumbnail ? (
-                    <img src={post.thumbnail.startsWith('//') ? `https:${post.thumbnail}` : post.thumbnail} alt={post.title} />
+                    <img src={post.thumbnail.startsWith('//') ? `https:${post.thumbnail}` : post.thumbnail} alt={post.title} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
                   ) : (
                     <div className="post-grid-no-image" />
                   )}
