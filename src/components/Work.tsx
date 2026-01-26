@@ -62,38 +62,49 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
   // 헤더를 먼저 로드한 후 글 목록 로드
   useEffect(() => {
     let isMounted = true;
+    const maxRetries = 3;
+    const retryDelay = 1500;
 
     const loadData = async () => {
       // 에러 및 로딩 상태 리셋
       setError(null);
       setPostsLoading(true);
 
-      // 1. 헤더 먼저 로드
-      try {
-        const headerResponse = await workAPI.getWorkHeader();
-        if (isMounted) {
-          if (headerResponse.success && headerResponse.data) {
-            setTitle(headerResponse.data.title || 'ART WORK');
-            setSubtitle(headerResponse.data.subtitle || '작업 기록');
-          } else {
-            setTitle('ART WORK');
-            setSubtitle('작업 기록');
+      // 1. 헤더 로드 (재시도 로직 포함)
+      let headerLoaded = false;
+      for (let attempt = 0; attempt <= maxRetries && !headerLoaded; attempt++) {
+        try {
+          const headerResponse = await workAPI.getWorkHeader({ forceRefresh: attempt > 0 });
+          if (isMounted && headerResponse.success && headerResponse.data) {
+            const loadedTitle = headerResponse.data.title;
+            const loadedSubtitle = headerResponse.data.subtitle;
+            if (loadedTitle && loadedTitle !== 'ART WORK') {
+              setTitle(loadedTitle);
+              setSubtitle(loadedSubtitle || '작업 기록');
+              headerLoaded = true;
+            } else if (attempt < maxRetries) {
+              console.log(`Work header: 기본값 응답, ${attempt + 1}/${maxRetries} 재시도 중...`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+              continue;
+            }
+          }
+        } catch (err) {
+          console.error('헤더 로딩 오류:', err);
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            continue;
           }
         }
-      } catch (err) {
-        console.error('헤더 로딩 오류:', err);
-        if (isMounted) {
-          setTitle('ART WORK');
-          setSubtitle('작업 기록');
-        }
+      }
+      if (isMounted && !headerLoaded) {
+        setTitle('ART WORK');
+        setSubtitle('작업 기록');
       }
       if (isMounted) {
         setHeaderLoading(false);
       }
 
-      // 2. 헤더 로드 완료 후 글 목록 로드 (재시도 로직 포함)
-      const maxRetries = 3;
-      const retryDelay = 1500;
+      // 2. 글 목록 로드 (재시도 로직 포함)
 
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
