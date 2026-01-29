@@ -886,6 +886,111 @@
   }
 }
 
+/* 1920x1200 최적화 */
+@media (min-width: 1920px) {
+  .guestbook-header {
+    padding: 28px 60px;
+  }
+
+  .guestbook-title {
+    font-size: 1.8rem;
+    letter-spacing: 0.35em;
+    gap: 20px;
+  }
+
+  .guestbook-subtitle {
+    font-size: 0.9rem;
+    margin-top: 10px;
+  }
+
+  .guestbook-back-btn {
+    padding: 12px 24px;
+    font-size: 0.9rem;
+  }
+
+  .guestbook-write-btn {
+    padding: 14px 28px;
+    font-size: 0.9rem;
+  }
+
+  .guestbook-fullscreen-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 1.3rem;
+  }
+
+  .guestbook-main {
+    padding: 160px 60px 120px;
+  }
+
+  .guestbook-grid {
+    max-width: 1800px;
+    gap: 28px;
+    padding: 30px;
+  }
+
+  .guestbook-card {
+    width: 100px;
+    height: 100px;
+  }
+
+  .card-name {
+    font-size: 0.8rem;
+    max-width: 75px;
+  }
+
+  .card-delete-btn {
+    width: 22px;
+    height: 22px;
+    font-size: 0.85rem;
+    top: -5px;
+    right: -5px;
+  }
+
+  .guestbook-modal {
+    max-width: 560px;
+    padding: 48px;
+  }
+
+  .guestbook-detail-modal {
+    max-width: 660px;
+    padding: 48px;
+  }
+
+  .form-title {
+    font-size: 1.3rem;
+  }
+
+  .detail-author .author-name {
+    font-size: 1.2rem;
+  }
+
+  .detail-message {
+    font-size: 1.05rem;
+    line-height: 1.9;
+  }
+
+  .guestbook-footer {
+    padding: 50px 20px 70px;
+  }
+
+  .guestbook-footer p {
+    font-size: 0.9rem;
+  }
+
+  .guestbook-loading p {
+    font-size: 1rem;
+  }
+
+  .empty-icon {
+    font-size: 4.5rem;
+  }
+
+  .guestbook-empty p {
+    font-size: 1.2rem;
+  }
+}
+
 /* 스크롤바 스타일링 */
 .guestbook-container::-webkit-scrollbar {
   width: 6px;
