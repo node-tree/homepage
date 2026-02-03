@@ -543,69 +543,82 @@ const Guestbook: React.FC = () => {
     window.addEventListener('resize', resizeCanvas);
     window.addEventListener('mousemove', handleMouseMove);
 
+    // 정적 도형 모드: 도형을 고정하고 애니메이션 최소화
+    const STATIC_MODE = true;
+    const FIXED_SHAPE_INDEX = 5; // 구 도형 (0: 뒤틀린 메쉬, 3: 구, 5: 토러스 등)
+    const FIXED_TIME = 0; // 회전 고정
+    let isSettled = false; // 파티클이 위치에 도달했는지
+
     const animate = () => {
       if (!ctx || !canvas) return;
 
       frameRef.current += 1;
-      const time = frameRef.current * 0.01;
-      stateTimer++;
+      // 정적 모드: 시간 고정, 일반 모드: 시간 진행
+      const time = STATIC_MODE ? FIXED_TIME : frameRef.current * 0.01;
 
-      // 상태 전환
-      if (stateTimer > STATE_DURATION[currentState]) {
-        stateTimer = 0;
-        if (currentState === 'free') {
-          currentState = Math.random() > 0.5 ? 'text' : 'shape';
-          if (currentState === 'shape') {
-            // GOOD_SHAPES는 컴포넌트 외부에 호이스팅됨
-            currentShapeIndex = GOOD_SHAPES[Math.floor(Math.random() * GOOD_SHAPES.length)];
-            flashTimer = FLASH_DURATION; // 도형 형성 시 플래시!
-          } else {
-            // 텍스트 번갈아 표시 (Reconnect <-> 낙원식당)
-            currentTextIndex = (currentTextIndex + 1) % 2;
-            textTargets = getTextCoordinates(canvas.width / 2, canvas.height / 2, currentTextIndex);
-            flashTimer = FLASH_DURATION; // 텍스트 형성 시 플래시!
-          }
-        } else {
-          currentState = 'free';
-          flashTimer = FLASH_DURATION; // 배경으로 돌아올 때도 플래시!
-          particlesRef.current.forEach((p, i) => {
-            if (i < FORMATION_PARTICLE_COUNT) {
-              const angle = Math.random() * Math.PI * 2;
-              const speed = 1 + Math.random() * 2;
-              p.vx = Math.cos(angle) * speed;
-              p.vy = Math.sin(angle) * speed;
+      // 정적 모드에서는 상태 전환 없이 shape 고정
+      if (STATIC_MODE) {
+        currentState = 'shape';
+        currentShapeIndex = FIXED_SHAPE_INDEX;
+      } else {
+        stateTimer++;
+
+        // 상태 전환
+        if (stateTimer > STATE_DURATION[currentState]) {
+          stateTimer = 0;
+          if (currentState === 'free') {
+            currentState = Math.random() > 0.5 ? 'text' : 'shape';
+            if (currentState === 'shape') {
+              currentShapeIndex = GOOD_SHAPES[Math.floor(Math.random() * GOOD_SHAPES.length)];
+              flashTimer = FLASH_DURATION;
+            } else {
+              currentTextIndex = (currentTextIndex + 1) % 2;
+              textTargets = getTextCoordinates(canvas.width / 2, canvas.height / 2, currentTextIndex);
+              flashTimer = FLASH_DURATION;
             }
-          });
+          } else {
+            currentState = 'free';
+            flashTimer = FLASH_DURATION;
+            particlesRef.current.forEach((p, i) => {
+              if (i < FORMATION_PARTICLE_COUNT) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1 + Math.random() * 2;
+                p.vx = Math.cos(angle) * speed;
+                p.vy = Math.sin(angle) * speed;
+              }
+            });
+          }
+        }
+
+        // 플래시 효과 감소
+        if (flashTimer > 0) {
+          flashTimer--;
         }
       }
 
-      // 플래시 효과 감소
-      if (flashTimer > 0) {
-        flashTimer--;
-      }
-
-      // 플래시 강도 계산 (두 번 깜박임: 켜-꺼-켜-꺼)
-      // 16-13: 켜 (1), 12-9: 꺼 (0), 8-5: 켜 (1), 4-1: 꺼 (0)
+      // 플래시 강도 계산 (정적 모드에서는 플래시 없음)
       let flashIntensity = 0;
-      if (flashTimer > 12) {
-        flashIntensity = 1; // 첫 번째 깜박임 ON
-      } else if (flashTimer > 8) {
-        flashIntensity = 0; // 첫 번째 깜박임 OFF
-      } else if (flashTimer > 4) {
-        flashIntensity = 1; // 두 번째 깜박임 ON
-      } else {
-        flashIntensity = 0; // 두 번째 깜박임 OFF
+      if (!STATIC_MODE) {
+        if (flashTimer > 12) {
+          flashIntensity = 1;
+        } else if (flashTimer > 8) {
+          flashIntensity = 0;
+        } else if (flashTimer > 4) {
+          flashIntensity = 1;
+        } else {
+          flashIntensity = 0;
+        }
       }
 
-      // 배경 클리어 (플래시 시 어두워짐) - 잔상 효과 제거
-      const bgBrightness = Math.round(250 - flashIntensity * 230); // 250 -> 20
+      // 배경 클리어
+      const bgBrightness = Math.round(250 - flashIntensity * 230);
       ctx.fillStyle = `rgba(${bgBrightness}, ${bgBrightness}, ${bgBrightness}, 1)`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const particles = particlesRef.current;
-      const particleColor = Math.round(flashIntensity * 255);
+      const particleColor = STATIC_MODE ? 30 : Math.round(flashIntensity * 255);
 
-      // 텍스트 상태: 전체 화면에 렌더링 (뷰포트 분할 없음)
+      // 텍스트 상태: 전체 화면에 렌더링 (정적 모드에서는 사용 안함)
       if (currentState === 'text') {
         // 파티클 업데이트
         particles.forEach((p, i) => {
@@ -767,13 +780,16 @@ const Guestbook: React.FC = () => {
             if (isFormationParticle && targets && targets.length > 0 && stateSnapshot !== 'free') {
               const targetIndex = i % targets.length;
               const target = targets[targetIndex];
-              const oscillation = 3;
-              const offsetX = Math.sin(time * 2 + i * 0.5) * oscillation;
-              const offsetY = Math.cos(time * 2.5 + i * 0.3) * oscillation;
+              // 정적 모드: 진동 없이 목표 위치로 이동
+              const oscillation = STATIC_MODE ? 0 : 3;
+              const offsetX = STATIC_MODE ? 0 : Math.sin(time * 2 + i * 0.5) * oscillation;
+              const offsetY = STATIC_MODE ? 0 : Math.cos(time * 2.5 + i * 0.3) * oscillation;
               const finalX = target.x + offsetX;
               const finalY = target.y + offsetY;
-              p.x += (finalX - p.x) * 0.06;
-              p.y += (finalY - p.y) * 0.06;
+              // 정적 모드: 더 빠르게 위치에 도달
+              const easing = STATIC_MODE ? 0.15 : 0.06;
+              p.x += (finalX - p.x) * easing;
+              p.y += (finalY - p.y) * easing;
               p.vx = (finalX - p.x) * 0.02;
               p.vy = (finalY - p.y) * 0.02;
             } else {
@@ -835,9 +851,10 @@ const Guestbook: React.FC = () => {
           if (stateSnapshot === 'shape' && isFormationParticle && targets && targets.length > 0) {
             const targetIndex = i % targets.length;
             const target = targets[targetIndex];
-            const oscillation = 2;
-            const drawX = target.x + Math.sin(time * 2 + i * 0.5) * oscillation;
-            const drawY = target.y + Math.cos(time * 2.5 + i * 0.3) * oscillation;
+            // 정적 모드: 진동 없이 고정 위치
+            const oscillation = STATIC_MODE ? 0 : 2;
+            const drawX = target.x + (STATIC_MODE ? 0 : Math.sin(time * 2 + i * 0.5) * oscillation);
+            const drawY = target.y + (STATIC_MODE ? 0 : Math.cos(time * 2.5 + i * 0.3) * oscillation);
 
             const color = particleColor > 0 ? particleColor : 30;
             drawSphereVP(drawX, drawY, p.size * 1.5, color);
@@ -926,10 +943,19 @@ const Guestbook: React.FC = () => {
 
         ctx.restore();
 
-        // 뷰포트 테두리
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(vpX, vpY, vpW, vpH);
+        // 뷰포트 테두리 (정적 모드에서는 테두리 제거)
+        if (!STATIC_MODE) {
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(vpX, vpY, vpW, vpH);
+        }
+      }
+
+      // 정적 모드: 파티클이 위치에 도달하면 애니메이션 중지
+      if (STATIC_MODE && frameRef.current > 120) {
+        // 2초(60fps * 2) 후 애니메이션 중지
+        isSettled = true;
+        return; // 애니메이션 루프 종료
       }
 
       animationRef.current = requestAnimationFrame(animate);
