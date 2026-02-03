@@ -556,8 +556,7 @@ const Guestbook: React.FC = () => {
       currentState = 'shape';
       currentShapeIndex = FIXED_SHAPE_INDEX;
 
-      // 파티클을 도형 위치에 직접 배치
-      const particles = particlesRef.current;
+      // 도형 좌표 계산
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
       const baseSize = Math.min(canvas.width, canvas.height) * 0.35;
@@ -592,40 +591,38 @@ const Guestbook: React.FC = () => {
       frameRef.current += 1;
       const time = frameRef.current * 0.01;
 
-      {
-        stateTimer++;
+      stateTimer++;
 
-        // 상태 전환
-        if (stateTimer > STATE_DURATION[currentState]) {
-          stateTimer = 0;
-          if (currentState === 'free') {
-            currentState = Math.random() > 0.5 ? 'text' : 'shape';
-            if (currentState === 'shape') {
-              currentShapeIndex = GOOD_SHAPES[Math.floor(Math.random() * GOOD_SHAPES.length)];
-              flashTimer = FLASH_DURATION;
-            } else {
-              currentTextIndex = (currentTextIndex + 1) % 2;
-              textTargets = getTextCoordinates(canvas.width / 2, canvas.height / 2, currentTextIndex);
-              flashTimer = FLASH_DURATION;
-            }
-          } else {
-            currentState = 'free';
+      // 상태 전환
+      if (stateTimer > STATE_DURATION[currentState]) {
+        stateTimer = 0;
+        if (currentState === 'free') {
+          currentState = Math.random() > 0.5 ? 'text' : 'shape';
+          if (currentState === 'shape') {
+            currentShapeIndex = GOOD_SHAPES[Math.floor(Math.random() * GOOD_SHAPES.length)];
             flashTimer = FLASH_DURATION;
-            particlesRef.current.forEach((p, i) => {
-              if (i < FORMATION_PARTICLE_COUNT) {
-                const angle = Math.random() * Math.PI * 2;
-                const speed = 1 + Math.random() * 2;
-                p.vx = Math.cos(angle) * speed;
-                p.vy = Math.sin(angle) * speed;
-              }
-            });
+          } else {
+            currentTextIndex = (currentTextIndex + 1) % 2;
+            textTargets = getTextCoordinates(canvas.width / 2, canvas.height / 2, currentTextIndex);
+            flashTimer = FLASH_DURATION;
           }
+        } else {
+          currentState = 'free';
+          flashTimer = FLASH_DURATION;
+          particlesRef.current.forEach((p, i) => {
+            if (i < FORMATION_PARTICLE_COUNT) {
+              const angle = Math.random() * Math.PI * 2;
+              const speed = 1 + Math.random() * 2;
+              p.vx = Math.cos(angle) * speed;
+              p.vy = Math.sin(angle) * speed;
+            }
+          });
         }
+      }
 
-        // 플래시 효과 감소
-        if (flashTimer > 0) {
-          flashTimer--;
-        }
+      // 플래시 효과 감소
+      if (flashTimer > 0) {
+        flashTimer--;
       }
 
       // 플래시 강도 계산 (정적 모드에서는 플래시 없음)
