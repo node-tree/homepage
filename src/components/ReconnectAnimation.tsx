@@ -208,8 +208,28 @@ const ReconnectAnimation: React.FC<ReconnectAnimationProps> = ({ width = 300, he
       return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
     }
 
+    // 베지어 커브 이징 (cubic-bezier 스타일)
+    function cubicBezier(t: number, p1x: number, p1y: number, p2x: number, p2y: number): number {
+      // Newton-Raphson으로 t에 대한 x 값 찾기
+      let x = t;
+      for (let i = 0; i < 8; i++) {
+        const currentX = 3 * p1x * x * (1 - x) * (1 - x) + 3 * p2x * x * x * (1 - x) + x * x * x;
+        const currentSlope = 3 * p1x * (1 - x) * (1 - x) - 6 * p1x * x * (1 - x) + 6 * p2x * x * (1 - x) - 3 * p2x * x * x + 3 * x * x;
+        if (Math.abs(currentSlope) < 1e-6) break;
+        x = x - (currentX - t) / currentSlope;
+      }
+      // y 값 계산
+      return 3 * p1y * x * (1 - x) * (1 - x) + 3 * p2y * x * x * (1 - x) + x * x * x;
+    }
+
+    // 휘몰아치는 느낌의 이징 (천천히 시작 -> 빠르게 -> 천천히 끝)
+    function easeVortex(t: number): number {
+      return cubicBezier(t, 0.4, 0, 0.2, 1);
+    }
+
     const startTime = Date.now();
-    let rotationAtVortexEnd = 0;
+    let rotationAtVortexStart = 0;
+    let targetRotationAtVortexEnd = 0;
     let lastPhase = '';
 
     function animate() {
@@ -233,20 +253,21 @@ const ReconnectAnimation: React.FC<ReconnectAnimationProps> = ({ width = 300, he
         currentPhase = 'hold';
       }
 
-      // vortex -> transition 전환 시 현재 회전값을 0 방향 최단 경로로 정규화
-      if (lastPhase === 'vortex' && currentPhase === 'transition') {
+      // random -> vortex 전환 시 시작 회전값과 목표 회전값 계산
+      if (lastPhase === 'random' && currentPhase === 'vortex') {
+        rotationAtVortexStart = particlesMesh.rotation.y;
+        // vortex 끝에서 정확히 정면(2π의 배수)에서 멈추도록 목표 설정
         const twoPi = Math.PI * 2;
-        const currentRot = particlesMesh.rotation.y;
-        // 0~2π 범위로 정규화 후 최단 경로 계산
-        const normalized = ((currentRot % twoPi) + twoPi) % twoPi;
-        rotationAtVortexEnd = normalized > Math.PI ? normalized - twoPi : normalized;
+        const nearestMultiple = Math.ceil(rotationAtVortexStart / twoPi) * twoPi;
+        targetRotationAtVortexEnd = nearestMultiple + twoPi * 2; // 추가로 2바퀴
       }
 
       // 새 사이클 시작 시 회전 리셋
       if (lastPhase === 'hold' && currentPhase === 'explode') {
         particlesMesh.rotation.y = 0;
         linesMesh.rotation.y = 0;
-        rotationAtVortexEnd = 0;
+        rotationAtVortexStart = 0;
+        targetRotationAtVortexEnd = 0;
       }
 
       lastPhase = currentPhase;
@@ -298,8 +319,12 @@ const ReconnectAnimation: React.FC<ReconnectAnimationProps> = ({ width = 300, he
         updateLines(positions);
 
       } else if (cycleTime < EXPLODE_DURATION + RANDOM_DURATION + VORTEX_DURATION) {
-        particlesMesh.rotation.y += 0.02;
-        linesMesh.rotation.y += 0.02;
+        // vortex 끝에서 정확히 정면(2π의 배수)에서 멈추도록 회전 (베지어 이징)
+        const vortexTime = cycleTime - EXPLODE_DURATION - RANDOM_DURATION;
+        const vortexProgress = vortexTime / VORTEX_DURATION;
+        const easedVortex = easeVortex(vortexProgress);
+        particlesMesh.rotation.y = rotationAtVortexStart + (targetRotationAtVortexEnd - rotationAtVortexStart) * easedVortex;
+        linesMesh.rotation.y = particlesMesh.rotation.y;
         linesMaterial.opacity = 0.2;
 
         for (let i = 0; i < particleCount; i++) {
@@ -323,10 +348,9 @@ const ReconnectAnimation: React.FC<ReconnectAnimationProps> = ({ width = 300, he
         const progress = transitionTime / TRANSITION_DURATION;
         const easedProgress = easeInOutQuad(progress);
 
-        // 회전을 정확히 0으로 복귀 (정면)
-        // rotationAtVortexEnd는 이미 -π~π 범위로 정규화됨
-        particlesMesh.rotation.y = rotationAtVortexEnd * (1 - easedProgress);
-        linesMesh.rotation.y = rotationAtVortexEnd * (1 - easedProgress);
+        // vortex 끝에서 이미 정면이므로 0 유지
+        particlesMesh.rotation.y = 0;
+        linesMesh.rotation.y = 0;
 
         for (let i = 0; i < particleCount; i++) {
           const i3 = i * 3;
