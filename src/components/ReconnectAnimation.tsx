@@ -233,9 +233,13 @@ const ReconnectAnimation: React.FC<ReconnectAnimationProps> = ({ width = 300, he
         currentPhase = 'hold';
       }
 
-      // vortex -> transition 전환 시 현재 회전값 저장
+      // vortex -> transition 전환 시 현재 회전값을 0 방향 최단 경로로 정규화
       if (lastPhase === 'vortex' && currentPhase === 'transition') {
-        rotationAtVortexEnd = particlesMesh.rotation.y;
+        const twoPi = Math.PI * 2;
+        const currentRot = particlesMesh.rotation.y;
+        // 0~2π 범위로 정규화 후 최단 경로 계산
+        const normalized = ((currentRot % twoPi) + twoPi) % twoPi;
+        rotationAtVortexEnd = normalized > Math.PI ? normalized - twoPi : normalized;
       }
 
       // 새 사이클 시작 시 회전 리셋
@@ -320,13 +324,9 @@ const ReconnectAnimation: React.FC<ReconnectAnimationProps> = ({ width = 300, he
         const easedProgress = easeInOutQuad(progress);
 
         // 회전을 정확히 0으로 복귀 (정면)
-        const twoPi = Math.PI * 2;
-        // 현재 회전값을 0~2π 범위로 정규화
-        const normalizedRotation = ((rotationAtVortexEnd % twoPi) + twoPi) % twoPi;
-        // 0으로 가는 최단 경로 계산 (π보다 크면 반대 방향으로)
-        const shortestPath = normalizedRotation > Math.PI ? normalizedRotation - twoPi : normalizedRotation;
-        particlesMesh.rotation.y = shortestPath * (1 - easedProgress);
-        linesMesh.rotation.y = shortestPath * (1 - easedProgress);
+        // rotationAtVortexEnd는 이미 -π~π 범위로 정규화됨
+        particlesMesh.rotation.y = rotationAtVortexEnd * (1 - easedProgress);
+        linesMesh.rotation.y = rotationAtVortexEnd * (1 - easedProgress);
 
         for (let i = 0; i < particleCount; i++) {
           const i3 = i * 3;
