@@ -6,8 +6,35 @@ import { useAuth } from '../contexts/AuthContext';
 import './Guestbook.css';
 
 // [js-hoist-regexp] 상수를 컴포넌트 외부로 호이스팅
-const PARTICLE_COUNT = 2000;
-const FORMATION_PARTICLE_COUNT = 1200;
+// 저사양 기기 감지 함수
+const isLowEndDevice = (): boolean => {
+  // 1. 하드웨어 동시성 (CPU 코어 수) 체크
+  const hardwareConcurrency = navigator.hardwareConcurrency || 2;
+  if (hardwareConcurrency <= 4) return true;
+
+  // 2. 디바이스 메모리 체크 (Chrome 전용)
+  const deviceMemory = (navigator as { deviceMemory?: number }).deviceMemory;
+  if (deviceMemory && deviceMemory <= 4) return true;
+
+  // 3. 모바일 기기 체크
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  if (isMobile) return true;
+
+  // 4. 터치 기기 체크 (태블릿 포함)
+  if ('ontouchstart' in window || navigator.maxTouchPoints > 0) return true;
+
+  return false;
+};
+
+// 저사양 모드 여부
+const LOW_END_MODE = isLowEndDevice();
+
+// 파티클 수 동적 조절
+const PARTICLE_COUNT = LOW_END_MODE ? 400 : 2000;
+const FORMATION_PARTICLE_COUNT = LOW_END_MODE ? 250 : 1200;
+
+// 연결선 그리기 비활성화 여부 (저사양 기기)
+const DISABLE_CONNECTION_LINES = LOW_END_MODE;
 
 const STATE_DURATION = {
   free: 300,
@@ -71,6 +98,9 @@ interface GuestbookCardProps {
   onDelete: (id: string, name: string) => void;
 }
 
+// 처음 N개 카드만 애니메이션 적용 (성능 최적화)
+const MAX_ANIMATED_CARDS = LOW_END_MODE ? 10 : 30;
+
 const GuestbookCard = memo<GuestbookCardProps>(({
   entry,
   index,
@@ -78,17 +108,21 @@ const GuestbookCard = memo<GuestbookCardProps>(({
   deleting,
   onSelect,
   onDelete
-}) => (
+}) => {
+  // 저사양 기기 또는 너무 많은 카드는 애니메이션 건너뛰기
+  const shouldAnimate = !LOW_END_MODE && index < MAX_ANIMATED_CARDS;
+
+  return (
   <motion.article
     className="guestbook-card clickable"
-    initial={{ opacity: 0, scale: 0.8 }}
+    initial={shouldAnimate ? { opacity: 0, scale: 0.8 } : false}
     animate={{ opacity: 1, scale: 1 }}
-    transition={{
+    transition={shouldAnimate ? {
       delay: index * 0.03,
       duration: 0.4,
       ease: [0.25, 0.1, 0.25, 1]
-    }}
-    whileHover={{
+    } : { duration: 0 }}
+    whileHover={LOW_END_MODE ? undefined : {
       scale: 1.08,
       transition: { duration: 0.2 }
     }}
@@ -109,7 +143,8 @@ const GuestbookCard = memo<GuestbookCardProps>(({
       </button>
     )}
   </motion.article>
-));
+  );
+});
 
 GuestbookCard.displayName = 'GuestbookCard';
 
@@ -601,21 +636,30 @@ const Guestbook: React.FC = () => {
           p.life += 1;
         });
 
-        // 스피어 그리기 헬퍼 함수 (투명도 없음)
+        // 스피어 그리기 헬퍼 함수 (저사양 기기: 단순 원, 고사양 기기: 그라데이션)
         const drawSphere = (x: number, y: number, radius: number, baseColor: number) => {
-          const gradient = ctx.createRadialGradient(
-            x - radius * 0.3, y - radius * 0.3, radius * 0.1,
-            x, y, radius
-          );
-          const highlightColor = Math.min(baseColor + 80, 255);
-          const shadowColor = Math.max(baseColor - 40, 0);
-          gradient.addColorStop(0, `rgb(${highlightColor}, ${highlightColor}, ${highlightColor})`);
-          gradient.addColorStop(0.5, `rgb(${baseColor}, ${baseColor}, ${baseColor})`);
-          gradient.addColorStop(1, `rgb(${shadowColor}, ${shadowColor}, ${shadowColor})`);
-          ctx.fillStyle = gradient;
-          ctx.beginPath();
-          ctx.arc(x, y, radius, 0, Math.PI * 2);
-          ctx.fill();
+          if (LOW_END_MODE) {
+            // 저사양 기기: 단순한 원 (성능 최적화)
+            ctx.fillStyle = `rgb(${baseColor}, ${baseColor}, ${baseColor})`;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            // 고사양 기기: 그라데이션 적용
+            const gradient = ctx.createRadialGradient(
+              x - radius * 0.3, y - radius * 0.3, radius * 0.1,
+              x, y, radius
+            );
+            const highlightColor = Math.min(baseColor + 80, 255);
+            const shadowColor = Math.max(baseColor - 40, 0);
+            gradient.addColorStop(0, `rgb(${highlightColor}, ${highlightColor}, ${highlightColor})`);
+            gradient.addColorStop(0.5, `rgb(${baseColor}, ${baseColor}, ${baseColor})`);
+            gradient.addColorStop(1, `rgb(${shadowColor}, ${shadowColor}, ${shadowColor})`);
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+          }
         };
 
         // 파티클 렌더링
@@ -631,56 +675,59 @@ const Guestbook: React.FC = () => {
           }
         });
 
-        // 텍스트 연결선 그리기
-        const formationParticles = particles.slice(0, FORMATION_PARTICLE_COUNT);
-        const lineColor = particleColor > 0 ? particleColor : 0;
+        // 텍스트 연결선 그리기 (저사양 기기에서는 비활성화)
+        if (!DISABLE_CONNECTION_LINES) {
+          const formationParticles = particles.slice(0, FORMATION_PARTICLE_COUNT);
+          const lineColor = particleColor > 0 ? particleColor : 0;
 
-        // 먼 거리 연결
-        ctx.beginPath();
-        ctx.strokeStyle = `rgba(${lineColor}, ${lineColor}, ${lineColor}, 0.15)`;
-        ctx.lineWidth = 0.15;
-        for (let i = 0; i < formationParticles.length; i += 4) {
-          for (let j = i + 1; j < formationParticles.length; j += 4) {
-            const dx = formationParticles[i].x - formationParticles[j].x;
-            const dy = formationParticles[i].y - formationParticles[j].y;
-            const distSq = dx * dx + dy * dy;
-            if (distSq < 8000 && distSq > 2000) {
-              ctx.moveTo(formationParticles[i].x, formationParticles[i].y);
-              ctx.lineTo(formationParticles[j].x, formationParticles[j].y);
+          // 먼 거리 연결
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(${lineColor}, ${lineColor}, ${lineColor}, 0.15)`;
+          ctx.lineWidth = 0.15;
+          for (let i = 0; i < formationParticles.length; i += 4) {
+            for (let j = i + 1; j < formationParticles.length; j += 4) {
+              const dx = formationParticles[i].x - formationParticles[j].x;
+              const dy = formationParticles[i].y - formationParticles[j].y;
+              const distSq = dx * dx + dy * dy;
+              if (distSq < 8000 && distSq > 2000) {
+                ctx.moveTo(formationParticles[i].x, formationParticles[i].y);
+                ctx.lineTo(formationParticles[j].x, formationParticles[j].y);
+              }
             }
           }
-        }
-        ctx.stroke();
+          ctx.stroke();
 
-        // 가까운 연결
-        ctx.beginPath();
-        ctx.strokeStyle = `rgba(${lineColor}, ${lineColor}, ${lineColor}, 0.3)`;
-        ctx.lineWidth = 0.25;
-        for (let i = 0; i < formationParticles.length; i += 2) {
-          for (let j = i + 1; j < formationParticles.length; j += 2) {
-            const dx = formationParticles[i].x - formationParticles[j].x;
-            const dy = formationParticles[i].y - formationParticles[j].y;
-            const distSq = dx * dx + dy * dy;
-            if (distSq < 2000) {
-              ctx.moveTo(formationParticles[i].x, formationParticles[i].y);
-              ctx.lineTo(formationParticles[j].x, formationParticles[j].y);
+          // 가까운 연결
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(${lineColor}, ${lineColor}, ${lineColor}, 0.3)`;
+          ctx.lineWidth = 0.25;
+          for (let i = 0; i < formationParticles.length; i += 2) {
+            for (let j = i + 1; j < formationParticles.length; j += 2) {
+              const dx = formationParticles[i].x - formationParticles[j].x;
+              const dy = formationParticles[i].y - formationParticles[j].y;
+              const distSq = dx * dx + dy * dy;
+              if (distSq < 2000) {
+                ctx.moveTo(formationParticles[i].x, formationParticles[i].y);
+                ctx.lineTo(formationParticles[j].x, formationParticles[j].y);
+              }
             }
           }
+          ctx.stroke();
         }
-        ctx.stroke();
 
         animationRef.current = requestAnimationFrame(animate);
         return;
       }
 
-      // 도형/자유 상태: 6개 뷰포트 분할 렌더링
-      const cols = 3;
-      const rows = 2;
+      // 도형/자유 상태: 뷰포트 분할 렌더링 (저사양 기기는 1개만)
+      const viewportCount = LOW_END_MODE ? 1 : 6;
+      const cols = LOW_END_MODE ? 1 : 3;
+      const rows = LOW_END_MODE ? 1 : 2;
       const cellW = canvas.width / cols;
       const cellH = canvas.height / rows;
       const gap = 2;
 
-      for (let viewIdx = 0; viewIdx < 6; viewIdx++) {
+      for (let viewIdx = 0; viewIdx < viewportCount; viewIdx++) {
         const col = viewIdx % cols;
         const row = Math.floor(viewIdx / cols);
         const vpX = col * cellW + gap;
@@ -753,21 +800,29 @@ const Guestbook: React.FC = () => {
           });
         }
 
-        // 스피어 그리기 헬퍼 함수 (뷰포트용, 투명도 없음)
+        // 스피어 그리기 헬퍼 함수 (뷰포트용, 저사양 기기: 단순 원)
         const drawSphereVP = (x: number, y: number, radius: number, baseColor: number) => {
-          const gradient = ctx.createRadialGradient(
-            x - radius * 0.3, y - radius * 0.3, radius * 0.1,
-            x, y, radius
-          );
-          const highlightColor = Math.min(baseColor + 80, 255);
-          const shadowColor = Math.max(baseColor - 40, 0);
-          gradient.addColorStop(0, `rgb(${highlightColor}, ${highlightColor}, ${highlightColor})`);
-          gradient.addColorStop(0.5, `rgb(${baseColor}, ${baseColor}, ${baseColor})`);
-          gradient.addColorStop(1, `rgb(${shadowColor}, ${shadowColor}, ${shadowColor})`);
-          ctx.fillStyle = gradient;
-          ctx.beginPath();
-          ctx.arc(x, y, radius, 0, Math.PI * 2);
-          ctx.fill();
+          if (LOW_END_MODE) {
+            // 저사양 기기: 단순한 원 (성능 최적화)
+            ctx.fillStyle = `rgb(${baseColor}, ${baseColor}, ${baseColor})`;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            const gradient = ctx.createRadialGradient(
+              x - radius * 0.3, y - radius * 0.3, radius * 0.1,
+              x, y, radius
+            );
+            const highlightColor = Math.min(baseColor + 80, 255);
+            const shadowColor = Math.max(baseColor - 40, 0);
+            gradient.addColorStop(0, `rgb(${highlightColor}, ${highlightColor}, ${highlightColor})`);
+            gradient.addColorStop(0.5, `rgb(${baseColor}, ${baseColor}, ${baseColor})`);
+            gradient.addColorStop(1, `rgb(${shadowColor}, ${shadowColor}, ${shadowColor})`);
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+          }
         };
 
         // 파티클 렌더링 - 모든 뷰포트에서
@@ -798,8 +853,8 @@ const Guestbook: React.FC = () => {
           }
         });
 
-        // 연결선 그리기 (도형 상태에서만)
-        if (currentState === 'shape' && targets && targets.length > 0) {
+        // 연결선 그리기 (도형 상태에서만, 저사양 기기에서는 비활성화)
+        if (!DISABLE_CONNECTION_LINES && currentState === 'shape' && targets && targets.length > 0) {
           // 플래시 시 연결선 색상 반전
           const lineColor = particleColor;
 
