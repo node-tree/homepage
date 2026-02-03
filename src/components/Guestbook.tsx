@@ -543,24 +543,56 @@ const Guestbook: React.FC = () => {
     window.addEventListener('resize', resizeCanvas);
     window.addEventListener('mousemove', handleMouseMove);
 
-    // 정적 도형 모드: 도형을 고정하고 애니메이션 최소화
+    // 정적 도형 모드: 애니메이션 없이 한 번만 그림
     const STATIC_MODE = true;
-    const FIXED_SHAPE_INDEX = 5; // 구 도형 (0: 뒤틀린 메쉬, 3: 구, 5: 토러스 등)
-    const FIXED_TIME = 0; // 회전 고정
-    let isSettled = false; // 파티클이 위치에 도달했는지
+    const FIXED_SHAPE_INDEX = 0; // 뒤틀린 메쉬
+    const FIXED_TIME = 0;
+
+    // 정적 렌더링: 한 번만 그리고 끝
+    const renderOnce = () => {
+      if (!ctx || !canvas) return;
+
+      const time = FIXED_TIME;
+      currentState = 'shape';
+      currentShapeIndex = FIXED_SHAPE_INDEX;
+
+      // 파티클을 도형 위치에 직접 배치
+      const particles = particlesRef.current;
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const baseSize = Math.min(canvas.width, canvas.height) * 0.35;
+      const targets = getShapeForView(FIXED_SHAPE_INDEX, centerX, centerY, baseSize, time, 0);
+
+      // 배경
+      ctx.fillStyle = 'rgb(250, 250, 250)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 파티클을 목표 위치에 직접 그리기
+      if (targets && targets.length > 0) {
+        targets.forEach((target, i) => {
+          const size = 1 + Math.random() * 1.5;
+          ctx.fillStyle = 'rgb(30, 30, 30)';
+          ctx.beginPath();
+          ctx.arc(target.x, target.y, size, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+    };
+
+    if (STATIC_MODE) {
+      renderOnce();
+      return () => {
+        window.removeEventListener('resize', resizeCanvas);
+      };
+    }
 
     const animate = () => {
       if (!ctx || !canvas) return;
 
       frameRef.current += 1;
-      // 정적 모드: 시간 고정, 일반 모드: 시간 진행
-      const time = STATIC_MODE ? FIXED_TIME : frameRef.current * 0.01;
+      const time = frameRef.current * 0.01;
 
-      // 정적 모드에서는 상태 전환 없이 shape 고정
-      if (STATIC_MODE) {
-        currentState = 'shape';
-        currentShapeIndex = FIXED_SHAPE_INDEX;
-      } else {
+      {
         stateTimer++;
 
         // 상태 전환
@@ -949,13 +981,6 @@ const Guestbook: React.FC = () => {
           ctx.lineWidth = 1;
           ctx.strokeRect(vpX, vpY, vpW, vpH);
         }
-      }
-
-      // 정적 모드: 파티클이 위치에 도달하면 애니메이션 중지
-      if (STATIC_MODE && frameRef.current > 120) {
-        // 2초(60fps * 2) 후 애니메이션 중지
-        isSettled = true;
-        return; // 애니메이션 루프 종료
       }
 
       animationRef.current = requestAnimationFrame(animate);
