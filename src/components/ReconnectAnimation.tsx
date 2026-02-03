@@ -319,8 +319,9 @@ const ReconnectAnimation: React.FC<ReconnectAnimationProps> = ({ width = 300, he
         const progress = transitionTime / TRANSITION_DURATION;
         const easedProgress = easeInOutQuad(progress);
 
-        // 회전을 자연스럽게 0으로 복귀
-        const targetRotation = 0;
+        // 회전을 가장 가까운 정면(2π 배수)으로 자연스럽게 복귀
+        const twoPi = Math.PI * 2;
+        const targetRotation = Math.round(rotationAtVortexEnd / twoPi) * twoPi;
         particlesMesh.rotation.y = rotationAtVortexEnd + (targetRotation - rotationAtVortexEnd) * easedProgress;
         linesMesh.rotation.y = rotationAtVortexEnd + (targetRotation - rotationAtVortexEnd) * easedProgress;
 
