@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import Home from './components/Home';
 import Location3D from './components/Location3D';
+import StrudelSynth from './components/StrudelSynth';
 import Contact from './components/Contact';
 import Filed from './components/Filed';
 import CV from './components/CV';
@@ -13,7 +14,7 @@ import LocationVideoSettings from './components/LocationVideoSettings';
 import About from './components/About';
 import Guestbook from './components/Guestbook';
 import Work from './components/Work';
-import { playHoverSound, playClickSound } from './utils/sound';
+import { playHoverSound, playClickSound, playNavSound } from './utils/sound';
 import { prefetchAPI } from './services/api';
 
 // 네비게이션 항목
@@ -42,7 +43,7 @@ function Navigation({ currentPage, onPageChange }: { currentPage: string; onPage
             className={`nav-node ${currentPage === item.page ? 'active' : ''}`}
             onMouseEnter={playHoverSound}
             onClick={() => {
-              playClickSound();
+              playNavSound(item.page);
               onPageChange(item.page);
             }}
             whileTap={{ scale: 0.95 }}
@@ -65,7 +66,7 @@ function MobileNavigation({ currentPage, onPageChange }: { currentPage: string; 
   ];
 
   const handleItemClick = (page: string) => {
-    playClickSound();
+    playNavSound(page);
     onPageChange(page);
     setIsOpen(false);
   };
@@ -279,6 +280,16 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/guestbook" element={<Guestbook />} />
+          <Route path="/synth" element={
+            <div style={{
+              minHeight: '100vh',
+              background: 'linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%)',
+              paddingTop: '140px',
+              paddingBottom: '40px'
+            }}>
+              <StrudelSynth />
+            </div>
+          } />
           <Route path="*" element={<AppContent />} />
         </Routes>
       </BrowserRouter>
