@@ -245,6 +245,7 @@ const playPadFM = (freq: number, vol: number) => {
 // ============================================
 // 플럭 / 퍼커시브 사운드 (FM)
 // ============================================
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const playPluckFM = (freq: number, vol: number) => {
   playFMSynth({
     carrierFreq: freq,
