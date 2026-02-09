@@ -51,14 +51,19 @@ export const initAudioContext = async (): Promise<void> => {
   }
 
   // iOS Safari unlock: 무음 버퍼를 재생하여 오디오 활성화
+  // source.stop() 호출하지 않음 - 자연스럽게 끝나도록 함
   if (!isAudioUnlocked) {
     try {
       const buffer = ctx.createBuffer(1, 1, 22050);
       const source = ctx.createBufferSource();
       source.buffer = buffer;
       source.connect(ctx.destination);
-      source.start(0);
-      source.stop(0.001);
+      // iOS 호환성: start만 호출, stop은 하지 않음
+      if (source.start) {
+        source.start(0);
+      } else if ((source as any).noteOn) {
+        (source as any).noteOn(0);
+      }
       isAudioUnlocked = true;
     } catch {
       // 무시

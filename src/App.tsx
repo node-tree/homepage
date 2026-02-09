@@ -159,21 +159,28 @@ function AppContent() {
   }, []);
 
   // 모바일 브라우저를 위한 AudioContext 초기화
-  // 첫 번째 사용자 인터랙션(터치/클릭) 시 오디오 활성화
+  // iOS Safari: touchend 사용 필수 (touchstart는 작동 안 함)
   useEffect(() => {
     const handleFirstInteraction = () => {
       initAudioContext();
-      // 한 번만 실행 후 리스너 제거
+      // 모든 리스너 제거
+      document.removeEventListener('touchend', handleFirstInteraction);
       document.removeEventListener('touchstart', handleFirstInteraction);
-      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('mousedown', handleFirstInteraction);
+      document.removeEventListener('keydown', handleFirstInteraction);
     };
 
-    document.addEventListener('touchstart', handleFirstInteraction, { once: true });
-    document.addEventListener('click', handleFirstInteraction, { once: true });
+    // iOS 6-8: touchstart, iOS 9+: touchend
+    document.addEventListener('touchend', handleFirstInteraction, false);
+    document.addEventListener('touchstart', handleFirstInteraction, false);
+    document.addEventListener('mousedown', handleFirstInteraction, false);
+    document.addEventListener('keydown', handleFirstInteraction, false);
 
     return () => {
+      document.removeEventListener('touchend', handleFirstInteraction);
       document.removeEventListener('touchstart', handleFirstInteraction);
-      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('mousedown', handleFirstInteraction);
+      document.removeEventListener('keydown', handleFirstInteraction);
     };
   }, []);
 
