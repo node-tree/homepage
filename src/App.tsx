@@ -14,7 +14,7 @@ import LocationVideoSettings from './components/LocationVideoSettings';
 import About from './components/About';
 import Guestbook from './components/Guestbook';
 import Work from './components/Work';
-import { playHoverSound, playClickSound, playNavSound } from './utils/sound';
+import { playHoverSound, playClickSound, playNavSound, initAudioContext } from './utils/sound';
 import { prefetchAPI } from './services/api';
 
 // 네비게이션 항목
@@ -156,6 +156,25 @@ function AppContent() {
   useEffect(() => {
     // 초기 로드 시 자주 사용하는 데이터 병렬 프리페칭
     prefetchAPI.critical();
+  }, []);
+
+  // 모바일 브라우저를 위한 AudioContext 초기화
+  // 첫 번째 사용자 인터랙션(터치/클릭) 시 오디오 활성화
+  useEffect(() => {
+    const handleFirstInteraction = () => {
+      initAudioContext();
+      // 한 번만 실행 후 리스너 제거
+      document.removeEventListener('touchstart', handleFirstInteraction);
+      document.removeEventListener('click', handleFirstInteraction);
+    };
+
+    document.addEventListener('touchstart', handleFirstInteraction, { once: true });
+    document.addEventListener('click', handleFirstInteraction, { once: true });
+
+    return () => {
+      document.removeEventListener('touchstart', handleFirstInteraction);
+      document.removeEventListener('click', handleFirstInteraction);
+    };
   }, []);
 
   // URL 경로에 따라 페이지 설정
