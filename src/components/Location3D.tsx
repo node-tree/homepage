@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { locationPostAPI } from '../services/api';
 import WritePost from './WritePost';
 import { useAuth } from '../contexts/AuthContext';
+import { playHoverSound, playClickSound } from '../utils/sound';
 
 interface Post {
   id: string;
@@ -667,7 +668,13 @@ const Location3D: React.FC = () => {
               <div
                 key={post.id}
                 className={`post-grid-item ${isReorderMode ? 'reorder-item' : ''}`}
-                onClick={() => !isReorderMode && handlePostClick(post)}
+                onMouseEnter={() => !isReorderMode && playHoverSound()}
+                onClick={() => {
+                  if (!isReorderMode) {
+                    playClickSound();
+                    handlePostClick(post);
+                  }
+                }}
               >
                 <div className="post-grid-thumbnail">
                   {post.thumbnail ? (

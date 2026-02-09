@@ -1,0 +1,501 @@
+/* Moog Style Synthesizer */
+.moog-synth {
+  display: flex;
+  max-width: 700px;
+  margin: 0 auto;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* 우드 사이드 패널 */
+.wood-panel {
+  width: 35px;
+  background: linear-gradient(
+    90deg,
+    #2a1810 0%,
+    #4a2820 20%,
+    #3a2018 40%,
+    #4a2820 60%,
+    #3a2018 80%,
+    #2a1810 100%
+  );
+  position: relative;
+}
+
+.wood-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 0, 0, 0.1) 3px,
+    rgba(0, 0, 0, 0.1) 6px
+  );
+}
+
+.wood-panel.left {
+  border-radius: 8px 0 0 8px;
+}
+
+.wood-panel.right {
+  border-radius: 0 8px 8px 0;
+}
+
+/* 메인 패널 */
+.main-panel {
+  flex: 1;
+  background: linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%);
+  padding: 20px 25px;
+  border-top: 3px solid #333;
+  border-bottom: 3px solid #111;
+}
+
+/* 헤더 */
+.moog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #333;
+}
+
+.logo-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand {
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  color: #d4af37;
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+  font-family: 'Arial Black', sans-serif;
+}
+
+.model {
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  color: #666;
+  margin-top: 2px;
+}
+
+.status-leds {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.6rem;
+  color: #555;
+  letter-spacing: 0.1em;
+}
+
+.led {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #222;
+  border: 1px solid #333;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.led.on {
+  background: #00ff41;
+  box-shadow:
+    0 0 8px #00ff41,
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.led.red.on {
+  background: #ff3333;
+  box-shadow:
+    0 0 8px #ff3333,
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.led.blink {
+  animation: blink 0.5s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* 오실로스코프 */
+.oscilloscope {
+  margin-bottom: 20px;
+}
+
+.scope-bezel {
+  background: #0a0a0a;
+  border: 3px solid #1a1a1a;
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow:
+    inset 0 2px 10px rgba(0, 0, 0, 0.8),
+    0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.scope-screen {
+  width: 100%;
+  height: 120px;
+  border-radius: 4px;
+  background: #0a0a0a;
+}
+
+.scope-label {
+  text-align: center;
+  font-size: 0.55rem;
+  color: #444;
+  letter-spacing: 0.15em;
+  margin-top: 6px;
+}
+
+/* 섹션 */
+.synth-section {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: linear-gradient(180deg, #151515 0%, #0a0a0a 100%);
+  border-radius: 6px;
+  border: 1px solid #222;
+}
+
+.section-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: #d4af37;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #222;
+}
+
+/* 오실레이터 선택 */
+.osc-selector {
+  display: flex;
+  gap: 10px;
+}
+
+.osc-btn {
+  flex: 1;
+  padding: 12px 8px;
+  background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+  border: 1px solid #333;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.osc-btn:hover {
+  background: linear-gradient(180deg, #333 0%, #222 100%);
+}
+
+.osc-btn.active {
+  background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+  border-color: #d4af37;
+  box-shadow:
+    0 0 10px rgba(212, 175, 55, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.osc-icon {
+  font-size: 1.4rem;
+  color: #00ff41;
+  text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+}
+
+.osc-btn span {
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  color: #888;
+}
+
+.osc-btn.active span {
+  color: #d4af37;
+}
+
+/* 노브 */
+.knobs-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.moog-knob-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.moog-knob {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3a3a3a 0%, #1a1a1a 50%, #2a2a2a 100%);
+  border: 2px solid #444;
+  cursor: pointer;
+  position: relative;
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.5),
+    inset 0 2px 3px rgba(255, 255, 255, 0.1),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.3);
+  transition: box-shadow 0.2s;
+}
+
+.moog-knob:hover {
+  box-shadow:
+    0 4px 20px rgba(212, 175, 55, 0.3),
+    inset 0 2px 3px rgba(255, 255, 255, 0.1),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.3);
+}
+
+.moog-knob::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #222 0%, #111 100%);
+  border: 1px solid #333;
+}
+
+.knob-indicator {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 10px;
+  background: #d4af37;
+  border-radius: 2px;
+  box-shadow: 0 0 5px rgba(212, 175, 55, 0.5);
+}
+
+.knob-label {
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  color: #666;
+}
+
+/* 프리셋 스위치 */
+.presets-row {
+  display: flex;
+  gap: 8px;
+}
+
+.preset-switch {
+  flex: 1;
+  padding: 10px 6px;
+  background: linear-gradient(180deg, #222 0%, #111 100%);
+  border: 1px solid #333;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.preset-switch:hover {
+  background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+}
+
+.preset-switch.active {
+  background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+  border-color: #d4af37;
+}
+
+.switch-led {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #222;
+  border: 1px solid #333;
+}
+
+.preset-switch.active .switch-led {
+  background: #00ff41;
+  box-shadow: 0 0 6px #00ff41;
+}
+
+.preset-switch span {
+  font-size: 0.5rem;
+  letter-spacing: 0.05em;
+  color: #666;
+}
+
+.preset-switch.active span {
+  color: #d4af37;
+}
+
+/* 메인 컨트롤 버튼 */
+.main-controls {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.main-btn {
+  flex: 1;
+  padding: 15px;
+  background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+  border: 2px solid #333;
+  border-radius: 6px;
+  color: #888;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s;
+}
+
+.main-btn:hover {
+  background: linear-gradient(180deg, #333 0%, #222 100%);
+}
+
+.main-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.main-btn .btn-led {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #222;
+  border: 1px solid #333;
+}
+
+.play-btn.active {
+  border-color: #ff3333;
+  color: #ff3333;
+}
+
+.play-btn.active .btn-led {
+  background: #ff3333;
+  box-shadow: 0 0 8px #ff3333;
+}
+
+.code-btn.active {
+  border-color: #00ff41;
+  color: #00ff41;
+}
+
+.code-btn.active .btn-led {
+  background: #00ff41;
+  box-shadow: 0 0 8px #00ff41;
+}
+
+/* 코드 패널 */
+.code-panel {
+  margin-top: 15px;
+  background: #0a0a0a;
+  border: 1px solid #222;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background: #111;
+  border-bottom: 1px solid #222;
+}
+
+.code-header span {
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  color: #666;
+}
+
+.code-led {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #222;
+}
+
+.code-led.on {
+  background: #00ff41;
+  box-shadow: 0 0 6px #00ff41;
+}
+
+.code-input {
+  width: 100%;
+  min-height: 100px;
+  padding: 15px;
+  background: #0a0a0a;
+  border: none;
+  color: #00ff41;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+}
+
+.code-input::placeholder {
+  color: #333;
+}
+
+/* 반응형 */
+@media (max-width: 600px) {
+  .moog-synth {
+    flex-direction: column;
+    margin: 10px;
+  }
+
+  .wood-panel {
+    display: none;
+  }
+
+  .main-panel {
+    border-radius: 8px;
+  }
+
+  .knobs-row {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .moog-knob {
+    width: 45px;
+    height: 45px;
+  }
+
+  .osc-selector {
+    flex-wrap: wrap;
+  }
+
+  .presets-row {
+    flex-wrap: wrap;
+  }
+
+  .preset-switch {
+    min-width: calc(33% - 6px);
+  }
+}
