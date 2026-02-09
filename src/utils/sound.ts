@@ -22,6 +22,7 @@ export const setBgVolume = (volume: number) => {
 
 // Web Audio API 컨텍스트 (싱글톤)
 let audioContext: AudioContext | null = null;
+let isAudioUnlocked = false;
 
 const getAudioContext = (): AudioContext => {
   if (!audioContext) {
@@ -30,10 +31,17 @@ const getAudioContext = (): AudioContext => {
   return audioContext;
 };
 
+// 오디오가 활성화되었는지 확인
+export const isAudioReady = (): boolean => {
+  if (!audioContext) return false;
+  return audioContext.state === 'running' || isAudioUnlocked;
+};
+
 // 모바일 브라우저를 위한 AudioContext 초기화 및 resume
 // 첫 번째 사용자 인터랙션 시 호출되어야 함
 export const initAudioContext = async (): Promise<void> => {
   const ctx = getAudioContext();
+
   if (ctx.state === 'suspended') {
     try {
       await ctx.resume();
@@ -41,6 +49,59 @@ export const initAudioContext = async (): Promise<void> => {
       // 오디오 초기화 실패 무시
     }
   }
+
+  // iOS Safari unlock: 무음 버퍼를 재생하여 오디오 활성화
+  if (!isAudioUnlocked) {
+    try {
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+      source.stop(0.001);
+      isAudioUnlocked = true;
+    } catch {
+      // 무시
+    }
+  }
+
+  if (ctx.state === 'running') {
+    isAudioUnlocked = true;
+  }
+};
+
+// 사운드 재생 전 AudioContext 활성화 확인 및 시도
+const ensureAudioContext = (): AudioContext | null => {
+  const ctx = getAudioContext();
+
+  // suspended 상태면 resume 시도 (사용자 제스처 내에서 호출됨)
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => {
+      // 무시
+    });
+  }
+
+  // 아직 unlock되지 않았으면 무음 버퍼로 unlock 시도
+  if (!isAudioUnlocked && ctx.state === 'running') {
+    try {
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+      isAudioUnlocked = true;
+    } catch {
+      // 무시
+    }
+  }
+
+  // running 상태이고 unlock된 경우에만 컨텍스트 반환
+  if (ctx.state === 'running') {
+    isAudioUnlocked = true;
+    return ctx;
+  }
+
+  return null;
 };
 
 // 음계 주파수
@@ -103,8 +164,8 @@ interface FMParams {
 
 const playFMSynth = (params: FMParams) => {
   try {
-    const ctx = getAudioContext();
-    if (ctx.state === 'suspended') ctx.resume();
+    const ctx = ensureAudioContext();
+    if (!ctx) return; // AudioContext가 아직 활성화되지 않음
 
     const now = ctx.currentTime;
     const {
