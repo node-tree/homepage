@@ -4,7 +4,7 @@
     {
       "src": "package.json",
       "use": "@vercel/static-build",
-      "config": { 
+      "config": {
         "distDir": "build"
       }
     },
@@ -27,20 +27,22 @@
       "dest": "/manifest.json"
     },
     {
+      "src": "/logo.svg",
+      "dest": "/logo.svg",
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate"
+      }
+    },
+    {
       "src": "/logo.png",
-      "dest": "/logo.png"
+      "dest": "/logo.png",
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate"
+      }
     },
     {
       "src": "/robots.txt",
       "dest": "/robots.txt"
-    },
-    {
-      "src": "/click.wav",
-      "dest": "/click.wav"
-    },
-    {
-      "src": "/click02.wav",
-      "dest": "/click02.wav"
     },
     {
       "src": "/pdf/(.*)",
@@ -51,4 +53,4 @@
       "dest": "/index.html"
     }
   ]
-} 
+}
