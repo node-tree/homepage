@@ -30,6 +30,19 @@ const getAudioContext = (): AudioContext => {
   return audioContext;
 };
 
+// 모바일 브라우저를 위한 AudioContext 초기화 및 resume
+// 첫 번째 사용자 인터랙션 시 호출되어야 함
+export const initAudioContext = async (): Promise<void> => {
+  const ctx = getAudioContext();
+  if (ctx.state === 'suspended') {
+    try {
+      await ctx.resume();
+    } catch {
+      // 오디오 초기화 실패 무시
+    }
+  }
+};
+
 // 음계 주파수
 const NOTES = {
   C3: 130.81,
