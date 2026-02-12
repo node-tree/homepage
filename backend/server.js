@@ -23,7 +23,7 @@ app.use(cors({
     : ['http://localhost:3000', 'http://localhost:3001'],
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Vercel 서버리스 환경에 최적화된 MongoDB 연결
