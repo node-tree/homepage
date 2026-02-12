@@ -122,7 +122,7 @@ router.post('/register', async (req, res) => {
       const token = jwt.sign(
         { userId: newUser.id, username: newUser.username, role: newUser.role },
         JWT_SECRET,
-        { expiresIn: '7d' }
+        { expiresIn: '30d' }
       );
 
       return res.json({
@@ -162,7 +162,7 @@ router.post('/register', async (req, res) => {
     const token = jwt.sign(
       { userId: user._id, username: user.username, role: user.role },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     res.json({
@@ -233,7 +233,7 @@ router.post('/login', async (req, res) => {
       const token = jwt.sign(
         { userId: user.id, username: user.username, role: user.role },
         JWT_SECRET,
-        { expiresIn: '7d' }
+        { expiresIn: '30d' }
       );
 
       return res.json({
@@ -273,7 +273,7 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign(
       { userId: user._id, username: user.username, role: user.role },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     res.json({
@@ -377,7 +377,7 @@ router.post('/create-admin', async (req, res) => {
     const token = jwt.sign(
       { userId: adminUser._id, username: adminUser.username, role: adminUser.role },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     res.json({

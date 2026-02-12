@@ -127,6 +127,14 @@ const getAuthToken = () => {
   return localStorage.getItem('auth_token');
 };
 
+// 401 응답 시 자동 로그아웃 처리
+const handle401 = () => {
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('auth_user');
+  alert('로그인이 만료되었습니다. 다시 로그인해주세요.');
+  window.location.reload();
+};
+
 // 인증 헤더를 포함한 기본 헤더 생성
 const getHeaders = () => {
   const headers = {
@@ -265,6 +273,7 @@ export const workAPI = {
       body: JSON.stringify(postData)
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       const errorData = await response.json().catch(() => ({}));
       console.error('Work createPost 오류:', response.status, errorData);
       throw new Error(errorData.message || `Failed to create post (${response.status})`);
@@ -283,6 +292,7 @@ export const workAPI = {
       body: JSON.stringify(postData)
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       const errorData = await response.json().catch(() => ({}));
       console.error('Work updatePost 오류:', response.status, errorData);
       throw new Error(errorData.message || `Failed to update post (${response.status})`);
@@ -300,6 +310,7 @@ export const workAPI = {
       headers: getHeaders()
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       const errorData = await response.json().catch(() => ({}));
       console.error('Work deletePost 오류:', response.status, errorData);
       throw new Error(errorData.message || `Failed to delete post (${response.status})`);
@@ -360,6 +371,7 @@ export const workAPI = {
       body: JSON.stringify(headerData)
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       throw new Error('Failed to update work header');
     }
     const data = await response.json();
@@ -375,6 +387,7 @@ export const workAPI = {
       body: JSON.stringify({ orders })
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       throw new Error('Failed to reorder posts');
     }
     const data = await response.json();
@@ -437,6 +450,7 @@ export const filedAPI = {
       body: JSON.stringify(postData)
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       const errorData = await response.json().catch(() => ({}));
       console.error('Filed createPost 오류:', response.status, errorData);
       throw new Error(errorData.message || `Failed to create post (${response.status})`);
@@ -454,6 +468,7 @@ export const filedAPI = {
       body: JSON.stringify(postData)
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       const errorData = await response.json().catch(() => ({}));
       console.error('Filed updatePost 오류:', response.status, errorData);
       throw new Error(errorData.message || `Failed to update post (${response.status})`);
@@ -470,6 +485,7 @@ export const filedAPI = {
       headers: getHeaders()
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       const errorData = await response.json().catch(() => ({}));
       console.error('Filed deletePost 오류:', response.status, errorData);
       throw new Error(errorData.message || `Failed to delete post (${response.status})`);
@@ -529,6 +545,7 @@ export const filedAPI = {
       body: JSON.stringify(headerData)
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       throw new Error('Failed to update filed header');
     }
     const data = await response.json();
@@ -544,6 +561,7 @@ export const filedAPI = {
       body: JSON.stringify({ orders })
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       throw new Error('Failed to reorder posts');
     }
     const data = await response.json();
@@ -602,6 +620,7 @@ export const aboutAPI = {
       body: JSON.stringify(aboutData)
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       throw new Error('Failed to update about content');
     }
     const data = await response.json();
@@ -659,6 +678,7 @@ export const cvAPI = {
       body: JSON.stringify(cvData)
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       throw new Error('Failed to update CV');
     }
     const data = await response.json();
@@ -731,6 +751,7 @@ export const locationAPI = {
       body: JSON.stringify(locationData)
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       throw new Error('Failed to update location');
     }
     const data = await response.json();
@@ -764,7 +785,7 @@ export const locationAPI = {
       headers: getHeaders(),
       body: JSON.stringify(headerData)
     });
-    if (!response.ok) throw new Error('Failed to update location header');
+    if (!response.ok) { if (response.status === 401) return handle401(); throw new Error('Failed to update location header'); }
     const data = await response.json();
     cacheUtils.remove(CACHE_KEYS.LOCATION_HEADER);
     return data;
@@ -816,6 +837,7 @@ export const locationPostAPI = {
       body: JSON.stringify(postData)
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       const errorData = await response.json().catch(() => ({}));
       console.error('Location createPost 오류:', response.status, errorData);
       throw new Error(errorData.message || `Failed to create location post (${response.status})`);
@@ -833,6 +855,7 @@ export const locationPostAPI = {
       body: JSON.stringify(postData)
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       const errorData = await response.json().catch(() => ({}));
       console.error('Location updatePost 오류:', response.status, errorData);
       throw new Error(errorData.message || `Failed to update location post (${response.status})`);
@@ -849,6 +872,7 @@ export const locationPostAPI = {
       headers: getHeaders()
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       const errorData = await response.json().catch(() => ({}));
       console.error('Location deletePost 오류:', response.status, errorData);
       throw new Error(errorData.message || `Failed to delete location post (${response.status})`);
@@ -888,7 +912,7 @@ export const locationPostAPI = {
       headers: getHeaders(),
       body: JSON.stringify(headerData)
     });
-    if (!response.ok) throw new Error('Failed to update location header');
+    if (!response.ok) { if (response.status === 401) return handle401(); throw new Error('Failed to update location header'); }
     const data = await response.json();
     cacheUtils.remove(CACHE_KEYS.LOCATION_HEADER);
     return data;
@@ -902,6 +926,7 @@ export const locationPostAPI = {
       body: JSON.stringify({ orders })
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       throw new Error('Failed to reorder location posts');
     }
     const data = await response.json();
@@ -941,6 +966,7 @@ export const humanAPI = {
       body: JSON.stringify(headerData)
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       throw new Error('Failed to update human header');
     }
     const data = await response.json();
@@ -1001,6 +1027,7 @@ export const homeAPI = {
       body: JSON.stringify(homeData)
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       throw new Error('Failed to update home settings');
     }
     const data = await response.json();
@@ -1044,6 +1071,7 @@ export const contactAPI = {
       body: JSON.stringify(contactData)
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       throw new Error('Failed to update contact');
     }
     const data = await response.json();
@@ -1144,6 +1172,7 @@ export const guestbookAPI = {
       headers: getHeaders()
     });
     if (!response.ok) {
+      if (response.status === 401) return handle401();
       throw new Error('Failed to delete guestbook entry');
     }
     const data = await response.json();
