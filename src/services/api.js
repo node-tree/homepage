@@ -265,7 +265,9 @@ export const workAPI = {
       body: JSON.stringify(postData)
     });
     if (!response.ok) {
-      throw new Error('Failed to create post');
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Work createPost 오류:', response.status, errorData);
+      throw new Error(errorData.message || `Failed to create post (${response.status})`);
     }
     const data = await response.json();
     // 캐시 무효화
@@ -281,7 +283,9 @@ export const workAPI = {
       body: JSON.stringify(postData)
     });
     if (!response.ok) {
-      throw new Error('Failed to update post');
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Work updatePost 오류:', response.status, errorData);
+      throw new Error(errorData.message || `Failed to update post (${response.status})`);
     }
     const data = await response.json();
     // 캐시 무효화
@@ -296,7 +300,9 @@ export const workAPI = {
       headers: getHeaders()
     });
     if (!response.ok) {
-      throw new Error('Failed to delete post');
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Work deletePost 오류:', response.status, errorData);
+      throw new Error(errorData.message || `Failed to delete post (${response.status})`);
     }
     const data = await response.json();
     // 캐시 무효화
@@ -431,7 +437,9 @@ export const filedAPI = {
       body: JSON.stringify(postData)
     });
     if (!response.ok) {
-      throw new Error('Failed to create post');
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Filed createPost 오류:', response.status, errorData);
+      throw new Error(errorData.message || `Failed to create post (${response.status})`);
     }
     const data = await response.json();
     cacheUtils.remove(CACHE_KEYS.FILED_POSTS);
@@ -446,7 +454,9 @@ export const filedAPI = {
       body: JSON.stringify(postData)
     });
     if (!response.ok) {
-      throw new Error('Failed to update post');
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Filed updatePost 오류:', response.status, errorData);
+      throw new Error(errorData.message || `Failed to update post (${response.status})`);
     }
     const data = await response.json();
     cacheUtils.remove(CACHE_KEYS.FILED_POSTS);
@@ -460,7 +470,9 @@ export const filedAPI = {
       headers: getHeaders()
     });
     if (!response.ok) {
-      throw new Error('Failed to delete post');
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Filed deletePost 오류:', response.status, errorData);
+      throw new Error(errorData.message || `Failed to delete post (${response.status})`);
     }
     const data = await response.json();
     cacheUtils.remove(CACHE_KEYS.FILED_POSTS);
@@ -804,7 +816,9 @@ export const locationPostAPI = {
       body: JSON.stringify(postData)
     });
     if (!response.ok) {
-      throw new Error('Failed to create location post');
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Location createPost 오류:', response.status, errorData);
+      throw new Error(errorData.message || `Failed to create location post (${response.status})`);
     }
     const data = await response.json();
     cacheUtils.remove('cache_location_posts');
@@ -819,7 +833,9 @@ export const locationPostAPI = {
       body: JSON.stringify(postData)
     });
     if (!response.ok) {
-      throw new Error('Failed to update location post');
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Location updatePost 오류:', response.status, errorData);
+      throw new Error(errorData.message || `Failed to update location post (${response.status})`);
     }
     const data = await response.json();
     cacheUtils.remove('cache_location_posts');
@@ -833,7 +849,9 @@ export const locationPostAPI = {
       headers: getHeaders()
     });
     if (!response.ok) {
-      throw new Error('Failed to delete location post');
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Location deletePost 오류:', response.status, errorData);
+      throw new Error(errorData.message || `Failed to delete location post (${response.status})`);
     }
     const data = await response.json();
     cacheUtils.remove('cache_location_posts');
