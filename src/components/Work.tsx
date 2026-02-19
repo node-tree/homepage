@@ -6,6 +6,7 @@ import WritePost from './WritePost';
 import { useAuth } from '../contexts/AuthContext';
 import ReconnectAnimation from './ReconnectAnimation';
 import { playHoverSound, playClickSound } from '../utils/sound';
+import { useEditorialLayout } from '../hooks/useEditorialLayout';
 
 interface Post {
   id: string;
@@ -37,6 +38,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
   const [isEditingHeader, setIsEditingHeader] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const { contentRef, LightboxPortal } = useEditorialLayout(selectedPost?.id);
 
   const loadPosts = useCallback(async () => {
     setPostsLoading(true);
@@ -424,9 +426,10 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
                 <ReconnectAnimation width={400} height={400} />
               )}
 
-              <div className="post-text">
+              <div className="post-text" ref={contentRef}>
                 {formatContent(selectedPost.content)}
               </div>
+              <LightboxPortal />
 
               {/* 유기적공명:에디아포닉 글에만 PDF 카탈로그 표시 */}
               {(selectedPost.title.includes('유기적공명') || selectedPost.title.includes('에디아포닉')) && (

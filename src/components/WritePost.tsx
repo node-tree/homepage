@@ -183,6 +183,9 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
 
             addMediaControls(wrapper);
           });
+
+          // 5. 이미지 번호 뱃지 업데이트
+          updateMediaIndices();
         }, 100);
       }
     } else {
@@ -423,6 +426,24 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     const newLine = document.createElement('div');
     newLine.innerHTML = '<br>';
     editorRef.current.appendChild(newLine);
+    // 이미지 번호 업데이트
+    updateMediaIndices();
+  };
+
+  // 이미지 번호 뱃지 업데이트
+  const updateMediaIndices = () => {
+    if (!editorRef.current) return;
+    const blocks = editorRef.current.querySelectorAll('.media-block[data-type="image"]');
+    blocks.forEach((block, idx) => {
+      let badge = block.querySelector('.media-index') as HTMLElement;
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'media-index';
+        badge.contentEditable = 'false';
+        block.appendChild(badge);
+      }
+      badge.textContent = `${idx + 1}`;
+    });
   };
 
   // 미디어 블록에 컨트롤 버튼 추가
@@ -433,9 +454,9 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     const controls = document.createElement('div');
     controls.className = 'media-controls';
     controls.contentEditable = 'false';
-    controls.style.cssText = 'position: absolute; top: 5px; right: 5px; display: flex; gap: 4px; z-index: 10; opacity: 1;';
+    controls.style.cssText = 'position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; z-index: 10; opacity: 1;';
 
-    const btnStyle = 'padding: 4px 8px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;';
+    const btnStyle = 'padding: 6px 10px; background: rgba(0,0,0,0.55); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);';
 
     // 위로 이동 버튼
     const upBtn = document.createElement('button');
@@ -453,6 +474,7 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
       const prev = mediaBlock.previousElementSibling;
       if (prev && !prev.classList.contains('media-controls')) {
         mediaBlock.parentNode?.insertBefore(mediaBlock, prev);
+        updateMediaIndices();
       }
     };
 
@@ -472,6 +494,7 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
       const next = mediaBlock.nextElementSibling;
       if (next) {
         mediaBlock.parentNode?.insertBefore(next, mediaBlock);
+        updateMediaIndices();
       }
     };
 
@@ -480,7 +503,7 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     deleteBtn.type = 'button';
     deleteBtn.innerHTML = '×';
     deleteBtn.title = '삭제';
-    deleteBtn.style.cssText = btnStyle + 'background: rgba(220,53,69,0.8);';
+    deleteBtn.style.cssText = btnStyle + 'background: rgba(220,53,69,0.75);';
     deleteBtn.onmousedown = (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -489,6 +512,7 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
       e.preventDefault();
       e.stopPropagation();
       mediaBlock.remove();
+      updateMediaIndices();
     };
 
     controls.appendChild(upBtn);
@@ -504,6 +528,8 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
   const removeMediaControls = (html: string): string => {
     // media-controls div 제거
     let cleaned = html.replace(/<div class="media-controls"[^>]*>[\s\S]*?<\/div>/gi, '');
+    // media-index 뱃지 제거
+    cleaned = cleaned.replace(/<span class="media-index"[^>]*>[^<]*<\/span>/gi, '');
     // contenteditable 속성 제거
     cleaned = cleaned.replace(/\s*contenteditable="[^"]*"/gi, '');
     // draggable 속성 제거 (media-block에서)

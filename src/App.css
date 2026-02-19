@@ -1366,13 +1366,15 @@
   margin: 16px 0;
   text-align: center;
   cursor: move;
-  transition: opacity 0.2s, border 0.2s;
+  transition: all 0.25s ease;
   padding: 8px;
-  border-radius: 8px;
+  border-radius: 10px;
+  border: 2px solid transparent;
 }
 
 .wysiwyg-editor .media-block:hover {
-  background: rgba(52, 152, 219, 0.1);
+  background: rgba(52, 152, 219, 0.06);
+  border-color: rgba(52, 152, 219, 0.3);
 }
 
 .wysiwyg-editor .media-block img {
@@ -1381,19 +1383,57 @@
   border-radius: 8px;
   display: block;
   margin: 0 auto;
+  transition: transform 0.2s ease;
 }
 
 .wysiwyg-editor .media-block .media-controls {
   opacity: 0;
   transition: opacity 0.2s;
+  display: flex;
+  gap: 4px;
 }
 
 .wysiwyg-editor .media-block:hover .media-controls {
   opacity: 1;
 }
 
+.wysiwyg-editor .media-block .media-controls button {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.15s ease;
+}
+
 .wysiwyg-editor .media-block .media-controls button:hover {
-  background: rgba(0,0,0,0.8) !important;
+  background: rgba(0,0,0,0.85) !important;
+  transform: scale(1.1);
+}
+
+/* 에디터 이미지 번호 뱃지 */
+.wysiwyg-editor .media-block .media-index {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  letter-spacing: 0.02em;
+}
+
+/* 드래그 중인 미디어 블록 */
+.wysiwyg-editor .media-block.dragging {
+  opacity: 0.4;
+  border-color: rgba(52, 152, 219, 0.5);
+}
+
+.wysiwyg-editor .media-block.drag-over {
+  border-color: #3498db;
+  background: rgba(52, 152, 219, 0.12);
 }
 
 .wysiwyg-editor .media-block .video-container {
@@ -1875,6 +1915,214 @@
   border-radius: 12px;
   border: none;
 }
+
+/* ===== 에디토리얼 매거진 레이아웃 ===== */
+
+/* 에디토리얼 풀 와이드 이미지 */
+.post-text .editorial-full {
+  margin: 2.5rem 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.post-text .editorial-full img {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto;
+  border-radius: 6px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease, filter 0.4s ease;
+  display: block;
+  margin: 0 auto;
+}
+
+.post-text .editorial-full:hover img {
+  transform: scale(1.03);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+}
+
+/* 풀 와이드 호버 오버레이 */
+.post-text .editorial-full::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.25) 0%,
+    rgba(0, 0, 0, 0) 40%
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.post-text .editorial-full:hover::after {
+  opacity: 1;
+}
+
+/* 에디토리얼 2컬럼 그리드 */
+.post-text .editorial-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 1.5rem 0 2.5rem 0;
+}
+
+.post-text .editorial-grid > * {
+  margin: 0 !important;
+  overflow: hidden;
+  border-radius: 6px;
+  position: relative;
+}
+
+.post-text .editorial-grid > *::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.2) 0%,
+    rgba(0, 0, 0, 0) 50%
+  );
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+
+.post-text .editorial-grid > *:hover::after {
+  opacity: 1;
+}
+
+.post-text .editorial-grid img {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+  aspect-ratio: 4/3;
+  display: block;
+  margin: 0 !important;
+}
+
+.post-text .editorial-grid > *:hover img {
+  transform: scale(1.05);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.18);
+}
+
+/* editorial-img-wrap (bare img를 감싼 wrapper) */
+.post-text .editorial-img-wrap {
+  text-align: center;
+}
+
+/* 모바일 대응 */
+@media (max-width: 600px) {
+  .post-text .editorial-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .post-text .editorial-grid img {
+    aspect-ratio: auto;
+  }
+}
+
+/* ===== 라이트박스 ===== */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: lightbox-fadein 0.25s ease;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+@keyframes lightbox-fadein {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.lightbox-image {
+  max-width: 90vw;
+  max-height: 88vh;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 16px 64px rgba(0, 0, 0, 0.5);
+  animation: lightbox-zoomin 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes lightbox-zoomin {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 2.2rem;
+  cursor: pointer;
+  z-index: 10001;
+  line-height: 1;
+  padding: 8px;
+  transition: color 0.2s;
+}
+
+.lightbox-close:hover {
+  color: #fff;
+}
+
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 2.4rem;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  line-height: 1;
+  padding: 0;
+}
+
+.lightbox-nav:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.lightbox-prev { left: 20px; }
+.lightbox-next { right: 20px; }
+
+.lightbox-counter {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+}
+
+/* ===== 에디토리얼 / 라이트박스 끝 ===== */
 
 .post-text p {
   margin: 0 0 1.5rem 0;
