@@ -5,6 +5,7 @@ import { locationPostAPI } from '../services/api';
 import WritePost from './WritePost';
 import { useAuth } from '../contexts/AuthContext';
 import { playHoverSound, playClickSound } from '../utils/sound';
+import { useEditorialLayout } from '../hooks/useEditorialLayout';
 
 interface Post {
   id: string;
@@ -31,6 +32,7 @@ const Location3D: React.FC = () => {
   const [isEditingHeader, setIsEditingHeader] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const { contentRef, LightboxPortal } = useEditorialLayout(selectedPost?.id);
 
   const loadPosts = useCallback(async () => {
     setPostsLoading(true);
@@ -394,9 +396,10 @@ const Location3D: React.FC = () => {
             </header>
 
             <div className="post-content">
-              <div className="post-text">
+              <div className="post-text" ref={contentRef}>
                 {formatContent(selectedPost.content)}
               </div>
+              <LightboxPortal />
             </div>
           </article>
 

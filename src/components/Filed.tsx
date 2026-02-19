@@ -5,6 +5,7 @@ import { filedAPI } from '../services/api';
 import WritePost from './WritePost';
 import { useAuth } from '../contexts/AuthContext';
 import { playHoverSound, playClickSound } from '../utils/sound';
+import { useEditorialLayout } from '../hooks/useEditorialLayout';
 
 // 카테고리 타입
 type CategoryType = '전체' | '문화예술교육' | '커뮤니티';
@@ -41,6 +42,7 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>('전체');
+  const { contentRef, LightboxPortal } = useEditorialLayout(selectedPost?.id);
 
   // 카테고리별 필터링된 포스트
   const filteredPosts = selectedCategory === '전체'
@@ -428,9 +430,10 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
             </header>
             
             <div className="post-content">
-              <div className="post-text">
+              <div className="post-text" ref={contentRef}>
                 {formatContent(selectedPost.content)}
               </div>
+              <LightboxPortal />
             </div>
           </article>
 
