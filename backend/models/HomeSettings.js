@@ -14,6 +14,10 @@ const homeSettingsSchema = new mongoose.Schema({
     enum: ['center', 'bottom-left', 'bottom-right', 'top-left', 'top-right'],
     default: 'bottom-left'
   },
+  backgroundImage: {
+    type: String,
+    default: null
+  },
   isActive: {
     type: Boolean,
     default: true

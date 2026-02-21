@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import GeometricParticles from './GeometricParticles';
 import { homeAPI } from '../services/api';
@@ -8,6 +8,7 @@ interface HomeSettings {
   title: string;
   subtitle: string;
   titlePosition: 'center' | 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
+  backgroundImage?: string | null;
 }
 
 const getPositionStyles = (isMobile: boolean): Record<string, React.CSSProperties> => ({
@@ -43,18 +44,53 @@ const getPositionStyles = (isMobile: boolean): Record<string, React.CSSPropertie
   },
 });
 
+// 이미지를 Canvas로 압축하여 base64 반환 (최대 1920px, JPEG 80%)
+const compressImage = (file: File, maxWidth = 1920, quality = 0.8): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error('Canvas context unavailable')); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
+
 const Home: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const [settings, setSettings] = useState<HomeSettings>({
     title: '',
     subtitle: '',
-    titlePosition: 'bottom-left'
+    titlePosition: 'bottom-left',
+    backgroundImage: null,
   });
   const [isLoaded, setIsLoaded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<HomeSettings>(settings);
   const [isSaving, setIsSaving] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // 이미지 편집 상태
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [imageError, setImageError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 모바일 감지
   useEffect(() => {
@@ -64,28 +100,23 @@ const Home: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // 프레임 패닝 관련 (프레임이 움직이는 효과)
+  // 프레임 패닝
   const containerRef = useRef<HTMLDivElement>(null);
   const frameX = useMotionValue(0);
   const [isUserInteracting, setIsUserInteracting] = useState(false);
   const interactionTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // 랜덤 프레임 이동
   useEffect(() => {
     if (isEditing) return;
 
     const moveRandomly = () => {
       if (!isUserInteracting) {
-        // -1 ~ 1 범위의 랜덤 값
         const randomX = (Math.random() - 0.5) * 2;
         frameX.set(randomX);
       }
     };
 
-    // 초기 랜덤 위치
     moveRandomly();
-
-    // 4~7초마다 랜덤 이동
     const interval = setInterval(() => {
       moveRandomly();
     }, 4000 + Math.random() * 3000);
@@ -93,19 +124,15 @@ const Home: React.FC = () => {
     return () => clearInterval(interval);
   }, [frameX, isUserInteracting, isEditing]);
 
-  // 마우스 이동 시 사용자 인터랙션 감지
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (containerRef.current && !isEditing) {
         const rect = containerRef.current.getBoundingClientRect();
         const x = (e.clientX - rect.left) / rect.width;
-        // -1 ~ 1 범위로 변환 (중앙이 0)
         frameX.set((x - 0.5) * 2);
 
-        // 사용자 인터랙션 중으로 표시
         setIsUserInteracting(true);
 
-        // 2초 후 자동 모드로 복귀
         if (interactionTimeout.current) {
           clearTimeout(interactionTimeout.current);
         }
@@ -132,7 +159,8 @@ const Home: React.FC = () => {
           setSettings({
             title: response.data.title || 'Node Tree',
             subtitle: response.data.subtitle || '서사 교차점의 기록',
-            titlePosition: response.data.titlePosition || 'bottom-left'
+            titlePosition: response.data.titlePosition || 'bottom-left',
+            backgroundImage: response.data.backgroundImage || null,
           });
         }
       } catch (error) {
@@ -140,7 +168,8 @@ const Home: React.FC = () => {
         setSettings({
           title: 'Node Tree',
           subtitle: '서사 교차점의 기록',
-          titlePosition: 'bottom-left'
+          titlePosition: 'bottom-left',
+          backgroundImage: null,
         });
       } finally {
         setIsLoaded(true);
@@ -151,7 +180,54 @@ const Home: React.FC = () => {
 
   const handleEdit = () => {
     setEditForm(settings);
+    setImagePreview(settings.backgroundImage || null);
+    setImageError('');
     setIsEditing(true);
+  };
+
+  // 파일 처리
+  const handleImageFile = useCallback(async (file: File) => {
+    setImageError('');
+    if (!file.type.startsWith('image/')) {
+      setImageError('이미지 파일만 업로드 가능합니다.');
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      setImageError('파일 크기는 15MB 이하여야 합니다.');
+      return;
+    }
+    try {
+      const compressed = await compressImage(file);
+      setImagePreview(compressed);
+      setEditForm(prev => ({ ...prev, backgroundImage: compressed }));
+    } catch (err) {
+      setImageError('이미지 처리에 실패했습니다.');
+    }
+  }, []);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageFile(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => setIsDragging(false);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleImageFile(file);
+  };
+
+  const handleRemoveImage = () => {
+    setImagePreview(null);
+    setEditForm(prev => ({ ...prev, backgroundImage: null }));
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSave = async () => {
@@ -172,6 +248,8 @@ const Home: React.FC = () => {
 
   const handleCancel = () => {
     setEditForm(settings);
+    setImagePreview(settings.backgroundImage || null);
+    setImageError('');
     setIsEditing(false);
   };
 
@@ -190,7 +268,45 @@ const Home: React.FC = () => {
         left: 0,
       }}
     >
-      {/* 미디어아트 캔버스 - 전체화면 */}
+      {/* 배경 이미지 레이어 */}
+      <AnimatePresence>
+        {settings.backgroundImage && (
+          <motion.div
+            key="bg-image"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.2 }}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              zIndex: 0,
+            }}
+          >
+            <img
+              src={settings.backgroundImage}
+              alt=""
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
+              }}
+            />
+            {/* 파티클이 잘 보이도록 반투명 오버레이 */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'rgba(255,255,255,0.15)',
+            }} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 미디어아트 캔버스 */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -201,11 +317,12 @@ const Home: React.FC = () => {
           position: 'absolute',
           top: 0,
           left: 0,
+          zIndex: 1,
         }}
       >
         <GeometricParticles height="100%" />
 
-        {/* 타이틀 오버레이 - 데이터 로드 후 표시 */}
+        {/* 타이틀 오버레이 */}
         {isLoaded && (
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -256,7 +373,7 @@ const Home: React.FC = () => {
           </motion.div>
         )}
 
-        {/* 편집 버튼 (로그인 시) */}
+        {/* 편집 버튼 */}
         {isAuthenticated && !isEditing && (
           <motion.button
             initial={{ opacity: 0 }}
@@ -279,7 +396,7 @@ const Home: React.FC = () => {
               zIndex: 20,
             }}
           >
-            텍스트 편집
+            홈 편집
           </motion.button>
         )}
       </motion.div>
@@ -302,6 +419,8 @@ const Home: React.FC = () => {
               alignItems: 'center',
               justifyContent: 'center',
               zIndex: 1000,
+              overflowY: 'auto',
+              padding: '20px',
             }}
             onClick={handleCancel}
           >
@@ -314,8 +433,8 @@ const Home: React.FC = () => {
                 background: '#fff',
                 borderRadius: '16px',
                 padding: '40px',
-                width: '90%',
-                maxWidth: '500px',
+                width: '100%',
+                maxWidth: '520px',
                 boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
               }}
             >
@@ -326,9 +445,106 @@ const Home: React.FC = () => {
                 color: '#111',
                 letterSpacing: '0.05em',
               }}>
-                홈 텍스트 편집
+                홈 편집
               </h2>
 
+              {/* 배경 이미지 섹션 */}
+              <div style={{ marginBottom: '28px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '12px',
+                  fontSize: '0.9rem',
+                  color: '#666',
+                  fontWeight: 500,
+                }}>
+                  배경 이미지
+                </label>
+
+                {/* 이미지 미리보기 */}
+                {imagePreview ? (
+                  <div style={{ position: 'relative', marginBottom: '12px' }}>
+                    <img
+                      src={imagePreview}
+                      alt="배경 미리보기"
+                      style={{
+                        width: '100%',
+                        height: '180px',
+                        objectFit: 'cover',
+                        borderRadius: '8px',
+                        border: '1px solid #eee',
+                        display: 'block',
+                      }}
+                    />
+                    <button
+                      onClick={handleRemoveImage}
+                      style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        background: 'rgba(0,0,0,0.7)',
+                        color: '#fff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: 1,
+                      }}
+                      title="이미지 삭제"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : null}
+
+                {/* 드래그&드롭 업로드 영역 */}
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    border: `2px dashed ${isDragging ? '#111' : '#ddd'}`,
+                    borderRadius: '8px',
+                    padding: '24px',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    background: isDragging ? 'rgba(0,0,0,0.03)' : '#fafafa',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <div style={{ fontSize: '1.5rem', marginBottom: '8px', color: '#999' }}>↑</div>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#888' }}>
+                    클릭하거나 파일을 드래그하세요
+                  </p>
+                  <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#bbb' }}>
+                    JPG, PNG, WEBP · 15MB 이하 · 자동 압축
+                  </p>
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  style={{ display: 'none' }}
+                />
+
+                {imageError && (
+                  <p style={{ margin: '8px 0 0', fontSize: '0.8rem', color: '#e53' }}>
+                    {imageError}
+                  </p>
+                )}
+              </div>
+
+              {/* 구분선 */}
+              <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '0 0 28px' }} />
+
+              {/* 텍스트 섹션 */}
               <div style={{ marginBottom: '24px' }}>
                 <label style={{
                   display: 'block',
@@ -351,6 +567,7 @@ const Home: React.FC = () => {
                     fontSize: '1rem',
                     outline: 'none',
                     transition: 'border-color 0.2s',
+                    boxSizing: 'border-box',
                   }}
                   onFocus={(e) => e.target.style.borderColor = '#111'}
                   onBlur={(e) => e.target.style.borderColor = '#ddd'}
@@ -379,6 +596,7 @@ const Home: React.FC = () => {
                     fontSize: '1rem',
                     outline: 'none',
                     transition: 'border-color 0.2s',
+                    boxSizing: 'border-box',
                   }}
                   onFocus={(e) => e.target.style.borderColor = '#111'}
                   onBlur={(e) => e.target.style.borderColor = '#ddd'}
@@ -407,6 +625,7 @@ const Home: React.FC = () => {
                     outline: 'none',
                     background: '#fff',
                     cursor: 'pointer',
+                    boxSizing: 'border-box',
                   }}
                 >
                   <option value="bottom-left">왼쪽 하단</option>
