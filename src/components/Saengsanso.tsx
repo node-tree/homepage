@@ -905,6 +905,7 @@ function SaengsansoApp() {
   }, []);
 
   // DB 데이터
+  const [loading, setLoading] = useState(true);
   const [exhibitions, setExhibitions] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [news, setNews] = useState<any[]>([]);
@@ -916,6 +917,7 @@ function SaengsansoApp() {
 
   // 데이터 로드
   const loadData = useCallback(async () => {
+    setLoading(true);
     try {
       const [exRes, prRes, nwRes, arRes, slRes] = await Promise.all([
         saengsansoAPI.exhibitions.getAll().catch(() => null),
@@ -935,6 +937,8 @@ function SaengsansoApp() {
       setNews(FALLBACK_NEWS);
       setArchives(FALLBACK_ARCHIVES);
       setSlides(FALLBACK_SLIDES);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -1013,6 +1017,12 @@ function SaengsansoApp() {
     await loadData();
   };
 
+  const loadingIndicator = (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '60px' }}>
+      <p style={{ ...TEXT_SM, color: C.gray65, letterSpacing: '0.05em' }}>불러오는 중...</p>
+    </div>
+  );
+
   const renderPage = () => {
     switch (currentPage) {
       case 'MAIN': return (
@@ -1028,17 +1038,20 @@ function SaengsansoApp() {
       );
       case 'ABOUT': return <PageAbout isAdmin={isAdmin && adminEditMode} />;
       case 'SHOP': return <PageShop />;
-      case 'PROJECTS': return (
-        <PageProjects
-          projects={projects}
-          isAdmin={isAdmin && adminEditMode}
-          onSave={makeSaveHandler('projects')}
-          onDelete={makeDeleteHandler('projects')}
-        />
-      );
+      case 'PROJECTS':
+        if (loading) return loadingIndicator;
+        return (
+          <PageProjects
+            projects={projects}
+            isAdmin={isAdmin && adminEditMode}
+            onSave={makeSaveHandler('projects')}
+            onDelete={makeDeleteHandler('projects')}
+          />
+        );
       case 'NEWS':
       case 'NEWS_NOTICE':
       case 'NEWS_PRESS':
+        if (loading) return loadingIndicator;
         return (
           <PageNews
             filter={currentPage === 'NEWS_NOTICE' ? 'notice' : currentPage === 'NEWS_PRESS' ? 'press' : undefined}
@@ -1048,14 +1061,16 @@ function SaengsansoApp() {
             onDelete={makeDeleteHandler('news')}
           />
         );
-      case 'ARCHIVE': return (
-        <PageArchive
-          archives={archives}
-          isAdmin={isAdmin && adminEditMode}
-          onSave={makeSaveHandler('archive')}
-          onDelete={makeDeleteHandler('archive')}
-        />
-      );
+      case 'ARCHIVE':
+        if (loading) return loadingIndicator;
+        return (
+          <PageArchive
+            archives={archives}
+            isAdmin={isAdmin && adminEditMode}
+            onSave={makeSaveHandler('archive')}
+            onDelete={makeDeleteHandler('archive')}
+          />
+        );
       default: return (
         <PageMain
           goToSlide={goToSlide}
