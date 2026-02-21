@@ -95,7 +95,7 @@ router.put('/', auth, async (req, res) => {
   try {
     await ensureDBConnection();
 
-    const { title, subtitle, titlePosition } = req.body;
+    const { title, subtitle, titlePosition, backgroundImage } = req.body;
 
     const updateData = {
       updatedAt: Date.now()
@@ -104,6 +104,7 @@ router.put('/', auth, async (req, res) => {
     if (title !== undefined) updateData.title = title;
     if (subtitle !== undefined) updateData.subtitle = subtitle;
     if (titlePosition) updateData.titlePosition = titlePosition;
+    if (backgroundImage !== undefined) updateData.backgroundImage = backgroundImage;
 
     let homeData = await HomeSettings.findOne({ isActive: true });
 

@@ -122,6 +122,7 @@ const CACHE_KEYS = {
   SSO_PROJECTS: 'cache_sso_projects',
   SSO_NEWS: 'cache_sso_news',
   SSO_ARCHIVES: 'cache_sso_archives',
+  SSO_SLIDES: 'cache_sso_slides',
 };
 
 // 토큰을 가져오는 헬퍼 함수
@@ -943,7 +944,28 @@ const ssoTypes = [
   { key: 'projects', cacheKey: CACHE_KEYS.SSO_PROJECTS },
   { key: 'news', cacheKey: CACHE_KEYS.SSO_NEWS },
   { key: 'archive', cacheKey: CACHE_KEYS.SSO_ARCHIVES },
+  { key: 'slides', cacheKey: 'cache_sso_slides' },
 ];
+
+export const saengsansoAboutAPI = {
+  get: async () => {
+    const response = await fetch(`${API_BASE_URL}/saengsanso/about-page`);
+    if (!response.ok) throw new Error('Failed to fetch saengsanso about');
+    return response.json();
+  },
+  update: async (description) => {
+    const response = await fetch(`${API_BASE_URL}/saengsanso/about-page`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ description }),
+    });
+    if (!response.ok) {
+      if (response.status === 401) return handle401();
+      throw new Error('Failed to update saengsanso about');
+    }
+    return response.json();
+  },
+};
 
 export const saengsansoAPI = {};
 

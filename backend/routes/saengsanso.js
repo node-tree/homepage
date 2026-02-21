@@ -7,6 +7,8 @@ const {
   SaengsansoProject,
   SaengsansoNews,
   SaengsansoArchive,
+  SaengsansoSlide,
+  SaengsansoAbout,
 } = require('../models/Saengsanso');
 
 // DB 연결 확인 (work.js 패턴 복제)
@@ -45,6 +47,7 @@ const MODELS = {
   projects: SaengsansoProject,
   news: SaengsansoNews,
   archive: SaengsansoArchive,
+  slides: SaengsansoSlide,
 };
 
 const SORT_FIELDS = {
@@ -52,6 +55,7 @@ const SORT_FIELDS = {
   projects: { sortOrder: 1, _id: -1 },
   news: { sortOrder: 1, _id: -1 },
   archive: { sortOrder: 1, _id: -1 },
+  slides: { sortOrder: 1, _id: 1 },
 };
 
 // ─── 공통 CRUD 라우트 생성 ───
@@ -122,6 +126,42 @@ Object.entries(MODELS).forEach(([type, Model]) => {
       res.status(500).json({ success: false, message: `${type} 삭제 실패`, error: error.message });
     }
   });
+});
+
+// ─── ABOUT 텍스트 전용 라우트 (단일 문서) ───
+const DEFAULT_ABOUT = '생산소는\n지역 리서치를 기반으로 활동하는 뉴미디어 아티스트 듀오 노드 트리의 작업 과정에서,\n적정한 규모의 도시에 대한 질문을 바탕으로\n마을에서 어떻게 관계를 맺고 어떤 태도로 실천되는지를 기록하는 공간입니다.\n마을에서 마음을 나누며, 감각과 이야기를 축적하고 있습니다';
+
+router.get('/about-page', async (req, res) => {
+  try {
+    await ensureDBConnection();
+    let doc = await SaengsansoAbout.findOne({ isActive: true });
+    if (!doc) {
+      doc = await SaengsansoAbout.create({ description: DEFAULT_ABOUT });
+    }
+    res.json({ success: true, data: doc });
+  } catch (error) {
+    console.error('SSO about 조회 오류:', error);
+    res.status(500).json({ success: false, message: 'about 조회 실패', error: error.message });
+  }
+});
+
+router.put('/about-page', auth, async (req, res) => {
+  try {
+    await ensureDBConnection();
+    const { description } = req.body;
+    let doc = await SaengsansoAbout.findOne({ isActive: true });
+    if (!doc) {
+      doc = await SaengsansoAbout.create({ description: description || DEFAULT_ABOUT });
+    } else {
+      doc.description = description ?? doc.description;
+      doc.updatedAt = new Date();
+      await doc.save();
+    }
+    res.json({ success: true, data: doc, message: 'about 수정 완료' });
+  } catch (error) {
+    console.error('SSO about 수정 오류:', error);
+    res.status(500).json({ success: false, message: 'about 수정 실패', error: error.message });
+  }
 });
 
 module.exports = router;
