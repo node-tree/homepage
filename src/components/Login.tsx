@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 
-const Login: React.FC = () => {
+interface LoginProps {
+  onClose?: () => void;
+}
+
+const Login: React.FC<LoginProps> = ({ onClose }) => {
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -17,9 +21,10 @@ const Login: React.FC = () => {
   // 이미 로그인된 경우 홈으로 리다이렉트
   useEffect(() => {
     if (isAuthenticated) {
+      if (onClose) { onClose(); return; }
       window.location.href = '/';
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, onClose]);
 
   // 입력 필드 변경 처리
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,6 +75,7 @@ const Login: React.FC = () => {
         
         // 부드러운 리다이렉트
         setTimeout(() => {
+          if (onClose) { onClose(); return; }
           window.location.href = '/';
         }, 800);
         return;
@@ -202,13 +208,24 @@ const Login: React.FC = () => {
           </form>
 
           <div className="back-to-home">
-            <motion.a 
-              href="/"
-              className="home-link"
-              whileHover={{ scale: 1.05 }}
-            >
-              ← 홈으로 돌아가기
-            </motion.a>
+            {onClose ? (
+              <motion.span
+                className="home-link"
+                style={{ cursor: 'pointer' }}
+                onClick={onClose}
+                whileHover={{ scale: 1.05 }}
+              >
+                ← 돌아가기
+              </motion.span>
+            ) : (
+              <motion.a
+                href="/"
+                className="home-link"
+                whileHover={{ scale: 1.05 }}
+              >
+                ← 홈으로 돌아가기
+              </motion.a>
+            )}
           </div>
         </motion.div>
       </div>
