@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import GeometricParticles from './GeometricParticles';
 import { homeAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import PageLoader from './PageLoader';
 
 interface HomeSettings {
   title: string;
