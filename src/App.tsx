@@ -5,34 +5,63 @@ import './App.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import Home from './components/Home';
-import Location3D from './components/Location3D';
+import SaengsansoApp from './components/Saengsanso';
 import StrudelSynth from './components/StrudelSynth';
 import Contact from './components/Contact';
 import Filed from './components/Filed';
 import CV from './components/CV';
-import LocationVideoSettings from './components/LocationVideoSettings';
 import About from './components/About';
 import Guestbook from './components/Guestbook';
 import Work from './components/Work';
 import { playHoverSound, playClickSound, playNavSound, initAudioContext } from './utils/sound';
 import { prefetchAPI } from './services/api';
 
+// 도메인 감지 (localhost에서는 ?saengsanso 쿼리로 테스트 가능)
+const isSaengsanso = typeof window !== 'undefined' && (
+  window.location.hostname === 'saengsanso.com' ||
+  window.location.hostname === 'www.saengsanso.com' ||
+  new URLSearchParams(window.location.search).has('saengsanso')
+);
+
+// 네비게이션 항목 타입
+interface NavItem {
+  id: number;
+  text: string;
+  page?: string;
+  href?: string;
+  external?: boolean;
+}
+
 // 네비게이션 항목
-const NAV_ITEMS = [
+const NAV_ITEMS: NavItem[] = [
   { id: 1, text: 'NODE TREE', page: 'ABOUT' },
-  { id: 2, text: 'CROSS CITY', page: 'LOCATION' },
+  { id: 2, text: '생산소', href: 'https://saengsanso.com', external: true },
   { id: 3, text: 'ART WORK', page: 'WORK' },
   { id: 4, text: 'COMMONS', page: 'FILED' },
   { id: 5, text: 'CV', page: 'CV' },
   { id: 6, text: 'CONTACT', page: 'CONTACT' }
 ];
 
+// 내부 페이지 전용 항목 (external 제외)
+const INTERNAL_NAV_ITEMS = NAV_ITEMS.filter(item => !item.external);
+
 // 데스크톱 네비게이션 컴포넌트 - 원형 노드 + 아래 텍스트
 function Navigation({ currentPage, onPageChange }: { currentPage: string; onPageChange: (page: string) => void }) {
-  const allNavItems = [
+  const allNavItems: NavItem[] = [
     { id: 0, text: 'HOME', page: 'HOME' },
     ...NAV_ITEMS
   ];
+
+  const handleClick = (item: NavItem) => {
+    if (item.external && item.href) {
+      window.open(item.href, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (item.page) {
+      playNavSound(item.page);
+      onPageChange(item.page);
+    }
+  };
 
   return (
     <nav className="fixed-navigation desktop-nav">
@@ -40,12 +69,9 @@ function Navigation({ currentPage, onPageChange }: { currentPage: string; onPage
         {allNavItems.map((item) => (
           <motion.div
             key={item.id}
-            className={`nav-node ${currentPage === item.page ? 'active' : ''}`}
+            className={`nav-node ${item.page && currentPage === item.page ? 'active' : ''}`}
             onMouseEnter={playHoverSound}
-            onClick={() => {
-              playNavSound(item.page);
-              onPageChange(item.page);
-            }}
+            onClick={() => handleClick(item)}
             whileTap={{ scale: 0.95 }}
           >
             <div className="nav-dot" />
@@ -60,14 +86,21 @@ function Navigation({ currentPage, onPageChange }: { currentPage: string; onPage
 // 모바일 햄버거 메뉴 컴포넌트
 function MobileNavigation({ currentPage, onPageChange }: { currentPage: string; onPageChange: (page: string) => void }) {
   const [isOpen, setIsOpen] = useState(false);
-  const allNavItems = [
+  const allNavItems: NavItem[] = [
     { id: 0, text: 'HOME', page: 'HOME' },
     ...NAV_ITEMS
   ];
 
-  const handleItemClick = (page: string) => {
-    playNavSound(page);
-    onPageChange(page);
+  const handleItemClick = (item: NavItem) => {
+    if (item.external && item.href) {
+      window.open(item.href, '_blank', 'noopener,noreferrer');
+      setIsOpen(false);
+      return;
+    }
+    if (item.page) {
+      playNavSound(item.page);
+      onPageChange(item.page);
+    }
     setIsOpen(false);
   };
 
@@ -117,12 +150,12 @@ function MobileNavigation({ currentPage, onPageChange }: { currentPage: string; 
                 {allNavItems.map((item) => (
                   <motion.div
                     key={item.id}
-                    className={`sidebar-item ${currentPage === item.page ? 'active' : ''}`}
-                    onClick={() => handleItemClick(item.page)}
+                    className={`sidebar-item ${item.page && currentPage === item.page ? 'active' : ''}`}
+                    onClick={() => handleItemClick(item)}
                     whileTap={{ scale: 0.98 }}
                   >
                     <div className="sidebar-dot" />
-                    <span>{item.text}</span>
+                    <span>{item.text}{item.external ? ' ↗' : ''}</span>
                   </motion.div>
                 ))}
               </div>
@@ -142,7 +175,6 @@ const prefetchMap: Record<string, () => void> = {
   FILED: prefetchAPI.filed,
   ABOUT: prefetchAPI.about,
   CV: prefetchAPI.cv,
-  LOCATION: prefetchAPI.location,
 };
 
 // 메인 콘텐츠 컴포넌트
@@ -191,7 +223,7 @@ function AppContent() {
       setCurrentPage('HOME');
     } else if (path === 'LOGIN') {
       // 로그인 페이지는 별도 처리
-    } else if (NAV_ITEMS.some(item => item.page === path)) {
+    } else if (INTERNAL_NAV_ITEMS.some(item => item.page === path)) {
       setCurrentPage(path);
     } else {
       // 알 수 없는 경로면 홈으로
@@ -220,8 +252,6 @@ function AppContent() {
     switch (currentPage) {
       case 'HOME':
         return <Home />;
-      case 'LOCATION':
-        return <Location3D />;
       case 'CONTACT':
         return <Contact />;
       case 'ABOUT':
@@ -232,8 +262,6 @@ function AppContent() {
         return <Filed />;
       case 'CV':
         return <CV />;
-      case 'LOCATION_SETTINGS':
-        return <LocationVideoSettings />;
       default:
         return <Home />;
     }
@@ -267,12 +295,6 @@ function AppContent() {
             whileHover={{ opacity: 1 }}
           >
             <span className="user-info">{user?.username}님</span>
-            <button
-              onClick={() => handlePageChange('LOCATION_SETTINGS')}
-              className="settings-button"
-            >
-              설정
-            </button>
             <button onClick={logout} className="logout-button">
               로그아웃
             </button>
@@ -300,6 +322,15 @@ function AppContent() {
 
 // App 컴포넌트
 function App() {
+  // saengsanso.com 도메인이면 생산소 독립 페이지 렌더링
+  if (isSaengsanso) {
+    return (
+      <AuthProvider>
+        <SaengsansoApp />
+      </AuthProvider>
+    );
+  }
+
   return (
     <AuthProvider>
       <BrowserRouter>
