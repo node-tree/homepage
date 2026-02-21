@@ -46,10 +46,14 @@ const FALLBACK_EXHIBITIONS = [
 ];
 
 const FALLBACK_PROJECTS = [
+  { category: 'EXHIBITION', date: '2024.09.06-22.', title: '고도 주민의 삶과 기억전', detail: '2024 고도주민활동지원사업. 백제역사문화연구원 위탁. 부여 청소년 문화의집.' },
+  { category: 'EXHIBITION', date: '2023.07.', title: '백제기와문화관 세계국가유산산업전 부스 기획 및 설치', detail: '충청남도 부여군 사적관리소 위탁. 세계국가유산산업전(경주) 부여 백제기와 홍보 부스.' },
+  { category: 'EXHIBITION', date: '2021.10.', title: '공예주간 조각수집', detail: '2021 공예주간. 대장장이 체험, 목공예·도자·보태니컬아트 전시, 살구에이드.' },
   { category: 'SOUNDSCAPE', date: '2024.11.10.', title: '사운드 오케스트라 in 부여', detail: '신동엽문학관 → 임천면 성흥산 → 대조사. 모듈러신스로 참여자와 소리 만들기. 관광두레 파일럿 프로그램.' },
   { category: 'SOUNDSCAPE', date: '2021-2023', title: '도시기록프로젝트 소리탐사조', detail: '서울 기반 도시 사운드 리서치' },
   { category: 'COLLABORATION', date: '2025.08-11.', title: '비단가람온길 레저코스 탄소중립 여행 활성화', detail: '서부내륙권 관광진흥사업. 백제역사문화연구원 위탁. 금강 인접 지자체 자전거여행+탄소중립 체험.' },
-  { category: 'COLLABORATION', date: '2025.09.20.', title: '비단가람 무브먼트 에코-플로깅', detail: '큐클리프(CUECLYP) × 인디언모터사이클 × 생산소 협업 — 백마강, 부여. 비단가람온길 탄소중립 사업의 일환.' },
+  { category: 'COLLABORATION', date: '2025.09.20.', title: '비단가람 무브먼트 에코-플로깅', detail: '큐클리프(CUECLYP) × 인디언모터사이클 × 생산소 협업 — 백마강, 부여. 무소음 DJing. 비단가람온길 탄소중립 사업의 일환.' },
+  { category: 'COLLABORATION', date: '2022.05.', title: '예방구 오픈 기념 뿡뿡파티', detail: '예방구(예술방앗간구룡) 오픈 기념 DJ파티. 생산소 × 예방구 협업.' },
   { category: 'RESIDENCY', date: '2021', title: '민간레지던시 프로젝트', detail: '히스테리안(강정아) 기획 — 대안적 거주와 공간 리서치' },
   { category: 'WORKSHOP & COMMUNITY', date: '2025.03.01.', title: '2025 삼일절 임천면', detail: '임천면 만세장터·임천보부상·장놀이패·부여웅비태권도·부여군여성농민회. 토종씨앗·연대·농민의 삶.' },
   { category: 'WORKSHOP & COMMUNITY', date: '2025.01.', title: '이야기 자리와 기록', detail: '꿈다락 문화예술학교 워크숍 \'나를 흔드는 ○○○이 있는가?\' 기록집 발간. 아르떼 라이브러리 수록.' },
@@ -610,13 +614,13 @@ function PageProjects({ projects, isAdmin, onSave, onDelete }: {
   const [editItem, setEditItem] = useState<any>(null); // null=닫힘, {}=새항목, {_id,...}=수정중
 
   const PROJ_FIELDS = [
-    { key: 'category', label: '카테고리', type: 'select' as const, options: ['SOUNDSCAPE', 'COLLABORATION', 'RESIDENCY', 'WORKSHOP & COMMUNITY'] },
+    { key: 'category', label: '카테고리', type: 'select' as const, options: ['SOUNDSCAPE', 'COLLABORATION', 'RESIDENCY', 'WORKSHOP & COMMUNITY', 'EXHIBITION'] },
     { key: 'date', label: '날짜' },
     { key: 'title', label: '제목' },
     { key: 'detail', label: '상세' },
   ];
 
-  const categories = ['SOUNDSCAPE', 'COLLABORATION', 'RESIDENCY', 'WORKSHOP & COMMUNITY'];
+  const categories = ['SOUNDSCAPE', 'COLLABORATION', 'RESIDENCY', 'WORKSHOP & COMMUNITY', 'EXHIBITION'];
   const grouped: Record<string, any[]> = {};
   categories.forEach(c => { grouped[c] = []; });
   projects.forEach(p => { if (grouped[p.category]) grouped[p.category].push(p); });
@@ -920,11 +924,11 @@ function SaengsansoApp() {
     setLoading(true);
     try {
       const [exRes, prRes, nwRes, arRes, slRes] = await Promise.all([
-        saengsansoAPI.exhibitions.getAll().catch(() => null),
-        saengsansoAPI.projects.getAll().catch(() => null),
-        saengsansoAPI.news.getAll().catch(() => null),
-        saengsansoAPI.archive.getAll().catch(() => null),
-        saengsansoAPI.slides.getAll().catch(() => null),
+        saengsansoAPI.exhibitions.getAll({ forceRefresh: true }).catch(() => null),
+        saengsansoAPI.projects.getAll({ forceRefresh: true }).catch(() => null),
+        saengsansoAPI.news.getAll({ forceRefresh: true }).catch(() => null),
+        saengsansoAPI.archive.getAll({ forceRefresh: true }).catch(() => null),
+        saengsansoAPI.slides.getAll({ forceRefresh: true }).catch(() => null),
       ]);
       setExhibitions(exRes?.success && exRes.data.length > 0 ? exRes.data : FALLBACK_EXHIBITIONS);
       setProjects(prRes?.success && prRes.data.length > 0 ? prRes.data : FALLBACK_PROJECTS);
@@ -1041,21 +1045,12 @@ function SaengsansoApp() {
       case 'PROJECTS':
         if (loading) return loadingIndicator;
         return (
-          <>
-            <PageExhibitions
-              exhibitions={exhibitions}
-              isAdmin={isAdmin && adminEditMode}
-              onAdd={() => {}}
-              onEdit={() => {}}
-              onDelete={makeDeleteHandler('exhibitions')}
-            />
-            <PageProjects
-              projects={projects}
-              isAdmin={isAdmin && adminEditMode}
-              onSave={makeSaveHandler('projects')}
-              onDelete={makeDeleteHandler('projects')}
-            />
-          </>
+          <PageProjects
+            projects={projects}
+            isAdmin={isAdmin && adminEditMode}
+            onSave={makeSaveHandler('projects')}
+            onDelete={makeDeleteHandler('projects')}
+          />
         );
       case 'NEWS':
       case 'NEWS_NOTICE':

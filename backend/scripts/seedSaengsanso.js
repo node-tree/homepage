@@ -6,16 +6,22 @@
 
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const mongoose = require('mongoose');
-const { SaengsansoProject, SaengsansoNews, SaengsansoArchive, SaengsansoExhibition } = require('../models/Saengsanso');
+const { SaengsansoProject, SaengsansoNews, SaengsansoArchive } = require('../models/Saengsanso');
 
 const PROJECTS = [
+  // ── EXHIBITION (전시) ──
+  { category: 'EXHIBITION', date: '2024.09.06-22.', title: '고도 주민의 삶과 기억전', detail: '2024 고도주민활동지원사업. 백제역사문화연구원 위탁. 부여 청소년 문화의집.', sortOrder: 1 },
+  { category: 'EXHIBITION', date: '2023.07.', title: '백제기와문화관 세계국가유산산업전 부스 기획 및 설치', detail: '충청남도 부여군 사적관리소 위탁. 세계국가유산산업전(경주) 부여 백제기와 홍보 부스.', sortOrder: 2 },
+  { category: 'EXHIBITION', date: '2021.10.', title: '공예주간 조각수집', detail: '2021 공예주간. 대장장이 체험(산소절단기/용접), 용기화분 만들기, 목공예·도자·보태니컬아트 전시, 살구에이드.', sortOrder: 3 },
+
   // ── SOUNDSCAPE ──
   { category: 'SOUNDSCAPE', date: '2024.11.10.', title: '사운드 오케스트라 in 부여', detail: '신동엽문학관 → 임천면 성흥산 → 대조사. 모듈러신스로 참여자와 소리 만들기. 관광두레 파일럿 프로그램.', sortOrder: 12 },
   { category: 'SOUNDSCAPE', date: '2021-2023', title: '도시기록프로젝트 소리탐사조', detail: '서울 기반 도시 사운드 리서치', sortOrder: 13 },
 
   // ── COLLABORATION ──
   { category: 'COLLABORATION', date: '2025.08-11.', title: '비단가람온길 레저코스 탄소중립 여행 활성화', detail: '서부내륙권 관광진흥사업. 백제역사문화연구원 위탁. 금강 인접 지자체(부여·세종·공주·논산·익산) 자전거여행+탄소중립 체험. 미션플로깅투어·친환경 여행지 꾸러미·금강 재순환 미술 체험.', sortOrder: 19 },
-  { category: 'COLLABORATION', date: '2025.09.20.', title: '비단가람 무브먼트 에코-플로깅', detail: '큐클리프(CUECLYP) × 인디언모터사이클 × 생산소 협업 — 백마강, 부여. 폐현수막·재활용 원단으로 사코슈백 제작. 비단가람온길 탄소중립 사업의 일환.', sortOrder: 20 },
+  { category: 'COLLABORATION', date: '2025.09.20.', title: '비단가람 무브먼트 에코-플로깅', detail: '큐클리프(CUECLYP) × 인디언모터사이클 × 생산소 협업 — 백마강, 부여. 폐현수막·재활용 원단으로 사코슈백 제작. 무소음 DJing 프로그램 운영. 비단가람온길 탄소중립 사업의 일환.', sortOrder: 20 },
+  { category: 'COLLABORATION', date: '2022.05.', title: '예방구 오픈 기념 뿡뿡파티', detail: '예방구(예술방앗간구룡) 오픈 기념 DJ파티. 생산소 × 예방구 협업.', sortOrder: 21 },
 
   // ── RESIDENCY ──
   { category: 'RESIDENCY', date: '2021', title: '민간레지던시 프로젝트', detail: '히스테리안(강정아) 기획 — 대안적 거주와 공간 리서치', sortOrder: 30 },
@@ -55,12 +61,6 @@ const PROJECTS = [
   { category: 'WORKSHOP & COMMUNITY', date: '2021.02.', title: '사운드키박스 프로젝트', detail: '동네 탐험 기록, 가사/멜로디 음악 제작. 소리 기반 지역 탐사 프로그램.', sortOrder: 72 },
   { category: 'WORKSHOP & COMMUNITY', date: '2021.', title: '만날 사람은 만난다', detail: '비대면 장애인 문화예술교육 콘텐츠 개발. 한국문화예술교육진흥원(아르떼). 발달장애 특화 콘텐츠 <일상색채수집보관함 — 그림판과 메모장>.', sortOrder: 73 },
 
-];
-
-const EXHIBITIONS = [
-  { year: '2024', date: '2024.09.06-22.', title: '고도 주민의 삶과 기억전', venue: '부여 청소년 문화의집', note: '2024 고도주민활동지원사업. 백제역사문화연구원 위탁.', sortOrder: 10 },
-  { year: '2023', date: '2023.07.', title: '백제기와문화관 세계국가유산산업전 부스 기획 및 설치', venue: '경주', note: '충청남도 부여군 사적관리소 위탁.', sortOrder: 20 },
-  { year: '2021', date: '2021.10.', title: '공예주간 조각수집', venue: '생산소, 부여', note: '대장장이 체험(산소절단기/용접), 용기화분 만들기, 목공예·도자·보태니컬아트 전시, 살구에이드.', sortOrder: 30 },
 ];
 
 const NEWS = [
@@ -112,7 +112,6 @@ async function seed() {
 
   // 기존 데이터 삭제
   await Promise.all([
-    SaengsansoExhibition.deleteMany({}),
     SaengsansoProject.deleteMany({}),
     SaengsansoNews.deleteMany({}),
     SaengsansoArchive.deleteMany({}),
@@ -120,14 +119,12 @@ async function seed() {
   console.log('🗑️  기존 sso_* 데이터 삭제 완료');
 
   // 새 데이터 삽입
-  const [exhibitions, projects, news, archives] = await Promise.all([
-    SaengsansoExhibition.insertMany(EXHIBITIONS),
+  const [projects, news, archives] = await Promise.all([
     SaengsansoProject.insertMany(PROJECTS),
     SaengsansoNews.insertMany(NEWS),
     SaengsansoArchive.insertMany(ARCHIVES),
   ]);
 
-  console.log(`🏛️  전시 ${exhibitions.length}개 저장`);
   console.log(`📦 프로젝트 ${projects.length}개 저장`);
   console.log(`📰 뉴스 ${news.length}개 저장`);
   console.log(`🗂️  아카이브 ${archives.length}개 저장`);
