@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import ReconnectAnimation from './ReconnectAnimation';
 import { playHoverSound, playClickSound } from '../utils/sound';
 import { useEditorialLayout } from '../hooks/useEditorialLayout';
+import PageLoader from './PageLoader';
 
 interface Post {
   id: string;
@@ -679,7 +680,20 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
         ) : (
           <>
             {headerLoading ? (
-              <div style={{ minHeight: '80px' }} />
+              <div style={{ minHeight: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <motion.div
+                  style={{ display: 'flex', gap: '6px' }}
+                >
+                  {[0, 1, 2].map((i) => (
+                    <motion.div
+                      key={i}
+                      style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#bbb' }}
+                      animate={{ opacity: [0.3, 1, 0.3] }}
+                      transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2, ease: 'easeInOut' }}
+                    />
+                  ))}
+                </motion.div>
+              </div>
             ) : (
               <>
                 <motion.h1
@@ -773,16 +787,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
         </div>
 
         {postsLoading && (
-          <div className="loading-container">
-            <motion.div
-              className="loading-spinner"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            >
-              ⟳
-            </motion.div>
-            <p>기록을 불러오는 중...</p>
-          </div>
+          <PageLoader message="기록을 불러오는 중..." />
         )}
 
         {error && (

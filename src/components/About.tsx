@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { aboutAPI } from '../services/api';
+import PageLoader from './PageLoader';
 
 // About 데이터 타입 정의
 interface AboutData {
@@ -382,23 +383,7 @@ const About: React.FC = () => {
   if (isLoading) {
     return (
       <div className="page-content">
-        <div className="page-header">
-          <h1 className="page-title">
-            ABOUT
-            <motion.div 
-              className="page-subtitle-container"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6, duration: 1 }}
-            ></motion.div>
-            <div className="page-subtitle">노드 트리(NODE TREE)
-              
-            </div>
-          </h1>
-        </div>
-        <div style={{ textAlign: 'center', padding: '2rem' }}>
-          <p>로딩 중...</p>
-        </div>
+        <PageLoader />
       </div>
     );
   }

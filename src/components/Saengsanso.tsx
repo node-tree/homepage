@@ -61,6 +61,8 @@ const FALLBACK_PROJECTS = [
   { category: 'WORKSHOP & COMMUNITY', date: '2024.08.', title: '어반아트 네비게이터 — 하자센터', detail: '소리+움직임 워크숍. AI 시대 사람과 공간을 소리·움직임으로 해석. 어린이 대상.' },
   { category: 'WORKSHOP & COMMUNITY', date: '2024.08.', title: '도시 읽기: 고흥', detail: '지역 기획자 초대로 고흥군 방문. 예술로 어울리기.' },
   { category: 'WORKSHOP & COMMUNITY', date: '2024.', title: '꿈다락 문화예술학교 워크숍', detail: '\'나를 흔드는 ○○○이 있는가?\' — 아르떼 라이브러리 기록집 발간' },
+  { category: 'WORKSHOP & COMMUNITY', date: '2023.', title: '안녕소리 자율이동', detail: '하자센터. 소리 기반 자율이동 워크숍.' },
+  { category: 'WORKSHOP & COMMUNITY', date: '2023.', title: '퍼레이드 빵빵', detail: '관광두레 프로그램.' },
   { category: 'WORKSHOP & COMMUNITY', date: '2023.09.', title: '공간(공항) 기반 수요 맞춤형 문화예술교육 프로그램 개발', detail: '한국문화예술교육진흥원 위탁. 공간 기반 문화예술교육 콘텐츠 기획·개발.' },
   { category: 'WORKSHOP & COMMUNITY', date: '2023.06.16.', title: '《블록파티》 전시공간 토크', detail: '아마도예술공간, 서울 — "축구와, 배드민턴과, (대안)예술은"' },
   { category: 'WORKSHOP & COMMUNITY', date: '2023.04.21-23.', title: '부여세도유채꽃방울토마토축제 프로그램 운영', detail: '충청남도 부여군 세도면 위탁. 15ha 금강 하천부지 유채꽃밭. 코로나 이후 첫 재개최.' },
@@ -84,6 +86,7 @@ const FALLBACK_PROJECTS = [
   { category: 'WORKSHOP & COMMUNITY', date: '2021.03-09.', title: '쓸데없는 대장간', detail: '1974년 생산소 공간을 대장간으로. 충남문화재단.' },
   { category: 'WORKSHOP & COMMUNITY', date: '2021.02.', title: '사운드키박스 프로젝트', detail: '동네 탐험 기록, 가사/멜로디 음악 제작.' },
   { category: 'WORKSHOP & COMMUNITY', date: '2021.', title: '만날 사람은 만난다', detail: '비대면 장애인 문화예술교육 콘텐츠 개발. 아르떼. 발달장애 특화 <일상색채수집보관함>.' },
+  { category: 'WORKSHOP & COMMUNITY', date: '2020.', title: '이어달리기의 시작점', detail: '문화예술교육 인력양성 연수사업. 제주문화예술재단.' },
 ];
 
 const FALLBACK_NEWS: any[] = [
@@ -421,11 +424,13 @@ function PageAbout({ isAdmin }: { isAdmin: boolean }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState('');
   const [saving, setSaving] = useState(false);
+  const [aboutLoading, setAboutLoading] = useState(true);
 
   useEffect(() => {
     saengsansoAboutAPI.get()
       .then(res => { if (res.success && res.data?.description) setDescription(res.data.description); })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setAboutLoading(false));
   }, []);
 
   const handleEdit = () => { setEditText(description); setIsEditing(true); };
@@ -438,6 +443,14 @@ function PageAbout({ isAdmin }: { isAdmin: boolean }) {
     } catch { alert('저장에 실패했습니다.'); }
     finally { setSaving(false); }
   };
+
+  if (aboutLoading) {
+    return (
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '60px' }}>
+        <p style={{ ...TEXT_SM, color: C.gray65, letterSpacing: '0.05em' }}>불러오는 중...</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', paddingTop: '10px' }}>
@@ -624,6 +637,10 @@ function PageProjects({ projects, isAdmin, onSave, onDelete }: {
   const grouped: Record<string, any[]> = {};
   categories.forEach(c => { grouped[c] = []; });
   projects.forEach(p => { if (grouped[p.category]) grouped[p.category].push(p); });
+  // 각 카테고리 내 날짜 역순(최신순) 정렬
+  categories.forEach(c => {
+    grouped[c].sort((a: any, b: any) => (b.date || '').localeCompare(a.date || ''));
+  });
 
   const handleSave = async (data: Record<string, string>) => {
     await onSave(data, editItem?._id);
@@ -801,7 +818,7 @@ function PageArchive({ archives, isAdmin, onSave, onDelete }: {
       {isAdmin && editItem && !editItem._id && (
         <InlineForm fields={ARCHIVE_FIELDS} initial={{}} onSave={handleSave} onCancel={() => setEditItem(null)} />
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px 0' }}>
         {archives.map((item: any, i: number) => (
           <div key={item._id || i} style={{ display: 'contents' }}>
             <div style={{
