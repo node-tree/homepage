@@ -1041,12 +1041,21 @@ function SaengsansoApp() {
       case 'PROJECTS':
         if (loading) return loadingIndicator;
         return (
-          <PageProjects
-            projects={projects}
-            isAdmin={isAdmin && adminEditMode}
-            onSave={makeSaveHandler('projects')}
-            onDelete={makeDeleteHandler('projects')}
-          />
+          <>
+            <PageExhibitions
+              exhibitions={exhibitions}
+              isAdmin={isAdmin && adminEditMode}
+              onAdd={() => {}}
+              onEdit={() => {}}
+              onDelete={makeDeleteHandler('exhibitions')}
+            />
+            <PageProjects
+              projects={projects}
+              isAdmin={isAdmin && adminEditMode}
+              onSave={makeSaveHandler('projects')}
+              onDelete={makeDeleteHandler('projects')}
+            />
+          </>
         );
       case 'NEWS':
       case 'NEWS_NOTICE':
