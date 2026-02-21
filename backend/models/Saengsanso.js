@@ -15,7 +15,7 @@ const projectSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ['SOUNDSCAPE', 'COLLABORATION', 'RESIDENCY', 'WORKSHOP & COMMUNITY']
+    enum: ['EXHIBITION', 'SOUNDSCAPE', 'COLLABORATION', 'RESIDENCY', 'WORKSHOP & COMMUNITY']
   },
   date: { type: String, required: true },
   title: { type: String, required: true },
