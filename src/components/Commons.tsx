@@ -23,11 +23,11 @@ interface Post {
   sortOrder?: number;
 }
 
-interface FiledProps {
+interface CommonsProps {
   onPostsLoaded?: (count: number) => void;
 }
 
-const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
+const Commons: React.FC<CommonsProps> = ({ onPostsLoaded }) => {
   const { isAuthenticated } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [posts, setPosts] = useState<Post[]>([]);
@@ -809,4 +809,4 @@ const Filed: React.FC<FiledProps> = ({ onPostsLoaded }) => {
   );
 };
 
-export default Filed; 
+export default Commons; 
