@@ -1057,13 +1057,15 @@ function ArchiveCard({ item, isAdmin, onEdit, onDelete: onDel }: {
 }
 
 // ─── 페이지: ARCHIVE (DB 연동) ───
-function PageArchive({ archives, isAdmin, onSave, onDelete }: {
+function PageArchive({ archives, isAdmin, onSave, onDelete, onReorder }: {
   archives: any[];
   isAdmin: boolean;
   onSave: (data: Record<string, string>, id?: string) => Promise<void>;
   onDelete: (id: string) => void;
+  onReorder: (orders: { id: string; sortOrder: number }[]) => Promise<void>;
 }) {
   const [editItem, setEditItem] = useState<any>(null);
+  const [reordering, setReordering] = useState(false);
 
   const ARCHIVE_FIELDS = [
     { key: 'image', label: '이미지 URL' },
@@ -1075,6 +1077,20 @@ function PageArchive({ archives, isAdmin, onSave, onDelete }: {
     setEditItem(null);
   };
 
+  const moveItem = async (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= archives.length || reordering) return;
+    setReordering(true);
+    try {
+      const reordered = [...archives];
+      const [moved] = reordered.splice(fromIndex, 1);
+      reordered.splice(toIndex, 0, moved);
+      const orders = reordered.map((item, i) => ({ id: item._id, sortOrder: i }));
+      await onReorder(orders);
+    } finally {
+      setReordering(false);
+    }
+  };
+
   return (
     <div style={{ flex: 1, overflowY: 'auto', paddingTop: '10px' }}>
       {isAdmin && editItem && !editItem._id && (
@@ -1083,12 +1099,34 @@ function PageArchive({ archives, isAdmin, onSave, onDelete }: {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0 }}>
         {archives.map((item: any, i: number) => (
           <div key={item._id || i} style={{ display: 'contents' }}>
-            <ArchiveCard
-              item={item}
-              isAdmin={isAdmin}
-              onEdit={() => setEditItem(item)}
-              onDelete={() => onDelete(item._id)}
-            />
+            <div style={{ position: 'relative' }}>
+              <ArchiveCard
+                item={item}
+                isAdmin={isAdmin}
+                onEdit={() => setEditItem(item)}
+                onDelete={() => onDelete(item._id)}
+              />
+              {isAdmin && (
+                <div style={{ position: 'absolute', bottom: '8px', right: '8px', display: 'flex', gap: '4px', zIndex: 2 }}>
+                  <button
+                    disabled={i === 0 || reordering}
+                    onClick={e => { e.stopPropagation(); moveItem(i, i - 1); }}
+                    style={{
+                      ...btnStyle, background: TR(0.8), fontSize: '14px', padding: '2px 8px',
+                      opacity: i === 0 ? 0.3 : 1, cursor: i === 0 ? 'default' : 'pointer',
+                    }}
+                  >←</button>
+                  <button
+                    disabled={i === archives.length - 1 || reordering}
+                    onClick={e => { e.stopPropagation(); moveItem(i, i + 1); }}
+                    style={{
+                      ...btnStyle, background: TR(0.8), fontSize: '14px', padding: '2px 8px',
+                      opacity: i === archives.length - 1 ? 0.3 : 1, cursor: i === archives.length - 1 ? 'default' : 'pointer',
+                    }}
+                  >→</button>
+                </div>
+              )}
+            </div>
             {isAdmin && editItem?._id === item._id && (
               <div style={{ gridColumn: '1 / -1' }}>
                 <InlineForm
@@ -1307,6 +1345,10 @@ function SaengsansoApp() {
             isAdmin={isAdmin && adminEditMode}
             onSave={makeSaveHandler('archive')}
             onDelete={makeDeleteHandler('archive')}
+            onReorder={async (orders) => {
+              await saengsansoAPI.archive.reorder(orders);
+              await loadData(true);
+            }}
           />
         );
       default: return (
