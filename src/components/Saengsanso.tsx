@@ -947,6 +947,18 @@ function PageNews({ filter, news, isAdmin, onSave, onDelete }: {
   );
 }
 
+// ─── 영상 URL 파싱 ───
+function parseVideoUrl(url: string): { type: 'youtube' | 'vimeo' | 'direct' | 'gif'; embedUrl: string } | null {
+  if (!url) return null;
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+  if (yt) return { type: 'youtube', embedUrl: `https://www.youtube.com/embed/${yt[1]}?autoplay=1&mute=1&loop=1&playlist=${yt[1]}&controls=0&playsinline=1` };
+  const vm = url.match(/vimeo\.com\/(\d+)/);
+  if (vm) return { type: 'vimeo', embedUrl: `https://player.vimeo.com/video/${vm[1]}?autoplay=1&muted=1&loop=1&background=1` };
+  if (/\.gif(\?|$)/i.test(url)) return { type: 'gif', embedUrl: url };
+  if (/\.(mp4|webm|mov)(\?|$)/i.test(url)) return { type: 'direct', embedUrl: url };
+  return null;
+}
+
 // ─── 페이지: ARCHIVE (DB 연동) ───
 function PageArchive({ archives, isAdmin, onSave, onDelete }: {
   archives: any[];
@@ -961,6 +973,7 @@ function PageArchive({ archives, isAdmin, onSave, onDelete }: {
     { key: 'year', label: '연도' },
     { key: 'bg', label: '배경(CSS)' },
     { key: 'image', label: '이미지 URL' },
+    { key: 'video', label: '영상 URL (YouTube/Vimeo/mp4)' },
   ];
 
   const handleSave = async (data: Record<string, string>) => {
@@ -974,21 +987,46 @@ function PageArchive({ archives, isAdmin, onSave, onDelete }: {
       {isAdmin && editItem && !editItem._id && (
         <InlineForm fields={ARCHIVE_FIELDS} initial={{}} onSave={handleSave} onCancel={() => setEditItem(null)} />
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px 0' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0 }}>
         {archives.map((item: any, i: number) => (
           <div key={item._id || i} style={{ display: 'contents' }}>
             <div style={{
               background: item.bg || 'linear-gradient(135deg, #1A1A14, #2A2A1E)',
               aspectRatio: '546 / 683', display: 'flex', flexDirection: 'column',
               justifyContent: 'flex-end', padding: '24px', cursor: 'pointer', transition: 'opacity 0.3s',
-              position: 'relative',
+              position: 'relative', overflow: 'hidden',
             }}
               onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
               onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
             >
-              {item.image && (
-                <img src={item.image} alt={item.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-              )}
+              {(() => {
+                const vid = parseVideoUrl(item.video || '');
+                const blurBg = (src: string, tag: 'img' | 'video') => (
+                  <>
+                    {tag === 'img'
+                      ? <img src={src} alt="" aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(18px) brightness(0.5)', transform: 'scale(1.08)' }} />
+                      : <video src={src} autoPlay muted loop playsInline aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(18px) brightness(0.5)', transform: 'scale(1.08)' }} />
+                    }
+                    <div style={{ position: 'absolute', inset: '5%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {tag === 'img'
+                        ? <img src={src} alt={item.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                        : <video src={src} autoPlay muted loop playsInline style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                      }
+                    </div>
+                  </>
+                );
+                if (vid) {
+                  if (vid.type === 'gif') return blurBg(vid.embedUrl, 'img');
+                  if (vid.type === 'direct') return blurBg(vid.embedUrl, 'video');
+                  return (
+                    <iframe src={vid.embedUrl} title={item.title}
+                      allow="autoplay; fullscreen" frameBorder="0"
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', pointerEvents: 'none' }} />
+                  );
+                }
+                if (item.image) return blurBg(item.image, 'img');
+                return null;
+              })()}
               <p style={{ color: C.accent, fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', margin: '0 0 6px 0', position: 'relative', zIndex: 1 }}>
                 {item.year}
               </p>
@@ -1007,7 +1045,7 @@ function PageArchive({ archives, isAdmin, onSave, onDelete }: {
               <div style={{ gridColumn: '1 / -1' }}>
                 <InlineForm
                   fields={ARCHIVE_FIELDS}
-                  initial={{ title: item.title, year: item.year, bg: item.bg || '', image: item.image || '' }}
+                  initial={{ title: item.title, year: item.year, bg: item.bg || '', image: item.image || '', video: item.video || '' }}
                   onSave={handleSave}
                   onCancel={() => setEditItem(null)}
                 />
