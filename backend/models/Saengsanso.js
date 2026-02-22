@@ -45,6 +45,7 @@ const archiveSchema = new mongoose.Schema({
   year: { type: String, required: true },
   bg: { type: String, default: '' },
   image: { type: String, default: '' },
+  video: { type: String, default: '' },
   sortOrder: { type: Number, default: 0 }
 }, { timestamps: true, collection: 'sso_archives' });
 
