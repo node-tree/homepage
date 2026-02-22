@@ -34,6 +34,8 @@ const newsSchema = new mongoose.Schema({
     enum: ['notice', 'press']
   },
   url: { type: String, default: '' },
+  content: { type: String, default: '' },
+  images: { type: String, default: '' }, // 쉼표 구분 이미지 URL
   sortOrder: { type: Number, default: 0 }
 }, { timestamps: true, collection: 'sso_news' });
 
