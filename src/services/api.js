@@ -974,8 +974,17 @@ ssoTypes.forEach(({ key, cacheKey }) => {
     getAll: async (options = {}) => {
       const { forceRefresh = false } = options;
       if (!forceRefresh) {
-        const cached = cacheUtils.get(cacheKey);
-        if (cached) return cached;
+        const { data: cached, isStale } = cacheUtils.getWithStale(cacheKey);
+        if (cached) {
+          if (isStale) {
+            // 백그라운드에서 조용히 갱신
+            deduplicatedFetch(`${API_BASE_URL}/saengsanso/${key}`)
+              .then(r => r.json())
+              .then(d => { if (d.success) cacheUtils.set(cacheKey, d); })
+              .catch(() => {});
+          }
+          return cached; // 캐시 즉시 반환
+        }
       }
       const response = await deduplicatedFetch(`${API_BASE_URL}/saengsanso/${key}`);
       if (!response.ok) throw new Error(`Failed to fetch ${key}`);
