@@ -34,6 +34,15 @@ const TR = (() => {
   return (a: number) => `rgba(${r},${g},${b},${a})`;
 })();
 
+// 테마색 짙은 버전 (호버용)
+const THEME_HOVER = (() => {
+  const hex = THEME_BG;
+  const r = Math.round(parseInt(hex.slice(1,3),16) * 0.82);
+  const g = Math.round(parseInt(hex.slice(3,5),16) * 0.82);
+  const b = Math.round(parseInt(hex.slice(5,7),16) * 0.82);
+  return `rgb(${r},${g},${b})`;
+})();
+
 const TEXT_BASE: React.CSSProperties = {
   fontSize: '20px', fontWeight: 700,
   fontFamily: "Verdana, 'Noto Sans Korean', 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif",
@@ -862,10 +871,10 @@ function PageNews({ filter, news, isAdmin, onSave, onDelete }: {
               display: 'flex', padding: '10px 0', borderBottom: '1px solid #6A9020',
               cursor: (item.category === 'notice' || item.url) ? 'pointer' : 'default',
               transition: 'background 0.2s',
-              background: selectedNotice?._id === item._id ? '#B8D860' : 'transparent',
+              background: selectedNotice?._id === item._id ? THEME_HOVER : 'transparent',
             }}
               onClick={() => handleItemClick(item)}
-              onMouseEnter={e => { if (selectedNotice?._id !== item._id) e.currentTarget.style.background = '#B0D050'; }}
+              onMouseEnter={e => { if (selectedNotice?._id !== item._id) e.currentTarget.style.background = THEME_HOVER; }}
               onMouseLeave={e => { if (selectedNotice?._id !== item._id) e.currentTarget.style.background = 'transparent'; }}
             >
               <span style={{ ...TEXT_SM, flex: '0 0 100px', color: C.gray65 }}>{item.date}</span>
