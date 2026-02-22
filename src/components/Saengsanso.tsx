@@ -13,15 +13,15 @@ const saengsansoAPI = _ssoAPI as Record<string, {
   reorder: (orders: any[]) => Promise<any>;
 }>;
 
-// ─── Autumn Atelier 디자인 토큰 ───
+// ─── Swiss Lime 디자인 토큰 ───
 const C = {
-  accent: '#CE7F64',   // 코랄 클레이
-  red: '#BA462C',      // 버밀리언 레드
-  cyan: '#CE7F64',     // 코랄 클레이 (accent 통일)
-  black: '#2F1F1B',    // 딥 에스프레소
-  dark: '#2F1F1B',     // 딥 에스프레소
-  white: '#EDD6B6',    // 앤티크 아이보리
-  gray65: '#7F776D',   // 테라코타 그레이
+  accent: '#1A1A14',   // 블랙
+  red: '#1A1A14',      // 블랙 (강조)
+  cyan: '#1A1A14',     // 블랙
+  black: '#1A1A14',    // 블랙
+  dark: '#1A1A14',     // 블랙
+  white: '#8BBF35',    // 라임 그린 (배경)
+  gray65: '#4A5030',   // 올리브 그레이
 };
 
 const TEXT_BASE: React.CSSProperties = {
@@ -118,10 +118,10 @@ const FALLBACK_NEWS: any[] = [
 const FALLBACK_ARCHIVES = [
   { title: '비단가람온길 탄소중립 여행', year: '2025', bg: 'linear-gradient(135deg, #1a2a1f, #2a3a2a)' },
   { title: '비단가람 무브먼트', year: '2025', bg: 'linear-gradient(135deg, #0d2a1a, #1a3a2a)' },
-  { title: '고도 주민의 삶과 기억', year: '2024', bg: 'linear-gradient(135deg, #2F2520, #40302A)' },
+  { title: '고도 주민의 삶과 기억', year: '2024', bg: 'linear-gradient(135deg, #1A1A14, #2A2A1E)' },
   { title: '사운드 오케스트라 in 부여', year: '2024', bg: 'linear-gradient(135deg, #1a1a2e, #0d1f2f)' },
-  { title: '금강아카이브', year: '2023', bg: 'linear-gradient(135deg, #35201E, #2F1F1B)' },
-  { title: '공간 기반 문화예술교육', year: '2023', bg: 'linear-gradient(135deg, #2a201a, #3a302a)' },
+  { title: '금강아카이브', year: '2023', bg: 'linear-gradient(135deg, #1A1A14, #1A1A14)' },
+  { title: '공간 기반 문화예술교육', year: '2023', bg: 'linear-gradient(135deg, #1A1A14, #2A2A1E)' },
   { title: '세계국가유산산업전 백제기와 부스', year: '2023', bg: 'linear-gradient(135deg, #2a1a20, #3a2a30)' },
   { title: '부여세도 방울토마토&유채꽃 축제', year: '2023', bg: 'linear-gradient(135deg, #1a2a1a, #2a3a20)' },
   { title: '블록파티 전시공간 토크', year: '2023', bg: 'linear-gradient(135deg, #2a1a1a, #3a2a1a)' },
@@ -130,11 +130,11 @@ const FALLBACK_ARCHIVES = [
 
 // ─── 슬라이드 fallback 데이터 ───
 const FALLBACK_SLIDES = [
-  { _id: 'f0', bg: 'linear-gradient(135deg, #2F1F1B 0%, #3D2D28 50%, #2F1F1B 100%)', caption: '생산소 — 부여 기반 대안예술공간', image: '' },
-  { _id: 'f1', bg: 'linear-gradient(135deg, #2B2520 0%, #3A302A 50%, #2B2520 100%)', caption: '유기적공명: 에디아포닉 Organic Resonance: Ediaphonic', image: '' },
-  { _id: 'f2', bg: 'linear-gradient(135deg, #2F2520 0%, #40302A 50%, #2F2520 100%)', caption: '위성악보 시리즈 — Satellite Score Series', image: '' },
-  { _id: 'f3', bg: 'linear-gradient(135deg, #35201E 0%, #2F1F1B 50%, #35201E 100%)', caption: '리커넥트: 낙원식당 Reconnect: Nakwon Restaurant', image: '' },
-  { _id: 'f4', bg: 'linear-gradient(135deg, #2B2018 0%, #3A2E26 50%, #2B2018 100%)', caption: '금강아카이브: 멀고도 가까운', image: '' },
+  { _id: 'f0', bg: 'linear-gradient(135deg, #1A1A14 0%, #2A2A1E 50%, #1A1A14 100%)', caption: '생산소 — 부여 기반 대안예술공간', image: '' },
+  { _id: 'f1', bg: 'linear-gradient(135deg, #1A1A14 0%, #2A2A1E 50%, #1A1A14 100%)', caption: '유기적공명: 에디아포닉 Organic Resonance: Ediaphonic', image: '' },
+  { _id: 'f2', bg: 'linear-gradient(135deg, #1A1A14 0%, #2A2A1E 50%, #1A1A14 100%)', caption: '위성악보 시리즈 — Satellite Score Series', image: '' },
+  { _id: 'f3', bg: 'linear-gradient(135deg, #1A1A14 0%, #1A1A14 50%, #1A1A14 100%)', caption: '리커넥트: 낙원식당 Reconnect: Nakwon Restaurant', image: '' },
+  { _id: 'f4', bg: 'linear-gradient(135deg, #1A1A14 0%, #2A2A1E 50%, #1A1A14 100%)', caption: '금강아카이브: 멀고도 가까운', image: '' },
 ];
 
 // ─── 이미지 압축 (canvas, max 1920px, JPEG 80%) ───
@@ -202,9 +202,9 @@ const addBtnStyle: React.CSSProperties = {
 // ─── 인라인 폼 스타일 ───
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '6px 8px', fontSize: '14px', fontFamily: 'inherit',
-  border: `1px solid #C4B5A4`, marginBottom: '6px', boxSizing: 'border-box',
+  border: `1px solid #1A1A14`, marginBottom: '6px', boxSizing: 'border-box',
 };
-const selectStyle: React.CSSProperties = { ...inputStyle, background: '#EDD6B6' };
+const selectStyle: React.CSSProperties = { ...inputStyle, background: '#8BBF35' };
 const formBtnStyle: React.CSSProperties = {
   padding: '4px 16px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
   border: 'none', marginRight: '6px',
@@ -212,23 +212,36 @@ const formBtnStyle: React.CSSProperties = {
 
 // ─── 인라인 편집 폼 ───
 function InlineForm({ fields, initial, onSave, onCancel }: {
-  fields: { key: string; label: string; type?: 'text' | 'select'; options?: string[] }[];
+  fields: { key: string; label: string; type?: 'text' | 'select' | 'textarea'; options?: string[] }[];
   initial: Record<string, string>;
   onSave: (data: Record<string, string>) => void;
   onCancel: () => void;
 }) {
-  const [form, setForm] = useState<Record<string, string>>(initial);
+  const [form, setForm] = useState<Record<string, string>>(() => {
+    const defaults: Record<string, string> = { ...initial };
+    fields.forEach(f => {
+      if (f.type === 'select' && f.options?.length && !defaults[f.key]) {
+        defaults[f.key] = f.options[0];
+      }
+    });
+    return defaults;
+  });
 
   return (
-    <div style={{ background: '#F5E8D8', padding: '12px', margin: '8px 0', border: '1px solid #C4B5A4' }}>
+    <div style={{ background: '#B8D860', padding: '12px', margin: '8px 0', border: '1px solid #1A1A14' }}>
       {fields.map(f => (
         <div key={f.key} style={{ marginBottom: '4px' }}>
           <label style={{ ...TEXT_XS, display: 'block', marginBottom: '2px' }}>{f.label}</label>
           {f.type === 'select' ? (
             <select style={selectStyle} value={form[f.key] || ''} onChange={e => setForm({ ...form, [f.key]: e.target.value })}>
-              <option value="">선택</option>
               {f.options?.map(o => <option key={o} value={o}>{o}</option>)}
             </select>
+          ) : f.type === 'textarea' ? (
+            <textarea
+              style={{ ...inputStyle, height: '120px', resize: 'vertical', fontFamily: 'inherit' }}
+              value={form[f.key] || ''}
+              onChange={e => setForm({ ...form, [f.key]: e.target.value })}
+            />
           ) : (
             <input style={inputStyle} value={form[f.key] || ''} onChange={e => setForm({ ...form, [f.key]: e.target.value })} />
           )}
@@ -236,7 +249,7 @@ function InlineForm({ fields, initial, onSave, onCancel }: {
       ))}
       <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
         <button style={{ ...formBtnStyle, background: C.accent, color: C.white }} onClick={() => onSave(form)}>저장</button>
-        <button style={{ ...formBtnStyle, background: '#DCC4A8' }} onClick={onCancel}>취소</button>
+        <button style={{ ...formBtnStyle, background: '#6A9020' }} onClick={onCancel}>취소</button>
       </div>
     </div>
   );
@@ -272,12 +285,12 @@ function SlideEditModal({ slide, onSave, onClose }: {
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(47,31,27,0.7)',
+      position: 'fixed', inset: 0, background: 'rgba(26,26,20,0.7)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000,
     }} onClick={onClose}>
       <div style={{
-        background: '#EDD6B6', padding: '28px', width: '90%', maxWidth: '480px',
-        boxShadow: '0 12px 40px rgba(47,31,27,0.4)', borderRadius: '2px',
+        background: '#8BBF35', padding: '28px', width: '90%', maxWidth: '480px',
+        boxShadow: '0 12px 40px rgba(26,26,20,0.4)', borderRadius: '2px',
       }} onClick={e => e.stopPropagation()}>
         <p style={{ ...TEXT_BASE, marginBottom: '20px' }}>
           {slide?._id ? '슬라이드 편집' : '슬라이드 추가'}
@@ -288,11 +301,11 @@ function SlideEditModal({ slide, onSave, onClose }: {
           <div style={{ position: 'relative', marginBottom: '12px' }}>
             <img src={imagePreview} alt="" style={{
               width: '100%', height: '160px', objectFit: 'cover',
-              display: 'block', border: '1px solid #C4B5A4',
+              display: 'block', border: '1px solid #1A1A14',
             }} />
             <button onClick={() => setImagePreview('')} style={{
               position: 'absolute', top: '6px', right: '6px',
-              background: 'rgba(47,31,27,0.8)', color: '#EDD6B6',
+              background: 'rgba(26,26,20,0.8)', color: '#8BBF35',
               border: 'none', borderRadius: '50%', width: '24px', height: '24px',
               cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>×</button>
@@ -306,14 +319,14 @@ function SlideEditModal({ slide, onSave, onClose }: {
           onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
           onClick={() => fileRef.current?.click()}
           style={{
-            border: `2px dashed ${isDragging ? C.accent : '#C4B5A4'}`,
+            border: `2px dashed ${isDragging ? C.accent : '#1A1A14'}`,
             padding: '16px', textAlign: 'center', cursor: 'pointer',
-            background: isDragging ? 'rgba(206,127,100,0.08)' : 'rgba(237,214,182,0.5)',
+            background: isDragging ? 'rgba(26,26,20,0.08)' : 'rgba(139,191,53,0.5)',
             marginBottom: '12px', transition: 'all 0.2s',
           }}
         >
           <p style={{ ...TEXT_SM, color: C.gray65, margin: 0 }}>이미지 클릭 또는 드래그</p>
-          <p style={{ ...TEXT_XS, color: '#B0A090', margin: '4px 0 0' }}>JPG·PNG·WEBP · 15MB 이하 · 자동 압축</p>
+          <p style={{ ...TEXT_XS, color: '#4A7010', margin: '4px 0 0' }}>JPG·PNG·WEBP · 15MB 이하 · 자동 압축</p>
         </div>
         <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
           onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
@@ -325,9 +338,9 @@ function SlideEditModal({ slide, onSave, onClose }: {
           style={{ ...inputStyle, marginBottom: '20px' }} placeholder="슬라이드 설명 텍스트" />
 
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ ...formBtnStyle, background: '#DCC4A8' }}>취소</button>
+          <button onClick={onClose} style={{ ...formBtnStyle, background: '#6A9020' }}>취소</button>
           <button onClick={handleSave} disabled={saving}
-            style={{ ...formBtnStyle, background: saving ? '#B0A090' : C.accent, color: C.white }}>
+            style={{ ...formBtnStyle, background: saving ? '#4A7010' : C.accent, color: C.white }}>
             {saving ? '저장 중...' : '저장'}
           </button>
         </div>
@@ -362,7 +375,7 @@ function PageMain({ goToSlide, currentSlide, slides, isAdmin, onEditSlide, onAdd
             className="sso-slide-drift"
             style={{
               position: 'absolute', inset: '-4%',
-              background: slide.bg || 'linear-gradient(135deg, #2F1F1B, #3D2D28)',
+              background: slide.bg || 'linear-gradient(135deg, #1A1A14, #2A2A1E)',
               backgroundSize: 'cover', backgroundPosition: 'center',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
@@ -375,7 +388,7 @@ function PageMain({ goToSlide, currentSlide, slides, isAdmin, onEditSlide, onAdd
               }} />
             )}
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6, duration: 0.6 }}
-              style={{ color: 'rgba(237,214,182,0.5)', fontSize: 'clamp(0.85rem, 1.5vw, 1.1rem)', fontWeight: 300, letterSpacing: '0.12em', textAlign: 'center', margin: 0, position: 'relative', zIndex: 1 }}>
+              style={{ color: 'rgba(139,191,53,0.5)', fontSize: 'clamp(0.85rem, 1.5vw, 1.1rem)', fontWeight: 300, letterSpacing: '0.12em', textAlign: 'center', margin: 0, position: 'relative', zIndex: 1 }}>
               {slide.caption}
             </motion.p>
           </div>
@@ -387,7 +400,7 @@ function PageMain({ goToSlide, currentSlide, slides, isAdmin, onEditSlide, onAdd
         {slides.map((_: any, i: number) => (
           <button key={i} onClick={() => goToSlide(i)} style={{
             width: '6px', height: '6px', borderRadius: '50%',
-            background: i === currentSlide ? C.accent : 'rgba(237,214,182,0.3)',
+            background: i === currentSlide ? C.accent : 'rgba(139,191,53,0.3)',
             border: 'none', cursor: 'pointer', padding: 0, transition: 'background 0.3s',
           }} />
         ))}
@@ -397,17 +410,17 @@ function PageMain({ goToSlide, currentSlide, slides, isAdmin, onEditSlide, onAdd
       {isAdmin && (
         <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '6px', zIndex: 20 }}>
           <button onClick={() => onEditSlide(slide)} style={{
-            background: 'rgba(206,127,100,0.9)', color: '#EDD6B6',
+            background: 'rgba(26,26,20,0.9)', color: '#8BBF35',
             border: 'none', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
           }}>이미지 편집</button>
           {slides.length > 1 && !String(slide._id).startsWith('f') && (
             <button onClick={() => onDeleteSlide(slide._id)} style={{
-              background: 'rgba(186,70,44,0.9)', color: '#EDD6B6',
+              background: 'rgba(26,26,20,0.9)', color: '#8BBF35',
               border: 'none', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
             }}>삭제</button>
           )}
           <button onClick={onAddSlide} style={{
-            background: 'rgba(47,31,27,0.85)', color: '#EDD6B6',
+            background: 'rgba(26,26,20,0.85)', color: '#8BBF35',
             border: 'none', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
           }}>+ 추가</button>
         </div>
@@ -481,11 +494,11 @@ function PageAbout({ isAdmin }: { isAdmin: boolean }) {
               />
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button onClick={handleSave} disabled={saving}
-                  style={{ ...formBtnStyle, background: saving ? '#B0A090' : C.accent, color: C.white }}>
+                  style={{ ...formBtnStyle, background: saving ? '#4A7010' : C.accent, color: C.white }}>
                   {saving ? '저장 중...' : '저장'}
                 </button>
                 <button onClick={() => setIsEditing(false)}
-                  style={{ ...formBtnStyle, background: '#DCC4A8' }}>
+                  style={{ ...formBtnStyle, background: '#6A9020' }}>
                   취소
                 </button>
               </div>
@@ -521,17 +534,22 @@ function PageAbout({ isAdmin }: { isAdmin: boolean }) {
             </a>
           </p>
           <br />
-          <p style={TEXT_BASE}>충남 부여군</p>
+          <p style={TEXT_BASE}>충남 부여군 장암면 석동로 29번길 3</p>
           <p style={TEXT_BASE}>Buyeo-gun, Chungcheongnam-do, Korea</p>
           <br />
           <p style={{ ...TEXT_SM, color: C.cyan }}>* 방문은 사전 연락 후 가능합니다</p>
           <br />
-          <div style={{
-            width: '100%', maxWidth: '660px', height: '284px',
-            background: `linear-gradient(135deg, ${C.dark} 0%, #3D2D28 100%)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <span style={{ color: 'rgba(237,214,182,0.3)', fontSize: '14px', letterSpacing: '0.1em' }}>MAP — 부여</span>
+          <div style={{ width: '100%', maxWidth: '660px', height: '284px' }}>
+            <iframe
+              title="생산소 위치"
+              src="https://maps.google.com/maps?q=충청남도+부여군+장암면+석동로+29번길+3&hl=ko&z=16&output=embed"
+              width="100%"
+              height="100%"
+              style={{ border: `2px solid ${C.dark}`, display: 'block' }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
           </div>
           <br />
           <p style={{ ...TEXT_XS, color: C.gray65 }}>website by NODE TREE</p>
@@ -703,11 +721,17 @@ function PageNews({ filter, news, isAdmin, onSave, onDelete }: {
     filter === 'notice' ? 'notice' : filter === 'press' ? 'press' : 'all'
   );
   const [editItem, setEditItem] = useState<any>(null);
+  const [selectedNotice, setSelectedNotice] = useState<any>(null);
 
   useEffect(() => {
     if (filter === 'notice') setActiveTab('notice');
     else if (filter === 'press') setActiveTab('press');
   }, [filter]);
+
+  // 탭 전환 시 패널 닫기
+  useEffect(() => {
+    setSelectedNotice(null);
+  }, [activeTab]);
 
   const NEWS_FIELDS = [
     { key: 'date', label: '날짜' },
@@ -715,9 +739,13 @@ function PageNews({ filter, news, isAdmin, onSave, onDelete }: {
     { key: 'source', label: '출처' },
     { key: 'category', label: '분류', type: 'select' as const, options: ['notice', 'press'] },
     { key: 'url', label: 'URL' },
+    { key: 'content', label: '본문', type: 'textarea' as const },
+    { key: 'images', label: '이미지 URL (쉼표로 구분)', type: 'text' as const },
   ];
 
-  const filteredNews = activeTab === 'all' ? news : news.filter((n: any) => n.category === activeTab);
+  const filteredNews = (activeTab === 'all' ? news : news.filter((n: any) => n.category === activeTab))
+    .slice()
+    .sort((a: any, b: any) => b.date.localeCompare(a.date));
   const tabs: { key: 'all' | 'notice' | 'press'; label: string }[] = [
     { key: 'all', label: '전체' },
     { key: 'notice', label: '공지사항' },
@@ -727,66 +755,143 @@ function PageNews({ filter, news, isAdmin, onSave, onDelete }: {
   const handleSave = async (data: Record<string, string>) => {
     await onSave(data, editItem?._id);
     setEditItem(null);
+    setSelectedNotice(null);
   };
 
+  const handleItemClick = (item: any) => {
+    if (item.category === 'notice') {
+      setSelectedNotice(selectedNotice?._id === item._id ? null : item);
+    } else if (item.url) {
+      window.open(item.url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const noticeImages = selectedNotice?.images
+    ? selectedNotice.images.split(',').map((s: string) => s.trim()).filter(Boolean)
+    : [];
+
   return (
-    <div style={{ flex: 1, overflowY: 'auto', paddingTop: '10px' }}>
-      <div style={{ display: 'flex', gap: '0', marginBottom: '20px' }}>
-        {tabs.map(tab => (
-          <span key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
-            ...TEXT_BASE, fontSize: '17px', padding: '6px 16px', cursor: 'pointer',
-            background: activeTab === tab.key ? C.red : 'transparent',
-            color: activeTab === tab.key ? C.white : C.dark, transition: 'all 0.2s',
-          }}>
-            {tab.label}
-          </span>
-        ))}
-      </div>
-      {/* 새 항목 추가 폼 */}
-      {isAdmin && editItem && !editItem._id && (
-        <InlineForm fields={NEWS_FIELDS} initial={{}} onSave={handleSave} onCancel={() => setEditItem(null)} />
-      )}
-      <div style={{ display: 'flex', borderBottom: `1px solid ${C.dark}`, paddingBottom: '8px', marginBottom: '4px' }}>
-        <span style={{ ...TEXT_SM, flex: '0 0 100px' }}>날짜</span>
-        <span style={{ ...TEXT_SM, flex: 1 }}>제목</span>
-        <span style={{ ...TEXT_SM, flex: '0 0 120px', textAlign: 'right' }}>출처</span>
-        {isAdmin && <span style={{ ...TEXT_SM, flex: '0 0 80px', textAlign: 'right' }}>관리</span>}
-      </div>
-      {filteredNews.map((item: any, i: number) => (
-        <div key={item._id || i}>
-          <div style={{
-            display: 'flex', padding: '10px 0', borderBottom: '1px solid #DCC4A8',
-            cursor: (!isAdmin && item.url) ? 'pointer' : 'default', transition: 'background 0.2s',
-          }}
-            onClick={() => !isAdmin && item.url && window.open(item.url, '_blank', 'noopener,noreferrer')}
-            onMouseEnter={e => { e.currentTarget.style.background = '#F5E8D8'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-          >
-            <span style={{ ...TEXT_SM, flex: '0 0 100px', color: C.gray65 }}>{item.date}</span>
-            <span style={{ ...TEXT_BASE, flex: 1 }}>
-              {item.title}
-              {item.url && <span style={{ ...TEXT_XS, color: C.cyan, marginLeft: '6px' }}>↗</span>}
+    <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      {/* ─── 왼쪽: 목록 ─── */}
+      <div style={{ flex: 1, overflowY: 'auto', paddingTop: '10px', minWidth: 0 }}>
+        <div style={{ display: 'flex', gap: '0', marginBottom: '20px' }}>
+          {tabs.map(tab => (
+            <span key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
+              ...TEXT_BASE, fontSize: '17px', padding: '6px 16px', cursor: 'pointer',
+              background: activeTab === tab.key ? C.red : 'transparent',
+              color: activeTab === tab.key ? C.white : C.dark, transition: 'all 0.2s',
+            }}>
+              {tab.label}
             </span>
-            <span style={{ ...TEXT_XS, flex: '0 0 120px', textAlign: 'right', color: C.gray65, alignSelf: 'center' }}>{item.source}</span>
-            {isAdmin && (
-              <span style={{ flex: '0 0 80px', textAlign: 'right', flexShrink: 0 }}>
-                <button style={btnStyle} onClick={e => { e.stopPropagation(); setEditItem(item); }}>수정</button>
-                <button style={{ ...btnStyle, color: C.red }} onClick={e => { e.stopPropagation(); onDelete(item._id); }}>삭제</button>
+          ))}
+        </div>
+        {/* 새 항목 추가 폼 */}
+        {isAdmin && editItem && !editItem._id && (
+          <InlineForm fields={NEWS_FIELDS} initial={{}} onSave={handleSave} onCancel={() => setEditItem(null)} />
+        )}
+        <div style={{ display: 'flex', borderBottom: `1px solid ${C.dark}`, paddingBottom: '8px', marginBottom: '4px' }}>
+          <span style={{ ...TEXT_SM, flex: '0 0 100px' }}>날짜</span>
+          <span style={{ ...TEXT_SM, flex: 1 }}>제목</span>
+          <span style={{ ...TEXT_SM, flex: '0 0 120px', textAlign: 'right' }}>출처</span>
+          {isAdmin && <span style={{ ...TEXT_SM, flex: '0 0 80px', textAlign: 'right' }}>관리</span>}
+        </div>
+        {filteredNews.map((item: any, i: number) => (
+          <div key={item._id || i}>
+            <div style={{
+              display: 'flex', padding: '10px 0', borderBottom: '1px solid #6A9020',
+              cursor: (item.category === 'notice' || item.url) ? 'pointer' : 'default',
+              transition: 'background 0.2s',
+              background: selectedNotice?._id === item._id ? '#B8D860' : 'transparent',
+            }}
+              onClick={() => handleItemClick(item)}
+              onMouseEnter={e => { if (selectedNotice?._id !== item._id) e.currentTarget.style.background = '#B0D050'; }}
+              onMouseLeave={e => { if (selectedNotice?._id !== item._id) e.currentTarget.style.background = 'transparent'; }}
+            >
+              <span style={{ ...TEXT_SM, flex: '0 0 100px', color: C.gray65 }}>{item.date}</span>
+              <span style={{ ...TEXT_BASE, flex: 1 }}>
+                {item.title}
+                {item.category === 'notice' && <span style={{ ...TEXT_XS, color: C.gray65, marginLeft: '6px' }}>›</span>}
+                {item.category === 'press' && item.url && <span style={{ ...TEXT_XS, color: C.cyan, marginLeft: '6px' }}>↗</span>}
               </span>
+              <span style={{ ...TEXT_XS, flex: '0 0 120px', textAlign: 'right', color: C.gray65, alignSelf: 'center' }}>{item.source}</span>
+              {isAdmin && (
+                <span style={{ flex: '0 0 80px', textAlign: 'right', flexShrink: 0 }}>
+                  <button style={btnStyle} onClick={e => { e.stopPropagation(); setEditItem(item); setSelectedNotice(null); }}>수정</button>
+                  <button style={{ ...btnStyle, color: C.red }} onClick={e => { e.stopPropagation(); onDelete(item._id); }}>삭제</button>
+                </span>
+              )}
+            </div>
+            {/* 수정 폼: 해당 항목 바로 아래 */}
+            {isAdmin && editItem?._id === item._id && (
+              <InlineForm
+                fields={NEWS_FIELDS}
+                initial={{ date: item.date, title: item.title, source: item.source, category: item.category, url: item.url || '', content: item.content || '', images: item.images || '' }}
+                onSave={handleSave}
+                onCancel={() => setEditItem(null)}
+              />
             )}
           </div>
-          {/* 수정 폼: 해당 항목 바로 아래 */}
-          {isAdmin && editItem?._id === item._id && (
-            <InlineForm
-              fields={NEWS_FIELDS}
-              initial={{ date: item.date, title: item.title, source: item.source, category: item.category, url: item.url || '' }}
-              onSave={handleSave}
-              onCancel={() => setEditItem(null)}
-            />
-          )}
-        </div>
-      ))}
-      {isAdmin && <button style={addBtnStyle} onClick={() => setEditItem({})}>+ 뉴스 추가</button>}
+        ))}
+        {isAdmin && <button style={addBtnStyle} onClick={() => setEditItem({})}>+ 뉴스 추가</button>}
+      </div>
+
+      {/* ─── 오른쪽: 공지사항 상세 슬라이드인 패널 ─── */}
+      <div style={{
+        width: selectedNotice ? '46%' : '0',
+        flexShrink: 0,
+        transition: 'width 0.3s ease',
+        overflow: 'hidden',
+      }}>
+        {selectedNotice && (
+          <div style={{
+            width: '46vw', height: '100%', overflowY: 'auto',
+            borderLeft: `1px solid ${C.dark}`, paddingLeft: '24px', paddingTop: '10px',
+            boxSizing: 'border-box',
+          }}>
+            {/* 닫기 버튼 */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+              <button onClick={() => setSelectedNotice(null)} style={{
+                background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px',
+                color: C.gray65, lineHeight: 1, padding: '0 4px',
+              }}>✕</button>
+            </div>
+            {/* 메타 정보 */}
+            <p style={{ ...TEXT_XS, color: C.gray65, margin: '0 0 4px' }}>{selectedNotice.date}</p>
+            <h2 style={{ ...TEXT_BASE, fontSize: '18px', fontWeight: 700, margin: '0 0 8px', lineHeight: 1.4 }}>
+              {selectedNotice.title}
+            </h2>
+            {selectedNotice.source && (
+              <p style={{ ...TEXT_XS, color: C.gray65, margin: '0 0 20px' }}>{selectedNotice.source}</p>
+            )}
+            <div style={{ borderTop: `1px solid ${C.dark}`, marginBottom: '20px' }} />
+            {/* 본문 */}
+            {selectedNotice.content ? (
+              <p style={{ ...TEXT_SM, lineHeight: 1.8, whiteSpace: 'pre-wrap', margin: '0 0 24px' }}>
+                {selectedNotice.content}
+              </p>
+            ) : (
+              <p style={{ ...TEXT_SM, color: C.gray65, margin: '0 0 24px' }}>내용이 없습니다.</p>
+            )}
+            {/* 이미지 */}
+            {noticeImages.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+                {noticeImages.map((url: string, i: number) => (
+                  <img key={i} src={url} alt={`첨부 이미지 ${i + 1}`}
+                    style={{ width: '100%', height: 'auto', display: 'block' }}
+                  />
+                ))}
+              </div>
+            )}
+            {/* 링크 */}
+            {selectedNotice.url && (
+              <a href={selectedNotice.url} target="_blank" rel="noopener noreferrer"
+                style={{ ...TEXT_SM, color: C.cyan, textDecoration: 'underline' }}>
+                관련 링크 →
+              </a>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -822,7 +927,7 @@ function PageArchive({ archives, isAdmin, onSave, onDelete }: {
         {archives.map((item: any, i: number) => (
           <div key={item._id || i} style={{ display: 'contents' }}>
             <div style={{
-              background: item.bg || 'linear-gradient(135deg, #2F1F1B, #3D2520)',
+              background: item.bg || 'linear-gradient(135deg, #1A1A14, #2A2A1E)',
               aspectRatio: '546 / 683', display: 'flex', flexDirection: 'column',
               justifyContent: 'flex-end', padding: '24px', cursor: 'pointer', transition: 'opacity 0.3s',
               position: 'relative',
@@ -841,8 +946,8 @@ function PageArchive({ archives, isAdmin, onSave, onDelete }: {
               </p>
               {isAdmin && (
                 <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 2 }}>
-                  <button style={{ ...btnStyle, background: 'rgba(237,214,182,0.8)' }} onClick={e => { e.stopPropagation(); setEditItem(item); }}>수정</button>
-                  <button style={{ ...btnStyle, background: 'rgba(237,214,182,0.8)', color: C.red }} onClick={e => { e.stopPropagation(); onDelete(item._id); }}>삭제</button>
+                  <button style={{ ...btnStyle, background: 'rgba(139,191,53,0.8)' }} onClick={e => { e.stopPropagation(); setEditItem(item); }}>수정</button>
+                  <button style={{ ...btnStyle, background: 'rgba(139,191,53,0.8)', color: C.red }} onClick={e => { e.stopPropagation(); onDelete(item._id); }}>삭제</button>
                 </div>
               )}
             </div>
@@ -891,6 +996,13 @@ function SaengsansoApp() {
   const TITLE_CHARS = '생산소 省算所 SAENGSANSO'.split('');
   const [pressedChars, setPressedChars] = useState<Set<number>>(new Set());
   const pressTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [titleVisible, setTitleVisible] = useState(false);
+  const [headerDark, setHeaderDark] = useState(false);
+  useEffect(() => {
+    const t1 = setTimeout(() => setTitleVisible(true), 80);
+    const t2 = setTimeout(() => setHeaderDark(true), 750);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
 
   useEffect(() => {
     const nonSpaceIndices = TITLE_CHARS.map((c, i) => c !== ' ' ? i : -1).filter(i => i >= 0);
@@ -1013,8 +1125,13 @@ function SaengsansoApp() {
 
   const makeDeleteHandler = (type: string) => async (id: string) => {
     if (!id || !window.confirm('정말 삭제하시겠습니까?')) return;
-    await (saengsansoAPI as any)[type].delete(id);
-    await loadData();
+    try {
+      await (saengsansoAPI as any)[type].delete(id);
+      await loadData();
+    } catch (err: any) {
+      console.error(`삭제 실패 (${type}):`, err);
+      alert(`삭제에 실패했습니다: ${err?.message || '서버 오류'}`);
+    }
   };
 
   const isMain = currentPage === 'MAIN';
@@ -1128,7 +1245,7 @@ function SaengsansoApp() {
     }}>
       {slideModal}
       {/* ─── 타이틀 행 ─── */}
-      <div style={{ background: '#2F1F1B', padding: '0 15px', flexShrink: 0 }}>
+      <div style={{ background: headerDark ? '#1A1A14' : '#8BBF35', padding: '0 15px', flexShrink: 0, overflow: 'hidden', transition: 'background 0.5s ease' }}>
         <div style={{ paddingTop: '18px', paddingBottom: '12px', margin: 0, lineHeight: '32px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
           onClick={() => handleNav('MAIN')}>
           <p style={{ margin: 0, padding: 0, fontSize: '20px', lineHeight: '32px' }}>
@@ -1139,13 +1256,15 @@ function SaengsansoApp() {
                   display: 'inline-block',
                   fontSize: '48px', fontWeight: 900,
                   fontFamily: "Verdana, 'Noto Sans Korean', 'Apple SD Gothic Neo', sans-serif",
-                  color: '#2F1F1B',
+                  color: headerDark ? '#8BBF35' : '#1A1A14',
                   lineHeight: '32px',
                   minWidth: char === ' ' ? '14px' : undefined,
-                  transition: 'text-shadow 0.35s ease-out',
+                  transform: titleVisible ? 'translateY(0)' : 'translateY(28px)',
+                  opacity: titleVisible ? 1 : 0,
+                  transition: `transform 0.55s cubic-bezier(0.22,1,0.36,1) ${i * 28}ms, opacity 0.4s ease ${i * 28}ms, color 0.5s ease, text-shadow 0.35s ease-out`,
                   textShadow: pressedChars.has(i)
-                    ? `2px 1px 0 #DCC4A8, 4px 2px 0 #CCAE90, 6px 3px 0 #BC9878, 8px 4px 0 #AC8260, 10px 5px 0 #9C6C48, 12px 6px 1px rgba(0,0,0,0.2), -1px -1px 0 #F8E4CE, -2px -1px 0 #F5E0CA`
-                    : `0 0 0 #2F1F1B, 0 0 0 #2F1F1B, 0 0 0 #2F1F1B, 0 0 0 #2F1F1B, 0 0 0 #2F1F1B, 0 0 0 #2F1F1B, 0 0 0 #2F1F1B, 0 0 0 #2F1F1B`,
+                    ? `2px 1px 0 #6A9020, 4px 2px 0 #5A8010, 6px 3px 0 #4A7010, 8px 4px 0 #3A6008, 10px 5px 0 #2A5000, 12px 6px 1px rgba(0,0,0,0.3), -1px -1px 0 #A8CC40, -2px -1px 0 #B0D050`
+                    : `0 0 0 #1A1A14, 0 0 0 #1A1A14, 0 0 0 #1A1A14, 0 0 0 #1A1A14, 0 0 0 #1A1A14, 0 0 0 #1A1A14, 0 0 0 #1A1A14, 0 0 0 #1A1A14`,
                 }}
               >
                 {char === ' ' ? '\u00A0' : char}
@@ -1158,12 +1277,12 @@ function SaengsansoApp() {
           {!isAuthenticated ? (
             <span
               onClick={(e) => { e.stopPropagation(); setShowLogin(true); }}
-              style={{ ...TEXT_XS, color: 'rgba(237,214,182,0.5)', cursor: 'pointer', textDecoration: 'none' }}
+              style={{ ...TEXT_XS, color: headerDark ? 'rgba(139,191,53,0.5)' : 'rgba(26,26,20,0.5)', cursor: 'pointer', textDecoration: 'none', transition: 'color 0.5s ease' }}
             >
               로그인
             </span>
           ) : (
-            <span style={{ ...TEXT_XS, color: 'rgba(237,214,182,0.7)' }}>
+            <span style={{ ...TEXT_XS, color: 'rgba(139,191,53,0.7)' }}>
               {user?.username}님{' '}
               <span
                 onClick={() => setAdminEditMode(m => !m)}
@@ -1178,7 +1297,7 @@ function SaengsansoApp() {
       </div>
 
       {/* ─── 네비게이션 행 ─── */}
-      <div style={{ background: C.white, padding: '0 15px', flexShrink: 0 }}>
+      <div style={{ background: C.white, padding: '0 15px', flexShrink: 0, overflow: 'hidden' }}>
         <nav className="sso-desktop-nav"
           style={{ display: 'flex', alignItems: 'center', margin: 0, padding: 0, position: 'relative', zIndex: 100, flexShrink: 0 }}
           onMouseLeave={() => setActiveDropdown(null)}
@@ -1186,7 +1305,12 @@ function SaengsansoApp() {
           {MENU_ITEMS.map((item, idx) => {
             const isActive = currentPage === item.page || (item.page === 'NEWS' && currentPage.startsWith('NEWS'));
             return (
-              <div key={item.label} style={{ position: 'relative', display: 'inline-block' }}
+              <div key={item.label} style={{
+                  position: 'relative', display: 'inline-block',
+                  transform: titleVisible ? 'translateY(0)' : 'translateY(20px)',
+                  opacity: titleVisible ? 1 : 0,
+                  transition: `transform 0.5s cubic-bezier(0.22,1,0.36,1) ${500 + idx * 70}ms, opacity 0.4s ease ${500 + idx * 70}ms`,
+                }}
                 onMouseEnter={() => item.sub ? setActiveDropdown(idx) : setActiveDropdown(null)}>
                 <span className="sso-nav-item" onClick={() => handleNav(item.page)} style={{
                   display: 'table-cell', padding: '0 10px', height: '34px', lineHeight: '34px',
@@ -1208,8 +1332,8 @@ function SaengsansoApp() {
                 </span>
                 {item.sub && activeDropdown === idx && (
                   <div style={{
-                    position: 'absolute', top: '34px', left: 0, background: '#EDD6B6',
-                    minWidth: '200px', boxShadow: '0 4px 20px rgba(47,31,27,0.15)', zIndex: 200, padding: '8px 0',
+                    position: 'absolute', top: '34px', left: 0, background: '#8BBF35',
+                    minWidth: '200px', boxShadow: '0 4px 20px rgba(26,26,20,0.15)', zIndex: 200, padding: '8px 0',
                   }}>
                     {item.sub.map(sub => (
                       <div key={sub.label} style={{
@@ -1244,10 +1368,10 @@ function SaengsansoApp() {
         {mobileMenuOpen && (
           <motion.div
             initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-            style={{ position: 'fixed', top: '120px', left: 0, right: 0, bottom: 0, background: '#EDD6B6', zIndex: 90, padding: '20px', overflowY: 'auto' }}
+            style={{ position: 'fixed', top: '120px', left: 0, right: 0, bottom: 0, background: '#8BBF35', zIndex: 90, padding: '20px', overflowY: 'auto' }}
           >
             {MENU_ITEMS.map(item => (
-              <div key={item.label} style={{ borderBottom: '1px solid #DCC4A8' }}>
+              <div key={item.label} style={{ borderBottom: '1px solid #6A9020' }}>
                 <div onClick={() => handleNav(item.page)} style={{
                   padding: '16px 0', fontSize: '17px', fontWeight: 700,
                   textTransform: 'uppercase' as const, color: C.dark, cursor: 'pointer',
@@ -1257,7 +1381,7 @@ function SaengsansoApp() {
                 {item.sub && (
                   <div style={{ paddingBottom: '12px' }}>
                     {item.sub.map(sub => (
-                      <div key={sub.label} style={{ padding: '8px 0 8px 16px', fontSize: '13px', color: '#7F776D', cursor: 'pointer' }}
+                      <div key={sub.label} style={{ padding: '8px 0 8px 16px', fontSize: '13px', color: '#4A5030', cursor: 'pointer' }}
                         onClick={() => handleNav(sub.page || item.page)}>
                         {sub.label}
                       </div>
@@ -1317,7 +1441,7 @@ function SaengsansoApp() {
           transform: translateX(-50%) scale(0) rotate(-30deg);
           transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
           font-size: 9px;
-          color: #CE7F64;
+          color: #1A1A14;
           line-height: 1;
           pointer-events: none;
         }
