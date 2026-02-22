@@ -8,7 +8,7 @@ import Home from './components/Home';
 import SaengsansoApp from './components/Saengsanso';
 import StrudelSynth from './components/StrudelSynth';
 import Contact from './components/Contact';
-import Filed from './components/Filed';
+import Commons from './components/Commons';
 import CV from './components/CV';
 import About from './components/About';
 import Guestbook from './components/Guestbook';
@@ -37,7 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 1, text: 'NODE TREE', page: 'ABOUT' },
   { id: 2, text: '생산소', href: 'https://saengsanso.com', external: true },
   { id: 3, text: 'ART WORK', page: 'WORK' },
-  { id: 4, text: 'COMMONS', page: 'FILED' },
+  { id: 4, text: 'COMMONS', page: 'COMMONS' },
   { id: 5, text: 'CV', page: 'CV' },
   { id: 6, text: 'CONTACT', page: 'CONTACT' }
 ];
@@ -258,8 +258,8 @@ function AppContent() {
         return <About />;
       case 'WORK':
         return <Work />;
-      case 'FILED':
-        return <Filed />;
+      case 'COMMONS':
+        return <Commons />;
       case 'CV':
         return <CV />;
       default:

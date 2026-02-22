@@ -136,7 +136,7 @@ const NAV_NOTES: { [key: string]: number } = {
   ABOUT: NOTES.D4,
   LOCATION: NOTES.E4,
   WORK: NOTES.G4,
-  FILED: NOTES.A4,
+  COMMONS: NOTES.A4,
   CV: NOTES.C5,
   CONTACT: NOTES.E5,
 };
