@@ -164,4 +164,21 @@ router.put('/about-page', auth, async (req, res) => {
   }
 });
 
+// ─── 이미지 프록시 (CORS 우회) ───
+router.get('/image-proxy', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) return res.status(400).json({ success: false, message: 'url 파라미터 필요' });
+    const fetch = (await import('node-fetch')).default;
+    const imgRes = await fetch(url, { timeout: 8000 });
+    if (!imgRes.ok) return res.status(400).end();
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Content-Type', imgRes.headers.get('content-type') || 'image/png');
+    res.set('Cache-Control', 'public, max-age=86400');
+    imgRes.body.pipe(res);
+  } catch {
+    res.status(500).end();
+  }
+});
+
 module.exports = router;

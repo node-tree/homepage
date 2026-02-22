@@ -41,8 +41,8 @@ const newsSchema = new mongoose.Schema({
 
 // ─── 아카이브 (sso_archives) ───
 const archiveSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  year: { type: String, required: true },
+  title: { type: String, default: '' },
+  year: { type: String, default: '' },
   bg: { type: String, default: '' },
   image: { type: String, default: '' },
   video: { type: String, default: '' },

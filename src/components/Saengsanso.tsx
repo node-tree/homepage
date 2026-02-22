@@ -13,16 +13,26 @@ const saengsansoAPI = _ssoAPI as Record<string, {
   reorder: (orders: any[]) => Promise<any>;
 }>;
 
-// ─── Swiss Lime 디자인 토큰 ───
+// ─── 랜덤 테마 (접속 시 결정) ───
+const THEME_COLORS = ['#C8D64A', '#DAAA20'] as const; // 샤르트뢰즈 그린, 골든 머스타드
+const THEME_BG = THEME_COLORS[Math.floor(Math.random() * THEME_COLORS.length)];
+
 const C = {
   accent: '#1A1A14',   // 블랙
   red: '#1A1A14',      // 블랙 (강조)
   cyan: '#1A1A14',     // 블랙
   black: '#1A1A14',    // 블랙
   dark: '#1A1A14',     // 블랙
-  white: '#8BBF35',    // 라임 그린 (배경)
+  white: THEME_BG,     // 랜덤 테마 배경
   gray65: '#4A5030',   // 올리브 그레이
 };
+
+// 테마색 rgba 헬퍼
+const TR = (() => {
+  const hex = THEME_BG;
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return (a: number) => `rgba(${r},${g},${b},${a})`;
+})();
 
 const TEXT_BASE: React.CSSProperties = {
   fontSize: '20px', fontWeight: 700,
@@ -204,7 +214,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%', padding: '6px 8px', fontSize: '14px', fontFamily: 'inherit',
   border: `1px solid #1A1A14`, marginBottom: '6px', boxSizing: 'border-box',
 };
-const selectStyle: React.CSSProperties = { ...inputStyle, background: '#8BBF35' };
+const selectStyle: React.CSSProperties = { ...inputStyle, background: C.white };
 const formBtnStyle: React.CSSProperties = {
   padding: '4px 16px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
   border: 'none', marginRight: '6px',
@@ -305,7 +315,7 @@ function SlideEditModal({ slide, onSave, onClose }: {
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000,
     }} onClick={onClose}>
       <div style={{
-        background: '#8BBF35', padding: '28px', width: '90%', maxWidth: '480px',
+        background: C.white, padding: '28px', width: '90%', maxWidth: '480px',
         boxShadow: '0 12px 40px rgba(26,26,20,0.4)', borderRadius: '2px',
       }} onClick={e => e.stopPropagation()}>
         <p style={{ ...TEXT_BASE, marginBottom: '16px' }}>
@@ -321,7 +331,7 @@ function SlideEditModal({ slide, onSave, onClose }: {
             }} />
             <button onClick={() => { setImagePreview(''); setUrlInput(''); }} style={{
               position: 'absolute', top: '6px', right: '6px',
-              background: 'rgba(26,26,20,0.8)', color: '#8BBF35',
+              background: 'rgba(26,26,20,0.8)', color: C.white,
               border: 'none', borderRadius: '50%', width: '24px', height: '24px',
               cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>×</button>
@@ -344,7 +354,7 @@ function SlideEditModal({ slide, onSave, onClose }: {
               style={{
                 border: `2px dashed ${isDragging ? C.accent : '#1A1A14'}`,
                 padding: '16px', textAlign: 'center', cursor: 'pointer',
-                background: isDragging ? 'rgba(26,26,20,0.08)' : 'rgba(139,191,53,0.5)',
+                background: isDragging ? 'rgba(26,26,20,0.08)' : TR(0.5),
                 marginBottom: '12px', transition: 'all 0.2s',
               }}
             >
@@ -439,7 +449,7 @@ function PageMain({ goToSlide, currentSlide, slides, isAdmin, onEditSlide, onAdd
               </div>
             )}
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6, duration: 0.6 }}
-              style={{ color: 'rgba(139,191,53,0.5)', fontSize: 'clamp(0.85rem, 1.5vw, 1.1rem)', fontWeight: 300, letterSpacing: '0.12em', textAlign: 'center', margin: 0, position: 'relative', zIndex: 1 }}>
+              style={{ color: TR(0.5), fontSize: 'clamp(0.85rem, 1.5vw, 1.1rem)', fontWeight: 300, letterSpacing: '0.12em', textAlign: 'center', margin: 0, position: 'relative', zIndex: 1 }}>
               {slide.caption}
             </motion.p>
           </div>
@@ -451,7 +461,7 @@ function PageMain({ goToSlide, currentSlide, slides, isAdmin, onEditSlide, onAdd
         {slides.map((_: any, i: number) => (
           <button key={i} onClick={() => goToSlide(i)} style={{
             width: '6px', height: '6px', borderRadius: '50%',
-            background: i === currentSlide ? C.accent : 'rgba(139,191,53,0.3)',
+            background: i === currentSlide ? C.accent : TR(0.3),
             border: 'none', cursor: 'pointer', padding: 0, transition: 'background 0.3s',
           }} />
         ))}
@@ -461,17 +471,17 @@ function PageMain({ goToSlide, currentSlide, slides, isAdmin, onEditSlide, onAdd
       {isAdmin && (
         <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '6px', zIndex: 20 }}>
           <button onClick={() => onEditSlide(slide)} style={{
-            background: 'rgba(26,26,20,0.9)', color: '#8BBF35',
+            background: 'rgba(26,26,20,0.9)', color: C.white,
             border: 'none', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
           }}>이미지 편집</button>
           {slides.length > 1 && !String(slide._id).startsWith('f') && (
             <button onClick={() => onDeleteSlide(slide._id)} style={{
-              background: 'rgba(26,26,20,0.9)', color: '#8BBF35',
+              background: 'rgba(26,26,20,0.9)', color: C.white,
               border: 'none', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
             }}>삭제</button>
           )}
           <button onClick={onAddSlide} style={{
-            background: 'rgba(26,26,20,0.85)', color: '#8BBF35',
+            background: 'rgba(26,26,20,0.85)', color: C.white,
             border: 'none', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
           }}>+ 추가</button>
         </div>
@@ -959,6 +969,93 @@ function parseVideoUrl(url: string): { type: 'youtube' | 'vimeo' | 'direct' | 'g
   return null;
 }
 
+// ─── 이미지에서 배경색 추출 ───
+const PROXY_BASE = process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api';
+
+function useExtractedBg(imgSrc: string | null, fallback: string): string {
+  const [bg, setBg] = useState<string>(fallback);
+  useEffect(() => {
+    if (!imgSrc) return;
+    let cancelled = false;
+    const proxyUrl = `${PROXY_BASE}/saengsanso/image-proxy?url=${encodeURIComponent(imgSrc)}`;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const S = 40;
+        const canvas = document.createElement('canvas');
+        canvas.width = S; canvas.height = S;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, S, S);
+        const corners = [
+          ctx.getImageData(0, 0, 3, 3).data,
+          ctx.getImageData(S - 3, 0, 3, 3).data,
+          ctx.getImageData(0, S - 3, 3, 3).data,
+          ctx.getImageData(S - 3, S - 3, 3, 3).data,
+        ];
+        let r = 0, g = 0, b = 0, n = 0;
+        corners.forEach(d => { for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i+1]; b += d[i+2]; n++; } });
+        if (!cancelled) setBg(`rgb(${Math.round(r/n)},${Math.round(g/n)},${Math.round(b/n)})`);
+      } catch {}
+    };
+    img.src = proxyUrl;
+    return () => { cancelled = true; };
+  }, [imgSrc]);
+  return bg;
+}
+
+// ─── 아카이브 카드 ───
+function ArchiveCard({ item, isAdmin, onEdit, onDelete: onDel }: {
+  item: any; isAdmin: boolean;
+  onEdit: () => void; onDelete: () => void;
+}) {
+  const vid = parseVideoUrl(item.video || '');
+  const imgSrc = vid?.type === 'gif' ? vid.embedUrl : (!item.video && item.image ? item.image : null);
+  const bg = useExtractedBg(imgSrc, item.bg || 'linear-gradient(135deg, #1A1A14, #2A2A1E)');
+
+  return (
+    <div style={{
+      background: bg,
+      aspectRatio: '546 / 683', display: 'flex', flexDirection: 'column',
+      justifyContent: 'flex-end', padding: '24px', cursor: 'pointer', transition: 'opacity 0.3s',
+      position: 'relative', overflow: 'hidden',
+    }}
+      onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
+      onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+    >
+      {vid ? (
+        vid.type === 'gif' ? (
+          <img src={vid.embedUrl} alt={item.title}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
+        ) : vid.type === 'direct' ? (
+          <video src={vid.embedUrl} autoPlay muted loop playsInline
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
+        ) : (
+          <iframe src={vid.embedUrl} title={item.title}
+            allow="autoplay; fullscreen" frameBorder="0"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', pointerEvents: 'none' }} />
+        )
+      ) : item.image ? (
+        <img src={item.image} alt={item.title}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
+      ) : null}
+      <p style={{ color: C.accent, fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', margin: '0 0 6px 0', position: 'relative', zIndex: 1 }}>
+        {item.year}
+      </p>
+      <p style={{ color: C.white, fontSize: '16px', fontWeight: 700, margin: 0, lineHeight: '24px', position: 'relative', zIndex: 1 }}>
+        {item.title}
+      </p>
+      {isAdmin && (
+        <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 2 }}>
+          <button style={{ ...btnStyle, background: TR(0.8) }} onClick={e => { e.stopPropagation(); onEdit(); }}>수정</button>
+          <button style={{ ...btnStyle, background: TR(0.8), color: C.red }} onClick={e => { e.stopPropagation(); onDel(); }}>삭제</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── 페이지: ARCHIVE (DB 연동) ───
 function PageArchive({ archives, isAdmin, onSave, onDelete }: {
   archives: any[];
@@ -969,11 +1066,8 @@ function PageArchive({ archives, isAdmin, onSave, onDelete }: {
   const [editItem, setEditItem] = useState<any>(null);
 
   const ARCHIVE_FIELDS = [
-    { key: 'title', label: '제목' },
-    { key: 'year', label: '연도' },
-    { key: 'bg', label: '배경(CSS)' },
     { key: 'image', label: '이미지 URL' },
-    { key: 'video', label: '영상 URL (YouTube/Vimeo/mp4)' },
+    { key: 'video', label: '영상 URL (YouTube/Vimeo/gif)' },
   ];
 
   const handleSave = async (data: Record<string, string>) => {
@@ -983,69 +1077,23 @@ function PageArchive({ archives, isAdmin, onSave, onDelete }: {
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', paddingTop: '10px' }}>
-      {/* 새 항목 추가 폼 */}
       {isAdmin && editItem && !editItem._id && (
         <InlineForm fields={ARCHIVE_FIELDS} initial={{}} onSave={handleSave} onCancel={() => setEditItem(null)} />
       )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0 }}>
         {archives.map((item: any, i: number) => (
           <div key={item._id || i} style={{ display: 'contents' }}>
-            <div style={{
-              background: item.bg || 'linear-gradient(135deg, #1A1A14, #2A2A1E)',
-              aspectRatio: '546 / 683', display: 'flex', flexDirection: 'column',
-              justifyContent: 'flex-end', padding: '24px', cursor: 'pointer', transition: 'opacity 0.3s',
-              position: 'relative', overflow: 'hidden',
-            }}
-              onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
-              onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
-            >
-              {(() => {
-                const vid = parseVideoUrl(item.video || '');
-                const blurBg = (src: string, tag: 'img' | 'video') => (
-                  <>
-                    {tag === 'img'
-                      ? <img src={src} alt="" aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(18px) brightness(0.5)', transform: 'scale(1.08)' }} />
-                      : <video src={src} autoPlay muted loop playsInline aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(18px) brightness(0.5)', transform: 'scale(1.08)' }} />
-                    }
-                    <div style={{ position: 'absolute', inset: '5%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {tag === 'img'
-                        ? <img src={src} alt={item.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                        : <video src={src} autoPlay muted loop playsInline style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                      }
-                    </div>
-                  </>
-                );
-                if (vid) {
-                  if (vid.type === 'gif') return blurBg(vid.embedUrl, 'img');
-                  if (vid.type === 'direct') return blurBg(vid.embedUrl, 'video');
-                  return (
-                    <iframe src={vid.embedUrl} title={item.title}
-                      allow="autoplay; fullscreen" frameBorder="0"
-                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', pointerEvents: 'none' }} />
-                  );
-                }
-                if (item.image) return blurBg(item.image, 'img');
-                return null;
-              })()}
-              <p style={{ color: C.accent, fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', margin: '0 0 6px 0', position: 'relative', zIndex: 1 }}>
-                {item.year}
-              </p>
-              <p style={{ color: C.white, fontSize: '16px', fontWeight: 700, margin: 0, lineHeight: '24px', position: 'relative', zIndex: 1 }}>
-                {item.title}
-              </p>
-              {isAdmin && (
-                <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 2 }}>
-                  <button style={{ ...btnStyle, background: 'rgba(139,191,53,0.8)' }} onClick={e => { e.stopPropagation(); setEditItem(item); }}>수정</button>
-                  <button style={{ ...btnStyle, background: 'rgba(139,191,53,0.8)', color: C.red }} onClick={e => { e.stopPropagation(); onDelete(item._id); }}>삭제</button>
-                </div>
-              )}
-            </div>
-            {/* 수정 폼: 카드 바로 다음 칸에 full-width로 */}
+            <ArchiveCard
+              item={item}
+              isAdmin={isAdmin}
+              onEdit={() => setEditItem(item)}
+              onDelete={() => onDelete(item._id)}
+            />
             {isAdmin && editItem?._id === item._id && (
               <div style={{ gridColumn: '1 / -1' }}>
                 <InlineForm
                   fields={ARCHIVE_FIELDS}
-                  initial={{ title: item.title, year: item.year, bg: item.bg || '', image: item.image || '', video: item.video || '' }}
+                  initial={{ image: item.image || '', video: item.video || '' }}
                   onSave={handleSave}
                   onCancel={() => setEditItem(null)}
                 />
@@ -1297,7 +1345,7 @@ function SaengsansoApp() {
     }}>
       {slideModal}
       {/* ─── 타이틀 행 ─── */}
-      <div style={{ background: '#000000', padding: '0 15px', flexShrink: 0 }}>
+      <div style={{ background: C.white, padding: '0 15px', flexShrink: 0 }}>
         <div style={{ paddingTop: '18px', paddingBottom: '12px', margin: 0, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
           onClick={() => handleNav('MAIN')}>
           <div style={{ overflowX: 'hidden', overflowY: 'visible', flex: 1 }}>
@@ -1306,7 +1354,7 @@ function SaengsansoApp() {
                 <span key={copy} style={{
                   fontSize: '48px', fontWeight: 900,
                   fontFamily: "Verdana, 'Noto Sans Korean', 'Apple SD Gothic Neo', sans-serif",
-                  color: '#8BBF35', lineHeight: '1.1',
+                  color: '#000000', lineHeight: '1.1',
                   whiteSpace: 'nowrap',
                   display: 'inline-block',
                   flexShrink: 0,
@@ -1322,12 +1370,12 @@ function SaengsansoApp() {
           {!isAuthenticated ? (
             <span
               onClick={(e) => { e.stopPropagation(); setShowLogin(true); }}
-              style={{ ...TEXT_XS, color: 'rgba(139,191,53,0.5)', cursor: 'pointer', textDecoration: 'none' }}
+              style={{ ...TEXT_XS, color: 'rgba(26,26,20,0.4)', cursor: 'pointer', textDecoration: 'none' }}
             >
               로그인
             </span>
           ) : (
-            <span style={{ ...TEXT_XS, color: 'rgba(139,191,53,0.7)' }}>
+            <span style={{ ...TEXT_XS, color: 'rgba(26,26,20,0.6)' }}>
               {user?.username}님{' '}
               <span
                 onClick={() => setAdminEditMode(m => !m)}
@@ -1377,7 +1425,7 @@ function SaengsansoApp() {
                 </span>
                 {item.sub && activeDropdown === idx && (
                   <div style={{
-                    position: 'absolute', top: '34px', left: 0, background: '#8BBF35',
+                    position: 'absolute', top: '34px', left: 0, background: C.white,
                     minWidth: '200px', boxShadow: '0 4px 20px rgba(26,26,20,0.15)', zIndex: 200, padding: '8px 0',
                   }}>
                     {item.sub.map(sub => (
@@ -1413,7 +1461,7 @@ function SaengsansoApp() {
         {mobileMenuOpen && (
           <motion.div
             initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-            style={{ position: 'fixed', top: '120px', left: 0, right: 0, bottom: 0, background: '#8BBF35', zIndex: 90, padding: '20px', overflowY: 'auto' }}
+            style={{ position: 'fixed', top: '120px', left: 0, right: 0, bottom: 0, background: C.white, zIndex: 90, padding: '20px', overflowY: 'auto' }}
           >
             {MENU_ITEMS.map(item => (
               <div key={item.label} style={{ borderBottom: '1px solid #6A9020' }}>
