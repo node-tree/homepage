@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- 라인 (원 아래에 그려짐) -->
+  <line x1="256" y1="60" x2="256" y2="300" stroke="#000" stroke-width="14"/>
+  <line x1="256" y1="300" x2="60" y2="452" stroke="#000" stroke-width="14"/>
+  <line x1="256" y1="300" x2="452" y2="452" stroke="#000" stroke-width="14"/>
+  <!-- 원 (라인 위에 그려짐) -->
+  <circle cx="256" cy="60" r="38" fill="#000"/>
+  <circle cx="256" cy="300" r="38" fill="#000"/>
+  <circle cx="60" cy="452" r="38" fill="#000"/>
+  <circle cx="452" cy="452" r="38" fill="#000"/>
+</svg>
