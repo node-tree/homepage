@@ -998,7 +998,9 @@ ssoTypes.forEach(({ key, cacheKey }) => {
       });
       if (!response.ok) {
         if (response.status === 401) return handle401();
-        throw new Error(`Failed to create ${key}`);
+        const errBody = await response.json().catch(() => ({}));
+        console.error(`SSO ${key} create 오류:`, response.status, errBody);
+        throw new Error(errBody.error || errBody.message || `Failed to create ${key}`);
       }
       const data = await response.json();
       cacheUtils.remove(cacheKey);
