@@ -155,7 +155,7 @@ function MobileNavigation({ currentPage, onPageChange }: { currentPage: string; 
                     whileTap={{ scale: 0.98 }}
                   >
                     <div className="sidebar-dot" />
-                    <span>{item.text}{item.external ? ' ↗' : ''}</span>
+                    <span>{item.text}</span>
                   </motion.div>
                 ))}
               </div>

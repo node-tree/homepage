@@ -1215,11 +1215,16 @@ function SaengsansoApp() {
 
   useEffect(() => {
     document.title = '생산소 SAENGSANSO';
+    // favicon 교체
+    const link = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
+    const prevHref = link?.href || '';
+    if (link) link.href = '/saengsanso-favicon.svg';
     const style = document.createElement('style');
     style.textContent = `html, body { margin: 0; padding: 0; height: 100%; } * { box-sizing: border-box; }`;
     document.head.appendChild(style);
     loadData();
     return () => {
+      if (link) link.href = prevHref;
       document.head.removeChild(style);
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
