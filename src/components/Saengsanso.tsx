@@ -137,8 +137,8 @@ const FALLBACK_SLIDES = [
   { _id: 'f4', bg: 'linear-gradient(135deg, #1A1A14 0%, #2A2A1E 50%, #1A1A14 100%)', caption: '금강아카이브: 멀고도 가까운', image: '' },
 ];
 
-// ─── 이미지 압축 (canvas, max 1920px, JPEG 80%) ───
-const compressImage = (file: File, maxWidth = 1920, quality = 0.8): Promise<string> =>
+// ─── 이미지 압축 (canvas, max 2560px, JPEG 90%) ───
+const compressImage = (file: File, maxWidth = 2560, quality = 0.9): Promise<string> =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -263,6 +263,8 @@ function SlideEditModal({ slide, onSave, onClose }: {
 }) {
   const [caption, setCaption] = useState(slide?.caption || '');
   const [imagePreview, setImagePreview] = useState<string>(slide?.image || '');
+  const [tab, setTab] = useState<'upload' | 'url'>('upload');
+  const [urlInput, setUrlInput] = useState(slide?.image?.startsWith('http') ? slide.image : '');
   const [isDragging, setIsDragging] = useState(false);
   const [imgError, setImgError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -275,6 +277,14 @@ function SlideEditModal({ slide, onSave, onClose }: {
     try { setImagePreview(await compressImage(file)); } catch { setImgError('이미지 처리 실패'); }
   };
 
+  const handleUrlApply = () => {
+    const url = urlInput.trim();
+    if (!url) return;
+    if (!url.startsWith('http')) { setImgError('http 또는 https로 시작하는 URL을 입력하세요.'); return; }
+    setImgError('');
+    setImagePreview(url);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -282,6 +292,12 @@ function SlideEditModal({ slide, onSave, onClose }: {
       onClose();
     } finally { setSaving(false); }
   };
+
+  const tabStyle = (active: boolean): React.CSSProperties => ({
+    padding: '6px 16px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', border: 'none',
+    background: active ? C.dark : 'transparent', color: active ? C.white : C.dark,
+    transition: 'all 0.15s',
+  });
 
   return (
     <div style={{
@@ -292,7 +308,7 @@ function SlideEditModal({ slide, onSave, onClose }: {
         background: '#8BBF35', padding: '28px', width: '90%', maxWidth: '480px',
         boxShadow: '0 12px 40px rgba(26,26,20,0.4)', borderRadius: '2px',
       }} onClick={e => e.stopPropagation()}>
-        <p style={{ ...TEXT_BASE, marginBottom: '20px' }}>
+        <p style={{ ...TEXT_BASE, marginBottom: '16px' }}>
           {slide?._id ? '슬라이드 편집' : '슬라이드 추가'}
         </p>
 
@@ -303,7 +319,7 @@ function SlideEditModal({ slide, onSave, onClose }: {
               width: '100%', height: '160px', objectFit: 'cover',
               display: 'block', border: '1px solid #1A1A14',
             }} />
-            <button onClick={() => setImagePreview('')} style={{
+            <button onClick={() => { setImagePreview(''); setUrlInput(''); }} style={{
               position: 'absolute', top: '6px', right: '6px',
               background: 'rgba(26,26,20,0.8)', color: '#8BBF35',
               border: 'none', borderRadius: '50%', width: '24px', height: '24px',
@@ -312,24 +328,49 @@ function SlideEditModal({ slide, onSave, onClose }: {
           </div>
         )}
 
-        {/* 이미지 업로드 영역 */}
-        <div
-          onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
-          onDragLeave={() => setIsDragging(false)}
-          onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
-          onClick={() => fileRef.current?.click()}
-          style={{
-            border: `2px dashed ${isDragging ? C.accent : '#1A1A14'}`,
-            padding: '16px', textAlign: 'center', cursor: 'pointer',
-            background: isDragging ? 'rgba(26,26,20,0.08)' : 'rgba(139,191,53,0.5)',
-            marginBottom: '12px', transition: 'all 0.2s',
-          }}
-        >
-          <p style={{ ...TEXT_SM, color: C.gray65, margin: 0 }}>이미지 클릭 또는 드래그</p>
-          <p style={{ ...TEXT_XS, color: '#4A7010', margin: '4px 0 0' }}>JPG·PNG·WEBP · 15MB 이하 · 자동 압축</p>
+        {/* 탭 전환 */}
+        <div style={{ display: 'flex', marginBottom: '10px', border: `1px solid ${C.dark}` }}>
+          <button style={tabStyle(tab === 'upload')} onClick={() => { setTab('upload'); setImgError(''); }}>파일 업로드</button>
+          <button style={tabStyle(tab === 'url')} onClick={() => { setTab('url'); setImgError(''); }}>URL 링크</button>
         </div>
-        <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
-          onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+
+        {tab === 'upload' ? (
+          <>
+            <div
+              onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
+              onClick={() => fileRef.current?.click()}
+              style={{
+                border: `2px dashed ${isDragging ? C.accent : '#1A1A14'}`,
+                padding: '16px', textAlign: 'center', cursor: 'pointer',
+                background: isDragging ? 'rgba(26,26,20,0.08)' : 'rgba(139,191,53,0.5)',
+                marginBottom: '12px', transition: 'all 0.2s',
+              }}
+            >
+              <p style={{ ...TEXT_SM, color: C.gray65, margin: 0 }}>이미지 클릭 또는 드래그</p>
+              <p style={{ ...TEXT_XS, color: '#4A7010', margin: '4px 0 0' }}>JPG·PNG·WEBP · 15MB 이하 · 자동 압축</p>
+            </div>
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
+              onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+          </>
+        ) : (
+          <div style={{ marginBottom: '12px' }}>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <input
+                value={urlInput}
+                onChange={e => setUrlInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleUrlApply()}
+                placeholder="https://example.com/image.jpg"
+                style={{ ...inputStyle, flex: 1, marginBottom: 0 }}
+              />
+              <button onClick={handleUrlApply}
+                style={{ ...formBtnStyle, background: C.dark, color: C.white, whiteSpace: 'nowrap' }}>
+                적용
+              </button>
+            </div>
+          </div>
+        )}
         {imgError && <p style={{ ...TEXT_XS, color: C.red, marginBottom: '8px' }}>{imgError}</p>}
 
         {/* 캡션 */}
@@ -363,7 +404,7 @@ function PageMain({ goToSlide, currentSlide, slides, isAdmin, onEditSlide, onAdd
   if (!slide) return null;
 
   return (
-    <div style={{ height: '52vh', position: 'relative', marginTop: '4px', overflow: 'hidden' }}>
+    <div style={{ height: '68vh', position: 'relative', marginTop: '4px', overflow: 'hidden' }}>
       <AnimatePresence initial={false}>
         <motion.div
           key={currentSlide}
@@ -380,12 +421,22 @@ function PageMain({ goToSlide, currentSlide, slides, isAdmin, onEditSlide, onAdd
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
-            {/* 실제 이미지 */}
+            {/* 블러 배경 레이어 */}
             {slide.image && (
-              <img src={slide.image} alt="" style={{
+              <img src={slide.image} alt="" aria-hidden="true" style={{
                 position: 'absolute', inset: 0, width: '100%', height: '100%',
-                objectFit: 'cover', display: 'block',
+                objectFit: 'cover', objectPosition: 'center', display: 'block',
+                filter: 'blur(24px) brightness(0.55)',
+                transform: 'scale(1.08)',
               }} />
+            )}
+            {/* 실제 이미지 — 균일 여백 */}
+            {slide.image && (
+              <div style={{ position: 'absolute', inset: '5%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img src={slide.image} alt="" loading="lazy" decoding="async" style={{
+                  maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block',
+                }} />
+              </div>
             )}
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6, duration: 0.6 }}
               style={{ color: 'rgba(139,191,53,0.5)', fontSize: 'clamp(0.85rem, 1.5vw, 1.1rem)', fontWeight: 300, letterSpacing: '0.12em', textAlign: 'center', margin: 0, position: 'relative', zIndex: 1 }}>
@@ -992,49 +1043,12 @@ function SaengsansoApp() {
   const [showLogin, setShowLogin] = useState(false);
   const [adminEditMode, setAdminEditMode] = useState(false); // 편집 버튼 눌러야 활성화
 
-  // ─── 타이틀 음각 애니메이션 ───
-  const TITLE_CHARS = '생산소 省算所 SAENGSANSO'.split('');
-  const [pressedChars, setPressedChars] = useState<Set<number>>(new Set());
-  const pressTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const [titleVisible, setTitleVisible] = useState(false);
-  const [headerDark, setHeaderDark] = useState(false);
-  useEffect(() => {
-    const t1 = setTimeout(() => setTitleVisible(true), 80);
-    const t2 = setTimeout(() => setHeaderDark(true), 750);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, []);
+  // ─── 네브 페이드인 ───
+  const [navVisible, setNavVisible] = useState(false);
 
   useEffect(() => {
-    const nonSpaceIndices = TITLE_CHARS.map((c, i) => c !== ' ' ? i : -1).filter(i => i >= 0);
-
-    const clearTimers = () => {
-      pressTimersRef.current.forEach(t => clearTimeout(t));
-      pressTimersRef.current = [];
-    };
-
-    const runCycle = () => {
-      clearTimers();
-      setPressedChars(new Set());
-
-      // 글자 하나씩 눌러넣기
-      nonSpaceIndices.forEach((charIdx, seqIdx) => {
-        const t = setTimeout(() => {
-          setPressedChars(prev => { const next = new Set(Array.from(prev)); next.add(charIdx); return next; });
-        }, seqIdx * 150);
-        pressTimersRef.current.push(t);
-      });
-
-      const totalPressTime = nonSpaceIndices.length * 150;
-
-      // 전부 눌린 채로 유지 → 일괄 해제 → 대기 → 반복
-      const releaseT = setTimeout(() => setPressedChars(new Set()), totalPressTime + 2000);
-      const restartT = setTimeout(runCycle, totalPressTime + 2000 + 1500);
-      pressTimersRef.current.push(releaseT, restartT);
-    };
-
-    runCycle();
-    return clearTimers;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    const t = setTimeout(() => setNavVisible(true), 400);
+    return () => clearTimeout(t);
   }, []);
 
   // DB 데이터
@@ -1049,15 +1063,15 @@ function SaengsansoApp() {
   const [slideEditTarget, setSlideEditTarget] = useState<any>(null); // null=닫힘, {}=추가, {_id,...}=편집
 
   // 데이터 로드
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (forceRefresh = false) => {
+    if (forceRefresh) setLoading(true);
     try {
       const [exRes, prRes, nwRes, arRes, slRes] = await Promise.all([
-        saengsansoAPI.exhibitions.getAll({ forceRefresh: true }).catch(() => null),
-        saengsansoAPI.projects.getAll({ forceRefresh: true }).catch(() => null),
-        saengsansoAPI.news.getAll({ forceRefresh: true }).catch(() => null),
-        saengsansoAPI.archive.getAll({ forceRefresh: true }).catch(() => null),
-        saengsansoAPI.slides.getAll({ forceRefresh: true }).catch(() => null),
+        saengsansoAPI.exhibitions.getAll({ forceRefresh }).catch(() => null),
+        saengsansoAPI.projects.getAll({ forceRefresh }).catch(() => null),
+        saengsansoAPI.news.getAll({ forceRefresh }).catch(() => null),
+        saengsansoAPI.archive.getAll({ forceRefresh }).catch(() => null),
+        saengsansoAPI.slides.getAll({ forceRefresh }).catch(() => null),
       ]);
       setExhibitions(exRes?.success && exRes.data.length > 0 ? exRes.data : FALLBACK_EXHIBITIONS);
       setProjects(prRes?.success && prRes.data.length > 0 ? prRes.data : FALLBACK_PROJECTS);
@@ -1120,14 +1134,14 @@ function SaengsansoApp() {
     } else {
       await api.create(data);
     }
-    await loadData();
+    await loadData(true);
   };
 
   const makeDeleteHandler = (type: string) => async (id: string) => {
     if (!id || !window.confirm('정말 삭제하시겠습니까?')) return;
     try {
       await (saengsansoAPI as any)[type].delete(id);
-      await loadData();
+      await loadData(true);
     } catch (err: any) {
       console.error(`삭제 실패 (${type}):`, err);
       alert(`삭제에 실패했습니다: ${err?.message || '서버 오류'}`);
@@ -1143,7 +1157,7 @@ function SaengsansoApp() {
     } else {
       await saengsansoAPI.slides.create(data);
     }
-    await loadData();
+    await loadData(true);
     // 슬라이드 추가 후 마지막 슬라이드로 이동
     if (!id) setCurrentSlide(slides.length);
   };
@@ -1152,7 +1166,7 @@ function SaengsansoApp() {
     if (!window.confirm('슬라이드를 삭제하시겠습니까?')) return;
     await saengsansoAPI.slides.delete(id);
     setCurrentSlide(0);
-    await loadData();
+    await loadData(true);
   };
 
   const loadingIndicator = (
@@ -1245,39 +1259,32 @@ function SaengsansoApp() {
     }}>
       {slideModal}
       {/* ─── 타이틀 행 ─── */}
-      <div style={{ background: headerDark ? '#1A1A14' : '#8BBF35', padding: '0 15px', flexShrink: 0, overflow: 'hidden', transition: 'background 0.5s ease' }}>
-        <div style={{ paddingTop: '18px', paddingBottom: '12px', margin: 0, lineHeight: '32px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+      <div style={{ background: '#000000', padding: '0 15px', flexShrink: 0 }}>
+        <div style={{ paddingTop: '18px', paddingBottom: '12px', margin: 0, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
           onClick={() => handleNav('MAIN')}>
-          <p style={{ margin: 0, padding: 0, fontSize: '20px', lineHeight: '32px' }}>
-            {TITLE_CHARS.map((char, i) => (
-              <span
-                key={i}
-                style={{
-                  display: 'inline-block',
+          <div style={{ overflowX: 'hidden', overflowY: 'visible', flex: 1 }}>
+            <div className="sso-marquee-track">
+              {[0, 1].map(copy => (
+                <span key={copy} style={{
                   fontSize: '48px', fontWeight: 900,
                   fontFamily: "Verdana, 'Noto Sans Korean', 'Apple SD Gothic Neo', sans-serif",
-                  color: headerDark ? '#8BBF35' : '#1A1A14',
-                  lineHeight: '32px',
-                  minWidth: char === ' ' ? '14px' : undefined,
-                  transform: titleVisible ? 'translateY(0)' : 'translateY(28px)',
-                  opacity: titleVisible ? 1 : 0,
-                  transition: `transform 0.55s cubic-bezier(0.22,1,0.36,1) ${i * 28}ms, opacity 0.4s ease ${i * 28}ms, color 0.5s ease, text-shadow 0.35s ease-out`,
-                  textShadow: pressedChars.has(i)
-                    ? `2px 1px 0 #6A9020, 4px 2px 0 #5A8010, 6px 3px 0 #4A7010, 8px 4px 0 #3A6008, 10px 5px 0 #2A5000, 12px 6px 1px rgba(0,0,0,0.3), -1px -1px 0 #A8CC40, -2px -1px 0 #B0D050`
-                    : `0 0 0 #1A1A14, 0 0 0 #1A1A14, 0 0 0 #1A1A14, 0 0 0 #1A1A14, 0 0 0 #1A1A14, 0 0 0 #1A1A14, 0 0 0 #1A1A14, 0 0 0 #1A1A14`,
-                }}
-              >
-                {char === ' ' ? '\u00A0' : char}
-              </span>
-            ))}
-          </p>
+                  color: '#8BBF35', lineHeight: '1.1',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-block',
+                  flexShrink: 0,
+                }}>
+                  {'생산소 省算所 SAENGSANSO\u00A0\u00A0\u00A0·\u00A0\u00A0\u00A0생산소 省算所 SAENGSANSO\u00A0\u00A0\u00A0·\u00A0\u00A0\u00A0생산소 省算所 SAENGSANSO\u00A0\u00A0\u00A0·\u00A0\u00A0\u00A0'}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
         {/* 로그인/로그아웃 */}
         <div style={{ textAlign: 'right', paddingBottom: '4px' }}>
           {!isAuthenticated ? (
             <span
               onClick={(e) => { e.stopPropagation(); setShowLogin(true); }}
-              style={{ ...TEXT_XS, color: headerDark ? 'rgba(139,191,53,0.5)' : 'rgba(26,26,20,0.5)', cursor: 'pointer', textDecoration: 'none', transition: 'color 0.5s ease' }}
+              style={{ ...TEXT_XS, color: 'rgba(139,191,53,0.5)', cursor: 'pointer', textDecoration: 'none' }}
             >
               로그인
             </span>
@@ -1307,9 +1314,9 @@ function SaengsansoApp() {
             return (
               <div key={item.label} style={{
                   position: 'relative', display: 'inline-block',
-                  transform: titleVisible ? 'translateY(0)' : 'translateY(20px)',
-                  opacity: titleVisible ? 1 : 0,
-                  transition: `transform 0.5s cubic-bezier(0.22,1,0.36,1) ${500 + idx * 70}ms, opacity 0.4s ease ${500 + idx * 70}ms`,
+                  transform: navVisible ? 'translateY(0)' : 'translateY(20px)',
+                  opacity: navVisible ? 1 : 0,
+                  transition: `transform 0.5s cubic-bezier(0.22,1,0.36,1) ${idx * 70}ms, opacity 0.4s ease ${idx * 70}ms`,
                 }}
                 onMouseEnter={() => item.sub ? setActiveDropdown(idx) : setActiveDropdown(null)}>
                 <span className="sso-nav-item" onClick={() => handleNav(item.page)} style={{
@@ -1416,6 +1423,16 @@ function SaengsansoApp() {
 
       {/* ─── 반응형 ─── */}
       <style>{`
+@keyframes ssoMarquee {
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(0); }
+}
+.sso-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: ssoMarquee 14s linear infinite;
+  will-change: transform;
+}
 @keyframes ssoSlowDrift {
   0%   { transform: scale(1.06) translate(0%, 0%); }
   25%  { transform: scale(1.06) translate(-1.2%, -0.6%); }
