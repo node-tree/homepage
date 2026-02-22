@@ -1215,10 +1215,23 @@ function SaengsansoApp() {
 
   useEffect(() => {
     document.title = '생산소 SAENGSANSO';
-    // favicon 교체
+    // favicon 교체 (canvas로 생성)
     const link = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
     const prevHref = link?.href || '';
-    if (link) link.href = '/saengsanso-favicon.svg';
+    if (link) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 64; canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#1A1A14';
+        ctx.font = 'bold 26px serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('省算', 32, 28);
+        ctx.fillText('所', 32, 56);
+        link.type = 'image/png';
+        link.href = canvas.toDataURL('image/png');
+      }
+    }
     const style = document.createElement('style');
     style.textContent = `html, body { margin: 0; padding: 0; height: 100%; } * { box-sizing: border-box; }`;
     document.head.appendChild(style);
