@@ -728,8 +728,8 @@ function PageProjects({ projects, isAdmin, onSave, onDelete }: {
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', paddingTop: '10px' }}>
-      <div style={{ display: 'flex', gap: '12px' }}>
-        <div style={{ flex: '0 0 196px', minWidth: '140px' }}><p style={TEXT_BASE}>PROGRAM</p></div>
+      <div className="sso-projects-layout" style={{ display: 'flex', gap: '12px' }}>
+        <div className="sso-projects-label" style={{ flex: '0 0 196px', minWidth: '140px' }}><p style={TEXT_BASE}>PROGRAM</p></div>
         <div style={{ flex: 1 }}>
           {/* 새 항목 추가 폼 */}
           {isAdmin && editItem && !editItem._id && (
@@ -853,7 +853,7 @@ function PageNews({ filter, news, isAdmin, onSave, onDelete }: {
         <div style={{ display: 'flex', borderBottom: `1px solid ${C.dark}`, paddingBottom: '8px', marginBottom: '4px' }}>
           <span style={{ ...TEXT_SM, flex: '0 0 100px' }}>날짜</span>
           <span style={{ ...TEXT_SM, flex: 1 }}>제목</span>
-          <span style={{ ...TEXT_SM, flex: '0 0 120px', textAlign: 'right' }}>출처</span>
+          <span style={{ ...TEXT_SM, flex: '0 0 80px', textAlign: 'right' }}>출처</span>
           {isAdmin && <span style={{ ...TEXT_SM, flex: '0 0 80px', textAlign: 'right' }}>관리</span>}
         </div>
         {filteredNews.map((item: any, i: number) => (
@@ -874,7 +874,7 @@ function PageNews({ filter, news, isAdmin, onSave, onDelete }: {
                 {item.category === 'notice' && <span style={{ ...TEXT_XS, color: C.gray65, marginLeft: '6px' }}>›</span>}
                 {item.category === 'press' && item.url && <span style={{ ...TEXT_XS, color: C.cyan, marginLeft: '6px' }}>↗</span>}
               </span>
-              <span style={{ ...TEXT_XS, flex: '0 0 120px', textAlign: 'right', color: C.gray65, alignSelf: 'center' }}>{item.source}</span>
+              <span style={{ ...TEXT_XS, flex: '0 0 80px', textAlign: 'right', color: C.gray65, alignSelf: 'center' }}>{item.source}</span>
               {isAdmin && (
                 <span style={{ flex: '0 0 80px', textAlign: 'right', flexShrink: 0 }}>
                   <button style={btnStyle} onClick={e => { e.stopPropagation(); setEditItem(item); setSelectedNotice(null); }}>수정</button>
@@ -906,7 +906,7 @@ function PageNews({ filter, news, isAdmin, onSave, onDelete }: {
         {selectedNotice && (
           <div style={{
             width: '46vw', height: '100%', overflowY: 'auto',
-            borderLeft: `1px solid ${C.dark}`, paddingLeft: '24px', paddingTop: '10px',
+            borderLeft: `1px solid ${C.dark}`, paddingLeft: '24px', paddingRight: '12px', paddingTop: '10px',
             boxSizing: 'border-box',
           }}>
             {/* 닫기 버튼 */}
@@ -1596,6 +1596,8 @@ function SaengsansoApp() {
         .sso-mobile-menu-btn { display: none !important; }
         @media (max-width: 768px) {
           .sso-desktop-nav > div > span { padding: 0 6px !important; font-size: 13px !important; }
+          .sso-projects-layout { flex-direction: column !important; gap: 0 !important; }
+          .sso-projects-label { flex: none !important; min-width: unset !important; margin-bottom: 8px !important; }
         }
         @media (max-width: 600px) {
           .sso-desktop-nav > div { display: none !important; }
