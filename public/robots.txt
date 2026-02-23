@@ -1,3 +1,6 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
 Disallow:
+
+Sitemap: https://nodetree.kr/sitemap.xml
+Sitemap: https://saengsanso.com/sitemap.xml

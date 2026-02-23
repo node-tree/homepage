@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import './App.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
+import SeoHead from './components/SeoHead';
 import Home from './components/Home';
 import SaengsansoApp from './components/Saengsanso';
 import StrudelSynth from './components/StrudelSynth';
@@ -248,6 +250,40 @@ function AppContent() {
     return <Login />;
   }
 
+  const NODE_TREE_BASE = 'https://nodetree.kr';
+  const SEO_MAP: Record<string, { title: string; description: string; keywords?: string }> = {
+    HOME: {
+      title: 'NODE TREE — 도시기록 아티스트 듀오',
+      description: '이화영+정강현으로 구성된 도시기록 아티스트 듀오. 사운드, 영상, 설치를 통해 도시와 장소의 기억을 기록합니다.',
+      keywords: 'NODE TREE, 노드트리, 이화영, 정강현, 사운드아트, 미디어아트, 도시기록, 현대미술',
+    },
+    ABOUT: {
+      title: 'NODE TREE | About — 소개',
+      description: 'NODE TREE(이화영+정강현)는 도시기록을 주제로 사운드, 영상, 설치 작업을 하는 아티스트 듀오입니다.',
+      keywords: 'NODE TREE 소개, 이화영, 정강현, 아티스트 듀오',
+    },
+    WORK: {
+      title: 'NODE TREE | Work — 작품',
+      description: 'NODE TREE의 사운드, 영상, 설치 작품 목록. 위성악보, 에디아포닉, 낙원식당 등.',
+      keywords: 'NODE TREE 작품, 위성악보, 에디아포닉, 낙원식당, 사운드 설치',
+    },
+    COMMONS: {
+      title: 'NODE TREE | Commons — 공유지',
+      description: 'NODE TREE의 공유 자료 및 리소스.',
+    },
+    CV: {
+      title: 'NODE TREE | CV — 이력',
+      description: '이화영+정강현 NODE TREE의 전시 이력, 레지던시, 수상 내역.',
+      keywords: 'NODE TREE CV, 이화영 이력, 정강현 이력, 전시 이력',
+    },
+    CONTACT: {
+      title: 'NODE TREE | Contact — 연락처',
+      description: 'NODE TREE에 문의하기. 협업 및 전시 문의를 환영합니다.',
+    },
+  };
+
+  const seo = SEO_MAP[currentPage] || SEO_MAP.HOME;
+
   const renderPageContent = () => {
     switch (currentPage) {
       case 'HOME':
@@ -269,6 +305,12 @@ function AppContent() {
 
   return (
     <div className="App">
+      <SeoHead
+        title={seo.title}
+        description={seo.description}
+        url={NODE_TREE_BASE}
+        keywords={seo.keywords}
+      />
       {/* 데스크톱 네비게이션 */}
       <Navigation currentPage={currentPage} onPageChange={handlePageChange} />
 
@@ -325,32 +367,36 @@ function App() {
   // saengsanso.com 도메인이면 생산소 독립 페이지 렌더링
   if (isSaengsanso) {
     return (
-      <AuthProvider>
-        <SaengsansoApp />
-      </AuthProvider>
+      <HelmetProvider>
+        <AuthProvider>
+          <SaengsansoApp />
+        </AuthProvider>
+      </HelmetProvider>
     );
   }
 
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/guestbook" element={<Guestbook />} />
-          <Route path="/synth" element={
-            <div style={{
-              minHeight: '100vh',
-              background: 'linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%)',
-              paddingTop: '140px',
-              paddingBottom: '40px'
-            }}>
-              <StrudelSynth />
-            </div>
-          } />
-          <Route path="*" element={<AppContent />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+    <HelmetProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/guestbook" element={<Guestbook />} />
+            <Route path="/synth" element={
+              <div style={{
+                minHeight: '100vh',
+                background: 'linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%)',
+                paddingTop: '140px',
+                paddingBottom: '40px'
+              }}>
+                <StrudelSynth />
+              </div>
+            } />
+            <Route path="*" element={<AppContent />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </HelmetProvider>
   );
 }
 

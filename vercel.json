@@ -45,6 +45,10 @@
       "dest": "/robots.txt"
     },
     {
+      "src": "/sitemap.xml",
+      "dest": "/sitemap.xml"
+    },
+    {
       "src": "/pdf/(.*)",
       "dest": "/pdf/$1"
     },
