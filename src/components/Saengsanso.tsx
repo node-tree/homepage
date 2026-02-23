@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { saengsansoAPI as _ssoAPI, saengsansoAboutAPI, saengsansoMembersAPI } from '../services/api';
 import Login from './Login';
+import SeoHead from './SeoHead';
 
 // API 타입 캐스팅
 const saengsansoAPI = _ssoAPI as Record<string, any>;
@@ -497,7 +498,7 @@ function PageMain({ goToSlide, currentSlide, slides, isAdmin, onEditSlide, onAdd
 const DEFAULT_ABOUT_DESC = '생산소는\n지역 리서치를 기반으로 활동하는 뉴미디어 아티스트 듀오 노드 트리의 작업 과정에서,\n적정한 규모의 도시에 대한 질문을 바탕으로\n마을에서 어떻게 관계를 맺고 어떤 태도로 실천되는지를 기록하는 공간입니다.\n마을에서 마음을 나누며, 감각과 이야기를 축적하고 있습니다';
 
 interface MemberData { image: string; name: string; role: string; bio: string; }
-const DEFAULT_MEMBERS: MemberData[] = Array.from({ length: 5 }, () => ({ image: '', name: '', role: '', bio: '' }));
+const DEFAULT_MEMBERS: MemberData[] = Array.from({ length: 6 }, () => ({ image: '', name: '', role: '', bio: '' }));
 
 function PageAbout({ isAdmin }: { isAdmin: boolean }) {
   const [description, setDescription] = useState(DEFAULT_ABOUT_DESC);
@@ -699,7 +700,7 @@ function PageAbout({ isAdmin }: { isAdmin: boolean }) {
               ))}
             </div>
             {isAdmin && (
-              <button onClick={() => { setEditMembers(members.map(m => ({ ...m }))); setIsEditingMembers(true); }}
+              <button onClick={() => { const padded = [...members.map(m => ({ ...m }))]; while (padded.length < 6) padded.push({ image: '', name: '', role: '', bio: '' }); setEditMembers(padded); setIsEditingMembers(true); }}
                 style={{ ...btnStyle, marginLeft: 0, marginTop: '8px', display: 'block', background: C.accent, color: C.white, border: 'none', padding: '4px 14px' }}>
                 멤버 편집
               </button>
@@ -1562,12 +1563,52 @@ function SaengsansoApp() {
     />
   );
 
+  const SSO_BASE = 'https://saengsanso.com';
+  const SSO_SEO_MAP: Record<string, { title: string; description: string; keywords?: string }> = {
+    MAIN: {
+      title: '생산소 省算所 SAENGSANSO — 충남 부여 대안예술공간',
+      description: '충남 부여에 위치한 대안예술공간. 사운드스케이프, 커뮤니티 프로젝트, 도시기록, 워크숍 등 다양한 문화예술 활동을 기획합니다.',
+      keywords: '생산소, SAENGSANSO, 부여 예술공간, 대안예술, 충남 문화예술, 사운드아트, 도시기록, NODE TREE',
+    },
+    ABOUT: {
+      title: '생산소 | About — 소개',
+      description: '2020년 서울에서 충남 부여로 이주한 NODE TREE(이화영+정강현)가 운영하는 대안예술공간 생산소를 소개합니다.',
+      keywords: '생산소 소개, 부여 예술공간, 이화영, 정강현',
+    },
+    PROJECTS: {
+      title: '생산소 | Projects — 프로젝트',
+      description: '생산소의 전시, 위탁 용역, 커뮤니티 프로젝트 목록. 에코플로깅, 금강워킹, 사운드오케스트라 등.',
+      keywords: '생산소 프로젝트, 에코플로깅, 금강워킹, 사운드오케스트라, 부여 문화예술',
+    },
+    NEWS: {
+      title: '생산소 | News — 뉴스',
+      description: '생산소의 공지사항 및 언론보도.',
+      keywords: '생산소 뉴스, 생산소 보도',
+    },
+    ARCHIVE: {
+      title: '생산소 | Archive — 아카이브',
+      description: '생산소 활동 아카이브.',
+    },
+    SHOP: {
+      title: '생산소 | Shop — 숍',
+      description: '생산소 굿즈 및 아카이브 자료.',
+    },
+  };
+  const ssoSeo = SSO_SEO_MAP[currentPage] || SSO_SEO_MAP.MAIN;
+
   return (
     <div style={{
       fontFamily: "Verdana, 'Noto Sans Korean', 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif",
       width: '100vw', height: '100vh', overflow: isMain ? 'hidden' : 'auto',
       background: C.white, display: 'flex', flexDirection: 'column',
     }}>
+      <SeoHead
+        title={ssoSeo.title}
+        description={ssoSeo.description}
+        url={SSO_BASE}
+        image={`${SSO_BASE}/logo.png`}
+        keywords={ssoSeo.keywords}
+      />
       {slideModal}
       {/* ─── 타이틀 행 ─── */}
       <div style={{ background: C.white, padding: '0 15px', flexShrink: 0 }}>

@@ -76,7 +76,7 @@ const memberItemSchema = new mongoose.Schema({
 }, { _id: false });
 
 const membersSchema = new mongoose.Schema({
-  members: { type: [memberItemSchema], default: Array.from({ length: 5 }, () => ({})) },
+  members: { type: [memberItemSchema], default: Array.from({ length: 6 }, () => ({})) },
   updatedAt: { type: Date, default: Date.now }
 }, { collection: 'sso_members' });
 
