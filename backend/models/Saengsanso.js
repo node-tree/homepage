@@ -67,6 +67,19 @@ const aboutSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 }, { collection: 'sso_about' });
 
+// ─── 멤버 (sso_members) — 단일 문서 ───
+const memberItemSchema = new mongoose.Schema({
+  image: { type: String, default: '' },
+  name: { type: String, default: '' },
+  role: { type: String, default: '' },
+  bio: { type: String, default: '' },
+}, { _id: false });
+
+const membersSchema = new mongoose.Schema({
+  members: { type: [memberItemSchema], default: Array.from({ length: 5 }, () => ({})) },
+  updatedAt: { type: Date, default: Date.now }
+}, { collection: 'sso_members' });
+
 module.exports = {
   SaengsansoExhibition: mongoose.model('SaengsansoExhibition', exhibitionSchema),
   SaengsansoProject: mongoose.model('SaengsansoProject', projectSchema),
@@ -74,4 +87,5 @@ module.exports = {
   SaengsansoArchive: mongoose.model('SaengsansoArchive', archiveSchema),
   SaengsansoSlide: mongoose.model('SaengsansoSlide', slideSchema),
   SaengsansoAbout: mongoose.model('SaengsansoAbout', aboutSchema),
+  SaengsansoMembers: mongoose.model('SaengsansoMembers', membersSchema),
 };

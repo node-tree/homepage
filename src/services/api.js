@@ -967,6 +967,26 @@ export const saengsansoAboutAPI = {
   },
 };
 
+export const saengsansoMembersAPI = {
+  get: async () => {
+    const response = await fetch(`${API_BASE_URL}/saengsanso/members`);
+    if (!response.ok) throw new Error('Failed to fetch saengsanso members');
+    return response.json();
+  },
+  update: async (members) => {
+    const response = await fetch(`${API_BASE_URL}/saengsanso/members`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ members }),
+    });
+    if (!response.ok) {
+      if (response.status === 401) return handle401();
+      throw new Error('Failed to update saengsanso members');
+    }
+    return response.json();
+  },
+};
+
 export const saengsansoAPI = {
   // 통합 API 1회 호출로 전체 데이터 로드
   loadAll: async () => {

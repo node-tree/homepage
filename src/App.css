@@ -3659,6 +3659,120 @@
   display: block;
 }
 
+/* 멤버 소개 섹션 */
+.members-section {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 3rem 2rem 4rem;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+}
+
+.members-grid {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+
+.member-card {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.member-image-wrap {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+}
+
+.member-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.member-image-placeholder {
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-secondary, #f0f0f0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.member-placeholder-label {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-muted, #bbb);
+  font-family: 'Arial', sans-serif;
+}
+
+.member-info {
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.member-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.member-name--empty {
+  color: var(--text-muted, #bbb);
+  font-weight: 400;
+}
+
+.member-role {
+  font-size: 0.75rem;
+  margin: 0;
+  opacity: 0.6;
+  line-height: 1.4;
+}
+
+.member-role--empty {
+  color: var(--text-muted, #bbb);
+}
+
+.member-bio {
+  font-size: 0.75rem;
+  margin: 0;
+  line-height: 1.5;
+  opacity: 0.75;
+}
+
+.member-bio--empty {
+  color: var(--text-muted, #bbb);
+}
+
+@media (max-width: 768px) {
+  .members-grid {
+    flex-wrap: wrap;
+    gap: 2rem;
+  }
+
+  .member-card {
+    flex: 0 0 calc(50% - 1rem);
+    max-width: calc(50% - 1rem);
+  }
+}
+
+@media (max-width: 480px) {
+  .member-card {
+    flex: 0 0 100%;
+    max-width: 280px;
+  }
+}
+
 .page-title {
   font-size: 1.8rem;
   font-weight: 600;
@@ -4451,5 +4565,42 @@
   /* 모바일에서 main-content 패딩 조정 */
   .main-content {
     padding-top: 0;
+  }
+}
+
+/* 생산소 아카이브 그리드 */
+.sso-archive-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 768px) {
+  .sso-archive-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* 생산소 멤버 그리드 모바일 */
+@media (max-width: 768px) {
+  .sso-members-grid {
+    flex-wrap: wrap;
+  }
+  .sso-member-card {
+    flex: 0 0 100% !important;
+    border-bottom: 1px solid rgba(26, 26, 20, 0.2);
+  }
+
+  /* 지도 + 연락처 모바일 */
+  .sso-map-contact {
+    flex-direction: column;
+  }
+  .sso-map-wrap {
+    flex: none !important;
+    width: 100% !important;
+    height: 220px;
+    border-bottom: 2px solid rgba(26, 26, 20, 1);
+  }
+  .sso-map-wrap iframe {
+    border-right: none !important;
+    height: 100%;
   }
 }
