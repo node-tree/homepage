@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
-import { saengsansoAPI as _ssoAPI, saengsansoAboutAPI } from '../services/api';
+import { saengsansoAPI as _ssoAPI, saengsansoAboutAPI, saengsansoMembersAPI } from '../services/api';
 import Login from './Login';
 
 // API 타입 캐스팅
@@ -496,19 +496,44 @@ function PageMain({ goToSlide, currentSlide, slides, isAdmin, onEditSlide, onAdd
 // ─── 페이지: ABOUT ───
 const DEFAULT_ABOUT_DESC = '생산소는\n지역 리서치를 기반으로 활동하는 뉴미디어 아티스트 듀오 노드 트리의 작업 과정에서,\n적정한 규모의 도시에 대한 질문을 바탕으로\n마을에서 어떻게 관계를 맺고 어떤 태도로 실천되는지를 기록하는 공간입니다.\n마을에서 마음을 나누며, 감각과 이야기를 축적하고 있습니다';
 
+interface MemberData { image: string; name: string; role: string; bio: string; }
+const DEFAULT_MEMBERS: MemberData[] = Array.from({ length: 5 }, () => ({ image: '', name: '', role: '', bio: '' }));
+
 function PageAbout({ isAdmin }: { isAdmin: boolean }) {
   const [description, setDescription] = useState(DEFAULT_ABOUT_DESC);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState('');
   const [saving, setSaving] = useState(false);
   const [aboutLoading, setAboutLoading] = useState(true);
+  const [members, setMembers] = useState<MemberData[]>(DEFAULT_MEMBERS);
+  const [isEditingMembers, setIsEditingMembers] = useState(false);
+  const [editMembers, setEditMembers] = useState<MemberData[]>(DEFAULT_MEMBERS);
+  const [membersSaving, setMembersSaving] = useState(false);
 
   useEffect(() => {
     saengsansoAboutAPI.get()
       .then(res => { if (res.success && res.data?.description) setDescription(res.data.description); })
       .catch(() => {})
       .finally(() => setAboutLoading(false));
+    saengsansoMembersAPI.get()
+      .then(res => { if (res.success && res.data) setMembers(res.data); })
+      .catch(() => {});
   }, []);
+
+  const handleMembersSave = async () => {
+    setMembersSaving(true);
+    try {
+      const res = await saengsansoMembersAPI.update(editMembers);
+      if (res.success) { setMembers(res.data); setIsEditingMembers(false); }
+      else alert('저장에 실패했습니다.');
+    } catch { alert('저장에 실패했습니다.'); }
+    finally { setMembersSaving(false); }
+  };
+
+  const updateEditMember = (i: number, field: keyof MemberData, value: string) => {
+    const next = editMembers.map((m, idx) => idx === i ? { ...m, [field]: value } : m);
+    setEditMembers(next);
+  };
 
   const handleEdit = () => { setEditText(description); setIsEditing(true); };
 
@@ -583,11 +608,124 @@ function PageAbout({ isAdmin }: { isAdmin: boolean }) {
             </div>
           )}
 
-          <br />
+        </div>
+
+      </div>
+
+      {/* 멤버 5인 소개 - 전체 너비 */}
+      <div style={{ width: '100%', marginTop: '32px' }}>
+        <p style={{ ...TEXT_BASE, marginBottom: '12px' }}>Operated by.</p>
+        {isAdmin && isEditingMembers ? (
+          <div style={{ marginBottom: '16px' }}>
+            {editMembers.map((m, i) => (
+              <div key={i} style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: `1px solid ${TR(0.4)}` }}>
+                <p style={{ ...TEXT_XS, color: C.gray65, margin: '0 0 6px', fontWeight: 700 }}>— {i + 1}번</p>
+                <input
+                  type="text" value={m.image}
+                  onChange={e => updateEditMember(i, 'image', e.target.value)}
+                  placeholder="이미지 URL"
+                  style={{ ...inputStyle, width: '100%', fontSize: '13px', padding: '4px 8px', marginBottom: '6px', boxSizing: 'border-box' }}
+                />
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
+                  <input
+                    type="text" value={m.name}
+                    onChange={e => updateEditMember(i, 'name', e.target.value)}
+                    placeholder="이름"
+                    style={{ ...inputStyle, flex: 1, fontSize: '13px', padding: '4px 8px' }}
+                  />
+                  <input
+                    type="text" value={m.role}
+                    onChange={e => updateEditMember(i, 'role', e.target.value)}
+                    placeholder="역할"
+                    style={{ ...inputStyle, flex: 1, fontSize: '13px', padding: '4px 8px' }}
+                  />
+                </div>
+                <textarea
+                  value={m.bio}
+                  onChange={e => updateEditMember(i, 'bio', e.target.value)}
+                  placeholder="소개글"
+                  rows={2}
+                  style={{ ...inputStyle, width: '100%', fontSize: '13px', padding: '4px 8px', resize: 'vertical', boxSizing: 'border-box' }}
+                />
+              </div>
+            ))}
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              <button onClick={handleMembersSave} disabled={membersSaving}
+                style={{ ...formBtnStyle, background: membersSaving ? '#4A5030' : C.accent, color: C.white }}>
+                {membersSaving ? '저장 중...' : '저장'}
+              </button>
+              <button onClick={() => setIsEditingMembers(false)}
+                style={{ ...formBtnStyle, background: '#6A9020' }}>취소</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="sso-members-grid" style={{ display: 'flex', gap: 0 }}>
+              {members.map((m, i) => (
+                <div key={i} className="sso-member-card" style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: TR(0.25), borderRight: i < 4 ? `1px solid ${C.dark}` : 'none' }}>
+                    {m.image ? (
+                      <img src={m.image} alt={m.name || `멤버 ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ ...TEXT_SM, color: C.gray65 }}>{i + 1}</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* 검은 바 - 이름 */}
+                  <div style={{ background: C.dark, padding: '4px 8px', borderRight: i < 4 ? `1px solid ${TR(0.3)}` : 'none' }}>
+                    <p style={{ ...TEXT_XS, color: C.white, margin: 0, fontWeight: 700 }}>{m.name || `— ${i + 1}`}</p>
+                  </div>
+                  {/* 역할 + 소개글 */}
+                  <div style={{ padding: '6px 4px 0' }}>
+                    <p style={{ ...TEXT_XS, margin: '0 0 4px', color: C.gray65 }}>{m.role || '역할'}</p>
+                    {m.bio ? (
+                      <div>
+                        {m.bio.split('\n').map((line, li) =>
+                          line.startsWith('- ') ? (
+                            <p key={li} style={{ ...TEXT_XS, margin: '0 0 1px', color: C.gray65, lineHeight: '18px', paddingLeft: '10px', textIndent: '-10px' }}>
+                              · {line.slice(2)}
+                            </p>
+                          ) : (
+                            <p key={li} style={{ ...TEXT_XS, margin: '0 0 1px', color: C.gray65, lineHeight: '18px' }}>{line}</p>
+                          )
+                        )}
+                      </div>
+                    ) : (
+                      <p style={{ ...TEXT_XS, margin: 0, color: C.gray65, lineHeight: '18px' }}>소개글</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {isAdmin && (
+              <button onClick={() => { setEditMembers(members.map(m => ({ ...m }))); setIsEditingMembers(true); }}
+                style={{ ...btnStyle, marginLeft: 0, marginTop: '8px', display: 'block', background: C.accent, color: C.white, border: 'none', padding: '4px 14px' }}>
+                멤버 편집
+              </button>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* 지도 + 연락처 */}
+      <div className="sso-map-contact" style={{ width: '100%', marginTop: '48px', display: 'flex', gap: 0, border: `2px solid ${C.dark}` }}>
+        <div className="sso-map-wrap" style={{ flex: '0 0 38%' }}>
+          <iframe
+            title="생산소 위치"
+            src="https://maps.google.com/maps?q=충청남도+부여군+장암면+석동로+29번길+3&hl=ko&z=16&output=embed"
+            width="100%"
+            height="100%"
+            style={{ display: 'block', border: 'none', borderRight: `2px solid ${C.dark}`, minHeight: '240px' }}
+            allowFullScreen
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
+        </div>
+        <div style={{ flex: 1, padding: '20px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px' }}>
           <p style={TEXT_BASE}>saengsanso@gmail.com</p>
           <p style={TEXT_BASE}>
-            Instagram @saengsanso
-            {' '}
+            Instagram @saengsanso{' '}
             <a
               href="https://instagram.com/saengsanso"
               target="_blank"
@@ -601,33 +739,14 @@ function PageAbout({ isAdmin }: { isAdmin: boolean }) {
           <p style={TEXT_BASE}>충남 부여군 장암면 석동로 29번길 3</p>
           <p style={TEXT_BASE}>Buyeo-gun, Chungcheongnam-do, Korea</p>
           <br />
-          <p style={{ ...TEXT_SM, color: C.cyan }}>* 방문은 사전 연락 후 가능합니다</p>
-          <br />
-          <div style={{ width: '100%', maxWidth: '660px', height: '284px' }}>
-            <iframe
-              title="생산소 위치"
-              src="https://maps.google.com/maps?q=충청남도+부여군+장암면+석동로+29번길+3&hl=ko&z=16&output=embed"
-              width="100%"
-              height="100%"
-              style={{ border: `2px solid ${C.dark}`, display: 'block' }}
-              allowFullScreen
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
-          </div>
-          <br />
-          <p style={{ ...TEXT_XS, color: C.gray65 }}>website by NODE TREE</p>
-        </div>
-        <div style={{ flex: '0 0 242px', minWidth: '200px' }}>
           <p style={TEXT_BASE}>Space Inquiry</p>
           <br />
-          <button style={{ ...TEXT_XS, background: C.red, color: C.white, border: 'none', padding: '4px 16px', cursor: 'pointer', fontWeight: 700 }}>문의하기</button>
-          <br /><br /><br />
-          <p style={TEXT_BASE}>Operated by.</p>
+          <button style={{ ...TEXT_XS, background: C.red, color: C.white, border: 'none', padding: '4px 16px', cursor: 'pointer', fontWeight: 700, alignSelf: 'flex-start' }}>문의하기</button>
           <br />
-          <button onClick={() => window.open('https://search.naver.com/search.naver?where=nexearch&sm=top_hty&fbm=0&ie=utf8&query=%EC%9D%B4%ED%99%94%EC%98%81+%EC%98%88%EC%88%A0%EA%B0%80&ackey=dwenwv4b', '_blank', 'noopener,noreferrer')} style={{ ...TEXT_XS, background: C.red, color: C.white, border: 'none', padding: '4px 16px', cursor: 'pointer', fontWeight: 700 }}>이화영 Lee Hwayoung</button>
-          <br /><br />
-          <button style={{ ...TEXT_XS, background: C.red, color: C.white, border: 'none', padding: '4px 16px', cursor: 'pointer', fontWeight: 700 }}>정강현 Jung Kanghyun</button>
+          <br />
+          <p style={{ ...TEXT_SM, color: C.cyan }}>* 방문은 사전 연락 후 가능합니다</p>
+          <br />
+          <p style={{ ...TEXT_XS, color: C.gray65 }}>website by NODE TREE</p>
         </div>
       </div>
     </div>
@@ -1099,7 +1218,7 @@ function PageArchive({ archives, isAdmin, onSave, onDelete, onReorder }: {
       {isAdmin && editItem && !editItem._id && (
         <InlineForm fields={ARCHIVE_FIELDS} initial={{}} onSave={handleSave} onCancel={() => setEditItem(null)} />
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0 }}>
+      <div className="sso-archive-grid" style={{ display: 'grid', gap: 0 }}>
         {archives.map((item: any, i: number) => (
           <div key={item._id || i} style={{ display: 'contents' }}>
             <div style={{ position: 'relative' }}>
@@ -1131,7 +1250,7 @@ function PageArchive({ archives, isAdmin, onSave, onDelete, onReorder }: {
               )}
             </div>
             {isAdmin && editItem?._id === item._id && (
-              <div style={{ gridColumn: '1 / -1' }}>
+              <div style={{ gridColumn: '1 / -1', display: 'block' }}>
                 <InlineForm
                   fields={ARCHIVE_FIELDS}
                   initial={{ image: item.image || '', video: item.video || '' }}

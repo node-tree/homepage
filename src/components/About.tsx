@@ -13,6 +13,7 @@ interface AboutData {
   isActive: boolean;
 }
 
+
 const About: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const [aboutData, setAboutData] = useState<AboutData | null>(null);
@@ -554,6 +555,8 @@ const About: React.FC = () => {
               <div style={{ color: '#aaa', fontStyle: 'italic' }}>아직 소개글이 없습니다.</div>
             )}
           </div>
+
+
         </>
       )}
     </div>

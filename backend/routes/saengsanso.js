@@ -9,6 +9,7 @@ const {
   SaengsansoArchive,
   SaengsansoSlide,
   SaengsansoAbout,
+  SaengsansoMembers,
 } = require('../models/Saengsanso');
 
 // DB 연결 확인 (work.js 패턴 복제)
@@ -193,6 +194,41 @@ router.put('/about-page', auth, async (req, res) => {
   } catch (error) {
     console.error('SSO about 수정 오류:', error);
     res.status(500).json({ success: false, message: 'about 수정 실패', error: error.message });
+  }
+});
+
+// ─── 멤버 라우트 (단일 문서) ───
+router.get('/members', async (req, res) => {
+  try {
+    await ensureDBConnection();
+    res.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+    let doc = await SaengsansoMembers.findOne();
+    if (!doc) {
+      doc = await SaengsansoMembers.create({});
+    }
+    res.json({ success: true, data: doc.members });
+  } catch (error) {
+    console.error('SSO members 조회 오류:', error);
+    res.status(500).json({ success: false, message: 'members 조회 실패', error: error.message });
+  }
+});
+
+router.put('/members', auth, async (req, res) => {
+  try {
+    await ensureDBConnection();
+    const { members } = req.body;
+    let doc = await SaengsansoMembers.findOne();
+    if (!doc) {
+      doc = await SaengsansoMembers.create({ members });
+    } else {
+      doc.members = members;
+      doc.updatedAt = new Date();
+      await doc.save();
+    }
+    res.json({ success: true, data: doc.members, message: 'members 수정 완료' });
+  } catch (error) {
+    console.error('SSO members 수정 오류:', error);
+    res.status(500).json({ success: false, message: 'members 수정 실패', error: error.message });
   }
 });
 
