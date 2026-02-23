@@ -967,7 +967,22 @@ export const saengsansoAboutAPI = {
   },
 };
 
-export const saengsansoAPI = {};
+export const saengsansoAPI = {
+  // 통합 API 1회 호출로 전체 데이터 로드
+  loadAll: async () => {
+    const response = await deduplicatedFetch(`${API_BASE_URL}/saengsanso/all`);
+    if (!response.ok) throw new Error('Failed to fetch saengsanso/all');
+    const data = await response.json();
+    if (data.success) {
+      if (data.exhibitions) cacheUtils.set(CACHE_KEYS.SSO_EXHIBITIONS, data.exhibitions);
+      if (data.projects) cacheUtils.set(CACHE_KEYS.SSO_PROJECTS, data.projects);
+      if (data.news) cacheUtils.set(CACHE_KEYS.SSO_NEWS, data.news);
+      if (data.archive) cacheUtils.set(CACHE_KEYS.SSO_ARCHIVES, data.archive);
+      if (data.slides) cacheUtils.set('cache_sso_slides', data.slides);
+    }
+    return data;
+  },
+};
 
 ssoTypes.forEach(({ key, cacheKey }) => {
   saengsansoAPI[key] = {
@@ -1089,14 +1104,27 @@ export const prefetchAPI = {
     guestbookAPI.getAll().catch(() => {});
   },
 
-  // 자주 방문하는 페이지 데이터를 병렬로 프리페치
-  critical: () => {
-    Promise.all([
-      homeAPI.getHome(),
-      workAPI.getAllPosts(),
-      filedAPI.getAllPosts(),
-      aboutAPI.getAbout()
-    ]).catch(() => {});
+  // 자주 방문하는 페이지 데이터를 통합 API 1회 호출로 프리페치
+  critical: async () => {
+    try {
+      const response = await deduplicatedFetch(`${API_BASE_URL}/home/all`);
+      if (!response.ok) throw new Error('Failed to fetch home/all');
+      const data = await response.json();
+      if (data.success) {
+        if (data.home) cacheUtils.set(CACHE_KEYS.HOME, data.home);
+        if (data.works) cacheUtils.set(CACHE_KEYS.WORK_POSTS, data.works);
+        if (data.filed) cacheUtils.set(CACHE_KEYS.FILED_POSTS, data.filed);
+        if (data.about) cacheUtils.set(CACHE_KEYS.ABOUT, data.about);
+      }
+    } catch (e) {
+      // 통합 API 실패 시 개별 호출로 폴백
+      Promise.all([
+        homeAPI.getHome(),
+        workAPI.getAllPosts(),
+        filedAPI.getAllPosts(),
+        aboutAPI.getAbout()
+      ]).catch(() => {});
+    }
   }
 };
 

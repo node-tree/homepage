@@ -5,13 +5,7 @@ import { saengsansoAPI as _ssoAPI, saengsansoAboutAPI } from '../services/api';
 import Login from './Login';
 
 // API 타입 캐스팅
-const saengsansoAPI = _ssoAPI as Record<string, {
-  getAll: (opts?: any) => Promise<any>;
-  create: (data: any) => Promise<any>;
-  update: (id: string, data: any) => Promise<any>;
-  delete: (id: string) => Promise<any>;
-  reorder: (orders: any[]) => Promise<any>;
-}>;
+const saengsansoAPI = _ssoAPI as Record<string, any>;
 
 // ─── 랜덤 테마 (접속 시 결정) ───
 const THEME_COLORS = ['#C8D64A', '#DAAA20'] as const; // 샤르트뢰즈 그린, 골든 머스타드
@@ -1195,22 +1189,54 @@ function SaengsansoApp() {
   // 슬라이드 편집 모달
   const [slideEditTarget, setSlideEditTarget] = useState<any>(null); // null=닫힘, {}=추가, {_id,...}=편집
 
-  // 데이터 로드
+  // 데이터 로드 — 초기 로드는 통합 API, forceRefresh는 개별 API
   const loadData = useCallback(async (forceRefresh = false) => {
     if (forceRefresh) setLoading(true);
     try {
-      const [exRes, prRes, nwRes, arRes, slRes] = await Promise.all([
-        saengsansoAPI.exhibitions.getAll({ forceRefresh }).catch(() => null),
-        saengsansoAPI.projects.getAll({ forceRefresh }).catch(() => null),
-        saengsansoAPI.news.getAll({ forceRefresh }).catch(() => null),
-        saengsansoAPI.archive.getAll({ forceRefresh }).catch(() => null),
-        saengsansoAPI.slides.getAll({ forceRefresh }).catch(() => null),
-      ]);
-      setExhibitions(exRes?.success && exRes.data.length > 0 ? exRes.data : FALLBACK_EXHIBITIONS);
-      setProjects(prRes?.success && prRes.data.length > 0 ? prRes.data : FALLBACK_PROJECTS);
-      setNews(nwRes?.success && nwRes.data.length > 0 ? nwRes.data : FALLBACK_NEWS);
-      setArchives(arRes?.success && arRes.data.length > 0 ? arRes.data : FALLBACK_ARCHIVES);
-      setSlides(slRes?.success && slRes.data.length > 0 ? slRes.data : FALLBACK_SLIDES);
+      if (forceRefresh) {
+        // CRUD 후 갱신: 개별 API 호출
+        const [exRes, prRes, nwRes, arRes, slRes] = await Promise.all([
+          saengsansoAPI.exhibitions.getAll({ forceRefresh }).catch(() => null),
+          saengsansoAPI.projects.getAll({ forceRefresh }).catch(() => null),
+          saengsansoAPI.news.getAll({ forceRefresh }).catch(() => null),
+          saengsansoAPI.archive.getAll({ forceRefresh }).catch(() => null),
+          saengsansoAPI.slides.getAll({ forceRefresh }).catch(() => null),
+        ]);
+        setExhibitions(exRes?.success && exRes.data.length > 0 ? exRes.data : FALLBACK_EXHIBITIONS);
+        setProjects(prRes?.success && prRes.data.length > 0 ? prRes.data : FALLBACK_PROJECTS);
+        setNews(nwRes?.success && nwRes.data.length > 0 ? nwRes.data : FALLBACK_NEWS);
+        setArchives(arRes?.success && arRes.data.length > 0 ? arRes.data : FALLBACK_ARCHIVES);
+        setSlides(slRes?.success && slRes.data.length > 0 ? slRes.data : FALLBACK_SLIDES);
+      } else {
+        // 초기 로드: 통합 API 1회 호출
+        const allData = await (saengsansoAPI as any).loadAll().catch(() => null);
+        if (allData?.success) {
+          const exRes = allData.exhibitions;
+          const prRes = allData.projects;
+          const nwRes = allData.news;
+          const arRes = allData.archive;
+          const slRes = allData.slides;
+          setExhibitions(exRes?.success && exRes.data.length > 0 ? exRes.data : FALLBACK_EXHIBITIONS);
+          setProjects(prRes?.success && prRes.data.length > 0 ? prRes.data : FALLBACK_PROJECTS);
+          setNews(nwRes?.success && nwRes.data.length > 0 ? nwRes.data : FALLBACK_NEWS);
+          setArchives(arRes?.success && arRes.data.length > 0 ? arRes.data : FALLBACK_ARCHIVES);
+          setSlides(slRes?.success && slRes.data.length > 0 ? slRes.data : FALLBACK_SLIDES);
+        } else {
+          // 통합 API 실패 시 개별 호출 폴백
+          const [exRes, prRes, nwRes, arRes, slRes] = await Promise.all([
+            saengsansoAPI.exhibitions.getAll().catch(() => null),
+            saengsansoAPI.projects.getAll().catch(() => null),
+            saengsansoAPI.news.getAll().catch(() => null),
+            saengsansoAPI.archive.getAll().catch(() => null),
+            saengsansoAPI.slides.getAll().catch(() => null),
+          ]);
+          setExhibitions(exRes?.success && exRes.data.length > 0 ? exRes.data : FALLBACK_EXHIBITIONS);
+          setProjects(prRes?.success && prRes.data.length > 0 ? prRes.data : FALLBACK_PROJECTS);
+          setNews(nwRes?.success && nwRes.data.length > 0 ? nwRes.data : FALLBACK_NEWS);
+          setArchives(arRes?.success && arRes.data.length > 0 ? arRes.data : FALLBACK_ARCHIVES);
+          setSlides(slRes?.success && slRes.data.length > 0 ? slRes.data : FALLBACK_SLIDES);
+        }
+      }
     } catch {
       setExhibitions(FALLBACK_EXHIBITIONS);
       setProjects(FALLBACK_PROJECTS);

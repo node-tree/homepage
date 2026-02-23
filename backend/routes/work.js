@@ -69,6 +69,7 @@ const ensureDBConnection = async () => {
 router.get('/header', async (req, res) => {
   try {
     await ensureDBConnection();
+    res.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
     let header = await WorkHeader.findOne({});
     if (!header) {
       header = new WorkHeader({ title: 'WORK', subtitle: '작업/프로젝트' });
@@ -139,11 +140,12 @@ router.put('/reorder', auth, async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     console.log('Work 데이터 조회 시작...');
-    
+
     // DB 연결 상태 확인 및 연결
     await ensureDBConnection();
     console.log('DB 연결 확인 완료');
-    
+
+    res.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
     const works = await Work.find().sort({ sortOrder: 1, _id: -1 });
     console.log(`DB에서 ${works.length}개의 Work 데이터 조회 완료`);
     
