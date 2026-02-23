@@ -735,6 +735,17 @@ function PageAbout({ isAdmin }: { isAdmin: boolean }) {
               ↗ 바로가기
             </a>
           </p>
+          <p style={TEXT_BASE}>
+            YouTube @SAENGSANSO{' '}
+            <a
+              href="https://www.youtube.com/@SAENGSANSO"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ ...TEXT_SM, color: C.accent, textDecoration: 'none', fontWeight: 700 }}
+            >
+              ↗ 바로가기
+            </a>
+          </p>
           <br />
           <p style={TEXT_BASE}>충남 부여군 장암면 석동로 29번길 3</p>
           <p style={TEXT_BASE}>Buyeo-gun, Chungcheongnam-do, Korea</p>
