@@ -49,6 +49,10 @@
       "dest": "/sitemap.xml"
     },
     {
+      "src": "/googlee27a3f9e329bcf11.html",
+      "dest": "/googlee27a3f9e329bcf11.html"
+    },
+    {
       "src": "/pdf/(.*)",
       "dest": "/pdf/$1"
     },
