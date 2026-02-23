@@ -1,6 +1,11 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const HomeSettings = require('../models/HomeSettings');
+const Work = require('../models/Work');
+const WorkHeader = require('../models/Work').WorkHeader;
+const Filed = require('../models/Filed');
+const FiledHeader = require('../models/Filed').FiledHeader;
+const About = require('../models/About');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -58,11 +63,73 @@ const ensureDBConnection = async () => {
   return true;
 };
 
+// GET /api/home/all - 노드트리 홈페이지 전체 데이터 통합 조회
+router.get('/all', async (req, res) => {
+  try {
+    await ensureDBConnection();
+
+    const [homeData, works, fileds, aboutData] = await Promise.all([
+      HomeSettings.findOne({ isActive: true }),
+      Work.find().sort({ sortOrder: 1, _id: -1 }),
+      Filed.find().sort({ sortOrder: 1, _id: -1 }),
+      About.findOne({ isActive: true }),
+    ]);
+
+    // works 포맷팅 (work.js GET과 동일)
+    const formattedWorks = works.map(work => {
+      let dateString;
+      try {
+        if (work.createdAt && work.createdAt instanceof Date) {
+          dateString = work.createdAt.toLocaleDateString('ko-KR');
+        } else {
+          dateString = work._id.getTimestamp().toLocaleDateString('ko-KR');
+        }
+      } catch { dateString = new Date().toLocaleDateString('ko-KR'); }
+      return {
+        id: work._id.toString(), title: work.title || '제목 없음',
+        content: work.contents || '내용 없음', htmlContent: work.htmlContent || '',
+        date: dateString, images: [], thumbnail: work.thumbnail || null, sortOrder: work.sortOrder || 0,
+      };
+    });
+
+    // filed 포맷팅 (filed.js GET과 동일)
+    const formattedFileds = fileds.map(filed => {
+      let dateString;
+      try {
+        if (filed.createdAt && filed.createdAt instanceof Date) {
+          dateString = filed.createdAt.toLocaleDateString('ko-KR');
+        } else {
+          dateString = filed._id.getTimestamp().toLocaleDateString('ko-KR');
+        }
+      } catch { dateString = new Date().toLocaleDateString('ko-KR'); }
+      return {
+        id: filed._id.toString(), title: filed.title || '제목 없음',
+        content: filed.contents || '내용 없음', htmlContent: filed.htmlContent || '',
+        date: dateString, images: [], thumbnail: filed.thumbnail || null,
+        category: filed.category || '문화예술교육', sortOrder: filed.sortOrder || 0,
+      };
+    });
+
+    res.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+    res.json({
+      success: true,
+      home: { success: true, data: homeData },
+      works: { success: true, data: formattedWorks, count: formattedWorks.length, source: 'database' },
+      filed: { success: true, data: formattedFileds, count: formattedFileds.length, source: 'database' },
+      about: { success: true, data: aboutData },
+    });
+  } catch (error) {
+    console.error('Home/all 통합 조회 오류:', error);
+    res.status(500).json({ success: false, message: '통합 데이터 조회에 실패했습니다.', error: error.message });
+  }
+});
+
 // GET /api/home - 홈 설정 조회
 router.get('/', async (req, res) => {
   try {
     await ensureDBConnection();
 
+    res.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
     let homeData = await HomeSettings.findOne({ isActive: true });
 
     // 데이터가 없으면 기본 데이터 생성

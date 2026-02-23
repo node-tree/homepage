@@ -69,6 +69,7 @@ const ensureDBConnection = async () => {
 router.get('/header', async (req, res) => {
   try {
     await ensureDBConnection();
+    res.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
     let header = await FiledHeader.findOne({});
     if (!header) {
       header = new FiledHeader({ title: 'FILED', subtitle: '기록/아카이브' });
@@ -144,6 +145,7 @@ router.get('/', async (req, res) => {
     await ensureDBConnection();
     console.log('DB 연결 확인 완료');
 
+    res.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
     // 카테고리 필터 (선택적)
     const { category } = req.query;
     const filter = category ? { category } : {};

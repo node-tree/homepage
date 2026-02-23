@@ -73,8 +73,9 @@ router.get('/', async (req, res) => {
     await ensureDBConnection();
     console.log('DB 연결 확인 완료');
     
+    res.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
     let aboutData = await About.findOne({ isActive: true });
-    
+
     // 데이터가 없으면 기본 데이터 생성
     if (!aboutData) {
       aboutData = new About({
@@ -85,9 +86,9 @@ router.get('/', async (req, res) => {
       await aboutData.save();
       console.log('기본 About 데이터 생성 완료');
     }
-    
+
     console.log('About 데이터 조회 완료');
-    
+
     res.json({
       success: true,
       data: aboutData,

@@ -58,12 +58,43 @@ const SORT_FIELDS = {
   slides: { sortOrder: 1, _id: 1 },
 };
 
+// ─── GET /api/saengsanso/all — 생산소 전체 데이터 통합 조회 ───
+router.get('/all', async (req, res) => {
+  try {
+    await ensureDBConnection();
+
+    const [exhibitions, projects, news, archive, slides, aboutDoc] = await Promise.all([
+      SaengsansoExhibition.find().sort(SORT_FIELDS.exhibitions),
+      SaengsansoProject.find().sort(SORT_FIELDS.projects),
+      SaengsansoNews.find().sort(SORT_FIELDS.news),
+      SaengsansoArchive.find().sort(SORT_FIELDS.archive),
+      SaengsansoSlide.find().sort(SORT_FIELDS.slides),
+      SaengsansoAbout.findOne({ isActive: true }),
+    ]);
+
+    res.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+    res.json({
+      success: true,
+      exhibitions: { success: true, data: exhibitions },
+      projects: { success: true, data: projects },
+      news: { success: true, data: news },
+      archive: { success: true, data: archive },
+      slides: { success: true, data: slides },
+      about: { success: true, data: aboutDoc },
+    });
+  } catch (error) {
+    console.error('SSO all 통합 조회 오류:', error);
+    res.status(500).json({ success: false, message: '통합 데이터 조회에 실패했습니다.', error: error.message });
+  }
+});
+
 // ─── 공통 CRUD 라우트 생성 ───
 Object.entries(MODELS).forEach(([type, Model]) => {
   // GET — 목록 조회 (공개)
   router.get(`/${type}`, async (req, res) => {
     try {
       await ensureDBConnection();
+      res.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
       const items = await Model.find().sort(SORT_FIELDS[type]);
       res.json({ success: true, data: items });
     } catch (error) {
@@ -134,6 +165,7 @@ const DEFAULT_ABOUT = '생산소는\n지역 리서치를 기반으로 활동하�
 router.get('/about-page', async (req, res) => {
   try {
     await ensureDBConnection();
+    res.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
     let doc = await SaengsansoAbout.findOne({ isActive: true });
     if (!doc) {
       doc = await SaengsansoAbout.create({ description: DEFAULT_ABOUT });
