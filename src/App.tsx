@@ -35,7 +35,7 @@ interface NavItem {
 // 네비게이션 항목
 const NAV_ITEMS: NavItem[] = [
   { id: 1, text: 'NODE TREE', page: 'ABOUT' },
-  { id: 2, text: '생산소', href: 'https://saengsanso.com', external: true },
+  { id: 2, text: 'ART SPACE', href: 'https://saengsanso.com', external: true },
   { id: 3, text: 'ART WORK', page: 'WORK' },
   { id: 4, text: 'COMMONS', page: 'COMMONS' },
   { id: 5, text: 'CV', page: 'CV' },
