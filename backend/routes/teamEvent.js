@@ -1,7 +1,38 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const TeamEvent = require('../models/TeamEvent');
 const auth = require('../middleware/auth');
+
+// Vercel 서버리스 환경 DB 연결 보장
+const ensureDBConnection = async () => {
+  if (mongoose.connection.readyState === 1) return true;
+
+  if (mongoose.connection.readyState === 2) {
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('MongoDB 연결 대기 타임아웃')), 10000);
+      mongoose.connection.once('connected', () => { clearTimeout(timeout); resolve(); });
+      mongoose.connection.once('error', (err) => { clearTimeout(timeout); reject(err); });
+    });
+    return true;
+  }
+
+  if (mongoose.connection.readyState === 0) {
+    if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI 환경변수가 설정되지 않았습니다.');
+    const options = {
+      serverSelectionTimeoutMS: 5000, connectTimeoutMS: 5000, socketTimeoutMS: 0,
+      maxPoolSize: 5, minPoolSize: 0, maxIdleTimeMS: 10000,
+      bufferCommands: false, family: 4, heartbeatFrequencyMS: 30000,
+    };
+    let mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri.includes('retryWrites')) {
+      const separator = mongoUri.includes('?') ? '&' : '?';
+      mongoUri += `${separator}retryWrites=true&w=majority`;
+    }
+    await mongoose.connect(mongoUri, options);
+  }
+  return true;
+};
 
 const TEAM_COLORS = [
   { name: 'RED',    hex: '#E53935' },
@@ -20,6 +51,7 @@ const TEAM_COUNT = 8;
 // GET /api/team-event/color/:visitorId - 방문자의 팀 색상 조회/배정
 router.get('/color/:visitorId', async (req, res) => {
   try {
+    await ensureDBConnection();
     const { visitorId } = req.params;
 
     // 현재 세션 ID 조회
@@ -89,6 +121,7 @@ router.get('/color/:visitorId', async (req, res) => {
 // POST /api/team-event/reset - 리셋 (관리자 전용)
 router.post('/reset', auth, async (req, res) => {
   try {
+    await ensureDBConnection();
     if (req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: '관리자만 리셋할 수 있습니다.' });
     }
@@ -113,6 +146,7 @@ router.post('/reset', auth, async (req, res) => {
 // POST /api/team-event/start - 이벤트 시작 (관리자 전용, 첫 세션 생성)
 router.post('/start', auth, async (req, res) => {
   try {
+    await ensureDBConnection();
     if (req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: '관리자만 시작할 수 있습니다.' });
     }
@@ -141,6 +175,7 @@ router.post('/start', auth, async (req, res) => {
 // GET /api/team-event/stats - 팀별 통계 (관리자 전용)
 router.get('/stats', auth, async (req, res) => {
   try {
+    await ensureDBConnection();
     const latestSession = await TeamEvent.findOne().sort({ createdAt: -1 });
     if (!latestSession) {
       return res.json({ success: true, stats: [], total: 0, sessionId: null });
@@ -180,6 +215,7 @@ router.get('/stats', auth, async (req, res) => {
 // GET /api/team-event/session - 현재 세션 정보 (공개)
 router.get('/session', async (req, res) => {
   try {
+    await ensureDBConnection();
     const latestSession = await TeamEvent.findOne().sort({ createdAt: -1 });
     if (!latestSession) {
       return res.json({ success: true, active: false });
