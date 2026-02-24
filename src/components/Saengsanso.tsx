@@ -1363,12 +1363,12 @@ function SaengsansoApp() {
     return () => clearTimeout(t);
   }, []);
 
-  // DB 데이터
-  const [loading, setLoading] = useState(true);
-  const [exhibitions, setExhibitions] = useState<any[]>([]);
-  const [projects, setProjects] = useState<any[]>([]);
-  const [news, setNews] = useState<any[]>([]);
-  const [archives, setArchives] = useState<any[]>([]);
+  // DB 데이터 — FALLBACK으로 즉시 렌더링, DB 로드 후 교체
+  const [loading, setLoading] = useState(false);
+  const [exhibitions, setExhibitions] = useState<any[]>(FALLBACK_EXHIBITIONS);
+  const [projects, setProjects] = useState<any[]>(FALLBACK_PROJECTS);
+  const [news, setNews] = useState<any[]>(FALLBACK_NEWS);
+  const [archives, setArchives] = useState<any[]>(FALLBACK_ARCHIVES);
   const [slides, setSlides] = useState<any[]>(FALLBACK_SLIDES);
 
   // 슬라이드 편집 모달

@@ -3,33 +3,11 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const TeamEvent = require('../models/TeamEvent');
 
-// Vercel 서버리스 환경 DB 연결 보장
+// DB 연결 확인 — 별도 모듈에서 캐싱된 연결 재사용
+const connectDB = require('../db');
 const ensureDBConnection = async () => {
   if (mongoose.connection.readyState === 1) return true;
-
-  if (mongoose.connection.readyState === 2) {
-    await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('MongoDB 연결 대기 타임아웃')), 10000);
-      mongoose.connection.once('connected', () => { clearTimeout(timeout); resolve(); });
-      mongoose.connection.once('error', (err) => { clearTimeout(timeout); reject(err); });
-    });
-    return true;
-  }
-
-  if (mongoose.connection.readyState === 0) {
-    if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI 환경변수가 설정되지 않았습니다.');
-    const options = {
-      serverSelectionTimeoutMS: 5000, connectTimeoutMS: 5000, socketTimeoutMS: 0,
-      maxPoolSize: 5, minPoolSize: 0, maxIdleTimeMS: 10000,
-      bufferCommands: false, family: 4, heartbeatFrequencyMS: 30000,
-    };
-    let mongoUri = process.env.MONGODB_URI;
-    if (!mongoUri.includes('retryWrites')) {
-      const separator = mongoUri.includes('?') ? '&' : '?';
-      mongoUri += `${separator}retryWrites=true&w=majority`;
-    }
-    await mongoose.connect(mongoUri, options);
-  }
+  await connectDB();
   return true;
 };
 

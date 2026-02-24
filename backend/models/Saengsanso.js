@@ -9,6 +9,7 @@ const exhibitionSchema = new mongoose.Schema({
   note: { type: String, default: '' },
   sortOrder: { type: Number, default: 0 }
 }, { timestamps: true, collection: 'sso_exhibitions' });
+exhibitionSchema.index({ sortOrder: 1, year: -1, _id: -1 });
 
 // ─── 프로젝트 (sso_projects) ───
 const projectSchema = new mongoose.Schema({
@@ -22,6 +23,7 @@ const projectSchema = new mongoose.Schema({
   detail: { type: String, default: '' },
   sortOrder: { type: Number, default: 0 }
 }, { timestamps: true, collection: 'sso_projects' });
+projectSchema.index({ sortOrder: 1, _id: -1 });
 
 // ─── 뉴스 (sso_news) ───
 const newsSchema = new mongoose.Schema({
@@ -38,6 +40,7 @@ const newsSchema = new mongoose.Schema({
   images: { type: String, default: '' }, // 쉼표 구분 이미지 URL
   sortOrder: { type: Number, default: 0 }
 }, { timestamps: true, collection: 'sso_news' });
+newsSchema.index({ sortOrder: 1, _id: -1 });
 
 // ─── 아카이브 (sso_archives) ───
 const archiveSchema = new mongoose.Schema({
@@ -48,6 +51,7 @@ const archiveSchema = new mongoose.Schema({
   video: { type: String, default: '' },
   sortOrder: { type: Number, default: 0 }
 }, { timestamps: true, collection: 'sso_archives' });
+archiveSchema.index({ sortOrder: 1, _id: -1 });
 
 // ─── 슬라이드 (sso_slides) ───
 const slideSchema = new mongoose.Schema({
@@ -56,6 +60,7 @@ const slideSchema = new mongoose.Schema({
   image: { type: String, default: '' },
   sortOrder: { type: Number, default: 0 }
 }, { timestamps: true, collection: 'sso_slides' });
+slideSchema.index({ sortOrder: 1, _id: 1 });
 
 // ─── ABOUT 텍스트 (sso_about) — 단일 문서 ───
 const aboutSchema = new mongoose.Schema({
