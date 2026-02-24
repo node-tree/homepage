@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../contexts/AuthContext';
 
 const API_BASE_URL =
@@ -6,6 +7,12 @@ const API_BASE_URL =
   (window.location.hostname === 'nodetree.kr' || window.location.hostname === 'www.nodetree.kr')
     ? '/api'
     : process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api');
+
+const EVENT_URL =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'nodetree.kr' || window.location.hostname === 'www.nodetree.kr')
+    ? 'https://nodetree.kr/team-event'
+    : `${window.location.origin}/team-event`;
 
 interface TeamColor {
   name: string;
@@ -29,7 +36,7 @@ function getVisitorId(): string {
 }
 
 export default function TeamEvent() {
-  const { isAuthenticated, isLoading: authLoading, token, user } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
 
   const [color, setColor] = useState<TeamColor | null>(null);
   const [sessionActive, setSessionActive] = useState(false);
@@ -37,7 +44,6 @@ export default function TeamEvent() {
   const [stats, setStats] = useState<TeamStat[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [resetting, setResetting] = useState(false);
-  const [showStats, setShowStats] = useState(false);
 
   // 세션 상태 확인
   const checkSession = useCallback(async () => {
@@ -57,7 +63,6 @@ export default function TeamEvent() {
   const fetchColor = useCallback(async () => {
     try {
       const visitorId = getVisitorId();
-
       const sessionRes = await fetch(`${API_BASE_URL}/team-event/session`);
       const sessionData = await sessionRes.json();
 
@@ -66,10 +71,8 @@ export default function TeamEvent() {
         setSessionLoaded(true);
         return;
       }
-
       setSessionActive(true);
 
-      // 로컬 캐시 확인
       const saved = localStorage.getItem('team_event_assignment');
       if (saved) {
         try {
@@ -82,10 +85,8 @@ export default function TeamEvent() {
         } catch {}
       }
 
-      // 서버에서 색상 배정
       const colorRes = await fetch(`${API_BASE_URL}/team-event/color/${visitorId}`);
       const colorData = await colorRes.json();
-
       if (colorData.success && colorData.assigned) {
         setColor(colorData.color);
         localStorage.setItem('team_event_assignment',
@@ -130,6 +131,7 @@ export default function TeamEvent() {
         setStats([]);
         setTotalCount(0);
         setSessionActive(true);
+        await fetchStats();
       }
     } catch (err) {
       console.error('리셋 오류:', err);
@@ -141,7 +143,6 @@ export default function TeamEvent() {
   // auth 로딩 완료 후 데이터 fetch
   useEffect(() => {
     if (authLoading) return;
-
     if (isAuthenticated) {
       checkSession();
     } else {
@@ -149,14 +150,14 @@ export default function TeamEvent() {
     }
   }, [authLoading, isAuthenticated, checkSession, fetchColor]);
 
-  // 관리자 통계 자동 갱신
+  // 관리자: 통계 자동 갱신 (이벤트 진행 중일 때)
   useEffect(() => {
-    if (isAuthenticated && showStats) {
+    if (isAuthenticated && sessionActive) {
       fetchStats();
-      const interval = setInterval(fetchStats, 5000);
+      const interval = setInterval(fetchStats, 3000);
       return () => clearInterval(interval);
     }
-  }, [isAuthenticated, showStats, fetchStats]);
+  }, [isAuthenticated, sessionActive, fetchStats]);
 
   // ─── auth 로딩 중 ───
   if (authLoading) {
@@ -170,22 +171,22 @@ export default function TeamEvent() {
   // ─── 로그인 사용자 (관리자) 화면 ───
   if (isAuthenticated) {
     return (
-      <div style={{ ...fullScreenStyle, gap: '24px', flexDirection: 'column' }}>
-        <div style={{ fontSize: '2rem', fontWeight: 900, color: '#fff', opacity: 0.8, fontFamily: 'monospace' }}>
-          TEAM EVENT
-        </div>
-        <div style={{ fontSize: '1rem', color: '#fff', opacity: 0.5, fontFamily: 'monospace' }}>
-          {!sessionLoaded ? '확인 중...' : sessionActive ? '이벤트 진행 중' : '이벤트 대기 중'}
-        </div>
-
-        {/* 버튼 영역 */}
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+      <div style={{
+        ...fullScreenStyle,
+        flexDirection: 'column',
+        padding: '24px 16px',
+        overflowY: 'auto',
+        justifyContent: 'flex-start',
+        paddingTop: '40px'
+      }}>
+        {/* 상단: RESET 버튼 */}
+        <div style={{ marginBottom: '24px' }}>
           <button
             onClick={handleStartOrReset}
             disabled={resetting || !sessionLoaded}
             style={{
-              padding: '16px 48px',
-              fontSize: '1.1rem',
+              padding: '12px 40px',
+              fontSize: '1rem',
               background: sessionActive ? '#ff4444' : '#fff',
               color: sessionActive ? '#fff' : '#111',
               border: 'none',
@@ -198,68 +199,74 @@ export default function TeamEvent() {
           >
             {resetting ? 'RESETTING...' : sessionActive ? 'RESET' : 'START EVENT'}
           </button>
-          {sessionActive && (
-            <button
-              onClick={() => setShowStats(!showStats)}
-              style={{
-                padding: '16px 48px',
-                fontSize: '1.1rem',
-                background: 'rgba(255,255,255,0.15)',
-                color: '#fff',
-                border: '1px solid rgba(255,255,255,0.3)',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontFamily: 'monospace'
-              }}
-            >
-              {showStats ? 'HIDE STATS' : 'SHOW STATS'}
-            </button>
-          )}
         </div>
 
-        {/* 통계 */}
-        {showStats && (
+        {/* QR 코드 */}
+        <div style={{
+          background: '#fff',
+          borderRadius: '16px',
+          padding: '24px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '12px',
+          marginBottom: '24px'
+        }}>
+          <QRCodeSVG
+            value={EVENT_URL}
+            size={Math.min(280, typeof window !== 'undefined' ? window.innerWidth - 100 : 280)}
+            level="M"
+            bgColor="#ffffff"
+            fgColor="#000000"
+          />
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: '10px',
-            width: '100%',
-            maxWidth: '500px',
-            padding: '0 16px'
+            fontFamily: 'monospace',
+            fontSize: '0.8rem',
+            color: '#666',
+            textAlign: 'center',
+            wordBreak: 'break-all'
           }}>
-            {stats.map((s) => (
+            {EVENT_URL}
+          </div>
+        </div>
+
+        {/* 팀별 색상 현황 */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '8px',
+          width: '100%',
+          maxWidth: '500px',
+          marginBottom: '16px'
+        }}>
+          {stats.map((s) => {
+            const isLight = s.color.name === 'YELLOW' || s.color.name === 'CYAN';
+            return (
               <div key={s.teamIndex} style={{
                 background: s.color.hex,
-                borderRadius: '8px',
-                padding: '12px 8px',
+                borderRadius: '10px',
+                padding: '12px 6px',
                 textAlign: 'center',
-                color: (s.color.name === 'YELLOW' || s.color.name === 'CYAN') ? '#000' : '#fff',
-                fontFamily: 'monospace',
-                fontSize: '0.85rem'
+                color: isLight ? '#000' : '#fff',
+                fontFamily: 'monospace'
               }}>
-                <div style={{ fontWeight: 'bold' }}>{s.color.name}</div>
-                <div style={{ fontSize: '1.8rem', fontWeight: 900 }}>{s.count}</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 'bold', opacity: 0.8 }}>{s.color.name}</div>
+                <div style={{ fontSize: '2rem', fontWeight: 900, lineHeight: 1.2 }}>{s.count}</div>
               </div>
-            ))}
-            <div style={{
-              gridColumn: '1 / -1',
-              textAlign: 'center',
-              color: 'rgba(255,255,255,0.5)',
-              fontFamily: 'monospace',
-              fontSize: '0.9rem',
-              paddingTop: '8px'
-            }}>
-              Total: {totalCount} / 130
-            </div>
-          </div>
-        )}
+            );
+          })}
+        </div>
 
-        {/* 디버그: 현재 유저 정보 */}
+        {/* 총 접속 인원 */}
         <div style={{
-          position: 'fixed', bottom: 8, right: 8,
-          color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace', fontSize: '0.7rem'
+          fontFamily: 'monospace',
+          textAlign: 'center',
+          color: '#fff',
+          marginBottom: '24px'
         }}>
-          {user?.username} ({user?.role})
+          <div style={{ fontSize: '0.9rem', opacity: 0.5, marginBottom: '4px' }}>접속 인원</div>
+          <div style={{ fontSize: '3rem', fontWeight: 900, lineHeight: 1 }}>{totalCount}</div>
+          <div style={{ fontSize: '0.85rem', opacity: 0.4, marginTop: '4px' }}>/ 130</div>
         </div>
       </div>
     );
