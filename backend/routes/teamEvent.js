@@ -33,6 +33,25 @@ const ensureDBConnection = async () => {
   return true;
 };
 
+// 기존 잘못된 visitorId unique 인덱스 삭제 (1회성 마이그레이션)
+let indexFixed = false;
+const fixIndex = async () => {
+  if (indexFixed) return;
+  try {
+    const collection = mongoose.connection.collection('teamevents');
+    const indexes = await collection.indexes();
+    const badIndex = indexes.find(idx => idx.key && idx.key.visitorId && !idx.key.sessionId && idx.unique);
+    if (badIndex) {
+      await collection.dropIndex(badIndex.name);
+      console.log('✅ visitorId unique 인덱스 삭제 완료');
+    }
+    indexFixed = true;
+  } catch (err) {
+    // 인덱스가 없거나 이미 삭제된 경우 무시
+    indexFixed = true;
+  }
+};
+
 const TEAM_COLORS = [
   { name: 'RED',    hex: '#E53935' },
   { name: 'BLUE',   hex: '#1E88E5' },
@@ -50,6 +69,7 @@ const TEAM_COUNT = 8;
 router.get('/session', async (req, res) => {
   try {
     await ensureDBConnection();
+    await fixIndex();
     const latestSession = await TeamEvent.findOne().sort({ createdAt: -1 });
     if (!latestSession) {
       return res.json({ success: true, active: false });
