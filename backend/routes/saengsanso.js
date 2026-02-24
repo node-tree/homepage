@@ -20,6 +20,24 @@ const ensureDBConnection = async () => {
   return true;
 };
 
+// ─── Vercel Deploy Hook — 데이터 변경 시 재배포 트리거 ───
+// 디바운스: 여러 변경이 연속으로 일어나도 30초에 한 번만 트리거
+let deployTimer = null;
+const triggerDeploy = () => {
+  const hookUrl = process.env.VERCEL_DEPLOY_HOOK;
+  if (!hookUrl) return;
+  if (deployTimer) clearTimeout(deployTimer);
+  deployTimer = setTimeout(async () => {
+    try {
+      const fetch = (await import('node-fetch')).default;
+      await fetch(hookUrl, { method: 'POST' });
+      console.log('[deploy-hook] Vercel 재배포 트리거 완료');
+    } catch (err) {
+      console.error('[deploy-hook] 트리거 실패:', err.message);
+    }
+  }, 30000); // 30초 디바운스
+};
+
 // ─── 모델 매핑 ───
 const MODELS = {
   exhibitions: SaengsansoExhibition,
@@ -88,6 +106,7 @@ Object.entries(MODELS).forEach(([type, Model]) => {
       await ensureDBConnection();
       const item = new Model(req.body);
       const saved = await item.save();
+      triggerDeploy();
       res.json({ success: true, data: saved, message: '추가 완료' });
     } catch (error) {
       console.error(`SSO ${type} 추가 오류:`, error);
@@ -104,6 +123,7 @@ Object.entries(MODELS).forEach(([type, Model]) => {
         return res.status(400).json({ success: false, message: '순서 데이터가 필요합니다.' });
       }
       await Promise.all(orders.map(o => Model.findByIdAndUpdate(o.id, { sortOrder: o.sortOrder })));
+      triggerDeploy();
       res.json({ success: true, message: '순서 변경 완료' });
     } catch (error) {
       console.error(`SSO ${type} 순서 변경 오류:`, error);
@@ -117,6 +137,7 @@ Object.entries(MODELS).forEach(([type, Model]) => {
       await ensureDBConnection();
       const updated = await Model.findByIdAndUpdate(req.params.id, req.body, { new: true });
       if (!updated) return res.status(404).json({ success: false, message: '항목을 찾을 수 없습니다.' });
+      triggerDeploy();
       res.json({ success: true, data: updated, message: '수정 완료' });
     } catch (error) {
       console.error(`SSO ${type} 수정 오류:`, error);
@@ -130,6 +151,7 @@ Object.entries(MODELS).forEach(([type, Model]) => {
       await ensureDBConnection();
       const deleted = await Model.findByIdAndDelete(req.params.id);
       if (!deleted) return res.status(404).json({ success: false, message: '항목을 찾을 수 없습니다.' });
+      triggerDeploy();
       res.json({ success: true, data: deleted, message: '삭제 완료' });
     } catch (error) {
       console.error(`SSO ${type} 삭제 오류:`, error);
@@ -168,6 +190,7 @@ router.put('/about-page', auth, async (req, res) => {
       doc.updatedAt = new Date();
       await doc.save();
     }
+    triggerDeploy();
     res.json({ success: true, data: doc, message: 'about 수정 완료' });
   } catch (error) {
     console.error('SSO about 수정 오류:', error);
@@ -203,6 +226,7 @@ router.put('/members', auth, async (req, res) => {
       doc.updatedAt = new Date();
       await doc.save();
     }
+    triggerDeploy();
     res.json({ success: true, data: doc.members, message: 'members 수정 완료' });
   } catch (error) {
     console.error('SSO members 수정 오류:', error);
