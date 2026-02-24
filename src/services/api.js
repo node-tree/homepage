@@ -989,8 +989,9 @@ export const saengsansoMembersAPI = {
 
 export const saengsansoAPI = {
   // 통합 API 1회 호출로 전체 데이터 로드
+  // Render 콜드 스타트(~15-20초) 대응: 1회 시도, 25초 타임아웃
   loadAll: async () => {
-    const response = await deduplicatedFetch(`${API_BASE_URL}/saengsanso/all`);
+    const response = await fetchWithRetry(`${API_BASE_URL}/saengsanso/all`, {}, 1, 25000);
     if (!response.ok) throw new Error('Failed to fetch saengsanso/all');
     const data = await response.json();
     if (data.success) {
