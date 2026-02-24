@@ -338,6 +338,9 @@ function AppContent() {
             whileHover={{ opacity: 1 }}
           >
             <span className="user-info">{user?.username}님</span>
+            <a href="/team-event" className="logout-button" style={{ textDecoration: 'none', marginRight: '4px' }}>
+              EVENT
+            </a>
             <button onClick={logout} className="logout-button">
               로그아웃
             </button>
