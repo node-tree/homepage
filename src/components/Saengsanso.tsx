@@ -905,18 +905,21 @@ function PageProjects({ projects, isAdmin, onSave, onDelete }: {
 }
 
 // ─── 페이지: NEWS (DB 연동) ───
-function PageNews({ filter, news, isAdmin, onSave, onDelete }: {
+function PageNews({ filter, news, isAdmin, onSave, onDelete, onReorder }: {
   filter?: 'notice' | 'press';
   news: any[];
   isAdmin: boolean;
   onSave: (data: Record<string, string>, id?: string) => Promise<void>;
   onDelete: (id: string) => void;
+  onReorder: (orders: { id: string; sortOrder: number }[]) => Promise<void>;
 }) {
   const [activeTab, setActiveTab] = useState<'all' | 'notice' | 'press'>(
     filter === 'notice' ? 'notice' : filter === 'press' ? 'press' : 'all'
   );
   const [editItem, setEditItem] = useState<any>(null);
   const [selectedNotice, setSelectedNotice] = useState<any>(null);
+  const [reorderMode, setReorderMode] = useState(false);
+  const [reordering, setReordering] = useState(false);
 
   useEffect(() => {
     if (filter === 'notice') setActiveTab('notice');
@@ -940,7 +943,28 @@ function PageNews({ filter, news, isAdmin, onSave, onDelete }: {
 
   const filteredNews = (activeTab === 'all' ? news : news.filter((n: any) => n.category === activeTab))
     .slice()
-    .sort((a: any, b: any) => b.date.localeCompare(a.date));
+    .sort((a: any, b: any) => {
+      if (reorderMode) {
+        const aOrder = a.sortOrder ?? 9999;
+        const bOrder = b.sortOrder ?? 9999;
+        return aOrder !== bOrder ? aOrder - bOrder : b.date.localeCompare(a.date);
+      }
+      return b.date.localeCompare(a.date);
+    });
+
+  const moveItem = async (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= filteredNews.length || reordering) return;
+    setReordering(true);
+    try {
+      const reordered = [...filteredNews];
+      const [moved] = reordered.splice(fromIndex, 1);
+      reordered.splice(toIndex, 0, moved);
+      const orders = reordered.map((item, i) => ({ id: item._id, sortOrder: i }));
+      await onReorder(orders);
+    } finally {
+      setReordering(false);
+    }
+  };
   const tabs: { key: 'all' | 'notice' | 'press'; label: string }[] = [
     { key: 'all', label: '전체' },
     { key: 'notice', label: '공지사항' },
@@ -984,6 +1008,22 @@ function PageNews({ filter, news, isAdmin, onSave, onDelete }: {
         {isAdmin && editItem && !editItem._id && (
           <InlineForm fields={NEWS_FIELDS} initial={{}} onSave={handleSave} onCancel={() => setEditItem(null)} />
         )}
+        {isAdmin && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
+            <button
+              onClick={() => { setReorderMode(v => !v); setEditItem(null); setSelectedNotice(null); }}
+              style={{
+                ...btnStyle,
+                background: reorderMode ? C.red : 'transparent',
+                color: reorderMode ? C.white : C.dark,
+                border: `1px solid ${reorderMode ? C.red : C.gray65}`,
+                padding: '4px 12px',
+              }}
+            >
+              {reorderMode ? '순서 저장 완료' : '순서 변경'}
+            </button>
+          </div>
+        )}
         <div style={{ display: 'flex', borderBottom: `1px solid ${C.dark}`, paddingBottom: '8px', marginBottom: '4px' }}>
           <span style={{ ...TEXT_SM, flex: '0 0 100px' }}>날짜</span>
           <span style={{ ...TEXT_SM, flex: 1 }}>제목</span>
@@ -994,30 +1034,44 @@ function PageNews({ filter, news, isAdmin, onSave, onDelete }: {
           <div key={item._id || i}>
             <div style={{
               display: 'flex', padding: '10px 0', borderBottom: '1px solid #6A9020',
-              cursor: (item.category === 'notice' || item.url) ? 'pointer' : 'default',
+              cursor: (!reorderMode && (item.category === 'notice' || item.url)) ? 'pointer' : reorderMode ? 'default' : 'default',
               transition: 'background 0.2s',
               background: selectedNotice?._id === item._id ? THEME_HOVER : 'transparent',
             }}
-              onClick={() => handleItemClick(item)}
-              onMouseEnter={e => { if (selectedNotice?._id !== item._id) e.currentTarget.style.background = THEME_HOVER; }}
+              onClick={() => { if (!reorderMode) handleItemClick(item); }}
+              onMouseEnter={e => { if (!reorderMode && selectedNotice?._id !== item._id) e.currentTarget.style.background = THEME_HOVER; }}
               onMouseLeave={e => { if (selectedNotice?._id !== item._id) e.currentTarget.style.background = 'transparent'; }}
             >
               <span style={{ ...TEXT_SM, flex: '0 0 100px', color: C.gray65 }}>{item.date}</span>
               <span style={{ ...TEXT_BASE, flex: 1 }}>
                 {item.title}
-                {item.category === 'notice' && <span style={{ ...TEXT_XS, color: C.gray65, marginLeft: '6px' }}>›</span>}
-                {item.category === 'press' && item.url && <span style={{ ...TEXT_XS, color: C.cyan, marginLeft: '6px' }}>↗</span>}
+                {!reorderMode && item.category === 'notice' && <span style={{ ...TEXT_XS, color: C.gray65, marginLeft: '6px' }}>›</span>}
+                {!reorderMode && item.category === 'press' && item.url && <span style={{ ...TEXT_XS, color: C.cyan, marginLeft: '6px' }}>↗</span>}
               </span>
               <span style={{ ...TEXT_XS, flex: '0 0 80px', textAlign: 'right', color: C.gray65, alignSelf: 'center' }}>{item.source}</span>
-              {isAdmin && (
+              {isAdmin && !reorderMode && (
                 <span style={{ flex: '0 0 80px', textAlign: 'right', flexShrink: 0 }}>
                   <button style={btnStyle} onClick={e => { e.stopPropagation(); setEditItem(item); setSelectedNotice(null); }}>수정</button>
                   <button style={{ ...btnStyle, color: C.red }} onClick={e => { e.stopPropagation(); onDelete(item._id); }}>삭제</button>
                 </span>
               )}
+              {isAdmin && reorderMode && (
+                <span style={{ flex: '0 0 56px', textAlign: 'right', flexShrink: 0, display: 'flex', gap: '4px', alignItems: 'center', justifyContent: 'flex-end' }}>
+                  <button
+                    disabled={i === 0 || reordering}
+                    onClick={e => { e.stopPropagation(); moveItem(i, i - 1); }}
+                    style={{ ...btnStyle, opacity: i === 0 ? 0.3 : 1, cursor: i === 0 ? 'default' : 'pointer', padding: '2px 7px' }}
+                  >↑</button>
+                  <button
+                    disabled={i === filteredNews.length - 1 || reordering}
+                    onClick={e => { e.stopPropagation(); moveItem(i, i + 1); }}
+                    style={{ ...btnStyle, opacity: i === filteredNews.length - 1 ? 0.3 : 1, cursor: i === filteredNews.length - 1 ? 'default' : 'pointer', padding: '2px 7px' }}
+                  >↓</button>
+                </span>
+              )}
             </div>
             {/* 수정 폼: 해당 항목 바로 아래 */}
-            {isAdmin && editItem?._id === item._id && (
+            {isAdmin && !reorderMode && editItem?._id === item._id && (
               <InlineForm
                 fields={NEWS_FIELDS}
                 initial={{ date: item.date, title: item.title, source: item.source, category: item.category, url: item.url || '', content: item.content || '', images: item.images || '' }}
@@ -1027,7 +1081,7 @@ function PageNews({ filter, news, isAdmin, onSave, onDelete }: {
             )}
           </div>
         ))}
-        {isAdmin && <button style={addBtnStyle} onClick={() => setEditItem({})}>+ 뉴스 추가</button>}
+        {isAdmin && !reorderMode && <button style={addBtnStyle} onClick={() => setEditItem({})}>+ 뉴스 추가</button>}
       </div>
 
       {/* ─── 오른쪽: 공지사항 상세 슬라이드인 패널 ─── */}
@@ -1519,6 +1573,10 @@ function SaengsansoApp() {
             isAdmin={isAdmin && adminEditMode}
             onSave={makeSaveHandler('news')}
             onDelete={makeDeleteHandler('news')}
+            onReorder={async (orders) => {
+              await saengsansoAPI.news.reorder(orders);
+              await loadData(true);
+            }}
           />
         );
       case 'ARCHIVE':
