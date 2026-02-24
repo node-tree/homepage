@@ -605,6 +605,55 @@ function PageAbout({ isAdmin }: { isAdmin: boolean }) {
         )}
       </div>
 
+      {/* Partners */}
+      <div style={{ width: '100%', marginTop: '48px' }}>
+        <p style={{ ...TEXT_BASE, marginBottom: '16px' }}>Partners.</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px 24px', alignItems: 'center' }}>
+          {[
+            { name: '충남문화관광재단', logo: '/images/partners/chungnam-culture.png' },
+            { name: '한국문화예술교육진흥원', logo: '/images/partners/arte.png' },
+            { name: '한국관광공사', logo: '/images/partners/knto.svg' },
+            { name: '한국공항공사', logo: '/images/partners/kac.png' },
+            { name: '대한민국 구석구석', logo: '/images/partners/korean-tourism.png' },
+            { name: '히스테리안', logo: '' },
+            { name: '홍우주 사회적협동조합', logo: '/images/partners/hongwuju.png' },
+            { name: '부여군', logo: '/images/partners/buyeo.png' },
+            { name: '큐클리프', logo: '/images/partners/cuecliff.png' },
+            { name: '인디언모터사이클', logo: '/images/partners/indian-motorcycle.svg' },
+            { name: '한국전통문화대학교', logo: '/images/partners/nuch.png' },
+            { name: '백제문화재단', logo: '/images/partners/baekje.png' },
+            { name: '하자센터', logo: '/images/partners/haja.png' },
+          ].map((p) => (
+            <div key={p.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', width: '80px' }}>
+              <div style={{
+                width: '60px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: TR(0.25), borderRadius: '8px', padding: '8px', overflow: 'hidden',
+              }}>
+                {p.logo ? (
+                  <img
+                    src={p.logo}
+                    alt={p.name}
+                    style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: 'grayscale(100%)', opacity: 0.7 }}
+                    onError={(e) => {
+                      const t = e.target as HTMLImageElement;
+                      t.style.display = 'none';
+                      if (t.nextElementSibling) (t.nextElementSibling as HTMLElement).style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <span style={{
+                  ...TEXT_XS, fontWeight: 700, color: C.gray65,
+                  display: p.logo ? 'none' : 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                  width: '100%', height: '100%', textAlign: 'center', lineHeight: '14px', fontSize: '11px',
+                }}>{p.name}</span>
+              </div>
+              <p style={{ ...TEXT_XS, fontSize: '9px', lineHeight: '12px', color: C.gray65, textAlign: 'center', margin: 0, wordBreak: 'keep-all' as const }}>{p.name}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* 지도 + 연락처 */}
       <div className="sso-map-contact" style={{ width: '100%', marginTop: '48px', display: 'flex', gap: 0, border: `2px solid ${C.dark}` }}>
         <div className="sso-map-wrap" style={{ flex: '0 0 38%' }}>
