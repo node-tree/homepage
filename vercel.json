@@ -71,6 +71,14 @@
       "dest": "/pdf/$1"
     },
     {
+      "src": "/images/(.*)",
+      "dest": "/images/$1"
+    },
+    {
+      "src": "/fonts/(.*)",
+      "dest": "/fonts/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "/index.html"
     }
