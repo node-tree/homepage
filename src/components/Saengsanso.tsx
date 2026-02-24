@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { saengsansoAPI as _ssoAPI, saengsansoAboutAPI, saengsansoMembersAPI } from '../services/api';
 import Login from './Login';
 import SeoHead from './SeoHead';
+import { FALLBACK_EXHIBITIONS, FALLBACK_PROJECTS, FALLBACK_NEWS, FALLBACK_ARCHIVES, FALLBACK_SLIDES } from '../data/saengsansoFallback';
 
 // API 타입 캐스팅
 const saengsansoAPI = _ssoAPI as Record<string, any>;
@@ -45,111 +46,6 @@ const TEXT_BASE: React.CSSProperties = {
 };
 const TEXT_SM: React.CSSProperties = { ...TEXT_BASE, fontSize: '14px', lineHeight: '24px' };
 const TEXT_XS: React.CSSProperties = { ...TEXT_BASE, fontSize: '12px', lineHeight: '20px' };
-
-// ─── 하드코딩 fallback 데이터 ───
-const FALLBACK_EXHIBITIONS = [
-  { year: '2025', date: '2025.11.28.-12.07.', title: '유기적공명: 에디아포닉 Organic Resonance: Ediaphonic', venue: 'CN갤러리, 서울', note: '' },
-  { year: '2024', date: '2024', title: "위성악보 시리즈 '국경'", venue: '신동엽문학관, 부여', note: '' },
-  { year: '2024', date: '2024.09.06-22.', title: '고도 주민의 삶과 기억전', venue: '부여 청소년 문화의집', note: '2024 고도주민활동지원사업. 백제역사문화연구원 위탁.' },
-  { year: '2023', date: '2023', title: '금강아카이브: 멀고도 가까운', venue: '무대륙, 서울', note: '' },
-  { year: '2023', date: '2023.07.', title: '백제기와문화관 세계국가유산산업전 부스 기획 및 설치', venue: '경주', note: '충청남도 부여군 사적관리소 위탁.' },
-  { year: '2023', date: '2023', title: '아르코 공공미술 프로젝트', venue: '', note: '' },
-  { year: '2023', date: '2023', title: '문화가있는날 금강워킹', venue: '서울, 부여, 강경, 서천', note: '지역문화진흥원' },
-  { year: '2021', date: '2021.10.', title: '공예주간 조각수집', venue: '생산소, 부여', note: '대장장이 체험, 목공예·도자·보태니컬아트 전시, 살구에이드.' },
-  { year: '2021', date: '2021', title: "위성악보 시리즈 'KARMA'", venue: '부소갤러리, 부여', note: '' },
-];
-
-const FALLBACK_PROJECTS = [
-  { category: 'EXHIBITION', date: '2024.09.06-22.', title: '고도 주민의 삶과 기억전', detail: '2024 고도주민활동지원사업. 백제역사문화연구원 위탁. 부여 청소년 문화의집.' },
-  { category: 'EXHIBITION', date: '2023.07.', title: '백제기와문화관 세계국가유산산업전 부스 기획 및 설치', detail: '충청남도 부여군 사적관리소 위탁. 세계국가유산산업전(경주) 부여 백제기와 홍보 부스.' },
-  { category: 'EXHIBITION', date: '2021.10.', title: '공예주간 조각수집', detail: '2021 공예주간. 대장장이 체험, 목공예·도자·보태니컬아트 전시, 살구에이드.' },
-  { category: 'SOUNDSCAPE', date: '2024.11.10.', title: '사운드 오케스트라 in 부여', detail: '신동엽문학관 → 임천면 성흥산 → 대조사. 모듈러신스로 참여자와 소리 만들기. 관광두레 파일럿 프로그램.' },
-  { category: 'SOUNDSCAPE', date: '2021-2023', title: '도시기록프로젝트 소리탐사조', detail: '서울 기반 도시 사운드 리서치' },
-  { category: 'COLLABORATION', date: '2025.08-11.', title: '비단가람온길 레저코스 탄소중립 여행 활성화', detail: '서부내륙권 관광진흥사업. 백제역사문화연구원 위탁. 금강 인접 지자체 자전거여행+탄소중립 체험.' },
-  { category: 'COLLABORATION', date: '2025.09.20.', title: '비단가람 무브먼트 에코-플로깅', detail: '큐클리프(CUECLYP) × 인디언모터사이클 × 생산소 협업 — 백마강, 부여. 무소음 DJing. 비단가람온길 탄소중립 사업의 일환.' },
-  { category: 'COLLABORATION', date: '2022.05.', title: '예방구 오픈 기념 뿡뿡파티', detail: '예방구(예술방앗간구룡) 오픈 기념 DJ파티. 생산소 × 예방구 협업.' },
-  { category: 'RESIDENCY', date: '2021', title: '민간레지던시 프로젝트', detail: '히스테리안(강정아) 기획 — 대안적 거주와 공간 리서치' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2025.03.01.', title: '2025 삼일절 임천면', detail: '임천면 만세장터·임천보부상·장놀이패·부여웅비태권도·부여군여성농민회. 토종씨앗·연대·농민의 삶.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2025.01.', title: '이야기 자리와 기록', detail: '꿈다락 문화예술학교 워크숍 \'나를 흔드는 ○○○이 있는가?\' 기록집 발간. 아르떼 라이브러리 수록.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2024.12.', title: '부여청년-마스터 크리스마스', detail: '부여 5년 커뮤니티 모임. 솥뚜껑삼겹살 저녁, 시낭송, 디제잉 파티, 키네틱공연. #지원사업아님' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2024.08.', title: '어반아트 네비게이터 — 하자센터', detail: '소리+움직임 워크숍. AI 시대 사람과 공간을 소리·움직임으로 해석. 어린이 대상.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2024.08.', title: '도시 읽기: 고흥', detail: '지역 기획자 초대로 고흥군 방문. 예술로 어울리기.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2024.', title: '꿈다락 문화예술학교 워크숍', detail: '\'나를 흔드는 ○○○이 있는가?\' — 아르떼 라이브러리 기록집 발간' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2023.', title: '안녕소리 자율이동', detail: '하자센터. 소리 기반 자율이동 워크숍.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2023.', title: '퍼레이드 빵빵', detail: '관광두레 프로그램.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2023.09.', title: '공간(공항) 기반 수요 맞춤형 문화예술교육 프로그램 개발', detail: '한국문화예술교육진흥원 위탁. 공간 기반 문화예술교육 콘텐츠 기획·개발.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2023.06.16.', title: '《블록파티》 전시공간 토크', detail: '아마도예술공간, 서울 — "축구와, 배드민턴과, (대안)예술은"' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2023.04.21-23.', title: '부여세도유채꽃방울토마토축제 프로그램 운영', detail: '충청남도 부여군 세도면 위탁. 15ha 금강 하천부지 유채꽃밭. 코로나 이후 첫 재개최.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2023.', title: '문화가있는날 금강워킹', detail: '서울, 부여, 강경, 서천 — 지역문화진흥원' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2022.05.', title: 'DJ입문 클래스 — 플러그인 생산소', detail: '20대부터 60대 함께하는 DJ입문과정. 관광두레.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2022.05.29.', title: '부여객사 로그온: 나는 너를 방울방울해', detail: '2022 공예주간. 방울토마토 영감 공연, 금속/한지공예 전시, 사운드 VR 체험.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2022.05.', title: '일상색채수집보관함', detail: '세계문화예술교육주간 프로그램.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2022.05.', title: '정답은 없다', detail: '생활문화공동체지원사업.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2022.05.', title: '우당탕탕운동회', detail: '세도꿈꾸는마을학교.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2022.04.', title: 'Cafeteria Brisa 계절다방', detail: '이동형 가판 프로젝트. 마을 순회 커피·문화 가판대.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2022.02.14.', title: '계절상품시리즈: 비밀결사대', detail: '정월대보름 세시풍속 재해석. 쥐불놀이·연 날리기. 몽사모 × 평통사.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2022.01.29.', title: '호랑이배 연 날리기 대회', detail: '설날 정월 행사. 전통 연 날리기.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2021.12.', title: '계절상품시리즈: 미리 만나는 크리스마스', detail: '연말 커뮤니티 축제.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2021.11.', title: '충남문화재단 × 버밀라 아카데미 — 날아오르다', detail: '생산소 × 버밀라 아카데미 협업.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2021.10.', title: '핼러윈 호박줄기 축제', detail: '생산소 핼러윈 파티.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2021.09.', title: '부여아트페어: 지금의 생활도구', detail: '생산소품 브랜드 런칭. 호미 디자인, 낭만히힛 조각수집전.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2021.09.', title: '옥수수파티', detail: '홍우주사회적협동조합 × 생산소. 부여아트페어 연계.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2021.08.', title: '웨하스영화제', detail: '고란독서회 연계. 프리다(Frida) 상영.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2021.08.', title: '이몽학 위령제', detail: '구룡면. 술 담그고 위령제 진행.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2021.08.', title: '술-술-술 酒-術-述', detail: '술빚기 프로그램. 지역 술 문화 체험.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2021.03-09.', title: '쓸데없는 대장간', detail: '1974년 생산소 공간을 대장간으로. 충남문화재단.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2021.02.', title: '사운드키박스 프로젝트', detail: '동네 탐험 기록, 가사/멜로디 음악 제작.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2021.', title: '만날 사람은 만난다', detail: '비대면 장애인 문화예술교육 콘텐츠 개발. 아르떼. 발달장애 특화 <일상색채수집보관함>.' },
-  { category: 'WORKSHOP & COMMUNITY', date: '2020.', title: '이어달리기의 시작점', detail: '문화예술교육 인력양성 연수사업. 제주문화예술재단.' },
-];
-
-const FALLBACK_NEWS: any[] = [
-  { date: '2025.08', title: '부여군, 비단가람온길 레저코스 사업 운영…11월까지', source: '에이티엔뉴스', category: 'press', url: 'https://www.atnnews.co.kr/news/articleView.html?idxno=90320' },
-  { date: '2025.08', title: '부여군 비단가람온길 레저코스 사업 11월까지 운영', source: '굿모닝충청', category: 'press', url: 'https://www.goodmorningcc.com/news/articleView.html?idxno=406473' },
-  { date: '2025.09.20', title: '비단가람 무브먼트 에코-플로깅 — 큐클리프 × 생산소 협업, 백마강 부여', source: '큐클리프', category: 'press', url: 'https://www.cueclyp.com/collaboration' },
-  { date: '2024.11.10', title: '사운드 오케스트라 in 부여 — 신동엽문학관·대조사. 관광두레 생산소 파일럿', source: '관광두레', category: 'press' },
-  { date: '2024.09.06-22', title: '고도 주민의 삶과 기억전 — 2024 고도주민활동지원사업, 백제역사문화연구원 × 생산소 기획', source: '백제역사문화연구원', category: 'press' },
-  { date: '2023.09', title: '공간(공항) 기반 수요 맞춤형 문화예술교육 프로그램 개발', source: '한국문화예술교육진흥원', category: 'press' },
-  { date: '2023.07', title: '백제기와문화관 세계국가유산산업전 부스 기획 및 설치', source: '세계국가유산산업전', category: 'press', url: 'https://heritage-korea.com/' },
-  { date: '2023.06', title: '《블록파티》 전시공간 토크 — 대안예술공간 운영자 대담', source: '아마도예술공간', category: 'press' },
-  { date: '2023.04', title: '2023 부여세도 방울토마토&유채꽃 축제 프로그램 운영', source: '데일리투데이', category: 'press', url: 'http://www.dtoday.co.kr/news/articleView.html?idxno=593416' },
-  { date: '2023', title: '금강아카이브: 멀고도 가까운 — 지역 문화 기록 프로젝트', source: '지역문화진흥원', category: 'press' },
-  { date: '2023', title: '문화가있는날 금강워킹 — 서울, 부여, 강경, 서천', source: '지역문화진흥원', category: 'press' },
-  { date: '2022.05', title: '즐거움이 방울방울 피어나는 부여객사로 — 부여객사 로그온, 공예주간', source: '충남일보', category: 'press', url: 'https://www.ccdn.co.kr/news/articleView.html?idxno=761279' },
-  { date: '2021', title: '만날 사람은 만난다 — 비대면 장애인 문화예술교육 콘텐츠 개발', source: '아르떼 라이브러리', category: 'press', url: 'https://lib.arte.or.kr/educationdata/board/ArchiveData_BoardView.do?board_id=BRD_ID0056902' },
-  { date: '2021', title: '히스테리안 — 민간레지던시 프로젝트 리서치', source: '히스테리안', category: 'press' },
-  { date: '2026.02', title: '생산소 홈페이지 오픈', source: '생산소', category: 'notice' },
-  { date: '2025.08', title: '비단가람온길 레저코스 탄소중립 여행 활성화 사업 시작', source: '생산소', category: 'notice' },
-  { date: '2025.09', title: '비단가람 무브먼트 에코-플로깅 진행', source: '생산소', category: 'notice' },
-  { date: '2024.11', title: '사운드 오케스트라 부여 프로그램 운영', source: '생산소', category: 'notice' },
-  { date: '2024.09', title: '고도 주민의 삶과 기억전 개최', source: '생산소', category: 'notice' },
-  { date: '2024', title: '생산소 부여 공간 운영 안내', source: '생산소', category: 'notice' },
-  { date: '2023.09', title: '공간 기반 문화예술교육 프로그램 개발 (한국문화예술교육진흥원)', source: '생산소', category: 'notice' },
-  { date: '2023.07', title: '세계국가유산산업전 백제기와문화관 부스 기획·설치', source: '생산소', category: 'notice' },
-  { date: '2023.04', title: '부여세도 방울토마토&유채꽃 축제 프로그램 운영', source: '생산소', category: 'notice' },
-];
-
-const FALLBACK_ARCHIVES = [
-  { title: '비단가람온길 탄소중립 여행', year: '2025', bg: 'linear-gradient(135deg, #1a2a1f, #2a3a2a)' },
-  { title: '비단가람 무브먼트', year: '2025', bg: 'linear-gradient(135deg, #0d2a1a, #1a3a2a)' },
-  { title: '고도 주민의 삶과 기억', year: '2024', bg: 'linear-gradient(135deg, #1A1A14, #2A2A1E)' },
-  { title: '사운드 오케스트라 in 부여', year: '2024', bg: 'linear-gradient(135deg, #1a1a2e, #0d1f2f)' },
-  { title: '금강아카이브', year: '2023', bg: 'linear-gradient(135deg, #1A1A14, #1A1A14)' },
-  { title: '공간 기반 문화예술교육', year: '2023', bg: 'linear-gradient(135deg, #1A1A14, #2A2A1E)' },
-  { title: '세계국가유산산업전 백제기와 부스', year: '2023', bg: 'linear-gradient(135deg, #2a1a20, #3a2a30)' },
-  { title: '부여세도 방울토마토&유채꽃 축제', year: '2023', bg: 'linear-gradient(135deg, #1a2a1a, #2a3a20)' },
-  { title: '블록파티 전시공간 토크', year: '2023', bg: 'linear-gradient(135deg, #2a1a1a, #3a2a1a)' },
-  { title: '민간레지던시 히스테리안', year: '2021', bg: 'linear-gradient(135deg, #1a1a2e, #2e1a2e)' },
-];
-
-// ─── 슬라이드 fallback 데이터 ───
-const FALLBACK_SLIDES = [
-  { _id: 'f0', bg: 'linear-gradient(135deg, #1A1A14 0%, #2A2A1E 50%, #1A1A14 100%)', caption: '생산소 — 부여 기반 대안예술공간', image: '' },
-  { _id: 'f1', bg: 'linear-gradient(135deg, #1A1A14 0%, #2A2A1E 50%, #1A1A14 100%)', caption: '유기적공명: 에디아포닉 Organic Resonance: Ediaphonic', image: '' },
-  { _id: 'f2', bg: 'linear-gradient(135deg, #1A1A14 0%, #2A2A1E 50%, #1A1A14 100%)', caption: '위성악보 시리즈 — Satellite Score Series', image: '' },
-  { _id: 'f3', bg: 'linear-gradient(135deg, #1A1A14 0%, #1A1A14 50%, #1A1A14 100%)', caption: '리커넥트: 낙원식당 Reconnect: Nakwon Restaurant', image: '' },
-  { _id: 'f4', bg: 'linear-gradient(135deg, #1A1A14 0%, #2A2A1E 50%, #1A1A14 100%)', caption: '금강아카이브: 멀고도 가까운', image: '' },
-];
 
 // ─── 이미지 압축 (canvas, max 2560px, JPEG 90%) ───
 const compressImage = (file: File, maxWidth = 2560, quality = 0.9): Promise<string> =>
