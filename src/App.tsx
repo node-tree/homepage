@@ -15,6 +15,7 @@ import CV from './components/CV';
 import About from './components/About';
 import Guestbook from './components/Guestbook';
 import Work from './components/Work';
+import TeamEvent from './components/TeamEvent';
 import { playHoverSound, playClickSound, playNavSound, initAudioContext } from './utils/sound';
 import { prefetchAPI } from './services/api';
 
@@ -382,6 +383,7 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/guestbook" element={<Guestbook />} />
+            <Route path="/team-event" element={<TeamEvent />} />
             <Route path="/synth" element={
               <div style={{
                 minHeight: '100vh',

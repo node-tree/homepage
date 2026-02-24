@@ -137,6 +137,7 @@ const contactRoutes = require('./routes/contact');
 const homeRoutes = require('./routes/home');
 const guestbookRoutes = require('./routes/guestbook');
 const saengsansoRoutes = require('./routes/saengsanso');
+const teamEventRoutes = require('./routes/teamEvent');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/work', workRoutes);
@@ -148,6 +149,7 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/home', homeRoutes);
 app.use('/api/guestbook', guestbookRoutes);
 app.use('/api/saengsanso', saengsansoRoutes);
+app.use('/api/team-event', teamEventRoutes);
 
 // 기본 라우트
 app.get('/', (req, res) => {
