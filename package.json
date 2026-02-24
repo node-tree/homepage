@@ -28,6 +28,7 @@
   "scripts": {
     "start": "concurrently \"npm run server\" \"npm run frontend\"",
     "frontend": "react-scripts start",
+    "prebuild": "node scripts/generate-fallback.js",
     "build": "CI=false react-scripts build",
     "server": "cd backend && npm run start-with-env",
     "dev": "concurrently \"npm run server\" \"npm run frontend\"",
