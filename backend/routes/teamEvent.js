@@ -1,0 +1,197 @@
+const express = require('express');
+const router = express.Router();
+const TeamEvent = require('../models/TeamEvent');
+const auth = require('../middleware/auth');
+
+const TEAM_COLORS = [
+  { name: 'RED',    hex: '#E53935' },
+  { name: 'BLUE',   hex: '#1E88E5' },
+  { name: 'GREEN',  hex: '#43A047' },
+  { name: 'YELLOW', hex: '#FDD835' },
+  { name: 'PURPLE', hex: '#8E24AA' },
+  { name: 'ORANGE', hex: '#FB8C00' },
+  { name: 'PINK',   hex: '#D81B60' },
+  { name: 'CYAN',   hex: '#00ACC1' }
+];
+
+const TOTAL_PEOPLE = 130;
+const TEAM_COUNT = 8;
+
+// GET /api/team-event/color/:visitorId - 방문자의 팀 색상 조회/배정
+router.get('/color/:visitorId', async (req, res) => {
+  try {
+    const { visitorId } = req.params;
+
+    // 현재 세션 ID 조회
+    const latestSession = await TeamEvent.findOne().sort({ createdAt: -1 });
+    const currentSessionId = latestSession ? latestSession.sessionId : null;
+
+    if (!currentSessionId) {
+      return res.json({ success: true, assigned: false, message: '아직 이벤트가 시작되지 않았습니다.' });
+    }
+
+    // 이미 배정된 색상이 있는지 확인
+    const existing = await TeamEvent.findOne({ visitorId, sessionId: currentSessionId });
+    if (existing) {
+      return res.json({
+        success: true,
+        assigned: true,
+        teamIndex: existing.teamIndex,
+        color: TEAM_COLORS[existing.teamIndex]
+      });
+    }
+
+    // 새로 배정: 가장 인원이 적은 팀에 배정
+    const counts = await TeamEvent.aggregate([
+      { $match: { sessionId: currentSessionId } },
+      { $group: { _id: '$teamIndex', count: { $sum: 1 } } }
+    ]);
+
+    // 팀별 카운트 맵 생성
+    const countMap = new Map();
+    counts.forEach(c => countMap.set(c._id, c.count));
+
+    // 가장 인원이 적은 팀 찾기 (동일하면 랜덤)
+    let minCount = Infinity;
+    const candidates = [];
+    for (let i = 0; i < TEAM_COUNT; i++) {
+      const c = countMap.get(i) || 0;
+      if (c < minCount) {
+        minCount = c;
+        candidates.length = 0;
+        candidates.push(i);
+      } else if (c === minCount) {
+        candidates.push(i);
+      }
+    }
+
+    const teamIndex = candidates[Math.floor(Math.random() * candidates.length)];
+
+    const assignment = new TeamEvent({
+      visitorId,
+      teamIndex,
+      sessionId: currentSessionId
+    });
+    await assignment.save();
+
+    res.json({
+      success: true,
+      assigned: true,
+      teamIndex,
+      color: TEAM_COLORS[teamIndex]
+    });
+  } catch (error) {
+    console.error('팀 배정 오류:', error);
+    res.status(500).json({ success: false, message: '팀 배정 중 오류가 발생했습니다.' });
+  }
+});
+
+// POST /api/team-event/reset - 리셋 (관리자 전용)
+router.post('/reset', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: '관리자만 리셋할 수 있습니다.' });
+    }
+
+    // 새 세션 ID 생성
+    const newSessionId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+    // 이전 데이터 삭제하지 않고 새 세션으로 전환
+    // (이전 기록 보존)
+
+    res.json({
+      success: true,
+      sessionId: newSessionId,
+      message: '팀 배정이 리셋되었습니다. 새 세션이 시작됩니다.'
+    });
+  } catch (error) {
+    console.error('리셋 오류:', error);
+    res.status(500).json({ success: false, message: '리셋 중 오류가 발생했습니다.' });
+  }
+});
+
+// POST /api/team-event/start - 이벤트 시작 (관리자 전용, 첫 세션 생성)
+router.post('/start', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: '관리자만 시작할 수 있습니다.' });
+    }
+
+    const sessionId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+    // 시작 마커 생성 (visitorId를 __session_marker__로)
+    const marker = new TeamEvent({
+      visitorId: `__session_${sessionId}__`,
+      teamIndex: 0,
+      sessionId
+    });
+    await marker.save();
+
+    res.json({
+      success: true,
+      sessionId,
+      message: '이벤트가 시작되었습니다.'
+    });
+  } catch (error) {
+    console.error('이벤트 시작 오류:', error);
+    res.status(500).json({ success: false, message: '이벤트 시작 중 오류가 발생했습니다.' });
+  }
+});
+
+// GET /api/team-event/stats - 팀별 통계 (관리자 전용)
+router.get('/stats', auth, async (req, res) => {
+  try {
+    const latestSession = await TeamEvent.findOne().sort({ createdAt: -1 });
+    if (!latestSession) {
+      return res.json({ success: true, stats: [], total: 0, sessionId: null });
+    }
+
+    const currentSessionId = latestSession.sessionId;
+
+    const counts = await TeamEvent.aggregate([
+      { $match: { sessionId: currentSessionId, visitorId: { $not: /^__session_/ } } },
+      { $group: { _id: '$teamIndex', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } }
+    ]);
+
+    const stats = TEAM_COLORS.map((color, i) => {
+      const found = counts.find(c => c._id === i);
+      return {
+        teamIndex: i,
+        color,
+        count: found ? found.count : 0
+      };
+    });
+
+    const total = stats.reduce((sum, s) => sum + s.count, 0);
+
+    res.json({
+      success: true,
+      stats,
+      total,
+      sessionId: currentSessionId
+    });
+  } catch (error) {
+    console.error('통계 조회 오류:', error);
+    res.status(500).json({ success: false, message: '통계 조회 중 오류가 발생했습니다.' });
+  }
+});
+
+// GET /api/team-event/session - 현재 세션 정보 (공개)
+router.get('/session', async (req, res) => {
+  try {
+    const latestSession = await TeamEvent.findOne().sort({ createdAt: -1 });
+    if (!latestSession) {
+      return res.json({ success: true, active: false });
+    }
+    res.json({
+      success: true,
+      active: true,
+      sessionId: latestSession.sessionId
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '세션 조회 중 오류가 발생했습니다.' });
+  }
+});
+
+module.exports = router;
