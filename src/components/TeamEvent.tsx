@@ -30,47 +30,30 @@ function getVisitorId(): string {
 
 export default function TeamEvent() {
   const { isAuthenticated, isLoading: authLoading, token, user } = useAuth();
-  const isAdmin = isAuthenticated && user?.role === 'admin';
 
   const [color, setColor] = useState<TeamColor | null>(null);
-  const [loading, setLoading] = useState(true);
   const [sessionActive, setSessionActive] = useState(false);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
   const [stats, setStats] = useState<TeamStat[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [resetting, setResetting] = useState(false);
   const [showStats, setShowStats] = useState(false);
 
-  // 저장된 세션과 색상 확인 (새로고침 대응)
-  const getSavedAssignment = useCallback(() => {
-    const saved = localStorage.getItem('team_event_assignment');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  }, []);
-
-  const saveAssignment = (sessionId: string, teamColor: TeamColor) => {
-    localStorage.setItem('team_event_assignment', JSON.stringify({ sessionId, color: teamColor }));
-  };
-
-  // 세션 상태만 확인 (로그인 사용자용)
+  // 세션 상태 확인
   const checkSession = useCallback(async () => {
     try {
-      const sessionRes = await fetch(`${API_BASE_URL}/team-event/session`);
-      const sessionData = await sessionRes.json();
-      setSessionActive(sessionData.success && sessionData.active);
+      const res = await fetch(`${API_BASE_URL}/team-event/session`);
+      const data = await res.json();
+      setSessionActive(data.success && data.active);
     } catch (err) {
       console.error('세션 확인 오류:', err);
+      setSessionActive(false);
     } finally {
-      setLoading(false);
+      setSessionLoaded(true);
     }
   }, []);
 
-  // 색상 조회/배정 (비로그인 방문자 전용)
+  // 비로그인 방문자: 색상 배정
   const fetchColor = useCallback(async () => {
     try {
       const visitorId = getVisitorId();
@@ -80,37 +63,40 @@ export default function TeamEvent() {
 
       if (!sessionData.success || !sessionData.active) {
         setSessionActive(false);
-        setColor(null);
-        setLoading(false);
+        setSessionLoaded(true);
         return;
       }
 
       setSessionActive(true);
 
-      // 로컬에 저장된 배정이 현재 세션과 같은지 확인
-      const saved = getSavedAssignment();
-      if (saved && saved.sessionId === sessionData.sessionId && saved.color) {
-        setColor(saved.color);
-        setLoading(false);
-        return;
+      // 로컬 캐시 확인
+      const saved = localStorage.getItem('team_event_assignment');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.sessionId === sessionData.sessionId && parsed.color) {
+            setColor(parsed.color);
+            setSessionLoaded(true);
+            return;
+          }
+        } catch {}
       }
 
-      // 서버에서 색상 조회/배정
+      // 서버에서 색상 배정
       const colorRes = await fetch(`${API_BASE_URL}/team-event/color/${visitorId}`);
       const colorData = await colorRes.json();
 
       if (colorData.success && colorData.assigned) {
         setColor(colorData.color);
-        saveAssignment(sessionData.sessionId, colorData.color);
-      } else {
-        setColor(null);
+        localStorage.setItem('team_event_assignment',
+          JSON.stringify({ sessionId: sessionData.sessionId, color: colorData.color }));
       }
     } catch (err) {
       console.error('팀 색상 조회 오류:', err);
     } finally {
-      setLoading(false);
+      setSessionLoaded(true);
     }
-  }, [getSavedAssignment]);
+  }, []);
 
   // 통계 조회
   const fetchStats = useCallback(async () => {
@@ -129,10 +115,10 @@ export default function TeamEvent() {
     }
   }, [token]);
 
-  // 리셋 (새 세션 시작)
-  const handleReset = async () => {
+  // 이벤트 시작/리셋
+  const handleStartOrReset = async () => {
     if (!token || resetting) return;
-    if (!window.confirm('정말 리셋하시겠습니까? 모든 팀 배정이 초기화됩니다.')) return;
+    if (sessionActive && !window.confirm('정말 리셋하시겠습니까? 모든 팀 배정이 초기화됩니다.')) return;
 
     setResetting(true);
     try {
@@ -150,7 +136,6 @@ export default function TeamEvent() {
         setStats([]);
         setTotalCount(0);
         setSessionActive(true);
-        if (isAdmin) await fetchStats();
       }
     } catch (err) {
       console.error('리셋 오류:', err);
@@ -164,57 +149,46 @@ export default function TeamEvent() {
     if (authLoading) return;
 
     if (isAuthenticated) {
-      // 로그인 사용자: 세션 상태만 확인, 팀 배정 안 함
       checkSession();
     } else {
-      // 비로그인 방문자: 팀 색상 배정
       fetchColor();
     }
   }, [authLoading, isAuthenticated, checkSession, fetchColor]);
 
   // 관리자 통계 자동 갱신
   useEffect(() => {
-    if (isAdmin && showStats) {
+    if (isAuthenticated && showStats) {
       fetchStats();
       const interval = setInterval(fetchStats, 5000);
       return () => clearInterval(interval);
     }
-  }, [isAdmin, showStats, fetchStats]);
+  }, [isAuthenticated, showStats, fetchStats]);
 
-  // auth 로딩 중이거나 데이터 로딩 중
-  if (authLoading || loading) {
+  // ─── auth 로딩 중 ───
+  if (authLoading) {
     return (
-      <div style={{
-        position: 'fixed', inset: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: '#111', color: '#fff',
-        fontSize: '1.2rem', fontFamily: 'monospace'
-      }}>
-        Loading...
+      <div style={fullScreenStyle}>
+        <span style={{ color: '#fff', fontFamily: 'monospace', fontSize: '1.2rem' }}>Loading...</span>
       </div>
     );
   }
 
-  // ─── 관리자 화면 ───
-  if (isAdmin) {
+  // ─── 로그인 사용자 (관리자) 화면 ───
+  if (isAuthenticated) {
     return (
-      <div style={{
-        position: 'fixed', inset: 0,
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        background: '#111', color: '#fff',
-        fontFamily: 'monospace', gap: '24px'
-      }}>
-        <div style={{ fontSize: '2rem', fontWeight: 900, opacity: 0.8 }}>TEAM EVENT</div>
-        <div style={{ fontSize: '1rem', opacity: 0.5 }}>
-          {sessionActive ? '이벤트 진행 중' : '이벤트 대기 중'}
+      <div style={{ ...fullScreenStyle, gap: '24px', flexDirection: 'column' }}>
+        <div style={{ fontSize: '2rem', fontWeight: 900, color: '#fff', opacity: 0.8, fontFamily: 'monospace' }}>
+          TEAM EVENT
+        </div>
+        <div style={{ fontSize: '1rem', color: '#fff', opacity: 0.5, fontFamily: 'monospace' }}>
+          {!sessionLoaded ? '확인 중...' : sessionActive ? '이벤트 진행 중' : '이벤트 대기 중'}
         </div>
 
         {/* 버튼 영역 */}
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
           <button
-            onClick={handleReset}
-            disabled={resetting}
+            onClick={handleStartOrReset}
+            disabled={resetting || !sessionLoaded}
             style={{
               padding: '16px 48px',
               fontSize: '1.1rem',
@@ -222,10 +196,10 @@ export default function TeamEvent() {
               color: sessionActive ? '#fff' : '#111',
               border: 'none',
               borderRadius: '8px',
-              cursor: resetting ? 'not-allowed' : 'pointer',
+              cursor: (resetting || !sessionLoaded) ? 'not-allowed' : 'pointer',
               fontFamily: 'monospace',
               fontWeight: 'bold',
-              opacity: resetting ? 0.5 : 1
+              opacity: (resetting || !sessionLoaded) ? 0.5 : 1
             }}
           >
             {resetting ? 'RESETTING...' : sessionActive ? 'RESET' : 'START EVENT'}
@@ -285,39 +259,46 @@ export default function TeamEvent() {
             </div>
           </div>
         )}
+
+        {/* 디버그: 현재 유저 정보 */}
+        <div style={{
+          position: 'fixed', bottom: 8, right: 8,
+          color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace', fontSize: '0.7rem'
+        }}>
+          {user?.username} ({user?.role})
+        </div>
       </div>
     );
   }
 
-  // ─── 비로그인 방문자: 이벤트 미시작 ───
+  // ─── 비로그인: 로딩 중 ───
+  if (!sessionLoaded) {
+    return (
+      <div style={fullScreenStyle}>
+        <span style={{ color: '#fff', fontFamily: 'monospace', fontSize: '1.2rem' }}>Loading...</span>
+      </div>
+    );
+  }
+
+  // ─── 비로그인: 이벤트 미시작 ───
   if (!sessionActive) {
     return (
-      <div style={{
-        position: 'fixed', inset: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: '#111', color: '#666',
-        fontSize: '1.2rem', fontFamily: 'monospace'
-      }}>
-        이벤트 준비 중
+      <div style={fullScreenStyle}>
+        <span style={{ color: '#666', fontFamily: 'monospace', fontSize: '1.2rem' }}>이벤트 준비 중</span>
       </div>
     );
   }
 
-  // ─── 비로그인 방문자: 전체화면 색상 ───
+  // ─── 비로그인: 전체화면 색상 ───
   const bgColor = color?.hex || '#111';
   const isLightColor = color?.name === 'YELLOW' || color?.name === 'CYAN';
   const textColor = isLightColor ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.9)';
 
   return (
     <div style={{
-      position: 'fixed', inset: 0,
+      ...fullScreenStyle,
       background: bgColor,
-      transition: 'background 0.6s ease',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      overflow: 'hidden'
+      transition: 'background 0.6s ease'
     }}>
       <div style={{
         fontSize: 'clamp(3rem, 15vw, 10rem)',
@@ -334,3 +315,13 @@ export default function TeamEvent() {
     </div>
   );
 }
+
+const fullScreenStyle: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  background: '#111',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  overflow: 'hidden'
+};
