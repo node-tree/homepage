@@ -100,11 +100,8 @@ export default function TeamEvent() {
 
   // 통계 조회
   const fetchStats = useCallback(async () => {
-    if (!token) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/team-event/stats`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await fetch(`${API_BASE_URL}/team-event/stats`);
       const data = await res.json();
       if (data.success) {
         setStats(data.stats);
@@ -113,21 +110,18 @@ export default function TeamEvent() {
     } catch (err) {
       console.error('통계 조회 오류:', err);
     }
-  }, [token]);
+  }, []);
 
   // 이벤트 시작/리셋
   const handleStartOrReset = async () => {
-    if (!token || resetting) return;
+    if (resetting) return;
     if (sessionActive && !window.confirm('정말 리셋하시겠습니까? 모든 팀 배정이 초기화됩니다.')) return;
 
     setResetting(true);
     try {
       const res = await fetch(`${API_BASE_URL}/team-event/start`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        }
+        headers: { 'Content-Type': 'application/json' }
       });
       const data = await res.json();
       if (data.success) {
