@@ -15,6 +15,20 @@
   ],
   "routes": [
     {
+      "src": "/api/saengsanso/all",
+      "dest": "/backend/server.js",
+      "headers": {
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600"
+      }
+    },
+    {
+      "src": "/api/saengsanso/(exhibitions|projects|news|archive|slides|about-page|members)",
+      "dest": "/backend/server.js",
+      "headers": {
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600"
+      }
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/backend/server.js"
     },

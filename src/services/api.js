@@ -24,14 +24,14 @@ const cacheUtils = {
   // 캐시에서 데이터 가져오기
   get: (key) => {
     try {
-      const cached = sessionStorage.getItem(key);
+      const cached = localStorage.getItem(key);
       if (!cached) return null;
 
       const { data, timestamp } = JSON.parse(cached);
       const isExpired = Date.now() - timestamp > CACHE_DURATION;
 
       if (isExpired) {
-        sessionStorage.removeItem(key);
+        localStorage.removeItem(key);
         return null;
       }
 
@@ -44,7 +44,7 @@ const cacheUtils = {
   // [SWR 패턴] stale 데이터도 반환 (만료되었지만 30분 이내)
   getWithStale: (key) => {
     try {
-      const cached = sessionStorage.getItem(key);
+      const cached = localStorage.getItem(key);
       if (!cached) return { data: null, isStale: false };
 
       const { data, timestamp } = JSON.parse(cached);
@@ -53,7 +53,7 @@ const cacheUtils = {
       const isTooOld = age > STALE_DURATION;
 
       if (isTooOld) {
-        sessionStorage.removeItem(key);
+        localStorage.removeItem(key);
         return { data: null, isStale: false };
       }
 
@@ -66,15 +66,15 @@ const cacheUtils = {
   // 캐시에 데이터 저장
   set: (key, data) => {
     try {
-      sessionStorage.setItem(key, JSON.stringify({
+      localStorage.setItem(key, JSON.stringify({
         data,
         timestamp: Date.now()
       }));
     } catch (e) {
-      // sessionStorage 용량 초과 시 기존 캐시 정리
+      // localStorage 용량 초과 시 기존 캐시 정리
       try {
-        sessionStorage.clear();
-        sessionStorage.setItem(key, JSON.stringify({
+        localStorage.clear();
+        localStorage.setItem(key, JSON.stringify({
           data,
           timestamp: Date.now()
         }));
@@ -87,7 +87,7 @@ const cacheUtils = {
   // 특정 캐시 삭제
   remove: (key) => {
     try {
-      sessionStorage.removeItem(key);
+      localStorage.removeItem(key);
     } catch (e) {
       // ignore
     }
@@ -96,10 +96,10 @@ const cacheUtils = {
   // 특정 prefix로 시작하는 캐시 모두 삭제
   clearByPrefix: (prefix) => {
     try {
-      const keys = Object.keys(sessionStorage);
+      const keys = Object.keys(localStorage);
       keys.forEach(key => {
         if (key.startsWith(prefix)) {
-          sessionStorage.removeItem(key);
+          localStorage.removeItem(key);
         }
       });
     } catch (e) {

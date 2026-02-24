@@ -12,33 +12,11 @@ const {
   SaengsansoMembers,
 } = require('../models/Saengsanso');
 
-// DB 연결 확인 (work.js 패턴 복제)
+// DB 연결 확인 — 별도 모듈에서 캐싱된 연결 재사용
+const connectDB = require('../db');
 const ensureDBConnection = async () => {
   if (mongoose.connection.readyState === 1) return true;
-
-  if (mongoose.connection.readyState === 2) {
-    await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('MongoDB 연결 대기 타임아웃')), 10000);
-      mongoose.connection.once('connected', () => { clearTimeout(timeout); resolve(); });
-      mongoose.connection.once('error', (err) => { clearTimeout(timeout); reject(err); });
-    });
-    return true;
-  }
-
-  if (mongoose.connection.readyState === 0) {
-    if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI 환경변수가 설정되지 않았습니다.');
-    const options = {
-      serverSelectionTimeoutMS: 5000, connectTimeoutMS: 5000, socketTimeoutMS: 0,
-      maxPoolSize: 5, minPoolSize: 0, maxIdleTimeMS: 10000,
-      bufferCommands: false, family: 4, heartbeatFrequencyMS: 30000,
-    };
-    let mongoUri = process.env.MONGODB_URI;
-    if (!mongoUri.includes('retryWrites')) {
-      const sep = mongoUri.includes('?') ? '&' : '?';
-      mongoUri += `${sep}retryWrites=true&w=majority`;
-    }
-    await mongoose.connect(mongoUri, options);
-  }
+  await connectDB();
   return true;
 };
 
@@ -65,12 +43,12 @@ router.get('/all', async (req, res) => {
     await ensureDBConnection();
 
     const [exhibitions, projects, news, archive, slides, aboutDoc] = await Promise.all([
-      SaengsansoExhibition.find().sort(SORT_FIELDS.exhibitions),
-      SaengsansoProject.find().sort(SORT_FIELDS.projects),
-      SaengsansoNews.find().sort(SORT_FIELDS.news),
-      SaengsansoArchive.find().sort(SORT_FIELDS.archive),
-      SaengsansoSlide.find().sort(SORT_FIELDS.slides),
-      SaengsansoAbout.findOne({ isActive: true }),
+      SaengsansoExhibition.find().sort(SORT_FIELDS.exhibitions).lean(),
+      SaengsansoProject.find().sort(SORT_FIELDS.projects).lean(),
+      SaengsansoNews.find().sort(SORT_FIELDS.news).lean(),
+      SaengsansoArchive.find().sort(SORT_FIELDS.archive).lean(),
+      SaengsansoSlide.find().sort(SORT_FIELDS.slides).lean(),
+      SaengsansoAbout.findOne({ isActive: true }).lean(),
     ]);
 
     res.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
@@ -96,7 +74,7 @@ Object.entries(MODELS).forEach(([type, Model]) => {
     try {
       await ensureDBConnection();
       res.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
-      const items = await Model.find().sort(SORT_FIELDS[type]);
+      const items = await Model.find().sort(SORT_FIELDS[type]).lean();
       res.json({ success: true, data: items });
     } catch (error) {
       console.error(`SSO ${type} 조회 오류:`, error);
