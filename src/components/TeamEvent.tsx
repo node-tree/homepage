@@ -237,32 +237,33 @@ export default function TeamEvent() {
         {/* QR 코드 오버레이 (우하단) */}
         <div style={{
           position: 'absolute',
-          bottom: '16px',
-          right: '16px',
+          bottom: '60px',
+          right: '24px',
           zIndex: 100,
-          background: 'rgba(255,255,255,0.95)',
-          borderRadius: '12px',
-          padding: '12px',
+          background: 'rgba(255,255,255,0.97)',
+          borderRadius: '16px',
+          padding: '20px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '6px',
-          backdropFilter: 'blur(8px)'
+          gap: '10px',
+          backdropFilter: 'blur(8px)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
         }}>
           <QRCodeSVG
             value={EVENT_URL}
-            size={120}
+            size={240}
             level="M"
             bgColor="#ffffff"
             fgColor="#000000"
           />
           <div style={{
             fontFamily: 'monospace',
-            fontSize: '0.6rem',
-            color: '#666',
+            fontSize: '0.75rem',
+            color: '#555',
             textAlign: 'center',
             wordBreak: 'break-all',
-            maxWidth: '120px'
+            maxWidth: '240px'
           }}>
             {EVENT_URL}
           </div>
@@ -335,7 +336,7 @@ export default function TeamEvent() {
           alignItems: 'center',
           justifyContent: 'center',
           gap: '0.5em',
-          padding: '12px 200px 12px 16px',
+          padding: '12px 300px 12px 16px',
           fontFamily: 'monospace',
           color: '#fff',
           zIndex: 50
