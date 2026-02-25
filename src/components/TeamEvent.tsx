@@ -16,6 +16,7 @@ const EVENT_URL =
 
 interface TeamColor {
   name: string;
+  nameKo: string;
   hex: string;
 }
 
@@ -250,7 +251,8 @@ export default function TeamEvent() {
                 color: isLight ? '#000' : '#fff',
                 fontFamily: 'monospace'
               }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 'bold', opacity: 0.8 }}>{s.color.name}</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>{s.color.nameKo}</div>
+                <div style={{ fontSize: '0.6rem', fontWeight: 'bold', opacity: 0.6 }}>{s.color.name}</div>
                 <div style={{ fontSize: '2rem', fontWeight: 900, lineHeight: 1.2 }}>{s.count}</div>
               </div>
             );
@@ -302,16 +304,34 @@ export default function TeamEvent() {
       transition: 'background 0.6s ease'
     }}>
       <div style={{
-        fontSize: 'clamp(3rem, 15vw, 10rem)',
-        fontWeight: 900,
-        color: textColor,
-        fontFamily: 'monospace',
-        letterSpacing: '0.05em',
-        textAlign: 'center',
-        userSelect: 'none',
-        lineHeight: 1
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '0.2em',
+        userSelect: 'none'
       }}>
-        {color?.name || ''}
+        <div style={{
+          fontSize: 'clamp(3rem, 15vw, 10rem)',
+          fontWeight: 900,
+          color: textColor,
+          fontFamily: 'monospace',
+          letterSpacing: '0.05em',
+          textAlign: 'center',
+          lineHeight: 1
+        }}>
+          {color?.nameKo || ''}
+        </div>
+        <div style={{
+          fontSize: 'clamp(1rem, 4vw, 2.5rem)',
+          fontWeight: 600,
+          color: textColor,
+          fontFamily: 'monospace',
+          letterSpacing: '0.1em',
+          textAlign: 'center',
+          opacity: 0.6
+        }}>
+          {color?.name || ''}
+        </div>
       </div>
     </div>
   );

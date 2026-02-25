@@ -31,14 +31,14 @@ const fixIndex = async () => {
 };
 
 const TEAM_COLORS = [
-  { name: 'RED',    hex: '#E53935' },
-  { name: 'BLUE',   hex: '#1E88E5' },
-  { name: 'GREEN',  hex: '#43A047' },
-  { name: 'YELLOW', hex: '#FDD835' },
-  { name: 'PURPLE', hex: '#8E24AA' },
-  { name: 'ORANGE', hex: '#FB8C00' },
-  { name: 'PINK',   hex: '#D81B60' },
-  { name: 'CYAN',   hex: '#00ACC1' }
+  { name: 'RED',    nameKo: '석류빛',    hex: '#E53935' },
+  { name: 'BLUE',   nameKo: '쪽빛',     hex: '#1E88E5' },
+  { name: 'GREEN',  nameKo: '풀빛',     hex: '#43A047' },
+  { name: 'YELLOW', nameKo: '유자빛',    hex: '#FDD835' },
+  { name: 'PURPLE', nameKo: '제비꽃빛',  hex: '#8E24AA' },
+  { name: 'ORANGE', nameKo: '귤빛',     hex: '#FB8C00' },
+  { name: 'PINK',   nameKo: '복숭아빛',  hex: '#D81B60' },
+  { name: 'CYAN',   nameKo: '옥빛',     hex: '#00ACC1' }
 ];
 
 const TEAM_COUNT = 8;
