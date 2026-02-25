@@ -45,6 +45,27 @@ export default function TeamEvent() {
   const [stats, setStats] = useState<TeamStat[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [resetting, setResetting] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.error('풀스크린 전환 실패:', err);
+      });
+    } else {
+      document.exitFullscreen().catch(err => {
+        console.error('풀스크린 해제 실패:', err);
+      });
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   // 세션 상태 확인
   const checkSession = useCallback(async () => {
@@ -164,6 +185,7 @@ export default function TeamEvent() {
   if (authLoading) {
     return (
       <div style={fullScreenStyle}>
+        <FullscreenButton isFullscreen={isFullscreen} onClick={toggleFullscreen} />
         <span style={{ color: '#fff', fontFamily: 'monospace', fontSize: '1.2rem' }}>Loading...</span>
       </div>
     );
@@ -180,6 +202,7 @@ export default function TeamEvent() {
         justifyContent: 'flex-start',
         paddingTop: '40px'
       }}>
+        <FullscreenButton isFullscreen={isFullscreen} onClick={toggleFullscreen} />
         {/* 상단: RESET 버튼 */}
         <div style={{ marginBottom: '24px' }}>
           <button
@@ -278,6 +301,7 @@ export default function TeamEvent() {
   if (!sessionLoaded) {
     return (
       <div style={fullScreenStyle}>
+        <FullscreenButton isFullscreen={isFullscreen} onClick={toggleFullscreen} />
         <span style={{ color: '#fff', fontFamily: 'monospace', fontSize: '1.2rem' }}>Loading...</span>
       </div>
     );
@@ -287,6 +311,7 @@ export default function TeamEvent() {
   if (!sessionActive) {
     return (
       <div style={fullScreenStyle}>
+        <FullscreenButton isFullscreen={isFullscreen} onClick={toggleFullscreen} />
         <span style={{ color: '#666', fontFamily: 'monospace', fontSize: '1.2rem' }}>이벤트 준비 중</span>
       </div>
     );
@@ -303,6 +328,7 @@ export default function TeamEvent() {
       background: bgColor,
       transition: 'background 0.6s ease'
     }}>
+      <FullscreenButton isFullscreen={isFullscreen} onClick={toggleFullscreen} />
       <div style={{
         display: 'flex',
         flexDirection: 'column',
@@ -346,3 +372,35 @@ const fullScreenStyle: React.CSSProperties = {
   justifyContent: 'center',
   overflow: 'hidden'
 };
+
+function FullscreenButton({ isFullscreen, onClick }: { isFullscreen: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      title={isFullscreen ? '창 모드' : '전체 화면'}
+      style={{
+        position: 'fixed',
+        top: '16px',
+        right: '16px',
+        zIndex: 9999,
+        width: '40px',
+        height: '40px',
+        background: 'rgba(255,255,255,0.15)',
+        border: '1px solid rgba(255,255,255,0.3)',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#fff',
+        fontSize: '1.1rem',
+        backdropFilter: 'blur(4px)',
+        transition: 'background 0.2s'
+      }}
+      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.25)')}
+      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
+    >
+      {isFullscreen ? '⊟' : '⊞'}
+    </button>
+  );
+}
