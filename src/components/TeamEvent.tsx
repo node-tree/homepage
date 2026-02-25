@@ -197,101 +197,152 @@ export default function TeamEvent() {
       <div style={{
         ...fullScreenStyle,
         flexDirection: 'column',
-        padding: '24px 16px',
-        overflowY: 'auto',
-        justifyContent: 'flex-start',
-        paddingTop: '40px'
+        padding: 0,
+        overflow: 'hidden',
+        justifyContent: 'stretch'
       }}>
         <FullscreenButton isFullscreen={isFullscreen} onClick={toggleFullscreen} />
-        {/* 상단: RESET 버튼 */}
-        <div style={{ marginBottom: '24px' }}>
+
+        {/* 컨트롤 오버레이 (좌상단) */}
+        <div style={{
+          position: 'absolute',
+          top: '16px',
+          left: '16px',
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
           <button
             onClick={handleStartOrReset}
             disabled={resetting || !sessionLoaded}
             style={{
-              padding: '12px 40px',
-              fontSize: '1rem',
-              background: sessionActive ? '#ff4444' : '#fff',
+              padding: '8px 24px',
+              fontSize: '0.85rem',
+              background: sessionActive ? 'rgba(255,68,68,0.9)' : 'rgba(255,255,255,0.9)',
               color: sessionActive ? '#fff' : '#111',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: '6px',
               cursor: (resetting || !sessionLoaded) ? 'not-allowed' : 'pointer',
               fontFamily: 'monospace',
               fontWeight: 'bold',
-              opacity: (resetting || !sessionLoaded) ? 0.5 : 1
+              opacity: (resetting || !sessionLoaded) ? 0.5 : 1,
+              backdropFilter: 'blur(4px)'
             }}
           >
             {resetting ? 'RESETTING...' : sessionActive ? 'RESET' : 'START EVENT'}
           </button>
         </div>
 
-        {/* QR 코드 */}
+        {/* QR 코드 오버레이 (우하단) */}
         <div style={{
-          background: '#fff',
-          borderRadius: '16px',
-          padding: '24px',
+          position: 'absolute',
+          bottom: '16px',
+          right: '16px',
+          zIndex: 100,
+          background: 'rgba(255,255,255,0.95)',
+          borderRadius: '12px',
+          padding: '12px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '12px',
-          marginBottom: '24px'
+          gap: '6px',
+          backdropFilter: 'blur(8px)'
         }}>
           <QRCodeSVG
             value={EVENT_URL}
-            size={Math.min(280, typeof window !== 'undefined' ? window.innerWidth - 100 : 280)}
+            size={120}
             level="M"
             bgColor="#ffffff"
             fgColor="#000000"
           />
           <div style={{
             fontFamily: 'monospace',
-            fontSize: '0.8rem',
+            fontSize: '0.6rem',
             color: '#666',
             textAlign: 'center',
-            wordBreak: 'break-all'
+            wordBreak: 'break-all',
+            maxWidth: '120px'
           }}>
             {EVENT_URL}
           </div>
         </div>
 
-        {/* 팀별 색상 현황 */}
+        {/* 팀별 색상 현황 — 화면 가득 */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '8px',
+          gridTemplateColumns: `repeat(${stats.length || 4}, 1fr)`,
           width: '100%',
-          maxWidth: '500px',
-          marginBottom: '16px'
+          height: '100%',
+          flex: 1,
+          gap: 0
         }}>
           {stats.map((s) => {
             const isLight = s.color.name === 'YELLOW' || s.color.name === 'CYAN';
+            const textClr = isLight ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.9)';
             return (
               <div key={s.teamIndex} style={{
                 background: s.color.hex,
-                borderRadius: '10px',
-                padding: '12px 6px',
-                textAlign: 'center',
-                color: isLight ? '#000' : '#fff',
-                fontFamily: 'monospace'
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: textClr,
+                fontFamily: 'monospace',
+                gap: '0.2em',
+                padding: '16px'
               }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>{s.color.nameKo}</div>
-                <div style={{ fontSize: '0.6rem', fontWeight: 'bold', opacity: 0.6 }}>{s.color.name}</div>
-                <div style={{ fontSize: '2rem', fontWeight: 900, lineHeight: 1.2 }}>{s.count}</div>
+                {/* 팀 인원 수 */}
+                <div style={{
+                  fontSize: 'clamp(4rem, 12vw, 14rem)',
+                  fontWeight: 900,
+                  lineHeight: 1,
+                  letterSpacing: '-0.02em'
+                }}>
+                  {s.count}
+                </div>
+                {/* 한글 이름 */}
+                <div style={{
+                  fontSize: 'clamp(1.2rem, 3vw, 3.5rem)',
+                  fontWeight: 700,
+                  letterSpacing: '0.05em'
+                }}>
+                  {s.color.nameKo}
+                </div>
+                {/* 영문 이름 */}
+                <div style={{
+                  fontSize: 'clamp(0.7rem, 1.5vw, 1.5rem)',
+                  fontWeight: 500,
+                  opacity: 0.55,
+                  letterSpacing: '0.15em'
+                }}>
+                  {s.color.name}
+                </div>
               </div>
             );
           })}
         </div>
 
-        {/* 총 접속 인원 */}
+        {/* 총 접속 인원 — 하단 바 */}
         <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: 'rgba(0,0,0,0.65)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.5em',
+          padding: '12px 200px 12px 16px',
           fontFamily: 'monospace',
-          textAlign: 'center',
           color: '#fff',
-          marginBottom: '24px'
+          zIndex: 50
         }}>
-          <div style={{ fontSize: '0.9rem', opacity: 0.5, marginBottom: '4px' }}>접속 인원</div>
-          <div style={{ fontSize: '3rem', fontWeight: 900, lineHeight: 1 }}>{totalCount}</div>
-          <div style={{ fontSize: '0.85rem', opacity: 0.4, marginTop: '4px' }}>/ 130</div>
+          <span style={{ fontSize: 'clamp(0.8rem, 1.5vw, 1.1rem)', opacity: 0.55 }}>접속 인원</span>
+          <span style={{ fontSize: 'clamp(2rem, 5vw, 4rem)', fontWeight: 900, lineHeight: 1 }}>{totalCount}</span>
+          <span style={{ fontSize: 'clamp(0.8rem, 1.5vw, 1.1rem)', opacity: 0.4 }}>/ 130</span>
         </div>
       </div>
     );
