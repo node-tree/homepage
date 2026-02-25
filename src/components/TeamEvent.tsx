@@ -343,7 +343,7 @@ export default function TeamEvent() {
         }}>
           <span style={{ fontSize: 'clamp(0.8rem, 1.5vw, 1.1rem)', opacity: 0.55 }}>접속 인원</span>
           <span style={{ fontSize: 'clamp(2rem, 5vw, 4rem)', fontWeight: 900, lineHeight: 1 }}>{totalCount}</span>
-          <span style={{ fontSize: 'clamp(0.8rem, 1.5vw, 1.1rem)', opacity: 0.4 }}>/ 130</span>
+          <span style={{ fontSize: 'clamp(0.8rem, 1.5vw, 1.1rem)', opacity: 0.4 }}>/ 140</span>
         </div>
       </div>
     );
