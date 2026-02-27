@@ -81,6 +81,25 @@ const NEWS = [
   { date: '2021', title: '만날 사람은 만난다 — 비대면 장애인 문화예술교육 콘텐츠 개발', source: '아르떼 라이브러리', category: 'press', url: 'https://lib.arte.or.kr/educationdata/board/ArchiveData_BoardView.do?board_id=BRD_ID0056902', sortOrder: 15.7 },
   { date: '2021', title: '히스테리안 — 민간레지던시 프로젝트 리서치', source: '히스테리안', category: 'press', url: '', sortOrder: 16 },
 
+  // ── press (네이버 검색 추가 2026.02) ──
+  { date: '2025.09.04', title: '공간공감/ 마을과 예술을 잇는 장암면 \'생산소\'', source: '동양일보', category: 'press', url: 'http://www.dynews.co.kr/news/articleView.html?idxno=818979', sortOrder: 10.3 },
+  { date: '2025.08.17', title: '광복 80주년, 부여 청소년과 지역이 함께 빚은 예술의 울림', source: '동양일보', category: 'press', url: 'http://www.dynews.co.kr/news/articleView.html?idxno=816047', sortOrder: 8.5 },
+  { date: '2025.08', title: '부여 비단가람온길 레저코스로 떠나는 특별한 라이딩', source: '로컬투데이', category: 'press', url: 'https://www.localtoday.co.kr/news/articleView.html?idxno=313260', sortOrder: 8.7 },
+  { date: '2025.08', title: '부여군, 비단가람온길 레저코스 사업 시행', source: '중도일보', category: 'press', url: 'https://m.joongdo.co.kr/view.php?key=20241014010003245', sortOrder: 8.8 },
+  { date: '2024.11.11', title: '지역소멸 대응 사례로 충남 부여 생산소 분석 — 한국예술연구소 학술세미나', source: '교수신문', category: 'press', url: 'http://www.kyosu.net/news/articleView.html?idxno=127224', sortOrder: 11.1 },
+  { date: '2023.11.01', title: '부여군, 공예문화 축제 \'123사비공예페스타\' 개최 — 생산소 공방 참여', source: '파이낸스투데이', category: 'press', url: 'http://www.fntoday.co.kr/news/articleView.html?idxno=305416', sortOrder: 12.2 },
+  { date: '2023.07.31', title: '클릭 이사람/ 끊임없이 3의 삶터를 찾아 부여를 들쑤시는 사람들', source: '동양일보', category: 'press', url: 'http://www.dynews.co.kr/news/articleView.html?idxno=714952', sortOrder: 12.75 },
+  { date: '2023.06.22', title: '4개 지역 예술단체가 참여하는 문화행사 \'금강워킹\'', source: '중도일보', category: 'press', url: 'http://www.joongdo.co.kr/web/view.php?key=20230622010006228', sortOrder: 13.1 },
+  { date: '2023.05.30', title: '청소년 위해 부여군, 예술단체와 뭉쳤다 — 금강워킹_미래항해', source: '충청투데이', category: 'press', url: 'https://www.cctoday.co.kr/news/articleView.html?idxno=2178711', sortOrder: 13.2 },
+  { date: '2023.02.13', title: '클릭 이사람/ 지역의 역사·문화자원의 가치를 발굴하는 \'현대 예술가\' 이화영', source: '동양일보', category: 'press', url: 'http://www.dynews.co.kr/news/articleView.html?idxno=692107', sortOrder: 15.05 },
+  { date: '2022.12.19', title: '덜어내고 더해가며 호응하는, 예술-이웃 — 대안예술공간 생산소', source: '아르떼365', category: 'press', url: 'https://arte365.kr/?p=97117', sortOrder: 15.25 },
+  { date: '2022.11.14', title: '부여 생태문화 탐방 \'합류지 프로젝트\' 성료', source: '충청일보', category: 'press', url: 'https://www.ccdailynews.com/news/articleView.html?idxno=2167066', sortOrder: 15.27 },
+  { date: '2022.09.28', title: '부여군 예술가·전문가·주민 모여 미래도시 상상한다', source: '아주경제', category: 'press', url: 'https://www.ajunews.com/view/20220928120034950', sortOrder: 15.29 },
+  { date: '2022.05.19', title: '부여 방울토마토 맛보며 인디 뮤지션 공연 즐겨볼까', source: '금강일보', category: 'press', url: 'http://www.ggilbo.com/news/articleView.html?idxno=913349', sortOrder: 15.31 },
+  { date: '2022.03.03', title: '클릭이사람/ 대안예술공간 \'생산소\' 운영자 김정기', source: '동양일보', category: 'press', url: 'http://www.dynews.co.kr/news/articleView.html?idxno=651885', sortOrder: 15.35 },
+  { date: '2021.12.01', title: '부여 청년들 일 냈다…\'부여안다\' 출판·전시회 — 생산소 갤러리', source: '굿모닝충청', category: 'press', url: 'http://www.goodmorningcc.com/news/articleView.html?idxno=260973', sortOrder: 15.5 },
+  { date: '2021.08.11', title: '충남문화재단, 김영민 작가 개인전 — 예술공간 생산소', source: '대전일보', category: 'press', url: 'https://www.daejonilbo.com/news/articleView.html?idxno=1483669', sortOrder: 15.65 },
+
   // ── notice ──
   { date: '2026.02', title: '생산소 홈페이지 오픈', source: '생산소', category: 'notice', url: '', sortOrder: 20 },
   { date: '2025.08', title: '비단가람온길 레저코스 탄소중립 여행 활성화 사업 시작', source: '생산소', category: 'notice', url: '', sortOrder: 20.5 },
@@ -94,16 +113,24 @@ const NEWS = [
 ];
 
 const ARCHIVES = [
-  { title: '비단가람온길 탄소중립 여행', year: '2025', bg: 'linear-gradient(135deg, #1a2a1f, #2a3a2a)', image: '', sortOrder: 5 },
-  { title: '비단가람 무브먼트', year: '2025', bg: 'linear-gradient(135deg, #0d2a1a, #1a3a2a)', image: '', sortOrder: 8 },
-  { title: '고도 주민의 삶과 기억', year: '2024', bg: 'linear-gradient(135deg, #2a2a1a, #1f1f0d)', image: '', sortOrder: 10 },
-  { title: '사운드 오케스트라 in 부여', year: '2024', bg: 'linear-gradient(135deg, #1a1a2e, #0d1f2f)', image: '', sortOrder: 30 },
-  { title: '금강아카이브: 멀고도 가까운', year: '2023', bg: 'linear-gradient(135deg, #0d2a1f, #1a3a2a)', image: '', sortOrder: 35 },
-  { title: '공간 기반 문화예술교육', year: '2023', bg: 'linear-gradient(135deg, #2a201a, #3a302a)', image: '', sortOrder: 38 },
-  { title: '세계국가유산산업전 백제기와 부스', year: '2023', bg: 'linear-gradient(135deg, #2a1a20, #3a2a30)', image: '', sortOrder: 40 },
-  { title: '부여세도 방울토마토&유채꽃 축제', year: '2023', bg: 'linear-gradient(135deg, #1a2a1a, #2a3a20)', image: '', sortOrder: 42 },
-  { title: '블록파티 전시공간 토크', year: '2023', bg: 'linear-gradient(135deg, #2a1a1a, #3a2a1a)', image: '', sortOrder: 50 },
-  { title: '민간레지던시 히스테리안', year: '2021', bg: 'linear-gradient(135deg, #1a1a2e, #2e1a2e)', image: '', sortOrder: 55 },
+  { title: '', year: '', bg: '', image: '', video: 'https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/talkv_high_4.gif', sortOrder: 1 },
+  { title: '', year: '', bg: '', image: 'https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/IMG_2091.PNG', video: '', sortOrder: 2 },
+  { title: '', year: '', bg: '', image: '', video: 'https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/talkv_output8.gif', sortOrder: 3 },
+  { title: '', year: '', bg: '', image: 'https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/IMG_5605.PNG', video: '', sortOrder: 4 },
+  { title: '', year: '', bg: '', image: 'https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/IMG_9909.PNG', video: '', sortOrder: 5 },
+  { title: '', year: '', bg: '', image: 'https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/IMG_9109.PNG', video: '', sortOrder: 6 },
+  { title: '', year: '', bg: 'linear-gradient(135deg, #2a1a1a, #3a2a1a)', image: '', video: 'https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/talkv_high.gif', sortOrder: 7 },
+  { title: '', year: '', bg: '', image: '', video: 'https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/talkv_output4.gif', sortOrder: 8 },
+  { title: '', year: '', bg: '', image: '', video: 'https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/talkv_output2.gif', sortOrder: 9 },
+  { title: '', year: '', bg: '', image: '', video: 'https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/talkv_output3.gif', sortOrder: 10 },
+  { title: '', year: '', bg: '', image: '', video: 'https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/talkv_output.gif', sortOrder: 11 },
+  { title: '', year: '', bg: '', image: 'https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/IMG_6472.PNG', video: '', sortOrder: 12 },
+  { title: '', year: '', bg: '', image: '', video: 'https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/talkv_high_2.gif', sortOrder: 13 },
+  { title: '', year: '', bg: 'linear-gradient(135deg, #2a1a20, #3a2a30)', image: '', video: 'https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/talkv_high_3.gif', sortOrder: 14 },
+  { title: '', year: '', bg: '', image: 'https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/IMG_5748.PNG', video: '', sortOrder: 15 },
+  { title: '', year: '', bg: '', image: '', video: 'https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/IMG_5219_output.gif', sortOrder: 16 },
+  { title: '', year: '', bg: '', image: '', video: 'https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/video.gif', sortOrder: 17 },
+  { title: '', year: '', bg: '', image: '', video: 'https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/video_1_911f6389_output.gif', sortOrder: 18 },
 ];
 
 async function seed() {
