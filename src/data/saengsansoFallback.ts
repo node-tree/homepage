@@ -615,3 +615,7 @@ export const FALLBACK_SLIDES = [
     "image": ""
   }
 ];
+
+export const FALLBACK_ABOUT_DESC = "";
+
+export const FALLBACK_MEMBERS: { image: string; name: string; role: string; bio: string }[] = [];
