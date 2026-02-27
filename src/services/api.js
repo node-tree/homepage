@@ -947,9 +947,24 @@ const ssoTypes = [
   { key: 'slides', cacheKey: 'cache_sso_slides' },
 ];
 
+// CDN 캐시 버스팅 유틸: 최근 업데이트 후 5분 이내면 타임스탬프 쿼리 파라미터 추가
+const cdnBustUrl = (baseUrl, storageKey) => {
+  try {
+    const ts = localStorage.getItem(storageKey);
+    if (ts && (Date.now() - Number(ts)) < 5 * 60 * 1000) {
+      return `${baseUrl}?_t=${ts}`;
+    }
+  } catch (e) { /* ignore */ }
+  return baseUrl;
+};
+const markCdnDirty = (storageKey) => {
+  try { localStorage.setItem(storageKey, String(Date.now())); } catch (e) { /* ignore */ }
+};
+
 export const saengsansoAboutAPI = {
   get: async () => {
-    const response = await fetch(`${API_BASE_URL}/saengsanso/about-page`);
+    const url = cdnBustUrl(`${API_BASE_URL}/saengsanso/about-page`, 'sso_about_updated');
+    const response = await fetch(url);
     if (!response.ok) throw new Error('Failed to fetch saengsanso about');
     return response.json();
   },
@@ -963,13 +978,16 @@ export const saengsansoAboutAPI = {
       if (response.status === 401) return handle401();
       throw new Error('Failed to update saengsanso about');
     }
-    return response.json();
+    const data = await response.json();
+    markCdnDirty('sso_about_updated');
+    return data;
   },
 };
 
 export const saengsansoMembersAPI = {
   get: async () => {
-    const response = await fetch(`${API_BASE_URL}/saengsanso/members`);
+    const url = cdnBustUrl(`${API_BASE_URL}/saengsanso/members`, 'sso_members_updated');
+    const response = await fetch(url);
     if (!response.ok) throw new Error('Failed to fetch saengsanso members');
     return response.json();
   },
@@ -983,7 +1001,9 @@ export const saengsansoMembersAPI = {
       if (response.status === 401) return handle401();
       throw new Error('Failed to update saengsanso members');
     }
-    return response.json();
+    const data = await response.json();
+    markCdnDirty('sso_members_updated');
+    return data;
   },
 };
 
