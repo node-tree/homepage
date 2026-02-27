@@ -1042,7 +1042,11 @@ ssoTypes.forEach(({ key, cacheKey }) => {
           return cached; // 캐시 즉시 반환
         }
       }
-      const response = await deduplicatedFetch(`${API_BASE_URL}/saengsanso/${key}`);
+      // forceRefresh=true 시 ?_t= 쿼리로 Vercel Edge Cache도 우회
+      const url = forceRefresh
+        ? `${API_BASE_URL}/saengsanso/${key}?_t=${Date.now()}`
+        : `${API_BASE_URL}/saengsanso/${key}`;
+      const response = await deduplicatedFetch(url);
       if (!response.ok) throw new Error(`Failed to fetch ${key}`);
       const data = await response.json();
       if (data.success) cacheUtils.set(cacheKey, data);
