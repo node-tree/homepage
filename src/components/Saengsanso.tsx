@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { saengsansoAPI as _ssoAPI, saengsansoAboutAPI, saengsansoMembersAPI } from '../services/api';
 import Login from './Login';
 import SeoHead from './SeoHead';
-import { FALLBACK_EXHIBITIONS, FALLBACK_PROJECTS, FALLBACK_NEWS, FALLBACK_ARCHIVES, FALLBACK_SLIDES } from '../data/saengsansoFallback';
+import { FALLBACK_EXHIBITIONS, FALLBACK_PROJECTS, FALLBACK_NEWS, FALLBACK_ARCHIVES, FALLBACK_SLIDES, FALLBACK_ABOUT_DESC, FALLBACK_MEMBERS } from '../data/saengsansoFallback';
 
 // API 타입 캐스팅
 const saengsansoAPI = _ssoAPI as Record<string, any>;
@@ -397,21 +397,23 @@ interface MemberData { image: string; name: string; role: string; bio: string; }
 const DEFAULT_MEMBERS: MemberData[] = Array.from({ length: 6 }, () => ({ image: '', name: '', role: '', bio: '' }));
 
 function PageAbout({ isAdmin }: { isAdmin: boolean }) {
-  const [description, setDescription] = useState(DEFAULT_ABOUT_DESC);
+  // FALLBACK으로 즉시 렌더링, DB 로드 후 교체
+  const initialDesc = (FALLBACK_ABOUT_DESC as string) || DEFAULT_ABOUT_DESC;
+  const initialMembers = (FALLBACK_MEMBERS as MemberData[])?.length > 0 ? (FALLBACK_MEMBERS as MemberData[]) : DEFAULT_MEMBERS;
+  const [description, setDescription] = useState(initialDesc);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState('');
   const [saving, setSaving] = useState(false);
-  const [aboutLoading, setAboutLoading] = useState(true);
-  const [members, setMembers] = useState<MemberData[]>(DEFAULT_MEMBERS);
+  const [members, setMembers] = useState<MemberData[]>(initialMembers);
   const [isEditingMembers, setIsEditingMembers] = useState(false);
-  const [editMembers, setEditMembers] = useState<MemberData[]>(DEFAULT_MEMBERS);
+  const [editMembers, setEditMembers] = useState<MemberData[]>(initialMembers);
   const [membersSaving, setMembersSaving] = useState(false);
 
   useEffect(() => {
+    // 폴백으로 이미 렌더링된 상태에서 DB 최신 데이터로 교체
     saengsansoAboutAPI.get()
       .then(res => { if (res.success && res.data?.description) setDescription(res.data.description); })
-      .catch(() => {})
-      .finally(() => setAboutLoading(false));
+      .catch(() => {});
     saengsansoMembersAPI.get()
       .then(res => { if (res.success && res.data) setMembers(res.data); })
       .catch(() => {});
@@ -442,14 +444,6 @@ function PageAbout({ isAdmin }: { isAdmin: boolean }) {
     } catch { alert('저장에 실패했습니다.'); }
     finally { setSaving(false); }
   };
-
-  if (aboutLoading) {
-    return (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '60px' }}>
-        <p style={{ ...TEXT_SM, color: C.gray65, letterSpacing: '0.05em' }}>불러오는 중...</p>
-      </div>
-    );
-  }
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', paddingTop: '10px' }}>

@@ -40,20 +40,26 @@ async function generateFallback() {
     const nwsSchema = new mongoose.Schema({}, { strict: false, collection: 'sso_news' });
     const arcSchema = new mongoose.Schema({}, { strict: false, collection: 'sso_archives' });
     const sldSchema = new mongoose.Schema({}, { strict: false, collection: 'sso_slides' });
+    const abtSchema = new mongoose.Schema({}, { strict: false, collection: 'sso_about' });
+    const memSchema = new mongoose.Schema({}, { strict: false, collection: 'sso_members' });
 
     const Exh = mongoose.models.FBExh || mongoose.model('FBExh', exhSchema);
     const Prj = mongoose.models.FBPrj || mongoose.model('FBPrj', prjSchema);
     const Nws = mongoose.models.FBNws || mongoose.model('FBNws', nwsSchema);
     const Arc = mongoose.models.FBArc || mongoose.model('FBArc', arcSchema);
     const Sld = mongoose.models.FBSld || mongoose.model('FBSld', sldSchema);
+    const Abt = mongoose.models.FBAbt || mongoose.model('FBAbt', abtSchema);
+    const Mem = mongoose.models.FBMem || mongoose.model('FBMem', memSchema);
 
     console.log('[fallback] 데이터 조회 중...');
-    const [exhibitions, projects, news, archive, slides] = await Promise.all([
+    const [exhibitions, projects, news, archive, slides, aboutDoc, membersDoc] = await Promise.all([
       Exh.find().sort({ sortOrder: 1, year: -1, _id: -1 }).lean(),
       Prj.find().sort({ sortOrder: 1, _id: -1 }).lean(),
       Nws.find().sort({ sortOrder: 1, _id: -1 }).lean(),
       Arc.find().sort({ sortOrder: 1, _id: -1 }).lean(),
       Sld.find().sort({ sortOrder: 1, _id: 1 }).lean(),
+      Abt.findOne({ isActive: true }).lean(),
+      Mem.findOne().lean(),
     ]);
 
     function pick(obj, fields) {
@@ -71,6 +77,10 @@ async function generateFallback() {
       ...pick(s, ['bg', 'caption', 'image']),
     }));
 
+    // About 설명 & 멤버 폴백
+    const aboutDesc = aboutDoc?.description || '';
+    const membersList = (membersDoc?.members || []).map(m => pick(m, ['image', 'name', 'role', 'bio']));
+
     const ts = `// 자동 생성 파일 — scripts/generate-fallback.js
 // 생성 시각: ${new Date().toISOString()}
 // 수동 편집 금지: 빌드 시 DB에서 자동 갱신됨
@@ -84,10 +94,14 @@ export const FALLBACK_NEWS: any[] = ${JSON.stringify(nws, null, 2)};
 export const FALLBACK_ARCHIVES = ${JSON.stringify(arc, null, 2)};
 
 export const FALLBACK_SLIDES = ${JSON.stringify(sld, null, 2)};
+
+export const FALLBACK_ABOUT_DESC = ${JSON.stringify(aboutDesc)};
+
+export const FALLBACK_MEMBERS: { image: string; name: string; role: string; bio: string }[] = ${JSON.stringify(membersList, null, 2)};
 `;
 
     fs.writeFileSync(OUTPUT, ts, 'utf8');
-    console.log(`[fallback] 생성 완료 — ${exh.length}개 전시, ${prj.length}개 프로젝트, ${nws.length}개 뉴스, ${arc.length}개 아카이브, ${sld.length}개 슬라이드`);
+    console.log(`[fallback] 생성 완료 — ${exh.length}개 전시, ${prj.length}개 프로젝트, ${nws.length}개 뉴스, ${arc.length}개 아카이브, ${sld.length}개 슬라이드, about: ${aboutDoc ? '있음' : '없음'}, members: ${membersList.length}명`);
 
     await mongoose.disconnect();
   } catch (err) {
