@@ -8,7 +8,7 @@ import ReconnectAnimation from './ReconnectAnimation';
 import { playHoverSound, playClickSound } from '../utils/sound';
 import { useEditorialLayout } from '../hooks/useEditorialLayout';
 import PageLoader from './PageLoader';
-import { ImageLayoutItem } from './ImageGallery';
+import ImageGallery, { ImageLayoutItem } from './ImageGallery';
 
 interface Post {
   id: string;
@@ -496,6 +496,25 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
                 {formatContent(selectedPost.content)}
               </div>
               <LightboxPortal />
+
+              {/* 이미지 갤러리 */}
+              {selectedPost.images && selectedPost.images.length > 0 && (
+                <ImageGallery
+                  images={selectedPost.images.map(src => ({
+                    src: src.startsWith('//') ? `https:${src}` : src
+                  }))}
+                  imageLayout={selectedPost.imageLayout}
+                  isAdmin={isAuthenticated}
+                  onLayoutChange={async (newLayout) => {
+                    try {
+                      await workAPI.updateImageLayout(selectedPost.id, newLayout);
+                      setSelectedPost({ ...selectedPost, imageLayout: newLayout });
+                    } catch (e) {
+                      alert('이미지 레이아웃 저장에 실패했습니다.');
+                    }
+                  }}
+                />
+              )}
 
               {/* 유기적공명:에디아포닉 글에만 PDF 카탈로그 표시 */}
               {(selectedPost.title.includes('유기적공명') || selectedPost.title.includes('에디아포닉')) && (

@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { playHoverSound, playClickSound } from '../utils/sound';
 import { useEditorialLayout } from '../hooks/useEditorialLayout';
 import PageLoader from './PageLoader';
-import { ImageLayoutItem } from './ImageGallery';
+import ImageGallery, { ImageLayoutItem } from './ImageGallery';
 
 // 카테고리 타입
 type CategoryType = '전체' | '문화예술교육' | '커뮤니티';
@@ -494,6 +494,25 @@ const Commons: React.FC<CommonsProps> = ({ onPostsLoaded }) => {
                 {formatContent(selectedPost.content)}
               </div>
               <LightboxPortal />
+
+              {/* 이미지 갤러리 */}
+              {selectedPost.images && selectedPost.images.length > 0 && (
+                <ImageGallery
+                  images={selectedPost.images.map(src => ({
+                    src: src.startsWith('//') ? `https:${src}` : src
+                  }))}
+                  imageLayout={selectedPost.imageLayout}
+                  isAdmin={isAuthenticated}
+                  onLayoutChange={async (newLayout) => {
+                    try {
+                      await filedAPI.updateImageLayout(selectedPost.id, newLayout);
+                      setSelectedPost({ ...selectedPost, imageLayout: newLayout });
+                    } catch (e) {
+                      alert('이미지 레이아웃 저장에 실패했습니다.');
+                    }
+                  }}
+                />
+              )}
             </div>
           </article>
 
