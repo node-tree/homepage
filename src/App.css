@@ -1387,6 +1387,83 @@
   min-height: auto;
 }
 
+/* ===== 에디터 에디토리얼 레이아웃 프리뷰 ===== */
+
+/* 풀 와이드 이미지 (에디터) */
+.wysiwyg-editor .media-block.editor-img-full {
+  margin: 1.5rem 0;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 2px solid transparent;
+}
+
+.wysiwyg-editor .media-block.editor-img-full img {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto;
+  border-radius: 6px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+  display: block;
+  margin: 0 auto;
+}
+
+.wysiwyg-editor .media-block.editor-img-full:hover img {
+  transform: scale(1.02);
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.15);
+}
+
+/* 2컬럼 그리드 행 (에디터) */
+.wysiwyg-editor .editor-image-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 1rem 0 1.5rem 0;
+}
+
+.wysiwyg-editor .editor-image-row .media-block.editor-img-grid-item {
+  margin: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  padding: 0;
+  border: 2px solid transparent;
+}
+
+.wysiwyg-editor .editor-image-row .media-block.editor-img-grid-item img {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100%;
+  object-fit: cover;
+  aspect-ratio: 4/3;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+  display: block;
+  margin: 0;
+}
+
+.wysiwyg-editor .editor-image-row .media-block.editor-img-grid-item:hover img {
+  transform: scale(1.03);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.15);
+}
+
+/* 에디터 에디토리얼 호버 시 편집 컨트롤 표시 */
+.wysiwyg-editor .media-block.editor-img-full:hover,
+.wysiwyg-editor .media-block.editor-img-grid-item:hover {
+  border-color: rgba(52, 152, 219, 0.3);
+}
+
+/* 모바일 대응 */
+@media (max-width: 600px) {
+  .wysiwyg-editor .editor-image-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .wysiwyg-editor .editor-image-row .media-block.editor-img-grid-item img {
+    aspect-ratio: auto;
+  }
+}
+
 /* 글쓰기 페이지 이미지 관련 스타일 */
 .images-header {
   display: flex;
@@ -1530,7 +1607,7 @@
 
 /* 포스트 상세 페이지 스타일 */
 .post-detail-container {
-  width: 800px;
+  width: 900px;
   max-width: 100%;
   margin: 2rem auto;
   padding: 0 20px;
@@ -1679,11 +1756,15 @@
 
 .post-text {
   width: 100%;
-  max-width: 100%;
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
   min-height: 100px;
-  text-align: center;
-  line-height: 1.8;
-  font-size: 1.1rem;
+  text-align: left;
+  line-height: 2;
+  font-size: 1.05rem;
+  color: #2a2a2a;
+  letter-spacing: -0.01em;
   margin-bottom: 3rem;
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -1695,7 +1776,7 @@
 /* HTML 콘텐츠 스타일 */
 .post-text .html-content {
   text-align: left;
-  line-height: 1.8;
+  line-height: 2;
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
@@ -1732,12 +1813,13 @@
 
 /* contentEditable에서 생성된 div 줄바꿈 처리 */
 .post-text .html-content > div {
-  min-height: 1.8em;
+  min-height: 1.4em;
+  margin-bottom: 0.3em;
 }
 
 .post-text .html-content > div:empty,
 .post-text .html-content > div > br:only-child {
-  min-height: 1.8em;
+  min-height: 0.8em;
 }
 
 /* 빈 줄 유지 */
@@ -1745,6 +1827,7 @@
 .post-text .html-content div:empty::before {
   content: "\00a0";
   display: block;
+  min-height: 0.6em;
 }
 
 /* 미디어 블록 스타일 (표시) */
@@ -1786,11 +1869,17 @@
 
 .post-text .html-content img {
   display: block;
-  margin: 2rem auto;
+  margin: 2.5rem auto;
   max-width: 100%;
   height: auto;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+}
+
+.post-text .html-content img:hover {
+  transform: scale(1.02);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16);
 }
 
 .post-text .html-content .video-container {
@@ -1810,11 +1899,338 @@
 .post-text .html-content video:not(.video-container video) {
   display: block;
   width: 100%;
-  max-width: 800px;
+  max-width: 100%;
   aspect-ratio: 16/9;
-  margin: 2rem auto;
-  border-radius: 12px;
+  margin: 2.5rem auto;
+  border-radius: 6px;
   border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* ===== 콘텐츠 더보기/접기 ===== */
+
+.html-content-wrapper {
+  position: relative;
+}
+
+.content-collapsed {
+  max-height: 1400px;
+  overflow: hidden;
+  position: relative;
+}
+
+.content-expand-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  background: linear-gradient(transparent, #fff 70%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 8px;
+}
+
+.content-expand-btn,
+.content-collapse-btn {
+  background: #222;
+  color: #fff;
+  border: none;
+  padding: 10px 32px;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: block;
+  margin: 1.5rem auto 0;
+}
+
+.content-expand-btn:hover,
+.content-collapse-btn:hover {
+  background: #444;
+}
+
+/* 긴 텍스트 가독성 — 문단 간격 */
+.post-text .html-content span {
+  display: inline;
+  line-height: 2.2;
+}
+
+.post-text .html-content span br + br {
+  display: block;
+  content: "";
+  margin-top: 1.2em;
+}
+
+/* ===== 이미지 갤러리 (전시 포맷) ===== */
+
+.image-gallery {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin: 0 0 2.5rem 0;
+  width: 100%;
+}
+
+.gallery-item {
+  overflow: hidden;
+  border-radius: 6px;
+  position: relative;
+  cursor: zoom-in;
+}
+
+.gallery-item--full {
+  grid-column: span 6;
+}
+
+.gallery-item--half {
+  grid-column: span 3;
+}
+
+.gallery-item--third {
+  grid-column: span 2;
+}
+
+.gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 6px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+}
+
+.gallery-item--full img {
+  max-height: 70vh;
+  object-fit: contain;
+  background: #f8f8f8;
+}
+
+.gallery-item--half img {
+  aspect-ratio: 4/3;
+}
+
+.gallery-item--third img {
+  aspect-ratio: 1/1;
+}
+
+.gallery-item:hover img {
+  transform: scale(1.03);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+}
+
+/* 갤러리 스크롤 fade-in 애니메이션 */
+.gallery-fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.gallery-fade-in--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 관리자 편집 바 */
+.gallery-admin-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.gallery-edit-btn {
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  padding: 6px 16px;
+  font-size: 0.8rem;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.gallery-edit-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+/* 편집 툴바 */
+.gallery-edit-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f5f5f5;
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-bottom: 12px;
+}
+
+.gallery-edit-label {
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.gallery-edit-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.gallery-save-btn {
+  background: #333;
+  color: #fff;
+  border: none;
+  border-radius: 16px;
+  padding: 6px 16px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.gallery-save-btn:hover {
+  background: #111;
+}
+
+.gallery-cancel-btn {
+  background: transparent;
+  border: 1px solid #ccc;
+  border-radius: 16px;
+  padding: 6px 16px;
+  font-size: 0.8rem;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.gallery-cancel-btn:hover {
+  border-color: #999;
+  color: #333;
+}
+
+/* 편집 모드 갤러리 */
+.image-gallery--editing {
+  gap: 16px;
+}
+
+.image-gallery--editing .gallery-item {
+  cursor: grab;
+}
+
+.image-gallery--editing .gallery-item:active {
+  cursor: grabbing;
+}
+
+.gallery-item--editing {
+  border: 2px dashed rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+}
+
+.gallery-item--editing:hover {
+  border-color: rgba(0, 0, 0, 0.3);
+}
+
+.gallery-item--drag-over {
+  border-color: #007aff !important;
+  background: rgba(0, 122, 255, 0.05);
+}
+
+.gallery-item--dragging {
+  opacity: 0.4;
+}
+
+/* 편집 모드 컨트롤 */
+.gallery-item-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  z-index: 10;
+}
+
+.gallery-size-toggle {
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.gallery-size-toggle:hover {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.gallery-drag-handle {
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  cursor: grab;
+  user-select: none;
+}
+
+/* 텍스트 섹션 (이미지 아래) */
+.post-text-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.post-text-section .html-content {
+  font-size: 1rem;
+  line-height: 1.8;
+  color: #333;
+}
+
+.post-text-section .html-content img {
+  display: none;
+}
+
+.post-video-section {
+  margin-top: 2rem;
+}
+
+/* 모바일 갤러리 대응 */
+@media (max-width: 600px) {
+  .image-gallery {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .gallery-item--full {
+    grid-column: span 2;
+  }
+
+  .gallery-item--half {
+    grid-column: span 1;
+  }
+
+  .gallery-item--third {
+    grid-column: span 1;
+  }
+
+  .gallery-item--full img {
+    max-height: 50vh;
+  }
+
+  .gallery-edit-toolbar {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+    text-align: center;
+  }
 }
 
 /* ===== 에디토리얼 매거진 레이아웃 ===== */

@@ -396,6 +396,22 @@ export const workAPI = {
     const data = await response.json();
     cacheUtils.remove(CACHE_KEYS.WORK_POSTS);
     return data;
+  },
+
+  // 이미지 레이아웃 저장
+  updateImageLayout: async (id, imageLayout) => {
+    const response = await fetch(`${API_BASE_URL}/work/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ imageLayout })
+    });
+    if (!response.ok) {
+      if (response.status === 401) return handle401();
+      throw new Error('Failed to update image layout');
+    }
+    const data = await response.json();
+    cacheUtils.remove(CACHE_KEYS.WORK_POSTS);
+    return data;
   }
 };
 
@@ -566,6 +582,22 @@ export const filedAPI = {
     if (!response.ok) {
       if (response.status === 401) return handle401();
       throw new Error('Failed to reorder posts');
+    }
+    const data = await response.json();
+    cacheUtils.remove(CACHE_KEYS.FILED_POSTS);
+    return data;
+  },
+
+  // 이미지 레이아웃 저장
+  updateImageLayout: async (id, imageLayout) => {
+    const response = await fetch(`${API_BASE_URL}/filed/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ imageLayout })
+    });
+    if (!response.ok) {
+      if (response.status === 401) return handle401();
+      throw new Error('Failed to update image layout');
     }
     const data = await response.json();
     cacheUtils.remove(CACHE_KEYS.FILED_POSTS);
