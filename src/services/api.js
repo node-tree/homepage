@@ -238,7 +238,8 @@ export const workAPI = {
       }
     }
 
-    const response = await deduplicatedFetch(`${API_BASE_URL}/work`);
+    const url = cdnBustUrl(`${API_BASE_URL}/work`, 'work_updated');
+    const response = await deduplicatedFetch(url);
     if (!response.ok) {
       throw new Error('Failed to fetch posts');
     }
@@ -282,8 +283,8 @@ export const workAPI = {
       throw new Error(errorData.message || `Failed to create post (${response.status})`);
     }
     const data = await response.json();
-    // 캐시 무효화
     cacheUtils.remove(CACHE_KEYS.WORK_POSTS);
+    markCdnDirty('work_updated');
     return data;
   },
 
@@ -301,8 +302,8 @@ export const workAPI = {
       throw new Error(errorData.message || `Failed to update post (${response.status})`);
     }
     const data = await response.json();
-    // 캐시 무효화
     cacheUtils.remove(CACHE_KEYS.WORK_POSTS);
+    markCdnDirty('work_updated');
     return data;
   },
 
@@ -319,8 +320,8 @@ export const workAPI = {
       throw new Error(errorData.message || `Failed to delete post (${response.status})`);
     }
     const data = await response.json();
-    // 캐시 무효화
     cacheUtils.remove(CACHE_KEYS.WORK_POSTS);
+    markCdnDirty('work_updated');
     return data;
   },
 
