@@ -20,6 +20,14 @@ const workSchema = new mongoose.Schema({
   sortOrder: {
     type: Number,
     default: 0
+  },
+  imageLayout: {
+    type: [{
+      src: String,
+      size: { type: String, enum: ['full', 'half', 'third'], default: 'full' },
+      order: Number
+    }],
+    default: []
   }
 }, {
   timestamps: true,

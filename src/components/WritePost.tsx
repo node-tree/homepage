@@ -186,6 +186,9 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
 
           // 5. 이미지 번호 뱃지 업데이트
           updateMediaIndices();
+
+          // 6. 에디토리얼 레이아웃 프리뷰 적용
+          layoutEditorImages();
         }, 100);
       }
     } else {
@@ -428,6 +431,8 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     editorRef.current.appendChild(newLine);
     // 이미지 번호 업데이트
     updateMediaIndices();
+    // 에디토리얼 레이아웃 다시 적용
+    layoutEditorImages();
   };
 
   // 이미지 번호 뱃지 업데이트
@@ -443,6 +448,128 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
         block.appendChild(badge);
       }
       badge.textContent = `${idx + 1}`;
+    });
+  };
+
+  // 에디터 이미지 그리드 행 해제
+  const unwrapEditorRows = () => {
+    if (!editorRef.current) return;
+    const rows = editorRef.current.querySelectorAll('.editor-image-row');
+    rows.forEach(row => {
+      const parent = row.parentNode;
+      while (row.firstChild) {
+        parent?.insertBefore(row.firstChild, row);
+      }
+      row.remove();
+    });
+    editorRef.current.querySelectorAll('.editor-img-full, .editor-img-grid-item').forEach(el => {
+      el.classList.remove('editor-img-full', 'editor-img-grid-item');
+    });
+  };
+
+  // 에디토리얼 레이아웃 프리뷰: 연속 이미지를 그리드로 배치
+  const layoutEditorImages = () => {
+    if (!editorRef.current) return;
+
+    // 1. 기존 .editor-image-row 래퍼를 해제 (이미지를 다시 에디터 루트로)
+    const existingRows = editorRef.current.querySelectorAll('.editor-image-row');
+    existingRows.forEach(row => {
+      const parent = row.parentNode;
+      while (row.firstChild) {
+        parent?.insertBefore(row.firstChild, row);
+      }
+      row.remove();
+    });
+
+    // 2. 에디토리얼 클래스 초기화
+    editorRef.current.querySelectorAll('.editor-img-full, .editor-img-grid-item').forEach(el => {
+      el.classList.remove('editor-img-full', 'editor-img-grid-item');
+    });
+
+    // 3. 에디터 직속 자식 순회하며 연속 이미지 그룹 찾기
+    //    빈 줄(<div><br></div> 등)은 이미지 사이에 있어도 연속으로 간주
+    const children = Array.from(editorRef.current.childNodes) as HTMLElement[];
+    const groups: HTMLElement[][] = [];
+    let currentGroup: HTMLElement[] = [];
+    const emptyBetween: HTMLElement[] = []; // 이미지 사이 빈 줄 임시 저장
+
+    const isEmptyNode = (el: HTMLElement) => {
+      if (el.nodeType === 3) return !el.textContent?.trim(); // 텍스트 노드
+      if (el.nodeType !== 1) return true;
+      const tag = el.tagName?.toLowerCase();
+      if (tag === 'br') return true;
+      // <div><br></div> 같은 빈 줄
+      if (tag === 'div' && (!el.textContent?.trim() || el.innerHTML === '<br>')) return true;
+      return false;
+    };
+
+    children.forEach(child => {
+      const isImage = child.nodeType === 1 && child.classList?.contains('media-block') && child.getAttribute('data-type') === 'image';
+      if (isImage) {
+        // 이미지 사이 빈 줄이 있었으면 무시하고 이미지만 그룹에 추가
+        emptyBetween.length = 0;
+        currentGroup.push(child);
+      } else if (currentGroup.length > 0 && isEmptyNode(child)) {
+        // 이미지 그룹 중간에 빈 줄이 있으면 잠시 보류
+        emptyBetween.push(child);
+      } else {
+        if (currentGroup.length > 0) {
+          groups.push([...currentGroup]);
+          currentGroup = [];
+          emptyBetween.length = 0;
+        }
+      }
+    });
+    if (currentGroup.length > 0) groups.push(currentGroup);
+
+    // 4. 이미지 사이의 빈 줄 제거 (그리드에 방해되므로)
+    groups.forEach(group => {
+      for (let g = 0; g < group.length - 1; g++) {
+        let sibling = group[g].nextSibling as HTMLElement;
+        while (sibling && sibling !== group[g + 1]) {
+          const next = sibling.nextSibling as HTMLElement;
+          if (isEmptyNode(sibling)) {
+            sibling.remove();
+          }
+          sibling = next;
+        }
+      }
+    });
+
+    // 5. 각 그룹에 에디토리얼 레이아웃 적용
+    groups.forEach(group => {
+      if (group.length === 1) {
+        // 단일 이미지: 풀 와이드
+        group[0].classList.add('editor-img-full');
+        return;
+      }
+
+      // 첫 번째: 풀 와이드
+      group[0].classList.add('editor-img-full');
+
+      // 나머지: 2개씩 그리드 행
+      let i = 1;
+      while (i < group.length) {
+        if (i + 1 < group.length) {
+          // 2개를 그리드 행으로 묶기
+          const row = document.createElement('div');
+          row.className = 'editor-image-row';
+          row.contentEditable = 'false';
+          const first = group[i];
+          const second = group[i + 1];
+          first.classList.add('editor-img-grid-item');
+          second.classList.add('editor-img-grid-item');
+          // first 앞에 row 삽입
+          first.parentNode?.insertBefore(row, first);
+          row.appendChild(first);
+          row.appendChild(second);
+          i += 2;
+        } else {
+          // 홀수 마지막: 풀 와이드
+          group[i].classList.add('editor-img-full');
+          i++;
+        }
+      }
     });
   };
 
@@ -471,10 +598,13 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     upBtn.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
+      // 그리드 행 안에 있으면 먼저 해제
+      unwrapEditorRows();
       const prev = mediaBlock.previousElementSibling;
       if (prev && !prev.classList.contains('media-controls')) {
         mediaBlock.parentNode?.insertBefore(mediaBlock, prev);
         updateMediaIndices();
+        layoutEditorImages();
       }
     };
 
@@ -491,10 +621,13 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     downBtn.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
+      // 그리드 행 안에 있으면 먼저 해제
+      unwrapEditorRows();
       const next = mediaBlock.nextElementSibling;
       if (next) {
         mediaBlock.parentNode?.insertBefore(next, mediaBlock);
         updateMediaIndices();
+        layoutEditorImages();
       }
     };
 
@@ -511,8 +644,10 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     deleteBtn.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
+      unwrapEditorRows();
       mediaBlock.remove();
       updateMediaIndices();
+      layoutEditorImages();
     };
 
     controls.appendChild(upBtn);
@@ -534,10 +669,16 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
     cleaned = cleaned.replace(/\s*contenteditable="[^"]*"/gi, '');
     // draggable 속성 제거 (media-block에서)
     cleaned = cleaned.replace(/\s*draggable="[^"]*"/gi, '');
+    // 에디터 레이아웃 클래스 제거
+    cleaned = cleaned.replace(/\s*class="editor-image-row"/gi, '');
+    cleaned = cleaned.replace(/\s+editor-img-full/gi, '');
+    cleaned = cleaned.replace(/\s+editor-img-grid-item/gi, '');
     return cleaned;
   };
 
   const handleSubmit = async () => {
+    // 저장 전 에디토리얼 프리뷰 래퍼 해제
+    unwrapEditorRows();
     let content = editorRef.current?.innerHTML || '';
 
     if (!title.trim() || !content.trim()) {

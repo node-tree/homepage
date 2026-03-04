@@ -8,6 +8,7 @@ import ReconnectAnimation from './ReconnectAnimation';
 import { playHoverSound, playClickSound } from '../utils/sound';
 import { useEditorialLayout } from '../hooks/useEditorialLayout';
 import PageLoader from './PageLoader';
+import { ImageLayoutItem } from './ImageGallery';
 
 interface Post {
   id: string;
@@ -17,6 +18,7 @@ interface Post {
   images?: string[];
   thumbnail?: string | null;
   sortOrder?: number;
+  imageLayout?: ImageLayoutItem[];
 }
 
 interface WorkProps {
@@ -39,6 +41,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
   const [isEditingHeader, setIsEditingHeader] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const [isContentExpanded, setIsContentExpanded] = useState(false);
   const { contentRef, LightboxPortal } = useEditorialLayout(selectedPost?.id);
 
   const loadPosts = useCallback(async () => {
@@ -145,6 +148,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
 
   const handlePostClick = (post: Post) => {
     setSelectedPost(post);
+    setIsContentExpanded(false);
     setSearchParams({ post: post.id });
   };
 
@@ -192,6 +196,38 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
     return cleaned;
   };
 
+  // 긴 텍스트 블록에 문단 나누기 삽입
+  const addParagraphBreaks = (html: string): string => {
+    // <span> 또는 텍스트 노드 안에 300자 이상 연속 텍스트가 있으면 문장 단위로 문단 분리
+    return html.replace(/>([^<]{300,})</g, (match, textBlock) => {
+      // 3~4문장마다 문단 구분 삽입
+      let sentenceCount = 0;
+      const result = textBlock.replace(/(다\.|된다\.|이다\.|한다\.|는다\.|였다\.|했다\.|된다\.|란다\.|있다\.|없다\.|같다\.|보인다\.|모른다\.|온다\.|간다\.)\s*/g,
+        (sentMatch: string) => {
+          sentenceCount++;
+          if (sentenceCount % 3 === 0) {
+            return sentMatch.trimEnd() + '<br><br>';
+          }
+          return sentMatch;
+        }
+      );
+      return '>' + result;
+    });
+  };
+
+  // 미디어(iframe/img)와 텍스트를 분리해서 구조화된 HTML 생성
+  const structureContent = (html: string): string => {
+    let structured = html;
+    // iframe을 감싸는 wrapper 추가 (반응형)
+    structured = structured.replace(
+      /<iframe([^>]*)><\/iframe>/g,
+      '<div class="video-container"><iframe$1></iframe></div>'
+    );
+    // 긴 텍스트에 문단 나누기
+    structured = addParagraphBreaks(structured);
+    return structured;
+  };
+
   const formatContent = (content: string) => {
     // HTML 태그 감지 (더 포괄적인 패턴)
     const htmlTagPattern = /<[a-z][\s\S]*?>/i;
@@ -202,7 +238,36 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
       if (!htmlContent.includes('<br')) {
         htmlContent = htmlContent.replace(/\n/g, '<br />');
       }
-      return <div className="html-content" dangerouslySetInnerHTML={{ __html: htmlContent }} />;
+      // 콘텐츠 구조화 (문단 나누기, 미디어 wrapper)
+      htmlContent = structureContent(htmlContent);
+
+      // 텍스트만 추출해서 길이 체크
+      const textOnly = htmlContent.replace(/<[^>]+>/g, '').trim();
+      const isLong = textOnly.length > 1500;
+
+      if (isLong && !isContentExpanded) {
+        return (
+          <div className="html-content-wrapper">
+            <div className="html-content content-collapsed" dangerouslySetInnerHTML={{ __html: htmlContent }} />
+            <div className="content-expand-overlay">
+              <button className="content-expand-btn" onClick={() => setIsContentExpanded(true)}>
+                더보기
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="html-content-wrapper">
+          <div className="html-content" dangerouslySetInnerHTML={{ __html: htmlContent }} />
+          {isLong && isContentExpanded && (
+            <button className="content-collapse-btn" onClick={() => setIsContentExpanded(false)}>
+              접기
+            </button>
+          )}
+        </div>
+      );
     }
 
     // 마크다운 형식 처리

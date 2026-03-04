@@ -123,7 +123,8 @@ router.get('/', async (req, res) => {
         date: dateString,
         images: [],
         thumbnail: work.thumbnail || null,
-        sortOrder: work.sortOrder || 0
+        sortOrder: work.sortOrder || 0,
+        imageLayout: work.imageLayout || []
       };
     });
 
@@ -183,8 +184,8 @@ router.post('/', auth, async (req, res) => {
   try {
     await ensureDBConnection();
     
-    const { title, content, htmlContent, thumbnail } = req.body;
-    
+    const { title, content, htmlContent, thumbnail, imageLayout } = req.body;
+
     if (!title || !content) {
       return res.status(400).json({
         success: false,
@@ -196,7 +197,8 @@ router.post('/', auth, async (req, res) => {
       title: title.trim(),
       contents: content.trim(), // content를 contents로 매핑
       htmlContent: htmlContent || '',
-      thumbnail: thumbnail ? thumbnail.trim() : null
+      thumbnail: thumbnail ? thumbnail.trim() : null,
+      imageLayout: imageLayout || []
     });
 
     const savedWork = await newWork.save();
@@ -211,6 +213,7 @@ router.post('/', auth, async (req, res) => {
         content: savedWork.contents,
         htmlContent: savedWork.htmlContent,
         thumbnail: savedWork.thumbnail,
+        imageLayout: savedWork.imageLayout || [],
         date: savedWork.createdAt ? savedWork.createdAt.toLocaleDateString('ko-KR') : new Date().toLocaleDateString('ko-KR')
       }
     });
@@ -232,23 +235,28 @@ router.put('/:id', auth, async (req, res) => {
     await ensureDBConnection();
     
     const { id } = req.params;
-    const { title, content, htmlContent, thumbnail } = req.body;
-    
-    if (!title || !content) {
+    const { title, content, htmlContent, thumbnail, imageLayout } = req.body;
+
+    // imageLayout만 업데이트하는 경우 title/content 검증 스킵
+    const isLayoutOnlyUpdate = imageLayout !== undefined && !title && !content;
+
+    if (!isLayoutOnlyUpdate && (!title || !content)) {
       return res.status(400).json({
         success: false,
         message: '제목과 내용을 모두 입력해주세요.'
       });
     }
 
+    const updateData = {};
+    if (title) updateData.title = title.trim();
+    if (content) updateData.contents = content.trim();
+    if (htmlContent !== undefined) updateData.htmlContent = htmlContent || '';
+    if (thumbnail !== undefined) updateData.thumbnail = thumbnail ? thumbnail.trim() : null;
+    if (imageLayout !== undefined) updateData.imageLayout = imageLayout;
+
     const updatedWork = await Work.findByIdAndUpdate(
       id,
-      {
-        title: title.trim(),
-        contents: content.trim(),
-        htmlContent: htmlContent || '',
-        thumbnail: thumbnail ? thumbnail.trim() : null
-      },
+      updateData,
       { new: true }
     );
 
@@ -270,6 +278,7 @@ router.put('/:id', auth, async (req, res) => {
         content: updatedWork.contents,
         htmlContent: updatedWork.htmlContent,
         thumbnail: updatedWork.thumbnail,
+        imageLayout: updatedWork.imageLayout || [],
         date: updatedWork.createdAt ? updatedWork.createdAt.toLocaleDateString('ko-KR') : new Date().toLocaleDateString('ko-KR')
       }
     });
@@ -360,7 +369,8 @@ router.get('/:id', async (req, res) => {
         htmlContent: work.htmlContent || '',
         date: dateString,
         images: [],
-        thumbnail: work.thumbnail || null
+        thumbnail: work.thumbnail || null,
+        imageLayout: work.imageLayout || []
       },
       source: 'database'
     });

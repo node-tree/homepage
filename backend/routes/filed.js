@@ -128,7 +128,8 @@ router.get('/', async (req, res) => {
         images: [],
         thumbnail: filed.thumbnail || null,
         category: filed.category || '문화예술교육',
-        sortOrder: filed.sortOrder || 0
+        sortOrder: filed.sortOrder || 0,
+        imageLayout: filed.imageLayout || []
       };
     });
 
@@ -188,7 +189,7 @@ router.post('/', auth, async (req, res) => {
   try {
     await ensureDBConnection();
 
-    const { title, content, htmlContent, thumbnail, category } = req.body;
+    const { title, content, htmlContent, thumbnail, category, imageLayout } = req.body;
 
     if (!title || !content) {
       return res.status(400).json({
@@ -199,10 +200,11 @@ router.post('/', auth, async (req, res) => {
 
     const newFiled = new Filed({
       title: title.trim(),
-      contents: content.trim(), // content를 contents로 매핑
+      contents: content.trim(),
       htmlContent: htmlContent || '',
       thumbnail: thumbnail ? thumbnail.trim() : null,
-      category: category || '문화예술교육'
+      category: category || '문화예술교육',
+      imageLayout: imageLayout || []
     });
 
     const savedFiled = await newFiled.save();
@@ -218,6 +220,7 @@ router.post('/', auth, async (req, res) => {
         htmlContent: savedFiled.htmlContent,
         thumbnail: savedFiled.thumbnail,
         category: savedFiled.category,
+        imageLayout: savedFiled.imageLayout || [],
         date: savedFiled.createdAt ? savedFiled.createdAt.toLocaleDateString('ko-KR') : new Date().toLocaleDateString('ko-KR')
       }
     });
@@ -239,24 +242,29 @@ router.put('/:id', auth, async (req, res) => {
     await ensureDBConnection();
 
     const { id } = req.params;
-    const { title, content, htmlContent, thumbnail, category } = req.body;
+    const { title, content, htmlContent, thumbnail, category, imageLayout } = req.body;
 
-    if (!title || !content) {
+    // imageLayout만 업데이트하는 경우 title/content 검증 스킵
+    const isLayoutOnlyUpdate = imageLayout !== undefined && !title && !content;
+
+    if (!isLayoutOnlyUpdate && (!title || !content)) {
       return res.status(400).json({
         success: false,
         message: '제목과 내용을 모두 입력해주세요.'
       });
     }
 
+    const updateData = {};
+    if (title) updateData.title = title.trim();
+    if (content) updateData.contents = content.trim();
+    if (htmlContent !== undefined) updateData.htmlContent = htmlContent || '';
+    if (thumbnail !== undefined) updateData.thumbnail = thumbnail ? thumbnail.trim() : null;
+    if (category) updateData.category = category;
+    if (imageLayout !== undefined) updateData.imageLayout = imageLayout;
+
     const updatedFiled = await Filed.findByIdAndUpdate(
       id,
-      {
-        title: title.trim(),
-        contents: content.trim(),
-        htmlContent: htmlContent || '',
-        thumbnail: thumbnail ? thumbnail.trim() : null,
-        category: category || '문화예술교육'
-      },
+      updateData,
       { new: true }
     );
 
@@ -279,6 +287,7 @@ router.put('/:id', auth, async (req, res) => {
         htmlContent: updatedFiled.htmlContent,
         thumbnail: updatedFiled.thumbnail,
         category: updatedFiled.category,
+        imageLayout: updatedFiled.imageLayout || [],
         date: updatedFiled.createdAt ? updatedFiled.createdAt.toLocaleDateString('ko-KR') : new Date().toLocaleDateString('ko-KR')
       }
     });
@@ -370,7 +379,8 @@ router.get('/:id', async (req, res) => {
         date: dateString,
         images: [],
         thumbnail: filed.thumbnail || null,
-        category: filed.category || '문화예술교육'
+        category: filed.category || '문화예술교육',
+        imageLayout: filed.imageLayout || []
       },
       source: 'database'
     });
