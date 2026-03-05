@@ -178,6 +178,21 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
     }
   };
 
+  // content HTML에서 이미지 URL 추출 (캐시 fallback용)
+  const extractImagesFromContent = (content: string): { src: string }[] => {
+    if (!content) return [];
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(content, 'text/html');
+      return Array.from(doc.querySelectorAll('img'))
+        .map(img => img.getAttribute('src') || '')
+        .filter(Boolean)
+        .map(src => ({ src: src.startsWith('//') ? `https:${src}` : src }));
+    } catch {
+      return [];
+    }
+  };
+
   // 갤러리가 있을 때 content 내 인라인 이미지 제거 (중복 방지)
   const stripInlineImages = (html: string): string => {
     const parser = new DOMParser();
@@ -457,6 +472,13 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
   }
 
   // 상세페이지 표시
+  // 갤러리 이미지: images[]가 있으면 사용, 없으면 content에서 추출 (캐시 old data 대응)
+  const galleryImages = selectedPost
+    ? (selectedPost.images && selectedPost.images.length > 0
+        ? selectedPost.images.map(src => ({ src: src.startsWith('//') ? `https:${src}` : src }))
+        : extractImagesFromContent(selectedPost.content))
+    : [];
+  const hasGallery = galleryImages.length > 0;
   if (selectedPost) {
     return (
       <div className="page-content">
@@ -508,16 +530,14 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
               )}
 
               <div className="post-text" ref={contentRef}>
-                {formatContent(selectedPost.content, !!(selectedPost.images && selectedPost.images.length > 0))}
+                {formatContent(selectedPost.content, hasGallery)}
               </div>
               <LightboxPortal />
 
               {/* 이미지 갤러리 */}
-              {selectedPost.images && selectedPost.images.length > 0 && (
+              {hasGallery && (
                 <ImageGallery
-                  images={selectedPost.images.map(src => ({
-                    src: src.startsWith('//') ? `https:${src}` : src
-                  }))}
+                  images={galleryImages}
                   imageLayout={selectedPost.imageLayout}
                   isAdmin={isAuthenticated}
                   onLayoutChange={async (newLayout) => {
