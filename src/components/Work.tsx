@@ -8,7 +8,7 @@ import ReconnectAnimation from './ReconnectAnimation';
 import { playHoverSound, playClickSound } from '../utils/sound';
 import { useEditorialLayout } from '../hooks/useEditorialLayout';
 import PageLoader from './PageLoader';
-import ImageGallery, { ImageLayoutItem } from './ImageGallery';
+import { ImageLayoutItem } from './ImageGallery';
 
 interface Post {
   id: string;
@@ -178,32 +178,6 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
     }
   };
 
-  // content HTML에서 이미지 URL 추출 (캐시 fallback용)
-  const extractImagesFromContent = (content: string): { src: string }[] => {
-    if (!content) return [];
-    try {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(content, 'text/html');
-      return Array.from(doc.querySelectorAll('img'))
-        .map(img => img.getAttribute('src') || '')
-        .filter(Boolean)
-        .map(src => ({ src: src.startsWith('//') ? `https:${src}` : src }));
-    } catch {
-      return [];
-    }
-  };
-
-  // 갤러리가 있을 때 content 내 인라인 이미지 제거 (중복 방지)
-  const stripInlineImages = (html: string): string => {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    doc.querySelectorAll('.media-block[data-type="image"], .media-block:not([data-type])').forEach(el => {
-      if (el.querySelector('img')) el.remove();
-    });
-    doc.querySelectorAll('img').forEach(el => el.remove());
-    return doc.body.innerHTML;
-  };
-
   // 미디어 컨트롤 버튼 제거 (표시용)
   const cleanMediaControls = (html: string): string => {
     let cleaned = html;
@@ -254,16 +228,12 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
     return structured;
   };
 
-  const formatContent = (content: string, hasGalleryImages = false) => {
+  const formatContent = (content: string) => {
     // HTML 태그 감지 (더 포괄적인 패턴)
     const htmlTagPattern = /<[a-z][\s\S]*?>/i;
     if (htmlTagPattern.test(content)) {
       // 미디어 컨트롤 버튼 제거
       let htmlContent = cleanMediaControls(content);
-      // 갤러리가 있으면 content 내 인라인 이미지 제거 (중복 방지)
-      if (hasGalleryImages) {
-        htmlContent = stripInlineImages(htmlContent);
-      }
       // 줄바꿈을 <br>로 변환 (이미 <br>이 없는 경우)
       if (!htmlContent.includes('<br')) {
         htmlContent = htmlContent.replace(/\n/g, '<br />');
@@ -471,14 +441,6 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
     );
   }
 
-  // 상세페이지 표시
-  // 갤러리 이미지: images[]가 있으면 사용, 없으면 content에서 추출 (캐시 old data 대응)
-  const galleryImages = selectedPost
-    ? (selectedPost.images && selectedPost.images.length > 0
-        ? selectedPost.images.map(src => ({ src: src.startsWith('//') ? `https:${src}` : src }))
-        : extractImagesFromContent(selectedPost.content))
-    : [];
-  const hasGallery = galleryImages.length > 0;
   if (selectedPost) {
     return (
       <div className="page-content">
@@ -530,26 +492,9 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
               )}
 
               <div className="post-text" ref={contentRef}>
-                {formatContent(selectedPost.content, hasGallery)}
+                {formatContent(selectedPost.content)}
               </div>
               <LightboxPortal />
-
-              {/* 이미지 갤러리 */}
-              {hasGallery && (
-                <ImageGallery
-                  images={galleryImages}
-                  imageLayout={selectedPost.imageLayout}
-                  isAdmin={isAuthenticated}
-                  onLayoutChange={async (newLayout) => {
-                    try {
-                      await workAPI.updateImageLayout(selectedPost.id, newLayout);
-                      setSelectedPost({ ...selectedPost, imageLayout: newLayout });
-                    } catch (e) {
-                      alert('이미지 레이아웃 저장에 실패했습니다.');
-                    }
-                  }}
-                />
-              )}
 
               {/* 유기적공명:에디아포닉 글에만 PDF 카탈로그 표시 */}
               {(selectedPost.title.includes('유기적공명') || selectedPost.title.includes('에디아포닉')) && (
