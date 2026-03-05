@@ -178,6 +178,17 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
     }
   };
 
+  // 갤러리가 있을 때 content 내 인라인 이미지 제거 (중복 방지)
+  const stripInlineImages = (html: string): string => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    doc.querySelectorAll('.media-block[data-type="image"], .media-block:not([data-type])').forEach(el => {
+      if (el.querySelector('img')) el.remove();
+    });
+    doc.querySelectorAll('img').forEach(el => el.remove());
+    return doc.body.innerHTML;
+  };
+
   // 미디어 컨트롤 버튼 제거 (표시용)
   const cleanMediaControls = (html: string): string => {
     let cleaned = html;
@@ -228,12 +239,16 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
     return structured;
   };
 
-  const formatContent = (content: string) => {
+  const formatContent = (content: string, hasGalleryImages = false) => {
     // HTML 태그 감지 (더 포괄적인 패턴)
     const htmlTagPattern = /<[a-z][\s\S]*?>/i;
     if (htmlTagPattern.test(content)) {
       // 미디어 컨트롤 버튼 제거
       let htmlContent = cleanMediaControls(content);
+      // 갤러리가 있으면 content 내 인라인 이미지 제거 (중복 방지)
+      if (hasGalleryImages) {
+        htmlContent = stripInlineImages(htmlContent);
+      }
       // 줄바꿈을 <br>로 변환 (이미 <br>이 없는 경우)
       if (!htmlContent.includes('<br')) {
         htmlContent = htmlContent.replace(/\n/g, '<br />');
@@ -493,7 +508,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
               )}
 
               <div className="post-text" ref={contentRef}>
-                {formatContent(selectedPost.content)}
+                {formatContent(selectedPost.content, !!(selectedPost.images && selectedPost.images.length > 0))}
               </div>
               <LightboxPortal />
 
