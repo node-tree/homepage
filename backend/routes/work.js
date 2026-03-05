@@ -13,6 +13,18 @@ const ensureDBConnection = async () => {
   return true;
 };
 
+// HTML content에서 이미지 src 추출
+const extractImagesFromHTML = (html) => {
+  if (!html) return [];
+  const imgs = [];
+  const regex = /<img[^>]+src=["']([^"']+)["']/gi;
+  let match;
+  while ((match = regex.exec(html)) !== null) {
+    imgs.push(match[1]);
+  }
+  return imgs;
+};
+
 // GET /work/header - 상단 제목/부제목 조회
 router.get('/header', async (req, res) => {
   try {
@@ -121,7 +133,7 @@ router.get('/', async (req, res) => {
         content: work.contents || '내용 없음', // contents를 content로 매핑
         htmlContent: work.htmlContent || '',
         date: dateString,
-        images: [],
+        images: extractImagesFromHTML(work.contents),
         thumbnail: work.thumbnail || null,
         sortOrder: work.sortOrder || 0,
         imageLayout: work.imageLayout || []
@@ -368,7 +380,7 @@ router.get('/:id', async (req, res) => {
         content: work.contents || '내용 없음',
         htmlContent: work.htmlContent || '',
         date: dateString,
-        images: [],
+        images: extractImagesFromHTML(work.contents),
         thumbnail: work.thumbnail || null,
         imageLayout: work.imageLayout || []
       },
