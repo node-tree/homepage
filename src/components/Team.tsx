@@ -31,7 +31,7 @@ const TEAM_MEMBERS: TeamMember[] = [
   {
     name: '정강현',
     nameEn: 'Kanghyun Jung',
-    role: 'Sound / 사운드',
+    role: '사운드·인터랙티브 시스템',
     bio: [
       '한양대학교 뉴미디어 음악 작곡',
       '모듈러 신스·필드 레코딩 기반 사운드 아티스트',
@@ -47,7 +47,7 @@ const TEAM_MEMBERS: TeamMember[] = [
   {
     name: '강정아',
     nameEn: 'Jeonga Kang',
-    role: 'Exhibition Curation & Archive / 전시 기획 및 아카이브',
+    role: '기획·아카이브',
     bio: [
       '동국대 불교학 전공 / 동국대학교 불교미술유산학과 석사 재학',
       '히스테리안 출판사 운영(2018.4~)',
@@ -62,7 +62,7 @@ const TEAM_MEMBERS: TeamMember[] = [
   {
     name: '남궁예은',
     nameEn: 'Yeeun Namgung',
-    role: 'Sound Art / 사운드 아트',
+    role: '사운드 아트·라이브 코딩',
     bio: [
       '비엔나 응용예술대학교 Cross-Disciplinary Strategies BA',
       '라이브 코딩 기반 사운드 아티스트',
@@ -78,7 +78,7 @@ const TEAM_MEMBERS: TeamMember[] = [
   {
     name: '이상옥',
     nameEn: 'Sangok Lee',
-    role: 'Conservation Science / 보존과학',
+    role: '보존과학',
     bio: [
       '한국전통문화대학교 조교수·학과장',
       '수집 금속 시편의 XRF·Raman 분광 분석 담당',
