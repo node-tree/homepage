@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import p5 from 'p5';
 import './Team.css';
 
@@ -18,7 +17,7 @@ const TEAM_MEMBERS: TeamMember[] = [
     nameEn: 'Hwayoung Lee',
     role: 'Team Leader / 설치미술',
     bio: [
-      '한국예술종합학교 MFA / 한성대학교 BFA(회화)',
+      '한국예술종합학교 미술원 조형예술과 전문사',
       '도시기록 프로젝트팀 NODE TREE 대표(2016~)',
       '(주)생산소 대표(2021~)',
       '충남창작스튜디오 2기 입주작가(2025-2026)',
@@ -43,21 +42,6 @@ const TEAM_MEMBERS: TeamMember[] = [
     links: [
       { label: '포트폴리오 다운로드', url: 'https://drive.google.com/drive/folders/16XdWrLsjS90HWzNUpySrcKmKmvRWsOmA?usp=sharing' },
       { label: 'nodetree.kr', url: 'https://www.nodetree.kr' },
-    ],
-  },
-  {
-    name: '이상옥',
-    nameEn: 'Sangok Lee',
-    role: 'Conservation Science / 보존과학',
-    bio: [
-      '한국전통문화대학교 조교수·학과장',
-      '수집 금속 시편의 XRF·Raman 분광 분석 담당',
-      '부식생성물의 광물 조성과 열화 등급 데이터화',
-      '「출토 청동유물의 납 함량에 따른 부식층 및 부식생성물 특성 분석」(2022, 보존과학회지)',
-      '「목조 건축문화재에 사용된 구조·보강용 전통 철물의 재사용 방안 연구」(2022, 보존과학회지)',
-    ],
-    links: [
-      { label: '한국전통문화대학교 교수 소개', url: 'https://www.knuh.ac.kr/mep/ots/proIntro/view.do?tplBaseId=TPL0000001&mnuBaseId=MNU0000350&topBaseId=MNU0000349&major=MAJCSM' },
     ],
   },
   {
@@ -89,6 +73,21 @@ const TEAM_MEMBERS: TeamMember[] = [
     links: [
       { label: '포트폴리오 다운로드', url: 'https://drive.google.com/drive/folders/1ueLJ7oq7Cc3gnRDTK-Ojgmk5t7n7vjW_?usp=sharing' },
       { label: 'Instagram', url: 'https://www.instagram.com/sophiologin/' },
+    ],
+  },
+  {
+    name: '이상옥',
+    nameEn: 'Sangok Lee',
+    role: 'Conservation Science / 보존과학',
+    bio: [
+      '한국전통문화대학교 조교수·학과장',
+      '수집 금속 시편의 XRF·Raman 분광 분석 담당',
+      '부식생성물의 광물 조성과 열화 등급 데이터화',
+      '「출토 청동유물의 납 함량에 따른 부식층 및 부식생성물 특성 분석」(2022, 보존과학회지)',
+      '「목조 건축문화재에 사용된 구조·보강용 전통 철물의 재사용 방안 연구」(2022, 보존과학회지)',
+    ],
+    links: [
+      { label: '한국전통문화대학교 교수 소개', url: 'https://www.knuh.ac.kr/mep/ots/proIntro/view.do?tplBaseId=TPL0000001&mnuBaseId=MNU0000350&topBaseId=MNU0000349&major=MAJCSM' },
     ],
   },
 ];
@@ -322,7 +321,6 @@ function corrosiveSketch(p: p5) {
 // TEAM COMPONENT
 // ═══════════════════════════════════════════════════════════════
 const Team: React.FC = () => {
-  const navigate = useNavigate();
   const canvasRef = useRef<HTMLDivElement>(null);
   const p5Ref = useRef<p5 | null>(null);
 
@@ -422,17 +420,6 @@ const Team: React.FC = () => {
           ))}
         </motion.div>
 
-        {/* Back */}
-        <motion.div
-          className="team-back"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8, duration: 0.5 }}
-        >
-          <button onClick={() => navigate('/')} className="team-back-button">
-            Back to Home
-          </button>
-        </motion.div>
       </div>
     </div>
   );

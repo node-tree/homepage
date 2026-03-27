@@ -388,7 +388,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/guestbook" element={<Guestbook />} />
             <Route path="/team-event" element={<TeamEvent />} />
-            <Route path="/team" element={<Team />} />
+            <Route path="/NODETREECorpus" element={<Team />} />
             <Route path="/synth" element={
               <div style={{
                 minHeight: '100vh',
