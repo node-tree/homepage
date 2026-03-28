@@ -14,6 +14,7 @@ interface StationData {
 const OceanData: React.FC = () => {
   const [stations, setStations] = useState<StationData[]>([]);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [loading, setLoading] = useState(true);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -21,6 +22,7 @@ const OceanData: React.FC = () => {
       const d = await res.json();
       if (d.stations?.length > 0) setStations(d.stations);
     } catch {}
+    setLoading(false);
     setLastUpdate(new Date());
   }, []);
 
@@ -43,6 +45,24 @@ const OceanData: React.FC = () => {
         <span>KHOA.REALTIME.BUSAN.4ST</span>
         <span>{lastUpdate.toLocaleTimeString('ko-KR', { hour12: false })}.{String(lastUpdate.getMilliseconds()).padStart(3, '0')}</span>
       </div>
+
+      {/* Loading overlay */}
+      {loading && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 20,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: '#000',
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 10, color: '#555', letterSpacing: '0.3em', marginBottom: 8 }}>
+              LOADING DATA
+            </div>
+            <div style={{ fontSize: 8, color: '#333' }}>
+              KHOA.REALTIME.BUSAN.4ST
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Three data panels */}
       <DataBarcode stations={stations} />
