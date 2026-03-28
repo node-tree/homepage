@@ -9,6 +9,7 @@ import SeoHead from './components/SeoHead';
 import Home from './components/Home';
 import SaengsansoApp from './components/Saengsanso';
 import StrudelSynth from './components/StrudelSynth';
+import OceanData from './components/OceanData';
 import Contact from './components/Contact';
 import Commons from './components/Commons';
 import CV from './components/CV';
@@ -389,6 +390,7 @@ function App() {
             <Route path="/guestbook" element={<Guestbook />} />
             <Route path="/team-event" element={<TeamEvent />} />
             <Route path="/NODETREECorpus" element={<Team />} />
+            <Route path="/ocean" element={<OceanData />} />
             <Route path="/synth" element={
               <div style={{
                 minHeight: '100vh',
