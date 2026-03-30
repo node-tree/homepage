@@ -42,50 +42,9 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
     setError(null);
 
     try {
-      // 테스트 계정들 (백엔드 없을 때) - 배포 환경에서는 제한
-      const isNodeTreeSite = window.location.hostname === 'nodetree.kr' || window.location.hostname === 'www.nodetree.kr';
-      const testAccounts = isNodeTreeSite ? [
-        // 배포 환경에서는 admin 계정만 허용
-        { username: 'admin', password: 'nodetree2024!', role: 'admin' as const }
-      ] : [
-        // 개발 환경에서는 여러 테스트 계정 허용
-        { username: 'admin', password: 'password', role: 'admin' as const },
-        { username: 'user', password: '123456', role: 'user' as const },
-        { username: 'nodetree', password: 'nodetree2024', role: 'admin' as const }
-      ];
-
-      const matchedAccount = testAccounts.find(account => 
-        account.username === formData.username && account.password === formData.password
-      );
-
-      if (matchedAccount) {
-        const testUser = {
-          id: `test-${matchedAccount.username}-${Date.now()}`,
-          username: matchedAccount.username,
-          email: `${matchedAccount.username}@nodetree.com`,
-          role: matchedAccount.role
-        };
-        
-        const testToken = 'test-jwt-token-' + Date.now();
-        login(testToken, testUser);
-        
-        // 로그인 성공 상태 표시
-        setError(null);
-        setSuccess(true);
-        
-        // 부드러운 리다이렉트
-        setTimeout(() => {
-          if (onClose) { onClose(); return; }
-          window.location.href = '/';
-        }, 800);
-        return;
-      }
-
-      // 백엔드 API 시도 - 상대 경로 사용
+      // 백엔드 API로 로그인
       const apiUrl = process.env.REACT_APP_API_URL || '/api';
-      
-      console.log('로그인 API URL:', apiUrl);
-      
+
       const response = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: {
@@ -97,9 +56,7 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
         })
       });
 
-      console.log('로그인 응답 상태:', response.status);
       const data = await response.json();
-      console.log('로그인 응답 데이터:', data);
 
       if (data.success) {
         login(data.token, data.user);
@@ -116,7 +73,6 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
         setError('사용자명 또는 비밀번호가 올바르지 않습니다.');
       }
     } catch (error) {
-      console.error('로그인 오류:', error);
       setError('로그인에 실패했습니다. 사용자명과 비밀번호를 확인해주세요.');
     } finally {
       setLoading(false);

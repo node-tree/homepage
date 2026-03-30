@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const About = require('../models/About');
 const auth = require('../middleware/auth');
+const { adminOnly } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -110,7 +111,7 @@ router.put('/', auth, async (req, res) => {
 });
 
 // DELETE /api/about/reset - 기존 데이터 삭제 및 초기화 (관리자만)
-router.delete('/reset', auth, async (req, res) => {
+router.delete('/reset', auth, adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
     

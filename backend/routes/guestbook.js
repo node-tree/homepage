@@ -3,6 +3,7 @@ const router = express.Router();
 const Guestbook = require('../models/Guestbook');
 const mongoose = require('mongoose');
 const auth = require('../middleware/auth');
+const { adminOnly } = require('../middleware/auth');
 
 // DB 연결 확인 — 별도 모듈에서 캐싱된 연결 재사용
 const connectDB = require('../db');
@@ -103,7 +104,7 @@ router.post('/', async (req, res) => {
 });
 
 // DELETE /api/guestbook/:id - 방명록 삭제 (관리자 전용)
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', auth, adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
 

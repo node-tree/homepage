@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const auth = require('../middleware/auth');
+const { adminOnly } = require('../middleware/auth');
 const {
   SaengsansoExhibition,
   SaengsansoProject,
@@ -101,7 +102,7 @@ Object.entries(MODELS).forEach(([type, Model]) => {
   });
 
   // POST — 추가 (auth)
-  router.post(`/${type}`, auth, async (req, res) => {
+  router.post(`/${type}`, auth, adminOnly, async (req, res) => {
     try {
       await ensureDBConnection();
       const item = new Model(req.body);
@@ -115,7 +116,7 @@ Object.entries(MODELS).forEach(([type, Model]) => {
   });
 
   // PUT reorder — 순서 변경 (auth)
-  router.put(`/${type}/reorder`, auth, async (req, res) => {
+  router.put(`/${type}/reorder`, auth, adminOnly, async (req, res) => {
     try {
       await ensureDBConnection();
       const { orders } = req.body;
@@ -132,7 +133,7 @@ Object.entries(MODELS).forEach(([type, Model]) => {
   });
 
   // PUT :id — 수정 (auth)
-  router.put(`/${type}/:id`, auth, async (req, res) => {
+  router.put(`/${type}/:id`, auth, adminOnly, async (req, res) => {
     try {
       await ensureDBConnection();
       const updated = await Model.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -146,7 +147,7 @@ Object.entries(MODELS).forEach(([type, Model]) => {
   });
 
   // DELETE :id — 삭제 (auth)
-  router.delete(`/${type}/:id`, auth, async (req, res) => {
+  router.delete(`/${type}/:id`, auth, adminOnly, async (req, res) => {
     try {
       await ensureDBConnection();
       const deleted = await Model.findByIdAndDelete(req.params.id);
@@ -178,7 +179,7 @@ router.get('/about-page', async (req, res) => {
   }
 });
 
-router.put('/about-page', auth, async (req, res) => {
+router.put('/about-page', auth, adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
     const { description } = req.body;
@@ -214,7 +215,7 @@ router.get('/members', async (req, res) => {
   }
 });
 
-router.put('/members', auth, async (req, res) => {
+router.put('/members', auth, adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
     const { members } = req.body;
@@ -234,16 +235,43 @@ router.put('/members', auth, async (req, res) => {
   }
 });
 
-// ─── 이미지 프록시 (CORS 우회) ───
+// ─── 이미지 프록시 (CORS 우회) — SSRF 방지 적용 ───
 router.get('/image-proxy', async (req, res) => {
   try {
     const { url } = req.query;
     if (!url) return res.status(400).json({ success: false, message: 'url 파라미터 필요' });
+
+    // URL 검증
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(url);
+    } catch {
+      return res.status(400).json({ success: false, message: '유효하지 않은 URL' });
+    }
+
+    // 프로토콜 검증
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      return res.status(400).json({ success: false, message: '허용되지 않는 프로토콜' });
+    }
+
+    // 내부 네트워크 차단 (SSRF 방지)
+    const hostname = parsedUrl.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('10.') || hostname.startsWith('192.168.') || hostname.startsWith('172.') || hostname === '0.0.0.0') {
+      return res.status(403).json({ success: false, message: '내부 네트워크 접근 불가' });
+    }
+
     const fetch = (await import('node-fetch')).default;
-    const imgRes = await fetch(url, { timeout: 8000 });
+    const imgRes = await fetch(url, { timeout: 8000, redirect: 'follow' });
     if (!imgRes.ok) return res.status(400).end();
+
+    // Content-Type이 이미지인지 확인
+    const contentType = imgRes.headers.get('content-type') || '';
+    if (!contentType.startsWith('image/')) {
+      return res.status(400).json({ success: false, message: '이미지가 아닙니다' });
+    }
+
     res.set('Access-Control-Allow-Origin', '*');
-    res.set('Content-Type', imgRes.headers.get('content-type') || 'image/png');
+    res.set('Content-Type', contentType);
     res.set('Cache-Control', 'public, max-age=86400');
     imgRes.body.pipe(res);
   } catch {

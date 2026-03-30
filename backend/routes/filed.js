@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Filed = require('../models/Filed');
 const auth = require('../middleware/auth');
+const { adminOnly } = require('../middleware/auth');
 const mongoose = require('mongoose');
 const FiledHeader = require('../models/Filed').FiledHeader;
 
@@ -30,7 +31,7 @@ router.get('/header', async (req, res) => {
 });
 
 // PUT /filed/header - 상단 제목/부제목 수정
-router.put('/header', require('../middleware/auth'), async (req, res) => {
+router.put('/header', require('../middleware/auth'), adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
     let header = await FiledHeader.findOne({});
@@ -47,7 +48,7 @@ router.put('/header', require('../middleware/auth'), async (req, res) => {
 });
 
 // PUT /filed/reorder - 글 순서 변경
-router.put('/reorder', auth, async (req, res) => {
+router.put('/reorder', auth, adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
 
@@ -185,7 +186,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/filed - 새 워크샵 글 작성
-router.post('/', auth, async (req, res) => {
+router.post('/', auth, adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
 
@@ -237,7 +238,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 // PUT /api/filed/:id - 워크샵 글 수정
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', auth, adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
 
@@ -304,7 +305,7 @@ router.put('/:id', auth, async (req, res) => {
 });
 
 // DELETE /api/filed/:id - 워크샵 글 삭제
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', auth, adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
     

@@ -7,6 +7,7 @@ const Filed = require('../models/Filed');
 const FiledHeader = require('../models/Filed').FiledHeader;
 const About = require('../models/About');
 const auth = require('../middleware/auth');
+const { adminOnly } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -113,7 +114,7 @@ router.get('/', async (req, res) => {
 });
 
 // PUT /api/home - 홈 설정 수정 (관리자만)
-router.put('/', auth, async (req, res) => {
+router.put('/', auth, adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
 

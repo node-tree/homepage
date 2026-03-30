@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const { HumanHeader } = require('../models/User');
 const auth = require('../middleware/auth');
+const { adminOnly } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -29,7 +30,7 @@ router.get('/header', async (req, res) => {
 });
 
 // PUT /api/human/header - 상단 제목/부제목 수정
-router.put('/header', auth, async (req, res) => {
+router.put('/header', auth, adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
     let header = await HumanHeader.findOne({});

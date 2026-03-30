@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Work = require('../models/Work');
 const auth = require('../middleware/auth');
+const { adminOnly } = require('../middleware/auth');
 const mongoose = require('mongoose');
 const WorkHeader = require('../models/Work').WorkHeader;
 
@@ -42,7 +43,7 @@ router.get('/header', async (req, res) => {
 });
 
 // PUT /work/header - 상단 제목/부제목 수정
-router.put('/header', require('../middleware/auth'), async (req, res) => {
+router.put('/header', require('../middleware/auth'), adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
     let header = await WorkHeader.findOne({});
@@ -59,7 +60,7 @@ router.put('/header', require('../middleware/auth'), async (req, res) => {
 });
 
 // PUT /work/reorder - 글 순서 변경
-router.put('/reorder', auth, async (req, res) => {
+router.put('/reorder', auth, adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
 
@@ -192,10 +193,10 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/work - 새 글 작성
-router.post('/', auth, async (req, res) => {
+router.post('/', auth, adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
-    
+
     const { title, content, htmlContent, thumbnail, imageLayout } = req.body;
 
     if (!title || !content) {
@@ -242,10 +243,10 @@ router.post('/', auth, async (req, res) => {
 });
 
 // PUT /api/work/:id - 글 수정
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', auth, adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
-    
+
     const { id } = req.params;
     const { title, content, htmlContent, thumbnail, imageLayout } = req.body;
 
@@ -307,7 +308,7 @@ router.put('/:id', auth, async (req, res) => {
 });
 
 // DELETE /api/work/:id - 글 삭제
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', auth, adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
     

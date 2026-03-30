@@ -1,7 +1,11 @@
 const jwt = require('jsonwebtoken');
 
-// 고정 JWT 시크릿 (Vercel 서버리스 인스턴스 간 일관성 보장)
-const JWT_SECRET = 'nodetree-jwt-secret-2024-fixed-key';
+// JWT 시크릿 (환경변수에서 로드)
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET 환경변수가 설정되지 않았습니다.');
+  process.exit(1);
+}
 
 const auth = (req, res, next) => {
   try {
@@ -56,4 +60,16 @@ const auth = (req, res, next) => {
   }
 };
 
-module.exports = auth; 
+// 관리자 권한 확인 미들웨어
+const adminOnly = (req, res, next) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: '관리자 권한이 필요합니다.'
+    });
+  }
+  next();
+};
+
+module.exports = auth;
+module.exports.adminOnly = adminOnly;

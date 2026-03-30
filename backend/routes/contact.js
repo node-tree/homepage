@@ -3,8 +3,15 @@ const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
 const Contact = require('../models/Contact');
 const auth = require('../middleware/auth');
+const { adminOnly } = require('../middleware/auth');
 
 const router = express.Router();
+
+// HTML 이스케이프 (이메일 인젝션 방지)
+const escapeHtml = (str) => {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+};
 
 // DB 연결 확인 — 별도 모듈에서 캐싱된 연결 재사용
 const connectDB = require('../db');
@@ -56,7 +63,7 @@ router.get('/', async (req, res) => {
 });
 
 // PUT /api/contact - Contact 설정 수정 (관리자만)
-router.put('/', auth, async (req, res) => {
+router.put('/', auth, adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
 
@@ -157,21 +164,26 @@ router.post('/send', async (req, res) => {
       }
     });
 
+    const safeName = escapeHtml(name);
+    const safeEmail = escapeHtml(email);
+    const safeSubject = escapeHtml(subject);
+    const safeMessage = escapeHtml(message);
+
     const mailOptions = {
-      from: `"${name}" <${process.env.SMTP_USER}>`,
+      from: `"${safeName}" <${process.env.SMTP_USER}>`,
       replyTo: email,
       to: recipientEmail,
-      subject: `[NODETREE 문의] ${subject}`,
+      subject: `[NODETREE 문의] ${safeSubject}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #333; border-bottom: 2px solid #111; padding-bottom: 10px;">새 문의가 접수되었습니다</h2>
           <div style="padding: 20px 0;">
-            <p><strong>이름:</strong> ${name}</p>
-            <p><strong>이메일:</strong> <a href="mailto:${email}">${email}</a></p>
-            <p><strong>제목:</strong> ${subject}</p>
+            <p><strong>이름:</strong> ${safeName}</p>
+            <p><strong>이메일:</strong> <a href="mailto:${safeEmail}">${safeEmail}</a></p>
+            <p><strong>제목:</strong> ${safeSubject}</p>
             <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
             <p><strong>내용:</strong></p>
-            <div style="background: #f8f8f8; padding: 15px; border-radius: 8px; white-space: pre-wrap;">${message}</div>
+            <div style="background: #f8f8f8; padding: 15px; border-radius: 8px; white-space: pre-wrap;">${safeMessage}</div>
           </div>
           <p style="color: #888; font-size: 12px; margin-top: 30px;">이 이메일은 nodetree.kr 문의 폼에서 자동 발송되었습니다.</p>
         </div>
@@ -190,8 +202,7 @@ router.post('/send', async (req, res) => {
     console.error('메일 전송 오류:', error);
     res.status(500).json({
       success: false,
-      message: '메시지 전송에 실패했습니다. 잠시 후 다시 시도해주세요.',
-      error: error.message
+      message: '메시지 전송에 실패했습니다. 잠시 후 다시 시도해주세요.'
     });
   }
 });

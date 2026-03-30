@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import { useAuth } from '../contexts/AuthContext';
 
 interface Post {
@@ -220,13 +221,13 @@ const PostDetail: React.FC<PostDetailProps> = ({
             <div
               ref={contentRef}
               className="content-section"
-              dangerouslySetInnerHTML={{ __html: post.htmlContent }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.htmlContent, { ADD_TAGS: ['iframe'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'src'] }) }}
             />
           ) : (
             <div
               ref={contentRef}
               className="content-section"
-              dangerouslySetInnerHTML={renderSafeContent(post.content)}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderSafeContent(post.content).__html, { ADD_TAGS: ['iframe'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'src'] }) }}
             />
           )}
         </div>

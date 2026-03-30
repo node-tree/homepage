@@ -10,6 +10,7 @@ import Home from './components/Home';
 import SaengsansoApp from './components/Saengsanso';
 import StrudelSynth from './components/StrudelSynth';
 import OceanData from './components/OceanData';
+import ClaudeMonitor from './components/ClaudeMonitor';
 import Contact from './components/Contact';
 import Commons from './components/Commons';
 import CV from './components/CV';
@@ -340,8 +341,8 @@ function AppContent() {
             whileHover={{ opacity: 1 }}
           >
             <span className="user-info">{user?.username}님</span>
-            <a href="/team-event" className="logout-button" style={{ textDecoration: 'none', marginRight: '4px' }}>
-              EVENT
+            <a href="/monitor" className="logout-button" style={{ textDecoration: 'none', marginRight: '4px' }}>
+              MONITOR
             </a>
             <button onClick={logout} className="logout-button">
               로그아웃
@@ -391,6 +392,7 @@ function App() {
             <Route path="/team-event" element={<TeamEvent />} />
             <Route path="/NODETREECorpus" element={<Team />} />
             <Route path="/ocean" element={<OceanData />} />
+            <Route path="/monitor" element={<ClaudeMonitor />} />
             <Route path="/synth" element={
               <div style={{
                 minHeight: '100vh',
