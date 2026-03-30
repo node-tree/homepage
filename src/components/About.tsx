@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
+import DOMPurify from 'dompurify';
 import { useAuth } from '../contexts/AuthContext';
 import { aboutAPI } from '../services/api';
 import PageLoader from './PageLoader';
@@ -550,7 +551,7 @@ const About: React.FC = () => {
 
           <div className="about-content">
             {aboutData?.htmlContent ? (
-              <div dangerouslySetInnerHTML={{ __html: aboutData.htmlContent }} />
+              <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(aboutData.htmlContent, { ADD_TAGS: ['iframe'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'src'] }) }} />
             ) : (
               <div style={{ color: '#aaa', fontStyle: 'italic' }}>아직 소개글이 없습니다.</div>
             )}

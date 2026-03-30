@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const CV = require('../models/CV');
 const auth = require('../middleware/auth');
+const { adminOnly } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -29,7 +30,7 @@ router.get('/', async (req, res) => {
 });
 
 // PUT /api/cv - CV 데이터 수정(관리자만)
-router.put('/', auth, async (req, res) => {
+router.put('/', auth, adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
     const { title, subtitle, content, htmlContent } = req.body;

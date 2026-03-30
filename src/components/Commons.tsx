@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import { filedAPI } from '../services/api';
 import WritePost from './WritePost';
 import { useAuth } from '../contexts/AuthContext';
@@ -300,7 +301,7 @@ const Commons: React.FC<CommonsProps> = ({ onPostsLoaded }) => {
       if (isLong && !isContentExpanded) {
         return (
           <div className="html-content-wrapper">
-            <div className="html-content content-collapsed" dangerouslySetInnerHTML={{ __html: htmlContent }} />
+            <div className="html-content content-collapsed" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(htmlContent, { ADD_TAGS: ['iframe'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'src'] }) }} />
             <div className="content-expand-overlay">
               <button className="content-expand-btn" onClick={() => setIsContentExpanded(true)}>
                 더보기
@@ -312,7 +313,7 @@ const Commons: React.FC<CommonsProps> = ({ onPostsLoaded }) => {
 
       return (
         <div className="html-content-wrapper">
-          <div className="html-content" dangerouslySetInnerHTML={{ __html: htmlContent }} />
+          <div className="html-content" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(htmlContent, { ADD_TAGS: ['iframe'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'src'] }) }} />
           {isLong && isContentExpanded && (
             <button className="content-collapse-btn" onClick={() => setIsContentExpanded(false)}>
               접기
