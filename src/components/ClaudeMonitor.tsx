@@ -34,6 +34,12 @@ interface RecommendItem { name: string; type: 'skill' | 'agent' | 'mcp'; desc: s
 interface TeamRecommendation { teamId: string; teamName: string; items: RecommendItem[]; }
 interface RecommendationsData { lastUpdated: string; recommendations: TeamRecommendation[]; }
 
+interface ClaudeFeature {
+  id: string; name: string; badge: 'new' | 'hot' | 'rising' | 'stable'; since: string;
+  desc: string; example: string; useCase: string;
+}
+interface ClaudeCodeFeaturesData { lastUpdated: string; version: string; features: ClaudeFeature[]; }
+
 interface GrantItem {
   id: string; title: string; organization: string;
   region: 'domestic' | 'international';
@@ -556,6 +562,7 @@ const ClaudeMonitor: React.FC = () => {
   const [showOverview, setShowOverview] = useState(false);
   const [grants, setGrants] = useState<GrantItem[]>(FALLBACK_GRANTS);
   const [grantsUpdated, setGrantsUpdated] = useState('');
+  const [claudeFeatures, setClaudeFeatures] = useState<ClaudeCodeFeaturesData | null>(null);
   const [calendar, setCalendar] = useState<CalendarEvent[]>([]);
   const [calendarUpdated, setCalendarUpdated] = useState('');
   const [calViewYear, setCalViewYear] = useState(() => new Date().getFullYear());
@@ -572,7 +579,7 @@ const ClaudeMonitor: React.FC = () => {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [indexRes, agentsRes, teamsRes, activityRes, recommendRes, grantsRes, calendarRes] = await Promise.all([
+      const [indexRes, agentsRes, teamsRes, activityRes, recommendRes, grantsRes, calendarRes, claudeFeaturesRes] = await Promise.all([
         fetch(`${GITHUB_RAW}/index.json?t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`${GITHUB_RAW}/agents.json?t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`${GITHUB_RAW}/teams.json?t=${Date.now()}`, { cache: 'no-store' }),
@@ -580,6 +587,7 @@ const ClaudeMonitor: React.FC = () => {
         fetch(`${GITHUB_RAW}/recommendations.json?t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`${GITHUB_RAW}/grants.json?t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`${GITHUB_RAW}/calendar.json?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`${GITHUB_RAW}/claude-code-features.json?t=${Date.now()}`, { cache: 'no-store' }),
       ]);
       if (indexRes.ok) {
         const d: IndexData = await indexRes.json();
@@ -617,6 +625,10 @@ const ClaudeMonitor: React.FC = () => {
       if (calendarRes.ok) {
         const d: CalendarData = await calendarRes.json();
         if (d.events) { setCalendar(d.events); setCalendarUpdated(d.lastUpdated || ''); }
+      }
+      if (claudeFeaturesRes.ok) {
+        const d: ClaudeCodeFeaturesData = await claudeFeaturesRes.json();
+        if (d.features?.length) setClaudeFeatures(d);
       }
     } catch {}
   }, []);
@@ -897,6 +909,53 @@ const ClaudeMonitor: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Claude Code Updates */}
+            {claudeFeatures && (
+              <div style={{ borderTop: `2px solid ${C.text}`, paddingTop: 20, marginTop: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 16 }}>
+                  <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '0.2em', color: C.text }}>CLAUDE CODE UPDATES</span>
+                  <span style={{ fontFamily: MONO, fontSize: 9, color: C.textDim, letterSpacing: '0.08em' }}>
+                    v{claudeFeatures.version} · {claudeFeatures.lastUpdated}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 0, border: `1px solid ${C.border}`, borderBottom: 'none' }}>
+                  {claudeFeatures.features.map((f, i) => (
+                    <div key={f.id} style={{
+                      display: 'grid', gridTemplateColumns: '200px 1fr',
+                      borderBottom: `1px solid ${C.border}`,
+                    }}>
+                      {/* Left: name + badge + since */}
+                      <div style={{ padding: '12px 14px', borderRight: `1px solid ${C.border}`, background: i % 2 === 0 ? '#fafafa' : '#fff' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
+                          <span style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, color: C.text }}>{f.name}</span>
+                          <span style={{
+                            fontFamily: MONO, fontSize: 7, letterSpacing: '0.1em', padding: '1px 5px',
+                            background: f.badge === 'new' ? '#0a0a0a' : f.badge === 'hot' ? '#c00' : f.badge === 'rising' ? '#b87000' : '#888',
+                            color: '#fff',
+                          }}>
+                            {f.badge === 'new' ? 'NEW' : f.badge === 'hot' ? 'HOT' : f.badge === 'rising' ? 'RISING' : 'STABLE'}
+                          </span>
+                        </div>
+                        <div style={{ fontFamily: MONO, fontSize: 8, color: C.textDim, letterSpacing: '0.06em' }}>{f.since}</div>
+                      </div>
+                      {/* Right: desc + example + useCase */}
+                      <div style={{ padding: '12px 14px' }}>
+                        <div style={{ fontFamily: SANS, fontSize: 10, color: C.text, marginBottom: 6, lineHeight: 1.5 }}>{f.desc}</div>
+                        <div style={{
+                          fontFamily: MONO, fontSize: 9, color: '#0a0a0a', background: '#f0f0f0',
+                          padding: '4px 8px', marginBottom: 6, borderRadius: 2, letterSpacing: '0.04em',
+                          wordBreak: 'break-all',
+                        }}>
+                          {f.example}
+                        </div>
+                        <div style={{ fontFamily: SANS, fontSize: 9, color: C.textDim, lineHeight: 1.5 }}>→ {f.useCase}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
