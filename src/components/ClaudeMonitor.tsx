@@ -707,10 +707,10 @@ const ClaudeMonitor: React.FC = () => {
         {/* ── Tab bar ─────────────────────────────────────────────────────── */}
         <div style={{ borderBottom: `1px solid ${C.border}`, display: 'flex', gap: 0, marginBottom: 0 }}>
           {([
-            { key: 'teams', label: `TEAMS  [${String(displayTeams.length).padStart(2,'0')}]` },
-            { key: 'agents', label: `HARNESS  [03]` },
-            { key: 'skills', label: `SKILLS  [${String(skills.filter(s=>s.type!=='agent').length).padStart(2,'0')}]` },
-            { key: 'grants', label: `GRANTS  [${String(grants.length).padStart(2,'0')}]` },
+            { key: 'teams', label: `팀 구조  [${String(displayTeams.length).padStart(2,'0')}]` },
+            { key: 'agents', label: `하네스  [03]` },
+            { key: 'skills', label: `스킬  [${String(skills.filter(s=>s.type!=='agent').length).padStart(2,'0')}]` },
+            { key: 'grants', label: `공모  [${String(grants.length).padStart(2,'0')}]` },
           ] as const).map(t => (
             <button key={t.key} className={`ikeda-tab${mainTab === t.key ? ' active' : ''}`} onClick={() => setMainTab(t.key)}>
               {t.label}
