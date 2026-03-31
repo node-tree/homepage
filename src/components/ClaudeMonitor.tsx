@@ -560,6 +560,10 @@ const ClaudeMonitor: React.FC = () => {
   const [calendarUpdated, setCalendarUpdated] = useState('');
   const [calViewYear, setCalViewYear] = useState(() => new Date().getFullYear());
   const [calViewMonth, setCalViewMonth] = useState(() => new Date().getMonth());
+  const [showAddEvent, setShowAddEvent] = useState(false);
+  const [addEventForm, setAddEventForm] = useState({ title: '', date: '', endDate: '', description: '', location: '' });
+  const [addEventStatus, setAddEventStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
+  const [addEventError, setAddEventError] = useState('');
 
   useEffect(() => {
     const iv = setInterval(() => setNow(new Date()), 1000);
@@ -1240,13 +1244,13 @@ const ClaudeMonitor: React.FC = () => {
               const s = new Date(e.start + 'T00:00:00');
               const en = new Date(e.end   + 'T00:00:00');
               for (let d = new Date(s); d <= en; d.setDate(d.getDate() + 1)) {
-                const key = d.toISOString().slice(0, 10);
+                const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
                 if (!eventMap[key]) eventMap[key] = [];
                 eventMap[key].push(e);
               }
             });
 
-            const todayStr = today.toISOString().slice(0, 10);
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
             const monthLabel = firstDay.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
             const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -1282,12 +1286,118 @@ const ClaudeMonitor: React.FC = () => {
                       nodetreemedia@gmail.com
                     </span>
                   </div>
-                  {calendarUpdated && (
-                    <span style={{ fontFamily: MONO, fontSize: 8, color: C.textDim, letterSpacing: '0.06em' }}>
-                      SYNCED {calendarUpdated.slice(0, 10)}
-                    </span>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {calendarUpdated && (
+                      <span style={{ fontFamily: MONO, fontSize: 8, color: C.textDim, letterSpacing: '0.06em' }}>
+                        SYNCED {calendarUpdated.slice(0, 10)}
+                      </span>
+                    )}
+                    <button
+                      className="ikeda-btn"
+                      onClick={() => { setShowAddEvent(v => !v); setAddEventStatus('idle'); setAddEventError(''); }}
+                      style={{ fontSize: 9, letterSpacing: '0.08em', padding: '4px 10px' }}
+                    >
+                      {showAddEvent ? '✕ 닫기' : '+ 일정 추가'}
+                    </button>
+                  </div>
                 </div>
+
+                {/* Add event form */}
+                {showAddEvent && (
+                  <div style={{ background: '#f5f5f5', border: `1px solid ${C.border}`, borderRadius: 4, padding: '16px', marginBottom: 16 }}>
+                    <div style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color: C.text, marginBottom: 12 }}>
+                      NEW EVENT → GOOGLE CALENDAR
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+                      <div style={{ gridColumn: '1/-1' }}>
+                        <label style={{ fontFamily: MONO, fontSize: 9, color: C.textDim, letterSpacing: '0.08em', display: 'block', marginBottom: 4 }}>TITLE *</label>
+                        <input
+                          type="text"
+                          value={addEventForm.title}
+                          onChange={e => setAddEventForm(f => ({ ...f, title: e.target.value }))}
+                          placeholder="일정 이름"
+                          style={{ width: '100%', fontFamily: MONO, fontSize: 11, padding: '6px 8px', border: `1px solid ${C.border}`, background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontFamily: MONO, fontSize: 9, color: C.textDim, letterSpacing: '0.08em', display: 'block', marginBottom: 4 }}>DATE *</label>
+                        <input
+                          type="date"
+                          value={addEventForm.date}
+                          onChange={e => setAddEventForm(f => ({ ...f, date: e.target.value }))}
+                          style={{ width: '100%', fontFamily: MONO, fontSize: 11, padding: '6px 8px', border: `1px solid ${C.border}`, background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontFamily: MONO, fontSize: 9, color: C.textDim, letterSpacing: '0.08em', display: 'block', marginBottom: 4 }}>END DATE</label>
+                        <input
+                          type="date"
+                          value={addEventForm.endDate}
+                          onChange={e => setAddEventForm(f => ({ ...f, endDate: e.target.value }))}
+                          style={{ width: '100%', fontFamily: MONO, fontSize: 11, padding: '6px 8px', border: `1px solid ${C.border}`, background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontFamily: MONO, fontSize: 9, color: C.textDim, letterSpacing: '0.08em', display: 'block', marginBottom: 4 }}>LOCATION</label>
+                        <input
+                          type="text"
+                          value={addEventForm.location}
+                          onChange={e => setAddEventForm(f => ({ ...f, location: e.target.value }))}
+                          placeholder="장소"
+                          style={{ width: '100%', fontFamily: MONO, fontSize: 11, padding: '6px 8px', border: `1px solid ${C.border}`, background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div style={{ gridColumn: '1/-1' }}>
+                        <label style={{ fontFamily: MONO, fontSize: 9, color: C.textDim, letterSpacing: '0.08em', display: 'block', marginBottom: 4 }}>DESCRIPTION</label>
+                        <input
+                          type="text"
+                          value={addEventForm.description}
+                          onChange={e => setAddEventForm(f => ({ ...f, description: e.target.value }))}
+                          placeholder="설명 (선택)"
+                          style={{ width: '100%', fontFamily: MONO, fontSize: 11, padding: '6px 8px', border: `1px solid ${C.border}`, background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <button
+                        className="ikeda-btn"
+                        disabled={addEventStatus === 'loading' || !addEventForm.title || !addEventForm.date}
+                        onClick={async () => {
+                          setAddEventStatus('loading');
+                          setAddEventError('');
+                          try {
+                            const res = await fetch('/api/calendar/create-event', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                title: addEventForm.title,
+                                date: addEventForm.date,
+                                endDate: addEventForm.endDate || undefined,
+                                description: addEventForm.description || undefined,
+                                location: addEventForm.location || undefined,
+                              }),
+                            });
+                            const data = await res.json();
+                            if (!res.ok) throw new Error(data.error || 'Failed');
+                            // optimistic update
+                            setCalendar(prev => [...prev, data.event].sort((a, b) => a.start.localeCompare(b.start)));
+                            setAddEventForm({ title: '', date: '', endDate: '', description: '', location: '' });
+                            setAddEventStatus('ok');
+                            setTimeout(() => { setAddEventStatus('idle'); setShowAddEvent(false); }, 2000);
+                          } catch (err: any) {
+                            setAddEventStatus('error');
+                            setAddEventError(err.message);
+                          }
+                        }}
+                        style={{ fontSize: 10, letterSpacing: '0.1em', padding: '6px 16px' }}
+                      >
+                        {addEventStatus === 'loading' ? 'ADDING...' : 'ADD TO CALENDAR'}
+                      </button>
+                      {addEventStatus === 'ok' && <span style={{ fontFamily: MONO, fontSize: 10, color: '#2a7a2a' }}>✓ 구글 캘린더에 등록됨</span>}
+                      {addEventStatus === 'error' && <span style={{ fontFamily: MONO, fontSize: 10, color: '#c00' }}>✕ {addEventError}</span>}
+                    </div>
+                  </div>
+                )}
 
                 {/* Month nav */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
