@@ -57,6 +57,7 @@ const guestbookRoutes = require('./routes/guestbook');
 const saengsansoRoutes = require('./routes/saengsanso');
 const teamEventRoutes = require('./routes/teamEvent');
 const oceanRoutes = require('./routes/ocean');
+const calendarRoutes = require('./routes/calendar');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/work', workRoutes);
@@ -70,6 +71,7 @@ app.use('/api/guestbook', guestbookRoutes);
 app.use('/api/saengsanso', saengsansoRoutes);
 app.use('/api/team-event', teamEventRoutes);
 app.use('/api/ocean', oceanRoutes);
+app.use('/api/calendar', calendarRoutes);
 
 // 기본 라우트
 app.get('/', (req, res) => {
