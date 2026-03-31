@@ -34,11 +34,20 @@ interface RecommendItem { name: string; type: 'skill' | 'agent' | 'mcp'; desc: s
 interface TeamRecommendation { teamId: string; teamName: string; items: RecommendItem[]; }
 interface RecommendationsData { lastUpdated: string; recommendations: TeamRecommendation[]; }
 
+interface GrantItem {
+  id: string; title: string; organization: string;
+  region: 'domestic' | 'international';
+  category: '현대예술' | '문화예술교육' | '미디어콘텐츠';
+  deadline: string | null; // "YYYY-MM-DD"
+  openDate?: string; url: string; amount?: string; notes?: string;
+}
+interface GrantsData { lastUpdated: string; grants: GrantItem[]; }
+
 // ── Harness agents ────────────────────────────────────────────────────────────
 const AGENTS = [
-  { tier: 'opus' as const,   role: 'PLANNER',   korean: '전략가', symbol: '▲', desc: '짧은 요청 → 상세 설계서 변환. 복잡한 추론 담당.', col: '#111' },
-  { tier: 'sonnet' as const, role: 'GENERATOR', korean: '구현자', symbol: '■', desc: 'Sprint Contract 단위 코드 구현. 주력 에이전트.', col: '#444' },
-  { tier: 'haiku' as const,  role: 'EVALUATOR', korean: '평가자', symbol: '○', desc: 'Playwright 테스트 및 채점. 자기 편향 제거.', col: '#888' },
+  { tier: 'opus' as const,   role: 'PLANNER',   korean: '전략가', symbol: '▲', desc: 'harness-planner — 요청 → Sprint Contract 변환. 다중 팀 작업 설계.', col: '#111' },
+  { tier: 'sonnet' as const, role: 'GENERATOR', korean: '구현자', symbol: '■', desc: '팀 전담 에이전트 — Sprint Contract 단위 구현. 주력 에이전트.', col: '#444' },
+  { tier: 'sonnet' as const, role: 'EVALUATOR', korean: '평가자', symbol: '○', desc: 'code / design / doc-evaluator — PASS/REWORK 판정. 자기 편향 제거.', col: '#888' },
 ] as const;
 
 const SKILL_CATEGORIES: Record<string, { label: string }> = {
@@ -54,6 +63,28 @@ const FALLBACK_TEAMS: TeamDef[] = [
   { id: 'accounting', name: '회계팀',           emoji: '□', color: '#059669', bg: '#ecfdf5', desc: '재무 관리, 예산, 지출 추적', skills: ['xlsx','korea-accounting','grant-accounting','pdf','hwpx','pptx'], agents: [] },
   { id: 'design',     name: '디자인 및 홍보팀', emoji: '●', color: '#e11d48', bg: '#fff1f2', desc: 'UI/UX 디자인, 브랜딩, 홍보', skills: ['pencil-design','taste-skill','frontend-design','photo-grading','figma-generate-design'], agents: [] },
   { id: 'planning',   name: '기획팀',           emoji: '◆', color: '#0891b2', bg: '#ecfeff', desc: '프로젝트 기획, 제안서, 문서 작성', skills: ['pptx','hwpx','pdf','skill-creator'], agents: [] },
+];
+
+const FALLBACK_GRANTS: GrantItem[] = [
+  // ── 국내
+  { id: 'arko-visual-2026', title: '한국문화예술위원회 시각예술 창작산실', organization: '한국문화예술위원회', region: 'domestic', category: '현대예술', deadline: '2026-04-30', openDate: '2026-03-17', url: 'https://www.arko.or.kr', amount: '최대 3,000만원', notes: '개인·단체 신청 가능' },
+  { id: 'arko-media-2026', title: '아르코 미디어아트 지원사업', organization: '한국문화예술위원회', region: 'domestic', category: '미디어콘텐츠', deadline: '2026-05-15', url: 'https://www.arko.or.kr', amount: '최대 2,000만원' },
+  { id: 'sfc-local-2026', title: '서울문화재단 예술지원 (지역특성화)', organization: '서울문화재단', region: 'domestic', category: '현대예술', deadline: '2026-04-18', openDate: '2026-03-25', url: 'https://www.sfac.or.kr', amount: '500~1,500만원' },
+  { id: 'cha-heritage-media-2026', title: '국가유산청 문화유산 미디어콘텐츠 제작', organization: '국가유산청', region: 'domestic', category: '미디어콘텐츠', deadline: '2026-04-10', openDate: '2026-03-10', url: 'https://www.cha.go.kr', amount: '최대 5,000만원', notes: '핵심 공모' },
+  { id: 'cha-edu-2026', title: '국가유산청 문화유산 교육프로그램 개발', organization: '국가유산청', region: 'domestic', category: '문화예술교육', deadline: '2026-04-25', url: 'https://www.cha.go.kr', amount: '최대 3,000만원' },
+  { id: 'arte-edu-2026', title: '한국문화예술교육진흥원 꿈다락 토요문화학교', organization: '한국문화예술교육진흥원', region: 'domestic', category: '문화예술교육', deadline: '2026-05-02', url: 'https://www.arte.or.kr', amount: '최대 4,000만원' },
+  { id: 'arte-school-2026', title: '학교 문화예술교육 지원사업', organization: '한국문화예술교육진흥원', region: 'domestic', category: '문화예술교육', deadline: '2026-05-20', url: 'https://www.arte.or.kr' },
+  { id: 'busan-art-2026', title: '부산문화재단 지역문화예술 활성화', organization: '부산문화재단', region: 'domestic', category: '현대예술', deadline: '2026-04-20', url: 'https://www.bfac.or.kr', amount: '500~2,000만원' },
+  { id: 'nfc-indie-2026', title: '영화진흥위원회 독립·예술영화 제작지원', organization: '영화진흥위원회', region: 'domestic', category: '미디어콘텐츠', deadline: '2026-06-01', url: 'https://www.kofic.or.kr', amount: '최대 1억원' },
+  { id: 'mcst-global-2026', title: '문화체육관광부 한국문화 세계화 프로젝트', organization: '문화체육관광부', region: 'domestic', category: '현대예술', deadline: '2026-05-30', url: 'https://www.mcst.go.kr', amount: '최대 5,000만원' },
+  // ── 해외
+  { id: 'paf-2026', title: 'Prince Claus Fund — Cultural Emergency Response', organization: 'Prince Claus Fund', region: 'international', category: '현대예술', deadline: '2026-04-15', url: 'https://princeclausfund.org', amount: 'Up to €25,000', notes: 'Rolling basis' },
+  { id: 'rhizome-2026', title: 'Rhizome Microgrants — Net Art & New Media', organization: 'Rhizome', region: 'international', category: '미디어콘텐츠', deadline: '2026-05-01', url: 'https://rhizome.org/commissions', amount: 'Up to $5,000' },
+  { id: 'asiarts-2026', title: 'Asia Arts Creative Fellows', organization: 'Asia Society', region: 'international', category: '현대예술', deadline: '2026-04-30', url: 'https://asiasociety.org/arts/creative-fellows', amount: 'Fellowship + travel' },
+  { id: 'zero1-2026', title: 'ZERO1 American Arts Incubator', organization: 'ZERO1 / US Embassy', region: 'international', category: '미디어콘텐츠', deadline: '2026-05-15', url: 'https://zero1.org/programs/american-arts-incubator', amount: 'Residency + $5,000' },
+  { id: 'cca-2026', title: 'Canada Council for the Arts — Digital Creativity', organization: 'Canada Council for the Arts', region: 'international', category: '미디어콘텐츠', deadline: '2026-06-15', url: 'https://canadacouncil.ca/funding/grants', amount: 'Up to CAD 30,000' },
+  { id: 'aks-2026', title: 'Korea Foundation — Arts & Culture Grant', organization: 'Korea Foundation', region: 'international', category: '현대예술', deadline: '2026-05-31', url: 'https://www.kf.or.kr/en', amount: 'Up to $20,000' },
+  { id: 'ycam-2026', title: 'YCAM Collaborative Research Grant', organization: 'YCAM (Yamaguchi Center)', region: 'international', category: '미디어콘텐츠', deadline: '2026-07-01', url: 'https://www.ycam.jp/en', notes: '미디어아트 특화' },
 ];
 
 // 카테고리별 단일 기호 — 이케다 료지 원칙
@@ -92,27 +123,38 @@ const FALLBACK_SKILLS: SkillDef[] = [
 
 // 에이전트 한글 설명 맵
 const AGENT_DESC_KO: Record<string, string> = {
-  'nodetreehome-web':    'nodetreeHome 웹 개발 · React 컴포넌트 · API · 배포',
-  'doc-design':          '포트폴리오·도록·공문서·보고서 제작 (Pencil, HWPX)',
-  'grant-writer':        '지원서·작가노트·프로젝트 설명문 작성',
-  'project-planner':     '일정·예산·역할 분담·진행 상황 관리 (Obsidian)',
-  'pr-content':          '홍보문·보도자료·전시 소개·SNS 캡션 작성',
-  'visual-design':       '포스터·인스타 이미지·전시 그래픽·홍보물 제작',
-  'grant-research':      '공모·레지던시·지원사업 발굴 및 전략 기획',
-  'nodetree-research':   '작가·작품·이론·기술 리서치 및 Obsidian 정리',
-  'media-art-pipeline':  'OSC·ArtNet·ESP32·TidalCycles·TouchDesigner 파이프라인',
+  // 하네스
+  'harness-planner':          '복잡한 요청 → Sprint Contract 변환 · 다중 팀 작업 설계 (Opus)',
+  // 개발팀
+  'nodetreehome-web':         'nodetreeHome 웹 개발 · React 컴포넌트 · API · 배포',
+  'code-evaluator':           '웹/미디어아트 파이프라인 코드 평가 · PASS/REWORK 판정',
+  // 디자인 및 홍보팀
+  'visual-design':            '포스터·인스타 이미지·전시 그래픽·홍보물 제작',
+  'pr-content':               '홍보문·보도자료·전시 소개·SNS 캡션 작성',
+  'design-evaluator':         '디자인·홍보물 평가 · NODE TREE 아이덴티티 기준 판정',
+  // 예술작업팀
+  'media-art-pipeline':       'OSC·ArtNet·ESP32·TidalCycles·TouchDesigner 파이프라인',
+  // 리서치팀
+  'nodetree-research':        '작가·작품·이론·기술 리서치 및 Obsidian 정리',
+  'grant-research':           '공모·레지던시·지원사업 발굴 및 전략 기획',
+  // 회계팀
   'saengsanso-accounting':    '주식회사 생산소 세무·회계·급여·법인카드 처리',
   'grant-accounting-agent':   '공모사업 정산·e나라도움·e보템·NCAS 집행 관리',
-  'code-evaluator':           '구현 결과물 채점 (GAN 이밸류에이터) · PASS/REWORK 판정',
+  // 기획팀
+  'doc-design':               '포트폴리오·도록·공문서·보고서 제작 (Pencil, HWPX)',
+  'grant-writer':             '지원서·작가노트·프로젝트 설명문 작성',
+  'project-planner':          '일정·예산·역할 분담·진행 상황 관리 (Obsidian)',
+  'doc-evaluator':            '지원서·문서·보고서 평가 · 공모 요건 충족 여부 판정',
 };
 
 const SYSTEM_MAP = [
-  { team: '개발팀',           emoji: '■', color: '#1d4ed8', agents: ['nodetreehome-web'] },
+  { team: '하네스',           emoji: '◈', color: '#ca8a04', agents: ['harness-planner'] },
+  { team: '개발팀',           emoji: '■', color: '#1d4ed8', agents: ['nodetreehome-web', 'code-evaluator'] },
   { team: '리서치팀',         emoji: '○', color: '#b45309', agents: ['nodetree-research', 'grant-research'] },
   { team: '예술작업팀',       emoji: '▲', color: '#7c3aed', agents: ['media-art-pipeline'] },
   { team: '회계팀',           emoji: '□', color: '#059669', agents: ['saengsanso-accounting', 'grant-accounting-agent'] },
-  { team: '디자인 및 홍보팀', emoji: '●', color: '#e11d48', agents: ['visual-design', 'pr-content'] },
-  { team: '기획팀',           emoji: '◆', color: '#0891b2', agents: ['doc-design', 'grant-writer', 'project-planner'] },
+  { team: '디자인 및 홍보팀', emoji: '●', color: '#e11d48', agents: ['visual-design', 'pr-content', 'design-evaluator'] },
+  { team: '기획팀',           emoji: '◆', color: '#0891b2', agents: ['doc-design', 'grant-writer', 'project-planner', 'doc-evaluator'] },
 ];
 
 const MOCK_SESSIONS: SessionSummary[] = [
@@ -141,6 +183,23 @@ function fmtRelDate(iso: string): string {
   } catch { return ''; }
 }
 function pad2(n: number) { return String(n).padStart(2, '0'); }
+function daysUntil(deadline: string | null): number | null {
+  if (!deadline) return null;
+  const diff = Math.ceil((new Date(deadline).getTime() - Date.now()) / 86400000);
+  return diff;
+}
+function urgencyColor(days: number | null): string {
+  if (days === null) return C.textDim;
+  if (days <= 6) return C.hot;
+  if (days <= 13) return C.rising;
+  if (days <= 29) return '#ca8a04';
+  return C.textDim;
+}
+const GRANT_CAT_COLOR: Record<string, string> = {
+  '현대예술':   '#7c3aed',
+  '문화예술교육': '#059669',
+  '미디어콘텐츠': '#0891b2',
+};
 
 // ── CSS-in-JS constants ───────────────────────────────────────────────────────
 const C = {
@@ -199,6 +258,11 @@ const scanlineStyle = `
   }
 
   @keyframes slide-in-left { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+  @keyframes urgency-pulse { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(239,68,68,0.4)} 50%{opacity:0.85;box-shadow:0 0 0 4px rgba(239,68,68,0)} }
+  @keyframes deadline-blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .grant-row:hover { background: #f5f5f5 !important; }
+  .grant-row a { color: inherit; text-decoration: none; }
+  .grant-row a:hover { text-decoration: underline; }
   .monitor-overview-btn {
     position: fixed; left: 0; top: 50%; transform: translateY(-50%);
     z-index: 201; background: #0a0a0a; color: #fff; border: none; cursor: pointer;
@@ -480,9 +544,11 @@ const ClaudeMonitor: React.FC = () => {
   const [isMock, setIsMock] = useState(true);
   const [lastSync, setLastSync] = useState('');
   const [now, setNow] = useState(new Date());
-  const [mainTab, setMainTab] = useState<'teams' | 'agents' | 'skills'>('teams');
+  const [mainTab, setMainTab] = useState<'teams' | 'agents' | 'skills' | 'grants'>('teams');
   const [skillCategory, setSkillCategory] = useState<string | null>(null);
   const [showOverview, setShowOverview] = useState(false);
+  const [grants, setGrants] = useState<GrantItem[]>(FALLBACK_GRANTS);
+  const [grantsUpdated, setGrantsUpdated] = useState('');
 
   useEffect(() => {
     const iv = setInterval(() => setNow(new Date()), 1000);
@@ -491,12 +557,13 @@ const ClaudeMonitor: React.FC = () => {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [indexRes, agentsRes, teamsRes, activityRes, recommendRes] = await Promise.all([
+      const [indexRes, agentsRes, teamsRes, activityRes, recommendRes, grantsRes] = await Promise.all([
         fetch(`${GITHUB_RAW}/index.json?t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`${GITHUB_RAW}/agents.json?t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`${GITHUB_RAW}/teams.json?t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`${GITHUB_RAW}/agent-activity.json?t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`${GITHUB_RAW}/recommendations.json?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`${GITHUB_RAW}/grants.json?t=${Date.now()}`, { cache: 'no-store' }),
       ]);
       if (indexRes.ok) {
         const d: IndexData = await indexRes.json();
@@ -526,6 +593,10 @@ const ClaudeMonitor: React.FC = () => {
       if (recommendRes.ok) {
         const d: RecommendationsData = await recommendRes.json();
         if (d.recommendations?.length) setRecommendations(d);
+      }
+      if (grantsRes.ok) {
+        const d: GrantsData = await grantsRes.json();
+        if (d.grants?.length) { setGrants(d.grants); setGrantsUpdated(d.lastUpdated || ''); }
       }
     } catch {}
   }, []);
@@ -639,6 +710,7 @@ const ClaudeMonitor: React.FC = () => {
             { key: 'teams', label: `TEAMS  [${String(displayTeams.length).padStart(2,'0')}]` },
             { key: 'agents', label: `HARNESS  [03]` },
             { key: 'skills', label: `SKILLS  [${String(skills.filter(s=>s.type!=='agent').length).padStart(2,'0')}]` },
+            { key: 'grants', label: `GRANTS  [${String(grants.length).padStart(2,'0')}]` },
           ] as const).map(t => (
             <button key={t.key} className={`ikeda-tab${mainTab === t.key ? ' active' : ''}`} onClick={() => setMainTab(t.key)}>
               {t.label}
@@ -772,15 +844,15 @@ const ClaudeMonitor: React.FC = () => {
                 <div className="monitor-rec-grid" style={{
                   border: `1px solid ${C.border}`, borderRight: 'none', borderBottom: 'none',
                 }}>
-                  {recommendations.recommendations.map(rec => (
+                  {recommendations.recommendations.filter(rec => rec.teamName && rec.items).map(rec => (
                     <div key={rec.teamId} style={{ borderRight: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
                       <div style={{
                         padding: '8px 14px', borderBottom: `1px solid ${C.border}`,
                         fontFamily: MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: C.textMid,
                       }}>
-                        {rec.teamName.toUpperCase()}
+                        {(rec.teamName ?? rec.teamId ?? '').toUpperCase()}
                       </div>
-                      {rec.items.map((item, i) => (
+                      {(rec.items ?? []).map((item, i) => (
                         <div key={i} style={{ padding: '10px 14px', borderBottom: i < rec.items.length - 1 ? `1px solid ${C.border}` : 'none' }}>
                           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 3 }}>
                             <span style={{ fontFamily: MONO, fontSize: 10, fontWeight: 600, color: C.text }}>{item.name}</span>
@@ -933,6 +1005,200 @@ const ClaudeMonitor: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* ── GRANTS TAB ──────────────────────────────────────────────────── */}
+        {mainTab === 'grants' && (() => {
+          const activeGrants = grants.filter(g => { const d = daysUntil(g.deadline); return d === null || d > 0; });
+          const domestic = activeGrants.filter(g => g.region === 'domestic').sort((a, b) => {
+            if (!a.deadline) return 1;
+            if (!b.deadline) return -1;
+            return a.deadline.localeCompare(b.deadline);
+          });
+          const intl = activeGrants.filter(g => g.region === 'international').sort((a, b) => {
+            if (!a.deadline) return 1;
+            if (!b.deadline) return -1;
+            return a.deadline.localeCompare(b.deadline);
+          });
+          const urgentCount = grants.filter(g => { const d = daysUntil(g.deadline); return d !== null && d > 0 && d <= 13; }).length;
+
+          const GrantCard = ({ g }: { g: GrantItem }) => {
+            const days = daysUntil(g.deadline);
+            const col = urgencyColor(days);
+            const isUrgent = days !== null && days <= 6;
+            return (
+              <div className="grant-row" style={{
+                padding: '10px 14px', borderBottom: `1px solid ${C.border}`,
+                transition: 'background 0.1s',
+              }}>
+                {/* Top row: D-N badge + title */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 4 }}>
+                  {/* Urgency badge */}
+                  <span style={{
+                    fontFamily: MONO, fontSize: 9, fontWeight: 700,
+                    color: '#fff',
+                    background: col,
+                    padding: '1px 5px', borderRadius: 2, flexShrink: 0, marginTop: 1,
+                    animation: isUrgent ? 'urgency-pulse 1.5s infinite' : 'none',
+                    letterSpacing: '0.04em',
+                  }}>
+                    {days === null ? '상시' : `D-${days}`}
+                  </span>
+                  {/* Title as link */}
+                  <a href={g.url} target="_blank" rel="noopener noreferrer" style={{
+                    fontFamily: SANS, fontSize: 11, fontWeight: 600, color: C.text,
+                    lineHeight: 1.45, flex: 1,
+                  }}>
+                    {g.title}
+                  </a>
+                </div>
+                {/* Organization + category + deadline */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', paddingLeft: 38 }}>
+                  <span style={{ fontFamily: MONO, fontSize: 8, color: C.textDim, letterSpacing: '0.04em' }}>{g.organization}</span>
+                  <span style={{ width: 2, height: 2, borderRadius: '50%', background: C.border, display: 'inline-block' }} />
+                  <span style={{
+                    fontFamily: MONO, fontSize: 7, padding: '1px 5px',
+                    border: `1px solid ${GRANT_CAT_COLOR[g.category]}44`,
+                    color: GRANT_CAT_COLOR[g.category],
+                    letterSpacing: '0.06em',
+                  }}>
+                    {g.category}
+                  </span>
+                  {g.amount && (
+                    <>
+                      <span style={{ width: 2, height: 2, borderRadius: '50%', background: C.border, display: 'inline-block' }} />
+                      <span style={{ fontFamily: MONO, fontSize: 8, color: C.textDim }}>{g.amount}</span>
+                    </>
+                  )}
+                  {g.deadline && (
+                    <>
+                      <span style={{ width: 2, height: 2, borderRadius: '50%', background: C.border, display: 'inline-block' }} />
+                      <span style={{
+                        fontFamily: MONO, fontSize: 8, color: col,
+                        animation: isUrgent ? 'deadline-blink 1s infinite' : 'none',
+                        fontWeight: isUrgent ? 700 : 400,
+                      }}>
+                        {g.deadline} 마감
+                      </span>
+                    </>
+                  )}
+                </div>
+                {g.notes && (
+                  <div style={{ paddingLeft: 38, marginTop: 3 }}>
+                    <span style={{ fontFamily: SANS, fontSize: 9, color: C.textDim, fontStyle: 'italic' }}>{g.notes}</span>
+                  </div>
+                )}
+              </div>
+            );
+          };
+
+          return (
+            <div style={{ padding: '24px 0' }}>
+              {/* Header strip */}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginBottom: 20 }}>
+                <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '0.2em', color: C.text }}>
+                  GRANT RADAR
+                </span>
+                <span style={{ fontFamily: MONO, fontSize: 9, color: C.textDim, letterSpacing: '0.08em' }}>
+                  현대예술 · 문화예술교육 · 미디어콘텐츠
+                </span>
+                {grantsUpdated && (
+                  <span style={{ fontFamily: MONO, fontSize: 8, color: C.textDim, marginLeft: 'auto', letterSpacing: '0.06em' }}>
+                    UPDATED {grantsUpdated.slice(0, 10)}
+                  </span>
+                )}
+                {!grantsUpdated && (
+                  <span style={{ fontFamily: MONO, fontSize: 8, color: C.textDim, marginLeft: 'auto', letterSpacing: '0.06em' }}>
+                    SEED DATA · 매주 월 09:00 자동 갱신
+                  </span>
+                )}
+              </div>
+
+              {/* Stats mini-strip */}
+              <div style={{
+                display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+                border: `1px solid ${C.border}`, borderRight: 'none', marginBottom: 20,
+              }}>
+                {[
+                  { label: 'TOTAL', value: String(grants.length) },
+                  { label: '국내', value: String(domestic.length) },
+                  { label: '해외', value: String(intl.length) },
+                  { label: '긴급 (D-13 이내)', value: String(urgentCount), accent: urgentCount > 0 ? C.hot : undefined },
+                ].map(s => (
+                  <div key={s.label} style={{ padding: '10px 14px', borderRight: `1px solid ${C.border}` }}>
+                    <div style={{ fontFamily: MONO, fontSize: 7, color: C.textDim, letterSpacing: '0.12em', marginBottom: 4 }}>{s.label}</div>
+                    <div style={{ fontFamily: MONO, fontSize: 20, fontWeight: 700, color: s.accent || C.text, lineHeight: 1 }}>{s.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Legend */}
+              <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+                {[
+                  { col: C.hot, label: 'D-6 이내' },
+                  { col: C.rising, label: 'D-13 이내' },
+                  { col: '#ca8a04', label: 'D-29 이내' },
+                  { col: C.textDim, label: '여유 있음' },
+                ].map(l => (
+                  <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 1, background: l.col, display: 'inline-block', flexShrink: 0 }} />
+                    <span style={{ fontFamily: MONO, fontSize: 8, color: C.textDim, letterSpacing: '0.06em' }}>{l.label}</span>
+                  </div>
+                ))}
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: 12 }}>
+                  {Object.entries(GRANT_CAT_COLOR).map(([cat, col]) => (
+                    <span key={cat} style={{
+                      fontFamily: MONO, fontSize: 7, padding: '1px 6px',
+                      border: `1px solid ${col}66`, color: col, letterSpacing: '0.04em',
+                    }}>{cat}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Two-column layout */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }} className="monitor-teams-grid" >
+
+                {/* 국내 */}
+                <div>
+                  <div style={{
+                    display: 'flex', alignItems: 'baseline', gap: 8,
+                    padding: '8px 14px', borderTop: `2px solid ${C.text}`,
+                    borderBottom: `1px solid ${C.border}`, background: C.bgSub,
+                  }}>
+                    <span style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color: C.text }}>국내</span>
+                    <span style={{ fontFamily: MONO, fontSize: 8, color: C.textDim }}>DOMESTIC · {domestic.length}</span>
+                  </div>
+                  <div style={{ border: `1px solid ${C.border}`, borderTop: 'none' }}>
+                    {domestic.length === 0 ? (
+                      <div style={{ padding: '24px 14px', fontFamily: MONO, fontSize: 10, color: C.textDim }}>— 데이터 없음</div>
+                    ) : domestic.map(g => <GrantCard key={g.id} g={g} />)}
+                  </div>
+                </div>
+
+                {/* 해외 */}
+                <div>
+                  <div style={{
+                    display: 'flex', alignItems: 'baseline', gap: 8,
+                    padding: '8px 14px', borderTop: `2px solid ${C.text}`,
+                    borderBottom: `1px solid ${C.border}`, background: C.bgSub,
+                  }}>
+                    <span style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color: C.text }}>해외</span>
+                    <span style={{ fontFamily: MONO, fontSize: 8, color: C.textDim }}>INTERNATIONAL · {intl.length}</span>
+                  </div>
+                  <div style={{ border: `1px solid ${C.border}`, borderTop: 'none' }}>
+                    {intl.length === 0 ? (
+                      <div style={{ padding: '24px 14px', fontFamily: MONO, fontSize: 10, color: C.textDim }}>— 데이터 없음</div>
+                    ) : intl.map(g => <GrantCard key={g.id} g={g} />)}
+                  </div>
+                </div>
+
+              </div>
+
+              <div style={{ marginTop: 12, fontFamily: MONO, fontSize: 8, color: C.textDim, letterSpacing: '0.1em' }}>
+                {grants.length} ENTRIES · grant-research 에이전트가 매주 월요일 자동 갱신
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
