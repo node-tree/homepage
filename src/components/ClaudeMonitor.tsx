@@ -43,6 +43,13 @@ interface GrantItem {
 }
 interface GrantsData { lastUpdated: string; grants: GrantItem[]; }
 
+interface CalendarEvent {
+  uid: string; title: string; start: string; end: string;
+  description?: string | null; location?: string | null;
+  status: string; daysUntil: number; isPast: boolean;
+}
+interface CalendarData { lastUpdated: string; calendarId: string; daysAhead: number; events: CalendarEvent[]; }
+
 // ── Harness agents ────────────────────────────────────────────────────────────
 const AGENTS = [
   { tier: 'opus' as const,   role: 'PLANNER',   korean: '전략가', symbol: '▲', desc: 'harness-planner — 요청 → Sprint Contract 변환. 다중 팀 작업 설계.', col: '#111' },
@@ -544,11 +551,15 @@ const ClaudeMonitor: React.FC = () => {
   const [isMock, setIsMock] = useState(true);
   const [lastSync, setLastSync] = useState('');
   const [now, setNow] = useState(new Date());
-  const [mainTab, setMainTab] = useState<'teams' | 'agents' | 'skills' | 'grants'>('teams');
+  const [mainTab, setMainTab] = useState<'teams' | 'agents' | 'skills' | 'grants' | 'todos'>('teams');
   const [skillCategory, setSkillCategory] = useState<string | null>(null);
   const [showOverview, setShowOverview] = useState(false);
   const [grants, setGrants] = useState<GrantItem[]>(FALLBACK_GRANTS);
   const [grantsUpdated, setGrantsUpdated] = useState('');
+  const [calendar, setCalendar] = useState<CalendarEvent[]>([]);
+  const [calendarUpdated, setCalendarUpdated] = useState('');
+  const [calViewYear, setCalViewYear] = useState(() => new Date().getFullYear());
+  const [calViewMonth, setCalViewMonth] = useState(() => new Date().getMonth());
 
   useEffect(() => {
     const iv = setInterval(() => setNow(new Date()), 1000);
@@ -557,13 +568,14 @@ const ClaudeMonitor: React.FC = () => {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [indexRes, agentsRes, teamsRes, activityRes, recommendRes, grantsRes] = await Promise.all([
+      const [indexRes, agentsRes, teamsRes, activityRes, recommendRes, grantsRes, calendarRes] = await Promise.all([
         fetch(`${GITHUB_RAW}/index.json?t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`${GITHUB_RAW}/agents.json?t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`${GITHUB_RAW}/teams.json?t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`${GITHUB_RAW}/agent-activity.json?t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`${GITHUB_RAW}/recommendations.json?t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`${GITHUB_RAW}/grants.json?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`${GITHUB_RAW}/calendar.json?t=${Date.now()}`, { cache: 'no-store' }),
       ]);
       if (indexRes.ok) {
         const d: IndexData = await indexRes.json();
@@ -597,6 +609,10 @@ const ClaudeMonitor: React.FC = () => {
       if (grantsRes.ok) {
         const d: GrantsData = await grantsRes.json();
         if (d.grants?.length) { setGrants(d.grants); setGrantsUpdated(d.lastUpdated || ''); }
+      }
+      if (calendarRes.ok) {
+        const d: CalendarData = await calendarRes.json();
+        if (d.events) { setCalendar(d.events); setCalendarUpdated(d.lastUpdated || ''); }
       }
     } catch {}
   }, []);
@@ -711,6 +727,7 @@ const ClaudeMonitor: React.FC = () => {
             { key: 'agents', label: `하네스  [03]` },
             { key: 'skills', label: `스킬  [${String(skills.filter(s=>s.type!=='agent').length).padStart(2,'0')}]` },
             { key: 'grants', label: `공모  [${String(grants.length).padStart(2,'0')}]` },
+            { key: 'todos',  label: `할일  [${String(calendar.filter(e => !e.isPast).length).padStart(2,'0')}]` },
           ] as const).map(t => (
             <button key={t.key} className={`ikeda-tab${mainTab === t.key ? ' active' : ''}`} onClick={() => setMainTab(t.key)}>
               {t.label}
@@ -1198,6 +1215,211 @@ const ClaudeMonitor: React.FC = () => {
               </div>
             </div>
           );
+        })()}
+
+        {/* ── TODOS TAB ───────────────────────────────────────────────────── */}
+        {mainTab === 'todos' && (() => {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          const CalendarView = () => {
+            const viewYear = calViewYear;
+            const viewMonth = calViewMonth;
+            const setViewYear = setCalViewYear;
+            const setViewMonth = setCalViewMonth;
+
+            const firstDay = new Date(viewYear, viewMonth, 1);
+            const lastDay  = new Date(viewYear, viewMonth + 1, 0);
+            const startDow = firstDay.getDay(); // 0=Sun
+            const daysInMonth = lastDay.getDate();
+
+            // Build event lookup: "YYYY-MM-DD" → events[]
+            const eventMap: Record<string, CalendarEvent[]> = {};
+            calendar.forEach(e => {
+              // mark every day from start to end (inclusive) for multi-day events
+              const s = new Date(e.start + 'T00:00:00');
+              const en = new Date(e.end   + 'T00:00:00');
+              for (let d = new Date(s); d <= en; d.setDate(d.getDate() + 1)) {
+                const key = d.toISOString().slice(0, 10);
+                if (!eventMap[key]) eventMap[key] = [];
+                eventMap[key].push(e);
+              }
+            });
+
+            const todayStr = today.toISOString().slice(0, 10);
+            const monthLabel = firstDay.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
+            const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+
+            // upcoming list for this month
+            const monthStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
+            const monthEvents = calendar
+              .filter(e => e.start.startsWith(monthStr) || e.end.startsWith(monthStr))
+              .sort((a, b) => a.start.localeCompare(b.start));
+
+            const prevMonth = () => {
+              if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11); }
+              else setViewMonth(m => m - 1);
+            };
+            const nextMonth = () => {
+              if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0); }
+              else setViewMonth(m => m + 1);
+            };
+
+            // cells: pad front + days + pad back to fill 6 rows
+            const cells: (number | null)[] = [
+              ...Array(startDow).fill(null),
+              ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+            ];
+            while (cells.length % 7 !== 0) cells.push(null);
+
+            return (
+              <div style={{ padding: '24px 0' }}>
+                {/* Header row */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                    <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '0.2em', color: C.text }}>CALENDAR</span>
+                    <span style={{ fontFamily: MONO, fontSize: 9, color: C.textDim, letterSpacing: '0.06em' }}>
+                      nodetreemedia@gmail.com
+                    </span>
+                  </div>
+                  {calendarUpdated && (
+                    <span style={{ fontFamily: MONO, fontSize: 8, color: C.textDim, letterSpacing: '0.06em' }}>
+                      SYNCED {calendarUpdated.slice(0, 10)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Month nav */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
+                  <button className="ikeda-btn" onClick={prevMonth} style={{ padding: '4px 12px' }}>←</button>
+                  <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, letterSpacing: '0.1em', color: C.text, minWidth: 140, textAlign: 'center' }}>
+                    {monthLabel}
+                  </span>
+                  <button className="ikeda-btn" onClick={nextMonth} style={{ padding: '4px 12px' }}>→</button>
+                  <button className="ikeda-btn" onClick={() => { setViewYear(today.getFullYear()); setViewMonth(today.getMonth()); }}
+                    style={{ marginLeft: 8, fontSize: 9, letterSpacing: '0.08em' }}>TODAY</button>
+                </div>
+
+                {/* Calendar grid */}
+                <div style={{ border: `1px solid ${C.border}`, marginBottom: 24 }}>
+                  {/* DOW header */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: `1px solid ${C.border}`, background: C.bgSub }}>
+                    {DOW.map((d, i) => (
+                      <div key={d} style={{
+                        padding: '6px 0', textAlign: 'center',
+                        fontFamily: MONO, fontSize: 9, letterSpacing: '0.08em',
+                        color: i === 0 ? '#e11d48' : i === 6 ? '#1d4ed8' : C.textDim,
+                        borderRight: i < 6 ? `1px solid ${C.border}` : 'none',
+                      }}>{d}</div>
+                    ))}
+                  </div>
+                  {/* Weeks */}
+                  {Array.from({ length: cells.length / 7 }, (_, w) => (
+                    <div key={w} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: w < cells.length / 7 - 1 ? `1px solid ${C.border}` : 'none' }}>
+                      {cells.slice(w * 7, w * 7 + 7).map((day, i) => {
+                        if (!day) return (
+                          <div key={i} style={{ minHeight: 64, background: '#fafafa', borderRight: i < 6 ? `1px solid ${C.border}` : 'none' }} />
+                        );
+                        const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                        const isToday = dateStr === todayStr;
+                        const dayEvents = eventMap[dateStr] || [];
+                        const dow = (startDow + (day - 1)) % 7;
+                        return (
+                          <div key={i} style={{
+                            minHeight: 64, padding: '4px 5px',
+                            borderRight: i < 6 ? `1px solid ${C.border}` : 'none',
+                            background: isToday ? '#f0f9ff' : C.bg,
+                            position: 'relative',
+                          }}>
+                            {/* day number */}
+                            <div style={{
+                              fontFamily: MONO, fontSize: 10, fontWeight: isToday ? 700 : 400,
+                              color: isToday ? '#0891b2' : dow === 0 ? '#e11d48' : dow === 6 ? '#1d4ed8' : C.text,
+                              marginBottom: 3,
+                              display: 'flex', alignItems: 'center', gap: 3,
+                            }}>
+                              {day}
+                              {isToday && <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#0891b2', display: 'inline-block' }} />}
+                            </div>
+                            {/* event chips */}
+                            {dayEvents.slice(0, 3).map((ev, ei) => {
+                              const urgent = !ev.isPast && ev.daysUntil <= 3;
+                              const soon   = !ev.isPast && ev.daysUntil <= 7;
+                              const chipColor = ev.isPast ? C.textDim : urgent ? C.hot : soon ? C.rising : '#7c3aed';
+                              return (
+                                <div key={ei} style={{
+                                  fontSize: 9, fontFamily: SANS,
+                                  background: chipColor + '18',
+                                  color: chipColor,
+                                  borderLeft: `2px solid ${chipColor}`,
+                                  padding: '1px 4px',
+                                  marginBottom: 2,
+                                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                  lineHeight: 1.4,
+                                }}>
+                                  {ev.title}
+                                </div>
+                              );
+                            })}
+                            {dayEvents.length > 3 && (
+                              <div style={{ fontFamily: MONO, fontSize: 8, color: C.textDim }}>+{dayEvents.length - 3}</div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+
+                {/* This month event list */}
+                {monthEvents.length > 0 && (
+                  <div>
+                    <div style={{
+                      display: 'flex', alignItems: 'baseline', gap: 8,
+                      padding: '7px 14px', borderTop: `2px solid ${C.text}`,
+                      borderBottom: `1px solid ${C.border}`, background: C.bgSub, marginBottom: 0,
+                    }}>
+                      <span style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color: C.text }}>
+                        {monthLabel.replace('년 ', '.').replace('월', '')} 일정
+                      </span>
+                      <span style={{ fontFamily: MONO, fontSize: 8, color: C.textDim }}>{monthEvents.length}건</span>
+                    </div>
+                    <div style={{ border: `1px solid ${C.border}`, borderTop: 'none' }}>
+                      {monthEvents.map(e => {
+                        const urgent = !e.isPast && e.daysUntil <= 3;
+                        const soon   = !e.isPast && e.daysUntil <= 7;
+                        const ac = e.isPast ? C.textDim : urgent ? C.hot : soon ? C.rising : C.text;
+                        return (
+                          <div key={e.uid} className="grant-row" style={{
+                            display: 'grid', gridTemplateColumns: '100px 1fr 56px',
+                            gap: 10, padding: '9px 14px', borderBottom: `1px solid ${C.border}`,
+                            alignItems: 'center',
+                          }}>
+                            <div style={{ fontFamily: MONO, fontSize: 10, color: ac, fontWeight: 600 }}>
+                              {e.start.slice(5)}{e.start !== e.end ? ` ~ ${e.end.slice(5)}` : ''}
+                            </div>
+                            <div>
+                              <div style={{ fontFamily: SANS, fontSize: 13, color: e.isPast ? C.textDim : C.text, fontWeight: 500 }}>{e.title}</div>
+                              {e.location && <div style={{ fontFamily: MONO, fontSize: 9, color: C.textDim }}>◎ {e.location}</div>}
+                            </div>
+                            <div style={{ textAlign: 'right', fontFamily: MONO, fontSize: 10, fontWeight: 700, color: ac, letterSpacing: '0.04em' }}>
+                              {e.isPast ? 'PAST' : e.daysUntil === 0 ? 'TODAY' : `D-${e.daysUntil}`}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ marginTop: 10, fontFamily: MONO, fontSize: 8, color: C.textDim, letterSpacing: '0.1em' }}>
+                  {calendar.length} EVENTS · ~/claude-code-logs/sync-calendar.py 로 갱신
+                </div>
+              </div>
+            );
+          };
+
+          return <CalendarView />;
         })()}
       </div>
     </div>
