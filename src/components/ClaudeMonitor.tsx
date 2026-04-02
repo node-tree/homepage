@@ -571,6 +571,7 @@ const ClaudeMonitor: React.FC = () => {
   const [addEventForm, setAddEventForm] = useState({ title: '', date: '', endDate: '', description: '', location: '' });
   const [addEventStatus, setAddEventStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
   const [addEventError, setAddEventError] = useState('');
+  const [deletingUid, setDeletingUid] = useState<string | null>(null);
 
   useEffect(() => {
     const iv = setInterval(() => setNow(new Date()), 1000);
@@ -1450,9 +1451,10 @@ const ClaudeMonitor: React.FC = () => {
                         const urgent = !e.isPast && e.daysUntil <= 3;
                         const soon   = !e.isPast && e.daysUntil <= 7;
                         const ac = e.isPast ? C.textDim : urgent ? C.hot : soon ? C.rising : C.text;
+                        const isDeleting = deletingUid === e.uid;
                         return (
                           <div key={e.uid} className="grant-row" style={{
-                            display: 'grid', gridTemplateColumns: '100px 1fr 56px',
+                            display: 'grid', gridTemplateColumns: '100px 1fr 56px 28px',
                             gap: 10, padding: '9px 14px', borderBottom: `1px solid ${C.border}`,
                             alignItems: 'center',
                           }}>
@@ -1466,6 +1468,33 @@ const ClaudeMonitor: React.FC = () => {
                             <div style={{ textAlign: 'right', fontFamily: MONO, fontSize: 10, fontWeight: 700, color: ac, letterSpacing: '0.04em' }}>
                               {e.isPast ? 'PAST' : e.daysUntil === 0 ? 'TODAY' : `D-${e.daysUntil}`}
                             </div>
+                            <button
+                              disabled={isDeleting}
+                              onClick={async () => {
+                                if (!window.confirm(`"${e.title}" 일정을 삭제할까요?`)) return;
+                                setDeletingUid(e.uid);
+                                try {
+                                  const res = await fetch(`/api/calendar/delete-event/${e.uid}`, { method: 'DELETE' });
+                                  if (!res.ok) throw new Error('삭제 실패');
+                                  setCalendar(prev => prev.filter(ev => ev.uid !== e.uid));
+                                  // localStorage pending에서도 제거
+                                  const localRaw = localStorage.getItem('calendar_pending_events');
+                                  if (localRaw) {
+                                    const localEvents: CalendarEvent[] = JSON.parse(localRaw);
+                                    localStorage.setItem('calendar_pending_events', JSON.stringify(localEvents.filter(ev => ev.uid !== e.uid)));
+                                  }
+                                } catch {
+                                  alert('삭제에 실패했습니다.');
+                                } finally {
+                                  setDeletingUid(null);
+                                }
+                              }}
+                              style={{
+                                background: 'none', border: 'none', cursor: isDeleting ? 'wait' : 'pointer',
+                                fontFamily: MONO, fontSize: 12, color: isDeleting ? C.textDim : '#c00',
+                                padding: '2px 4px', lineHeight: 1,
+                              }}
+                            >{isDeleting ? '…' : '×'}</button>
                           </div>
                         );
                       })}
