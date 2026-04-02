@@ -1,15 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const { google } = require('googleapis');
-const { spawn } = require('child_process');
-const path = require('path');
-
-const SYNC_SCRIPT = path.resolve('/Users/kanghyunjung/claude-code-logs/sync-calendar.py');
-
-function triggerCalendarSync() {
-  const proc = spawn('python3', [SYNC_SCRIPT], { detached: true, stdio: 'ignore' });
-  proc.unref();
-}
 
 function getOAuth2Client() {
   const client = new google.auth.OAuth2(
@@ -75,9 +66,6 @@ router.post('/create-event', async (req, res) => {
         isPast: new Date(startDate) < new Date(),
       }
     });
-
-    // 백그라운드에서 calendar.json 갱신 (새로고침 시에도 이벤트 유지)
-    triggerCalendarSync();
   } catch (err) {
     console.error('Calendar create-event error:', err.message);
     res.status(500).json({ error: err.message });
