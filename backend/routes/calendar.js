@@ -75,8 +75,10 @@ router.post('/create-event', async (req, res) => {
 // DELETE /api/calendar/delete-event/:eventId
 router.delete('/delete-event/:eventId', async (req, res) => {
   try {
-    const { eventId } = req.params;
+    let { eventId } = req.params;
     if (!eventId) return res.status(400).json({ error: 'eventId is required' });
+    // iCal UID는 "@google.com" suffix 포함 — API는 prefix만 사용
+    eventId = eventId.replace(/@google\.com$/, '');
 
     if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !process.env.GOOGLE_CALENDAR_REFRESH_TOKEN) {
       return res.status(500).json({ error: 'Google Calendar credentials not configured' });
