@@ -72,4 +72,26 @@ router.post('/create-event', async (req, res) => {
   }
 });
 
+// DELETE /api/calendar/delete-event/:eventId
+router.delete('/delete-event/:eventId', async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    if (!eventId) return res.status(400).json({ error: 'eventId is required' });
+
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !process.env.GOOGLE_CALENDAR_REFRESH_TOKEN) {
+      return res.status(500).json({ error: 'Google Calendar credentials not configured' });
+    }
+
+    const auth = getOAuth2Client();
+    const calendar = google.calendar({ version: 'v3', auth });
+
+    await calendar.events.delete({ calendarId: 'primary', eventId });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Calendar delete-event error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
