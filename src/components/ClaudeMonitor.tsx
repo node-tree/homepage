@@ -624,7 +624,20 @@ const ClaudeMonitor: React.FC = () => {
       }
       if (calendarRes.ok) {
         const d: CalendarData = await calendarRes.json();
-        if (d.events) { setCalendar(d.events); setCalendarUpdated(d.lastUpdated || ''); }
+        if (d.events) {
+          // localStorage에 임시 저장된 이벤트(아직 sync 안 된 것) 병합
+          const localRaw = localStorage.getItem('calendar_pending_events');
+          const localEvents: CalendarEvent[] = localRaw ? JSON.parse(localRaw) : [];
+          const remoteUids = new Set(d.events.map((e: CalendarEvent) => e.uid));
+          const stillPending = localEvents.filter(e => !remoteUids.has(e.uid));
+          // sync된 이벤트는 localStorage에서 제거
+          if (stillPending.length !== localEvents.length) {
+            localStorage.setItem('calendar_pending_events', JSON.stringify(stillPending));
+          }
+          const merged = [...d.events, ...stillPending].sort((a, b) => a.start.localeCompare(b.start));
+          setCalendar(merged);
+          setCalendarUpdated(d.lastUpdated || '');
+        }
       }
       if (claudeFeaturesRes.ok) {
         const d: ClaudeCodeFeaturesData = await claudeFeaturesRes.json();
@@ -1569,6 +1582,10 @@ const ClaudeMonitor: React.FC = () => {
                           const data = await res.json();
                           if (!res.ok) throw new Error(data.error || 'Failed');
                           setCalendar(prev => [...prev, data.event].sort((a, b) => a.start.localeCompare(b.start)));
+                          // 새로고침 후에도 보이도록 localStorage에 임시 저장
+                          const localRaw = localStorage.getItem('calendar_pending_events');
+                          const localEvents: CalendarEvent[] = localRaw ? JSON.parse(localRaw) : [];
+                          localStorage.setItem('calendar_pending_events', JSON.stringify([...localEvents, data.event]));
                           setAddEventForm({ title: '', date: '', endDate: '', description: '', location: '' });
                           setAddEventStatus('ok');
                           setTimeout(() => { setAddEventStatus('idle'); setShowAddEvent(false); }, 2000);
