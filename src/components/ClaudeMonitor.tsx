@@ -626,16 +626,27 @@ const ClaudeMonitor: React.FC = () => {
       if (calendarRes.ok) {
         const d: CalendarData = await calendarRes.json();
         if (d.events) {
-          // localStorage에 임시 저장된 이벤트(아직 sync 안 된 것) 병합
+          const deletedRaw = localStorage.getItem('calendar_deleted_uids');
+          const deletedUids: string[] = deletedRaw ? JSON.parse(deletedRaw) : [];
+
+          // remote에서 사라진 것은 deleted 목록에서 정리
+          const stillDeleted = deletedUids.filter(uid => d.events.some((e: CalendarEvent) => e.uid === uid));
+          if (stillDeleted.length !== deletedUids.length) {
+            localStorage.setItem('calendar_deleted_uids', JSON.stringify(stillDeleted));
+          }
+
+          // pending 이벤트(아직 sync 안 된 신규) 병합
           const localRaw = localStorage.getItem('calendar_pending_events');
           const localEvents: CalendarEvent[] = localRaw ? JSON.parse(localRaw) : [];
           const remoteUids = new Set(d.events.map((e: CalendarEvent) => e.uid));
           const stillPending = localEvents.filter(e => !remoteUids.has(e.uid));
-          // sync된 이벤트는 localStorage에서 제거
           if (stillPending.length !== localEvents.length) {
             localStorage.setItem('calendar_pending_events', JSON.stringify(stillPending));
           }
-          const merged = [...d.events, ...stillPending].sort((a, b) => a.start.localeCompare(b.start));
+
+          const deletedSet = new Set(stillDeleted);
+          const merged = [...d.events.filter((e: CalendarEvent) => !deletedSet.has(e.uid)), ...stillPending]
+            .sort((a, b) => a.start.localeCompare(b.start));
           setCalendar(merged);
           setCalendarUpdated(d.lastUpdated || '');
         }
@@ -1477,7 +1488,11 @@ const ClaudeMonitor: React.FC = () => {
                                   const res = await fetch(`/api/calendar/delete-event/${e.uid}`, { method: 'DELETE' });
                                   if (!res.ok) throw new Error('삭제 실패');
                                   setCalendar(prev => prev.filter(ev => ev.uid !== e.uid));
-                                  // localStorage pending에서도 제거
+                                  // localStorage에 삭제 기록 (새로고침 후에도 안 보이게)
+                                  const deletedRaw = localStorage.getItem('calendar_deleted_uids');
+                                  const deletedUids: string[] = deletedRaw ? JSON.parse(deletedRaw) : [];
+                                  localStorage.setItem('calendar_deleted_uids', JSON.stringify([...deletedUids, e.uid]));
+                                  // pending에서도 제거
                                   const localRaw = localStorage.getItem('calendar_pending_events');
                                   if (localRaw) {
                                     const localEvents: CalendarEvent[] = JSON.parse(localRaw);
