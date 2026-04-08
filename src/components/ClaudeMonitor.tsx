@@ -58,9 +58,9 @@ interface CalendarData { lastUpdated: string; calendarId: string; daysAhead: num
 
 // ── Harness agents ────────────────────────────────────────────────────────────
 const AGENTS = [
-  { tier: 'opus' as const,   role: 'PLANNER',   korean: '전략가', symbol: '▲', desc: 'harness-planner — 요청 → Sprint Contract 변환. 다중 팀 작업 설계.', col: '#111' },
-  { tier: 'sonnet' as const, role: 'GENERATOR', korean: '구현자', symbol: '■', desc: '팀 전담 에이전트 — Sprint Contract 단위 구현. 주력 에이전트.', col: '#444' },
-  { tier: 'sonnet' as const, role: 'EVALUATOR', korean: '평가자', symbol: '○', desc: 'code / design / doc-evaluator — PASS/REWORK 판정. 자기 편향 제거.', col: '#888' },
+  { tier: 'opus' as const,   role: 'PLANNER',   korean: '전략가', symbol: '▲', desc: 'harness-planner (claude-opus-4-6) — 요청 → Sprint Contract 변환. 다중 팀 작업 설계.', col: '#111' },
+  { tier: 'sonnet' as const, role: 'GENERATOR', korean: '구현자', symbol: '■', desc: '팀 전담 에이전트 (claude-sonnet-4-6) — Sprint Contract 단위 구현. 주력 에이전트.', col: '#444' },
+  { tier: 'sonnet' as const, role: 'EVALUATOR', korean: '평가자', symbol: '○', desc: 'code / design / doc-evaluator (claude-sonnet-4-6) — PASS/REWORK 판정. 자기 편향 제거.', col: '#888' },
 ] as const;
 
 const SKILL_CATEGORIES: Record<string, { label: string }> = {
@@ -146,9 +146,9 @@ const AGENT_DESC_KO: Record<string, string> = {
   'pr-content':               '홍보문·보도자료·전시 소개·SNS 캡션 작성',
   'design-evaluator':         '디자인·홍보물 평가 · NODE TREE 아이덴티티 기준 판정',
   // 예술작업팀
-  'media-art-pipeline':       'OSC·ArtNet·ESP32·TidalCycles·TouchDesigner 파이프라인',
+  'media-art-pipeline':       'OSC·ArtNet·ESP32·TidalCycles·TouchDesigner·소니피케이션·Hydra 파이프라인',
   // 리서치팀
-  'nodetree-research':        '작가·작품·이론·기술 리서치 및 Obsidian 정리',
+  'nodetree-research':        '작가·작품·이론·기술 리서치 · NotebookLM 분석 · YouTube 요약 · Obsidian 정리',
   'grant-research':           '공모·레지던시·지원사업 발굴 및 전략 기획',
   // 회계팀
   'saengsanso-accounting':    '주식회사 생산소 세무·회계·급여·법인카드 처리',
@@ -171,10 +171,10 @@ const SYSTEM_MAP = [
 ];
 
 const MOCK_SESSIONS: SessionSummary[] = [
-  { sessionId: 'a1b2', date: '2026-03-30', startTime: new Date(Date.now()-3600000).toISOString(), durationSeconds: 4740, modelTier: 'sonnet', projectName: 'nodetreeHome', toolCallCount: 67, firstPrompt: '구현하자 그리고 디자인은 좀 더 비주얼 미디어아트적으로' },
-  { sessionId: 'e5f6', date: '2026-03-30', startTime: new Date(Date.now()-7200000).toISOString(), durationSeconds: 1820, modelTier: 'opus', projectName: 'portfolio', toolCallCount: 23, firstPrompt: '이화영 수행 이력 포트폴리오 제작' },
-  { sessionId: 'c9d0', date: '2026-03-30', startTime: new Date(Date.now()-9600000).toISOString(), durationSeconds: 540, modelTier: 'haiku', projectName: 'ocean', toolCallCount: 8, firstPrompt: '부산 근해 실시간 API 테스트' },
-  { sessionId: 'a3b4', date: '2026-03-29', startTime: new Date(Date.now()-86400000).toISOString(), durationSeconds: 3200, modelTier: 'sonnet', projectName: 'nodetreeHome', toolCallCount: 44, firstPrompt: '채널2 실시간 해양데이터 구현' },
+  { sessionId: 'a1b2', date: '2026-04-09', startTime: new Date(Date.now()-3600000).toISOString(), durationSeconds: 5200, modelTier: 'sonnet', projectName: 'claude-system', toolCallCount: 84, firstPrompt: '노드트리 에이전트 시스템 대대적으로 손보자' },
+  { sessionId: 'e5f6', date: '2026-04-08', startTime: new Date(Date.now()-86400000).toISOString(), durationSeconds: 2100, modelTier: 'sonnet', projectName: 'research', toolCallCount: 31, firstPrompt: 'AI 엔지니어링이 4년간 이렇게 변화했습니다 NotebookLM 리서치' },
+  { sessionId: 'c9d0', date: '2026-04-07', startTime: new Date(Date.now()-172800000).toISOString(), durationSeconds: 1840, modelTier: 'sonnet', projectName: 'claude-system', toolCallCount: 52, firstPrompt: '토큰 소모 최적화 — CLAUDE.md 스킬 description 압축' },
+  { sessionId: 'a3b4', date: '2026-04-06', startTime: new Date(Date.now()-259200000).toISOString(), durationSeconds: 3200, modelTier: 'sonnet', projectName: 'nodetreeHome', toolCallCount: 44, firstPrompt: 'CORROSIA 풀 PT 영상 Remotion 구현' },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
