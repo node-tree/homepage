@@ -136,15 +136,16 @@ const FALLBACK_SKILLS: SkillDef[] = [
 
 // 에이전트 한글 설명 맵
 const AGENT_DESC_KO: Record<string, string> = {
-  // 하네스
+  // 하네스 (Planner + 3 Evaluators)
   'harness-planner':          '복잡한 요청 → Sprint Contract 변환 · 다중 팀 작업 설계 (Opus)',
+  'code-evaluator':           '웹/미디어아트 파이프라인 코드 평가 · PASS/REWORK 판정',
+  'design-evaluator':         '디자인·홍보물 평가 · NODE TREE 아이덴티티 기준 판정',
+  'doc-evaluator':            '지원서·문서·보고서 평가 · 공모 요건 충족 여부 판정',
   // 개발팀
   'nodetreehome-web':         'nodetreeHome 웹 개발 · React 컴포넌트 · API · 배포',
-  'code-evaluator':           '웹/미디어아트 파이프라인 코드 평가 · PASS/REWORK 판정',
   // 디자인 및 홍보팀
   'visual-design':            '포스터·인스타 이미지·전시 그래픽·홍보물 제작',
   'pr-content':               '홍보문·보도자료·전시 소개·SNS 캡션 작성',
-  'design-evaluator':         '디자인·홍보물 평가 · NODE TREE 아이덴티티 기준 판정',
   // 예술작업팀
   'media-art-pipeline':       'OSC·ArtNet·ESP32·TidalCycles·TouchDesigner·소니피케이션·Hydra 파이프라인',
   'film-production':          '퍼포먼스 필름 제작 전담 · 촬영·편집·색보정·사운드믹싱·영화제 출품',
@@ -158,17 +159,16 @@ const AGENT_DESC_KO: Record<string, string> = {
   'doc-design':               '포트폴리오·도록·공문서·보고서 제작 (Pencil, HWPX)',
   'grant-writer':             '지원서·작가노트·프로젝트 설명문 작성',
   'project-planner':          '일정·예산·역할 분담·진행 상황 관리 (Obsidian)',
-  'doc-evaluator':            '지원서·문서·보고서 평가 · 공모 요건 충족 여부 판정',
 };
 
 const SYSTEM_MAP = [
-  { team: '하네스',           emoji: '◈', color: '#ca8a04', agents: ['harness-planner'] },
-  { team: '개발팀',           emoji: '■', color: '#1d4ed8', agents: ['nodetreehome-web', 'code-evaluator'] },
+  { team: '하네스',           emoji: '◈', color: '#ca8a04', agents: ['harness-planner', 'code-evaluator', 'design-evaluator', 'doc-evaluator'] },
+  { team: '개발팀',           emoji: '■', color: '#1d4ed8', agents: ['nodetreehome-web'] },
   { team: '리서치팀',         emoji: '○', color: '#b45309', agents: ['nodetree-research', 'grant-research'] },
   { team: '예술작업팀',       emoji: '▲', color: '#7c3aed', agents: ['media-art-pipeline', 'film-production'] },
   { team: '회계팀',           emoji: '□', color: '#059669', agents: ['saengsanso-accounting', 'grant-accounting-agent'] },
-  { team: '디자인 및 홍보팀', emoji: '●', color: '#e11d48', agents: ['visual-design', 'pr-content', 'design-evaluator'] },
-  { team: '기획팀',           emoji: '◆', color: '#0891b2', agents: ['doc-design', 'grant-writer', 'project-planner', 'doc-evaluator'] },
+  { team: '디자인 및 홍보팀', emoji: '●', color: '#e11d48', agents: ['visual-design', 'pr-content'] },
+  { team: '기획팀',           emoji: '◆', color: '#0891b2', agents: ['doc-design', 'grant-writer', 'project-planner'] },
 ];
 
 const MOCK_SESSIONS: SessionSummary[] = [
@@ -462,7 +462,7 @@ function OverviewPanel({ onClose }: { onClose: () => void }) {
 
           {/* 02: ORGANIZATION */}
           <div style={{ marginBottom: 32 }}>
-            <SectionHeader n="02" label="ORGANIZATION — 6 TEAMS · 11 AGENTS" />
+            <SectionHeader n="02" label="ORGANIZATION — 6 TEAMS · 16 AGENTS" />
             <div style={{ border: `1px solid ${C.border}`, borderBottom: 'none' }}>
               {SYSTEM_MAP.map(row => (
                 <div key={row.team} style={{ display: 'grid', gridTemplateColumns: '110px 1fr', borderBottom: `1px solid ${C.border}` }}>
@@ -488,14 +488,18 @@ function OverviewPanel({ onClose }: { onClose: () => void }) {
             <SectionHeader n="03" label="ROUTING RULES — KEYWORD → AGENT" />
             <div style={{ border: `1px solid ${C.border}`, borderBottom: 'none' }}>
               {([
-                { kw: 'nodetreeHome, React, 배포, API 라우트', agent: 'nodetreehome-web' },
-                { kw: '부가세, 원천세, 4대보험, 법인세', agent: 'saengsanso-accounting' },
-                { kw: 'e나라도움, 보탬e, NCAS, 정산', agent: 'grant-accounting-agent' },
+                { kw: 'nodetreeHome, React, 배포, Vercel, API 라우트', agent: 'nodetreehome-web' },
+                { kw: '부가세, 원천세, 4대보험, 법인세, 급여', agent: 'saengsanso-accounting' },
+                { kw: 'e나라도움, 보탬e, NCAS, 정산, 보조금', agent: 'grant-accounting-agent' },
                 { kw: '공모, 레지던시, 지원사업 찾기', agent: 'grant-research' },
-                { kw: '리서치, URL 분석, Obsidian', agent: 'nodetree-research' },
-                { kw: '포스터, 인스타, 홍보물, 전시 그래픽', agent: 'visual-design' },
-                { kw: 'OSC, ArtNet, TouchDesigner, ESP32', agent: 'media-art-pipeline' },
+                { kw: '리서치, URL 분석, /research', agent: 'nodetree-research' },
+                { kw: '포스터, 홍보물, SNS이미지, 전시 그래픽', agent: 'visual-design' },
+                { kw: '보도자료, SNS캡션, 전시소개글', agent: 'pr-content' },
+                { kw: 'OSC, ArtNet, TouchDesigner, ESP32, TidalCycles', agent: 'media-art-pipeline' },
+                { kw: '촬영, 편집, 색보정, 영화제, 이토록고요한파동', agent: 'film-production' },
+                { kw: '포트폴리오, 도록, 공문서, 보고서', agent: 'doc-design' },
                 { kw: '지원서, 작가노트, 제안서', agent: 'grant-writer' },
+                { kw: '일정, 프로젝트관리, 타임라인', agent: 'project-planner' },
               ] as const).map((row, i) => (
                 <div key={i} style={{
                   display: 'grid', gridTemplateColumns: '1fr auto',
@@ -518,7 +522,7 @@ function OverviewPanel({ onClose }: { onClose: () => void }) {
                 { step: 'USER',      desc: '요청 입력 → Claude Code CLI 실행' },
                 { step: 'PLANNER',   desc: 'OPUS — 요청을 Sprint Contract로 변환' },
                 { step: 'GENERATOR', desc: 'SONNET — 팀 에이전트 파견 · 결과물 생성' },
-                { step: 'EVALUATOR', desc: 'HAIKU — Playwright 테스트 · PASS / REWORK 판정' },
+                { step: 'EVALUATOR', desc: 'SONNET — code/design/doc-evaluator · PASS / REWORK 판정' },
                 { step: 'STOP HOOK', desc: '세션 종료 시 자동 실행 → logs JSON 업데이트' },
                 { step: 'GITHUB',    desc: 'node-tree/claude-code-logs 에 push' },
                 { step: 'MONITOR',   desc: 'nodetree.kr/monitor — 60초마다 자동 동기화' },
