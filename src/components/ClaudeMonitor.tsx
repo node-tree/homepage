@@ -72,7 +72,7 @@ const SKILL_CATEGORIES: Record<string, { label: string }> = {
 const FALLBACK_TEAMS: TeamDef[] = [
   { id: 'dev',        name: '개발팀',           emoji: '■', color: '#1d4ed8', bg: '#eff6ff', desc: '소프트웨어 개발, 배포, 인프라', skills: ['vercel-react-best-practices','kicad-pcb-design','clangd-lsp','cli-anything','mcp-playwright'], agents: [] },
   { id: 'research',   name: '리서치팀',         emoji: '○', color: '#b45309', bg: '#fffbeb', desc: '정보 수집, 분석, 지식 정리', skills: ['notebooklm-research','youtube-study'], agents: [] },
-  { id: 'art',        name: '예술작업팀',       emoji: '▲', color: '#7c3aed', bg: '#f5f3ff', desc: '사운드 아트, 영상, 설치, 생성 예술', skills: ['algorithmic-art','supercollider-sound-art','td-guide','web-audio-synth','remotion-best-practices','canvas-design'], agents: [] },
+  { id: 'art',        name: '예술작업팀',       emoji: '▲', color: '#7c3aed', bg: '#f5f3ff', desc: '사운드 아트, 영상, 퍼포먼스 필름, 설치, 생성 예술', skills: ['algorithmic-art','supercollider-sound-art','td-guide','web-audio-synth','remotion-best-practices','canvas-design'], agents: [] },
   { id: 'accounting', name: '회계팀',           emoji: '□', color: '#059669', bg: '#ecfdf5', desc: '재무 관리, 예산, 지출 추적', skills: ['xlsx','korea-accounting','grant-accounting','pdf','hwpx','pptx'], agents: [] },
   { id: 'design',     name: '디자인 및 홍보팀', emoji: '●', color: '#e11d48', bg: '#fff1f2', desc: 'UI/UX 디자인, 브랜딩, 홍보', skills: ['pencil-design','taste-skill','frontend-design','photo-grading','figma-generate-design'], agents: [] },
   { id: 'planning',   name: '기획팀',           emoji: '◆', color: '#0891b2', bg: '#ecfeff', desc: '프로젝트 기획, 제안서, 문서 작성', skills: ['pptx','hwpx','pdf','skill-creator'], agents: [] },
@@ -147,6 +147,7 @@ const AGENT_DESC_KO: Record<string, string> = {
   'design-evaluator':         '디자인·홍보물 평가 · NODE TREE 아이덴티티 기준 판정',
   // 예술작업팀
   'media-art-pipeline':       'OSC·ArtNet·ESP32·TidalCycles·TouchDesigner·소니피케이션·Hydra 파이프라인',
+  'film-production':          '퍼포먼스 필름 제작 전담 · 촬영·편집·색보정·사운드믹싱·영화제 출품',
   // 리서치팀
   'nodetree-research':        '작가·작품·이론·기술 리서치 · NotebookLM 분석 · YouTube 요약 · Obsidian 정리',
   'grant-research':           '공모·레지던시·지원사업 발굴 및 전략 기획',
@@ -164,17 +165,17 @@ const SYSTEM_MAP = [
   { team: '하네스',           emoji: '◈', color: '#ca8a04', agents: ['harness-planner'] },
   { team: '개발팀',           emoji: '■', color: '#1d4ed8', agents: ['nodetreehome-web', 'code-evaluator'] },
   { team: '리서치팀',         emoji: '○', color: '#b45309', agents: ['nodetree-research', 'grant-research'] },
-  { team: '예술작업팀',       emoji: '▲', color: '#7c3aed', agents: ['media-art-pipeline'] },
+  { team: '예술작업팀',       emoji: '▲', color: '#7c3aed', agents: ['media-art-pipeline', 'film-production'] },
   { team: '회계팀',           emoji: '□', color: '#059669', agents: ['saengsanso-accounting', 'grant-accounting-agent'] },
   { team: '디자인 및 홍보팀', emoji: '●', color: '#e11d48', agents: ['visual-design', 'pr-content', 'design-evaluator'] },
   { team: '기획팀',           emoji: '◆', color: '#0891b2', agents: ['doc-design', 'grant-writer', 'project-planner', 'doc-evaluator'] },
 ];
 
 const MOCK_SESSIONS: SessionSummary[] = [
-  { sessionId: 'a1b2', date: '2026-04-09', startTime: new Date(Date.now()-3600000).toISOString(), durationSeconds: 5200, modelTier: 'sonnet', projectName: 'claude-system', toolCallCount: 84, firstPrompt: '노드트리 에이전트 시스템 대대적으로 손보자' },
-  { sessionId: 'e5f6', date: '2026-04-08', startTime: new Date(Date.now()-86400000).toISOString(), durationSeconds: 2100, modelTier: 'sonnet', projectName: 'research', toolCallCount: 31, firstPrompt: 'AI 엔지니어링이 4년간 이렇게 변화했습니다 NotebookLM 리서치' },
-  { sessionId: 'c9d0', date: '2026-04-07', startTime: new Date(Date.now()-172800000).toISOString(), durationSeconds: 1840, modelTier: 'sonnet', projectName: 'claude-system', toolCallCount: 52, firstPrompt: '토큰 소모 최적화 — CLAUDE.md 스킬 description 압축' },
-  { sessionId: 'a3b4', date: '2026-04-06', startTime: new Date(Date.now()-259200000).toISOString(), durationSeconds: 3200, modelTier: 'sonnet', projectName: 'nodetreeHome', toolCallCount: 44, firstPrompt: 'CORROSIA 풀 PT 영상 Remotion 구현' },
+  { sessionId: 'f7g8', date: '2026-04-20', startTime: new Date(Date.now()-1800000).toISOString(), durationSeconds: 6400, modelTier: 'sonnet', projectName: 'claude-system', toolCallCount: 112, firstPrompt: '하네스 엔지니어링 진단·수정 + film-production 에이전트 추가 + 컨텍스트 메모리 전면 정비' },
+  { sessionId: 'a1b2', date: '2026-04-18', startTime: new Date(Date.now()-172800000).toISOString(), durationSeconds: 5200, modelTier: 'sonnet', projectName: 'claude-system', toolCallCount: 84, firstPrompt: '노드트리 에이전트 시스템 대대적으로 손보자' },
+  { sessionId: 'e5f6', date: '2026-04-17', startTime: new Date(Date.now()-259200000).toISOString(), durationSeconds: 2100, modelTier: 'sonnet', projectName: 'research', toolCallCount: 31, firstPrompt: 'AI 엔지니어링이 4년간 이렇게 변화했습니다 NotebookLM 리서치' },
+  { sessionId: 'a3b4', date: '2026-04-17', startTime: new Date(Date.now()-280000000).toISOString(), durationSeconds: 3200, modelTier: 'sonnet', projectName: 'touchdesigner', toolCallCount: 44, firstPrompt: 'p5.js → TD 포팅 Day2 — Beat Field curl noise 파티클 + 카메라 궤도' },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
