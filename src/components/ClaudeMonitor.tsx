@@ -26,6 +26,8 @@ interface SessionSummary {
   toolCallCount: number; firstPrompt?: string;
 }
 interface IndexData { lastUpdated: string; totalSessions: number; sessions: SessionSummary[]; }
+interface HarnessDef { planner: AgentMember; evaluators: AgentMember[]; }
+interface TeamsData { lastUpdated: string; harness?: HarnessDef; teams: TeamDef[]; }
 interface AgentsData { lastUpdated: string; totalAgents: number; agents: SkillDef[]; }
 interface AgentActivity {
   [agentId: string]: { lastActive: string; lastProject: string; sessionId: string; };
@@ -161,15 +163,27 @@ const AGENT_DESC_KO: Record<string, string> = {
   'project-planner':          '일정·예산·역할 분담·진행 상황 관리 (Obsidian)',
 };
 
-const SYSTEM_MAP = [
-  { team: '하네스',           emoji: '◈', color: '#ca8a04', agents: ['harness-planner', 'code-evaluator', 'design-evaluator', 'doc-evaluator'] },
-  { team: '개발팀',           emoji: '■', color: '#1d4ed8', agents: ['nodetreehome-web'] },
-  { team: '리서치팀',         emoji: '○', color: '#b45309', agents: ['nodetree-research', 'grant-research'] },
-  { team: '예술작업팀',       emoji: '▲', color: '#7c3aed', agents: ['media-art-pipeline', 'film-production'] },
-  { team: '회계팀',           emoji: '□', color: '#059669', agents: ['saengsanso-accounting', 'grant-accounting-agent'] },
-  { team: '디자인 및 홍보팀', emoji: '●', color: '#e11d48', agents: ['visual-design', 'pr-content'] },
-  { team: '기획팀',           emoji: '◆', color: '#0891b2', agents: ['doc-design', 'grant-writer', 'project-planner'] },
-];
+const SYSTEM_MAP = {
+  planner: 'harness-planner',
+  evaluators: ['code-evaluator', 'design-evaluator', 'doc-evaluator'],
+  generators: [
+    { team: '개발팀',           emoji: '■', color: '#1d4ed8', agents: ['nodetreehome-web'] },
+    { team: '리서치팀',         emoji: '○', color: '#b45309', agents: ['nodetree-research', 'grant-research'] },
+    { team: '예술작업팀',       emoji: '▲', color: '#7c3aed', agents: ['media-art-pipeline', 'film-production'] },
+    { team: '회계팀',           emoji: '□', color: '#059669', agents: ['saengsanso-accounting', 'grant-accounting-agent'] },
+    { team: '디자인 및 홍보팀', emoji: '●', color: '#e11d48', agents: ['visual-design', 'pr-content'] },
+    { team: '기획팀',           emoji: '◆', color: '#0891b2', agents: ['doc-design', 'grant-writer', 'project-planner'] },
+  ],
+};
+
+const FALLBACK_HARNESS: HarnessDef = {
+  planner: { id: 'harness-planner', name: 'harness-planner', desc: '복잡한 요청 → Sprint Contract 변환 · 다중 팀 작업 설계 (Opus)' },
+  evaluators: [
+    { id: 'code-evaluator',   name: 'code-evaluator',   desc: '웹/미디어아트 파이프라인 코드 평가 · PASS/REWORK 판정' },
+    { id: 'design-evaluator', name: 'design-evaluator', desc: '디자인·홍보물 평가 · NODE TREE 아이덴티티 기준 판정' },
+    { id: 'doc-evaluator',    name: 'doc-evaluator',    desc: '지원서·문서·보고서 평가 · 공모 요건 충족 여부 판정' },
+  ],
+};
 
 const MOCK_SESSIONS: SessionSummary[] = [
   { sessionId: 'f7g8', date: '2026-04-20', startTime: new Date(Date.now()-1800000).toISOString(), durationSeconds: 6400, modelTier: 'sonnet', projectName: 'claude-system', toolCallCount: 112, firstPrompt: '하네스 엔지니어링 진단·수정 + film-production 에이전트 추가 + 컨텍스트 메모리 전면 정비' },
@@ -460,26 +474,57 @@ function OverviewPanel({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          {/* 02: ORGANIZATION */}
+          {/* 02: ORGANIZATION — HIERARCHICAL */}
           <div style={{ marginBottom: 32 }}>
-            <SectionHeader n="02" label="ORGANIZATION — 6 TEAMS · 16 AGENTS" />
-            <div style={{ border: `1px solid ${C.border}`, borderBottom: 'none' }}>
-              {SYSTEM_MAP.map(row => (
-                <div key={row.team} style={{ display: 'grid', gridTemplateColumns: '110px 1fr', borderBottom: `1px solid ${C.border}` }}>
-                  <div style={{
-                    padding: '9px 12px', borderRight: `1px solid ${C.border}`,
-                    background: C.bgSub, display: 'flex', alignItems: 'center', gap: 7,
-                  }}>
-                    <span style={{ fontFamily: MONO, fontSize: 12, color: row.color, flexShrink: 0 }}>{row.emoji}</span>
-                    <span style={{ fontFamily: MONO, fontSize: 8, fontWeight: 700, color: C.text, letterSpacing: '0.05em', lineHeight: 1.5 }}>{row.team}</span>
-                  </div>
-                  <div style={{ padding: '9px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {row.agents.map(a => (
-                      <span key={a} style={{ fontFamily: MONO, fontSize: 9, color: C.textMid, letterSpacing: '0.03em' }}>· {a}</span>
-                    ))}
-                  </div>
+            <SectionHeader n="02" label="ORGANIZATION — HARNESS ⊃ (PLANNER · 6 TEAMS · EVALUATORS)" />
+
+            {/* HARNESS 래퍼 */}
+            <div style={{ border: `2px solid ${C.borderStrong}`, padding: 12, background: '#fefce8' }}>
+              <div style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color: '#ca8a04', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 14 }}>◈</span>
+                <span>HARNESS — 전체 시스템</span>
+              </div>
+
+              {/* PLANNER */}
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontFamily: MONO, fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', color: C.textMid, marginBottom: 4 }}>▲ PLANNER</div>
+                <div style={{ border: `1px solid ${C.border}`, background: C.bg, padding: '7px 12px', fontFamily: MONO, fontSize: 9, color: C.text }}>
+                  · {SYSTEM_MAP.planner}
                 </div>
-              ))}
+              </div>
+
+              {/* GENERATORS (6 teams) */}
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontFamily: MONO, fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', color: C.textMid, marginBottom: 4 }}>■ GENERATORS — 6 TEAMS</div>
+                <div style={{ border: `1px solid ${C.border}`, borderBottom: 'none', background: C.bg }}>
+                  {SYSTEM_MAP.generators.map(row => (
+                    <div key={row.team} style={{ display: 'grid', gridTemplateColumns: '110px 1fr', borderBottom: `1px solid ${C.border}` }}>
+                      <div style={{
+                        padding: '7px 12px', borderRight: `1px solid ${C.border}`,
+                        background: C.bgSub, display: 'flex', alignItems: 'center', gap: 7,
+                      }}>
+                        <span style={{ fontFamily: MONO, fontSize: 11, color: row.color, flexShrink: 0 }}>{row.emoji}</span>
+                        <span style={{ fontFamily: MONO, fontSize: 8, fontWeight: 700, color: C.text, letterSpacing: '0.05em', lineHeight: 1.5 }}>{row.team}</span>
+                      </div>
+                      <div style={{ padding: '7px 12px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        {row.agents.map(a => (
+                          <span key={a} style={{ fontFamily: MONO, fontSize: 9, color: C.textMid, letterSpacing: '0.03em' }}>· {a}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* EVALUATORS */}
+              <div>
+                <div style={{ fontFamily: MONO, fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', color: C.textMid, marginBottom: 4 }}>○ EVALUATORS</div>
+                <div style={{ border: `1px solid ${C.border}`, background: C.bg, padding: '7px 12px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  {SYSTEM_MAP.evaluators.map(e => (
+                    <span key={e} style={{ fontFamily: MONO, fontSize: 9, color: C.text }}>· {e}</span>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -557,6 +602,7 @@ const ClaudeMonitor: React.FC = () => {
   const [totalSessions, setTotalSessions] = useState(47);
   const [skills, setSkills] = useState<SkillDef[]>(FALLBACK_SKILLS);
   const [teams, setTeams] = useState<TeamDef[]>([]);
+  const [harness, setHarness] = useState<HarnessDef>(FALLBACK_HARNESS);
   const [agentActivity, setAgentActivity] = useState<AgentActivity>({});
   const [recommendations, setRecommendations] = useState<RecommendationsData | null>(null);
   const [isMock, setIsMock] = useState(true);
@@ -611,14 +657,17 @@ const ClaudeMonitor: React.FC = () => {
         setAgentActivity(d);
       }
       if (teamsRes.ok) {
-        const d = await teamsRes.json();
+        const d: TeamsData = await teamsRes.json();
         if (d.teams?.length) {
-          const merged = d.teams.map((t: TeamDef) => {
-            const fallback = FALLBACK_TEAMS.find(f => f.id === t.id);
-            return { ...fallback, ...t, skills: fallback?.skills || [] };
-          });
+          const merged = d.teams
+            .filter(t => t.id !== 'harness')
+            .map((t: TeamDef) => {
+              const fallback = FALLBACK_TEAMS.find(f => f.id === t.id);
+              return { ...fallback, ...t, skills: fallback?.skills || [] };
+            });
           setTeams(merged);
         }
+        if (d.harness) setHarness(d.harness);
       }
       if (recommendRes.ok) {
         const d: RecommendationsData = await recommendRes.json();
@@ -748,8 +797,8 @@ const ClaudeMonitor: React.FC = () => {
           marginBottom: 24,
         }}>
           {[
-            { label: 'HARNESS AGENTS', value: '03', sub: 'PLN·GEN·EVAL' },
-            { label: 'SUB-AGENTS', value: String(agentCount).padStart(2,'0'), sub: `${displayTeams.length} TEAMS` },
+            { label: 'HARNESS', value: '04', sub: '1 PLN · 3 EVAL' },
+            { label: 'GENERATORS', value: String(agentCount || 12).padStart(2,'0'), sub: `${displayTeams.length} TEAMS` },
             { label: 'SKILLS', value: String(skillCount).padStart(2,'0'), sub: `PLG:${pluginCount} MCP:${mcpCount}` },
             { label: 'SESSIONS', value: String(totalSessions).padStart(3,'0'), sub: 'TOTAL LOGGED' },
             { label: 'TOOL CALLS', value: totalTools.toLocaleString(), sub: 'CUMULATIVE' },
@@ -770,7 +819,7 @@ const ClaudeMonitor: React.FC = () => {
         <div style={{ borderBottom: `1px solid ${C.border}`, display: 'flex', gap: 0, marginBottom: 0 }}>
           {([
             { key: 'teams', label: `팀 구조  [${String(displayTeams.length).padStart(2,'0')}]` },
-            { key: 'agents', label: `하네스  [03]` },
+            { key: 'agents', label: `하네스  [04]` },
             { key: 'skills', label: `스킬  [${String(skills.filter(s=>s.type!=='agent').length).padStart(2,'0')}]` },
             { key: 'grants', label: `공모  [${String(grants.length).padStart(2,'0')}]` },
             { key: 'todos',  label: `할일  [${String(calendar.filter(e => !e.isPast).length).padStart(2,'0')}]` },
@@ -789,6 +838,76 @@ const ClaudeMonitor: React.FC = () => {
         {/* ── TEAMS TAB ───────────────────────────────────────────────────── */}
         {mainTab === 'teams' && (
           <div style={{ padding: '24px 0' }}>
+
+            {/* ── HARNESS WRAPPER ─────────────────────────────────────── */}
+            <div style={{
+              border: `2px solid ${C.borderStrong}`,
+              background: '#fefce8',
+              padding: 16,
+              marginBottom: 24,
+            }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                marginBottom: 14, paddingBottom: 10, borderBottom: `1px solid rgba(0,0,0,0.1)`,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontFamily: MONO, fontSize: 18, color: '#ca8a04' }}>◈</span>
+                  <div>
+                    <div style={{ fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '0.2em', color: C.text }}>
+                      HARNESS
+                    </div>
+                    <div style={{ fontFamily: MONO, fontSize: 8, color: C.textMid, letterSpacing: '0.1em', marginTop: 2 }}>
+                      PLANNER → GENERATOR → EVALUATOR · 전체 시스템 프레임워크
+                    </div>
+                  </div>
+                </div>
+                <span style={{ fontFamily: MONO, fontSize: 9, color: C.textMid, letterSpacing: '0.1em' }}>
+                  04 CORE AGENTS
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                {/* PLANNER */}
+                <div>
+                  <div style={{ fontFamily: MONO, fontSize: 8, fontWeight: 700, letterSpacing: '0.15em', color: C.textMid, marginBottom: 6 }}>
+                    ▲ PLANNER [01]
+                  </div>
+                  <div style={{ border: `1px solid ${C.border}`, background: C.bg, padding: '9px 12px' }}>
+                    <div style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, color: C.text }}>
+                      {harness.planner.name}
+                    </div>
+                    <div style={{ fontFamily: SANS, fontSize: 9, color: C.textMid, marginTop: 3, lineHeight: 1.5 }}>
+                      {harness.planner.desc}
+                    </div>
+                  </div>
+                </div>
+
+                {/* EVALUATORS */}
+                <div>
+                  <div style={{ fontFamily: MONO, fontSize: 8, fontWeight: 700, letterSpacing: '0.15em', color: C.textMid, marginBottom: 6 }}>
+                    ○ EVALUATORS [{String(harness.evaluators.length).padStart(2,'0')}]
+                  </div>
+                  <div style={{ border: `1px solid ${C.border}`, background: C.bg, display: 'flex', flexDirection: 'column' }}>
+                    {harness.evaluators.map((ev, i) => (
+                      <div key={ev.id} style={{
+                        padding: '6px 12px',
+                        borderBottom: i < harness.evaluators.length - 1 ? `1px solid ${C.border}` : 'none',
+                      }}>
+                        <span style={{ fontFamily: MONO, fontSize: 9, fontWeight: 700, color: C.text }}>{ev.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{
+                marginTop: 12, paddingTop: 10, borderTop: `1px dashed rgba(0,0,0,0.15)`,
+                fontFamily: MONO, fontSize: 8, color: C.textMid, letterSpacing: '0.08em', textAlign: 'center',
+              }}>
+                ↓ GENERATORS — 6 TEAMS (아래) ↓
+              </div>
+            </div>
+
             {/* Team grid */}
             <div className="monitor-teams-grid" style={{
               border: `1px solid ${C.border}`, borderRight: 'none', borderBottom: 'none',
