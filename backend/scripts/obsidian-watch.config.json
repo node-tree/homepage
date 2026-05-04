@@ -1,0 +1,10 @@
+{
+  "_comment": "옵시디안 → MongoDB Work.research 자동 동기화 매핑. postId는 MongoDB ObjectId, obsidianPath는 vault 상대경로.",
+  "mappings": [
+    {
+      "postId": "69f7f16819e31bf1bef2699d",
+      "obsidianPath": "NODE TREE/작품/2026/공생직조",
+      "label": "공생직조 (Corrosia)"
+    }
+  ]
+}

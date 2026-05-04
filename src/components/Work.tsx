@@ -42,6 +42,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [isContentExpanded, setIsContentExpanded] = useState(false);
+  const [researchSynced, setResearchSynced] = useState(false);
   const { contentRef, LightboxPortal } = useEditorialLayout(selectedPost?.id);
 
   const loadPosts = useCallback(async () => {
@@ -139,6 +140,21 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
       }
     }
   }, [searchParams, posts, selectedPost]);
+
+  // selectedPost가 바뀔 때마다 리서치 sync 상태 조회 (인증 불필요)
+  useEffect(() => {
+    if (!selectedPost?.id) {
+      setResearchSynced(false);
+      return;
+    }
+    let cancelled = false;
+    workAPI.getResearchStatus(selectedPost.id)
+      .then((res: any) => {
+        if (!cancelled) setResearchSynced(!!res?.data?.synced);
+      })
+      .catch(() => { if (!cancelled) setResearchSynced(false); });
+    return () => { cancelled = true; };
+  }, [selectedPost?.id]);
 
   const handleSavePost = (newPost: { title: string; content: string; date: string; images?: string[] }) => {
     setShowWritePost(false);
@@ -455,26 +471,41 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
               ← 목록으로
             </motion.button>
             
-            {isAuthenticated && (
-              <div className="post-actions">
-                <motion.button 
+            <div className="post-actions">
+              {researchSynced && (
+                <motion.button
                   className="edit-button"
-                  onClick={() => handleEditPost(selectedPost)}
+                  onClick={() => navigate(`/work/research/${selectedPost.id}`)}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
+                  title={isAuthenticated
+                    ? '옵시디안에서 동기화된 리서치 아카이브를 봅니다'
+                    : '로그인 후 리서치 아카이브를 볼 수 있습니다'}
                 >
-                  수정
+                  📚 리서치 아카이브
                 </motion.button>
-                <motion.button 
-                  className="delete-button"
-                  onClick={() => handleDeletePost(selectedPost)}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  삭제
-                </motion.button>
-              </div>
-            )}
+              )}
+              {isAuthenticated && (
+                <>
+                  <motion.button
+                    className="edit-button"
+                    onClick={() => handleEditPost(selectedPost)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    수정
+                  </motion.button>
+                  <motion.button
+                    className="delete-button"
+                    onClick={() => handleDeletePost(selectedPost)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    삭제
+                  </motion.button>
+                </>
+              )}
+            </div>
           </div>
           
           <article className="post-article">

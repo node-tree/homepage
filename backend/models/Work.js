@@ -28,6 +28,22 @@ const workSchema = new mongoose.Schema({
       order: Number
     }],
     default: []
+  },
+  research: {
+    html: { type: String, default: '' },
+    markdown: { type: String, default: '' },
+    toc: {
+      type: [{
+        level: Number,
+        text: String,
+        anchor: String,
+        file: String
+      }],
+      default: []
+    },
+    sourceFiles: { type: [String], default: [] },
+    obsidianPath: { type: String, default: '' },
+    syncedAt: { type: Date, default: null }
   }
 }, {
   timestamps: true,
