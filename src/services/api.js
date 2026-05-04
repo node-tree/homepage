@@ -131,11 +131,13 @@ const getAuthToken = () => {
 };
 
 // 401 응답 시 자동 로그아웃 처리
-const handle401 = () => {
+const handle401 = (serverMessage) => {
+  const token = localStorage.getItem('auth_token');
+  const msg = serverMessage || (token ? '토큰이 만료되었거나 유효하지 않습니다.' : '로그인이 필요합니다.');
   localStorage.removeItem('auth_token');
   localStorage.removeItem('auth_user');
-  alert('로그인이 만료되었습니다. 다시 로그인해주세요.');
-  window.location.reload();
+  alert(`로그인이 필요합니다. 다시 로그인해주세요.\n(${msg})`);
+  window.location.href = '/login';
 };
 
 // 인증 헤더를 포함한 기본 헤더 생성
@@ -277,8 +279,9 @@ export const workAPI = {
       body: JSON.stringify(postData)
     });
     if (!response.ok) {
-      if (response.status === 401) return handle401();
       const errorData = await response.json().catch(() => ({}));
+      if (response.status === 401) return handle401(errorData.message);
+      if (response.status === 403) throw new Error('관리자 권한이 필요합니다.');
       console.error('Work createPost 오류:', response.status, errorData);
       throw new Error(errorData.message || `Failed to create post (${response.status})`);
     }
