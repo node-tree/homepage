@@ -17,6 +17,7 @@ import CV from './components/CV';
 import About from './components/About';
 import Guestbook from './components/Guestbook';
 import Work from './components/Work';
+import WorkResearch from './components/WorkResearch';
 import TeamEvent from './components/TeamEvent';
 import Team from './components/Team';
 import { playHoverSound, playClickSound, playNavSound, initAudioContext } from './utils/sound';
@@ -393,6 +394,7 @@ function App() {
             <Route path="/NODETREECorpus" element={<Team />} />
             <Route path="/ocean" element={<OceanData />} />
             <Route path="/monitor" element={<ClaudeMonitor />} />
+            <Route path="/work/research/:postId" element={<WorkResearch />} />
             <Route path="/synth" element={
               <div style={{
                 minHeight: '100vh',

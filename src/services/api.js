@@ -386,6 +386,47 @@ export const workAPI = {
     return data;
   },
 
+  // 리서치 아카이브 조회 (로그인 필수)
+  getResearch: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/work/${id}/research`, {
+      headers: getHeaders(),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      if (response.status === 401) return handle401(errorData.message);
+      if (response.status === 404) throw new Error('작품을 찾을 수 없습니다.');
+      throw new Error(errorData.message || `리서치 조회 실패 (${response.status})`);
+    }
+    return response.json();
+  },
+
+  // 리서치 sync 상태만 확인 (인증 불필요)
+  getResearchStatus: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/work/${id}/research/status`);
+    if (!response.ok) return { success: false, data: { synced: false } };
+    return response.json();
+  },
+
+  // 옵시디안 폴더에서 마스터 노트 + 리서치 동기화 (admin only)
+  syncObsidian: async (id, obsidianPath) => {
+    const response = await fetch(`${API_BASE_URL}/work/${id}/sync-obsidian`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(obsidianPath ? { obsidianPath } : {})
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      if (response.status === 401) return handle401(errorData.message);
+      if (response.status === 403) throw new Error('관리자 권한이 필요합니다.');
+      if (response.status === 503) throw new Error(errorData.message || '동기화는 로컬 환경에서만 동작합니다.');
+      throw new Error(errorData.message || `동기화 실패 (${response.status})`);
+    }
+    const data = await response.json();
+    cacheUtils.remove(CACHE_KEYS.WORK_POSTS);
+    markCdnDirty('work_updated');
+    return data;
+  },
+
   // 글 순서 변경
   reorderPosts: async (orders) => {
     const response = await fetch(`${API_BASE_URL}/work/reorder`, {

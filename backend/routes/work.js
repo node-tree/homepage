@@ -5,6 +5,7 @@ const auth = require('../middleware/auth');
 const { adminOnly } = require('../middleware/auth');
 const mongoose = require('mongoose');
 const WorkHeader = require('../models/Work').WorkHeader;
+const { buildResearchPayload, isVercelEnv, DEFAULT_VAULT_ROOT } = require('../utils/obsidian-sync');
 
 // DB 연결 확인 — 별도 모듈에서 캐싱된 연결 재사용
 const connectDB = require('../db');
@@ -399,4 +400,148 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-module.exports = router; 
+// POST /api/work/:id/sync-obsidian
+// 옵시디안 폴더에서 마스터+리서치를 읽어 work.research 서브문서만 갱신.
+// 메인 페이지 description(contents/htmlContent)은 건드리지 않음.
+router.post('/:id/sync-obsidian', auth, adminOnly, async (req, res) => {
+  try {
+    if (isVercelEnv()) {
+      return res.status(503).json({
+        success: false,
+        message: '옵시디안 동기화는 로컬 환경에서만 동작합니다. CLI 스크립트(backend/scripts/sync-obsidian-work.js)로 실행하세요.'
+      });
+    }
+
+    await ensureDBConnection();
+
+    const { id } = req.params;
+    const { obsidianPath } = req.body || {};
+    const inputPath = obsidianPath || 'NODE TREE/작품/2026/공생직조';
+
+    let payload;
+    try {
+      payload = buildResearchPayload(inputPath);
+    } catch (e) {
+      return res.status(400).json({ success: false, message: e.message });
+    }
+
+    const HTML_LIMIT = 2 * 1024 * 1024; // 2MB — research는 본문보다 너그럽게
+    if (payload.htmlLength > HTML_LIMIT) {
+      return res.status(413).json({
+        success: false,
+        message: `생성된 HTML이 너무 큽니다 (${payload.htmlLength} bytes > ${HTML_LIMIT}).`
+      });
+    }
+
+    const syncedAt = new Date();
+    const updatedWork = await Work.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          'research.html': payload.html,
+          'research.markdown': payload.markdown,
+          'research.toc': payload.toc,
+          'research.sourceFiles': payload.sourceFiles,
+          'research.obsidianPath': inputPath,
+          'research.syncedAt': syncedAt,
+        }
+      },
+      { new: true }
+    );
+
+    if (!updatedWork) {
+      return res.status(404).json({ success: false, message: '작품을 찾을 수 없습니다.' });
+    }
+
+    console.log(`옵시디안 리서치 동기화 완료: ${updatedWork._id} (${payload.charCount}자, TOC ${payload.toc.length}개)`);
+
+    res.json({
+      success: true,
+      syncedAt: syncedAt.toISOString(),
+      sourceFile: payload.sourceFile,
+      researchFiles: payload.researchFiles,
+      tocCount: payload.toc.length,
+      charCount: payload.charCount,
+      htmlLength: payload.htmlLength,
+      vaultRoot: DEFAULT_VAULT_ROOT,
+    });
+  } catch (error) {
+    console.error('옵시디안 동기화 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '동기화에 실패했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/work/:id/research
+// 리서치 아카이브 페이지에서 호출. 로그인 필수(내부용).
+router.get('/:id/research', auth, async (req, res) => {
+  try {
+    await ensureDBConnection();
+    const { id } = req.params;
+    const work = await Work.findById(id).select('title research');
+    if (!work) {
+      return res.status(404).json({ success: false, message: '작품을 찾을 수 없습니다.' });
+    }
+    const research = work.research || {};
+    if (!research.syncedAt || !research.html) {
+      return res.json({
+        success: true,
+        data: {
+          id: work._id.toString(),
+          title: work.title,
+          synced: false,
+          message: '아직 옵시디안에서 동기화된 리서치가 없습니다.'
+        }
+      });
+    }
+    res.json({
+      success: true,
+      data: {
+        id: work._id.toString(),
+        title: work.title,
+        synced: true,
+        html: research.html,
+        toc: research.toc || [],
+        sourceFiles: research.sourceFiles || [],
+        obsidianPath: research.obsidianPath || '',
+        syncedAt: research.syncedAt,
+      }
+    });
+  } catch (error) {
+    console.error('리서치 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '리서치 조회에 실패했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/work/:id/research/status
+// 인증 없이 "이 post에 리서치가 sync됐는지"만 확인. Work 페이지 버튼 노출용.
+router.get('/:id/research/status', async (req, res) => {
+  try {
+    await ensureDBConnection();
+    const { id } = req.params;
+    const work = await Work.findById(id).select('research.syncedAt research.sourceFiles');
+    if (!work) {
+      return res.status(404).json({ success: false, message: '작품을 찾을 수 없습니다.' });
+    }
+    const r = work.research || {};
+    res.json({
+      success: true,
+      data: {
+        synced: !!(r.syncedAt && r.sourceFiles && r.sourceFiles.length > 0),
+        syncedAt: r.syncedAt || null,
+        fileCount: (r.sourceFiles || []).length,
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+module.exports = router;
