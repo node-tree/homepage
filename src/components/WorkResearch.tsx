@@ -3,7 +3,10 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { workAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import TimeStackInfographic from './TimeStackInfographic';
 import './WorkResearch.css';
+
+const CORROSIA_POST_ID = '69f7f16819e31bf1bef2699d';
 
 interface TocItem {
   level: number;
@@ -81,13 +84,30 @@ const WorkResearch: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [data?.html]);
 
-  // mermaid 렌더 — script가 로드되어 있으면 실행
+  // mermaid 렌더 — dynamic import로 lazy load
   useEffect(() => {
     if (!data?.html) return;
-    const w = window as any;
-    if (w.mermaid && typeof w.mermaid.run === 'function') {
-      w.mermaid.run({ querySelector: '.research-body pre.mermaid' }).catch(() => {});
-    }
+    let cancelled = false;
+    import('mermaid').then(mod => {
+      if (cancelled) return;
+      const mermaid = mod.default;
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: 'base',
+        themeVariables: {
+          fontFamily: '"Inter", "Pretendard", sans-serif',
+          fontSize: '13px',
+          background: '#fafaf7',
+          primaryColor: '#faf9f4',
+          primaryBorderColor: '#2a2a2a',
+          primaryTextColor: '#1a1a1a',
+          lineColor: '#666',
+          tertiaryColor: '#f4f3ee',
+        },
+      });
+      mermaid.run({ querySelector: '.research-body pre.mermaid' }).catch(() => {});
+    }).catch(() => {});
+    return () => { cancelled = true; };
   }, [data?.html]);
 
   // TOC를 파일별로 그룹핑
@@ -219,8 +239,10 @@ const WorkResearch: React.FC = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
-          dangerouslySetInnerHTML={{ __html: data.html || '' }}
-        />
+        >
+          {data.id === CORROSIA_POST_ID && <TimeStackInfographic />}
+          <div dangerouslySetInnerHTML={{ __html: data.html || '' }} />
+        </motion.article>
       </div>
     </div>
   );

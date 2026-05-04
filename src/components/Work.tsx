@@ -5,6 +5,7 @@ import { workAPI } from '../services/api';
 import WritePost from './WritePost';
 import { useAuth } from '../contexts/AuthContext';
 import ReconnectAnimation from './ReconnectAnimation';
+import CorrosionCanvas from './CorrosionCanvas';
 import { playHoverSound, playClickSound } from '../utils/sound';
 import { useEditorialLayout } from '../hooks/useEditorialLayout';
 import PageLoader from './PageLoader';
@@ -44,6 +45,8 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
   const [isContentExpanded, setIsContentExpanded] = useState(false);
   const [researchSynced, setResearchSynced] = useState(false);
   const { contentRef, LightboxPortal } = useEditorialLayout(selectedPost?.id);
+
+  const CORROSIA_POST_ID = '69f7f16819e31bf1bef2699d';
 
   const loadPosts = useCallback(async () => {
     setPostsLoading(true);
@@ -509,6 +512,16 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
           </div>
           
           <article className="post-article">
+            {/* 공생직조: 부식 reaction-diffusion 헤로 캔버스 */}
+            {selectedPost.id === CORROSIA_POST_ID && (
+              <div className="corrosion-hero">
+                <CorrosionCanvas height={260} />
+                <div className="corrosion-hero-overlay">
+                  <span className="corrosion-hero-label">REACTION-DIFFUSION · TIDAL CORROSION</span>
+                </div>
+              </div>
+            )}
+
             <header className="post-header">
               <h1 className="post-title">{selectedPost.title}</h1>
               <div className="post-meta">
