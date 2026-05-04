@@ -1726,6 +1726,34 @@
   padding-bottom: 2rem;
 }
 
+/* 공생직조 부식 헤로 */
+.corrosion-hero {
+  position: relative;
+  width: 100%;
+  margin: 0 0 2rem;
+  background: #0a0a0a;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.corrosion-hero-overlay {
+  position: absolute;
+  left: 16px;
+  bottom: 12px;
+  pointer-events: none;
+}
+
+.corrosion-hero-label {
+  font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: rgba(232, 226, 211, 0.55);
+  text-transform: uppercase;
+  background: rgba(10, 10, 10, 0.6);
+  padding: 4px 8px;
+  border-left: 2px solid rgba(184, 84, 15, 0.7);
+}
+
 .post-title {
   font-size: 2rem;
   font-weight: 600;
