@@ -1,27 +1,31 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import './App.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import Login from './components/Login';
 import SeoHead from './components/SeoHead';
-import Home from './components/Home';
-import SaengsansoApp from './components/Saengsanso';
-import StrudelSynth from './components/StrudelSynth';
-import OceanData from './components/OceanData';
-import ClaudeMonitor from './components/ClaudeMonitor';
-import Contact from './components/Contact';
-import Commons from './components/Commons';
-import CV from './components/CV';
-import About from './components/About';
-import Guestbook from './components/Guestbook';
-import Work from './components/Work';
-import WorkResearch from './components/WorkResearch';
-import TeamEvent from './components/TeamEvent';
-import Team from './components/Team';
+import PageLoader from './components/PageLoader';
 import { playHoverSound, playClickSound, playNavSound, initAudioContext } from './utils/sound';
 import { prefetchAPI } from './services/api';
+
+// [code-split] 페이지/스탠드얼론 라우트 컴포넌트는 React.lazy로 분리.
+// 무거운 의존성(three.js=Home/Work, p5=Work/Team, mermaid=WorkResearch)을
+// 메인 번들에서 떼어내 라우트 진입 시점에만 로드한다.
+const Login = lazy(() => import('./components/Login'));
+const Home = lazy(() => import('./components/Home'));
+const SaengsansoApp = lazy(() => import('./components/Saengsanso'));
+const OceanData = lazy(() => import('./components/OceanData'));
+const ClaudeMonitor = lazy(() => import('./components/ClaudeMonitor'));
+const Contact = lazy(() => import('./components/Contact'));
+const Commons = lazy(() => import('./components/Commons'));
+const CV = lazy(() => import('./components/CV'));
+const About = lazy(() => import('./components/About'));
+const Guestbook = lazy(() => import('./components/Guestbook'));
+const Work = lazy(() => import('./components/Work'));
+const WorkResearch = lazy(() => import('./components/WorkResearch'));
+const TeamEvent = lazy(() => import('./components/TeamEvent'));
+const Team = lazy(() => import('./components/Team'));
 
 // 도메인 감지 (localhost에서는 ?saengsanso 쿼리로 테스트 가능)
 const isSaengsanso = typeof window !== 'undefined' && (
@@ -362,7 +366,10 @@ function AppContent() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
           >
-            {renderPageContent()}
+            {/* [code-split] lazy 페이지 로드 동안 로딩 표시 */}
+            <Suspense fallback={<PageLoader />}>
+              {renderPageContent()}
+            </Suspense>
           </motion.div>
         </AnimatePresence>
       </main>
@@ -377,7 +384,9 @@ function App() {
     return (
       <HelmetProvider>
         <AuthProvider>
-          <SaengsansoApp />
+          <Suspense fallback={<PageLoader />}>
+            <SaengsansoApp />
+          </Suspense>
         </AuthProvider>
       </HelmetProvider>
     );
@@ -387,26 +396,20 @@ function App() {
     <HelmetProvider>
       <AuthProvider>
         <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/guestbook" element={<Guestbook />} />
-            <Route path="/team-event" element={<TeamEvent />} />
-            <Route path="/NODETREECorpus" element={<Team />} />
-            <Route path="/ocean" element={<OceanData />} />
-            <Route path="/monitor" element={<ClaudeMonitor />} />
-            <Route path="/work/research/:postId" element={<WorkResearch />} />
-            <Route path="/synth" element={
-              <div style={{
-                minHeight: '100vh',
-                background: 'linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%)',
-                paddingTop: '140px',
-                paddingBottom: '40px'
-              }}>
-                <StrudelSynth />
-              </div>
-            } />
-            <Route path="*" element={<AppContent />} />
-          </Routes>
+          {/* [code-split] 모든 스탠드얼론 라우트를 단일 Suspense 경계로 감싼다.
+              각 라우트 컴포넌트가 lazy이므로 진입 시점에만 청크를 로드한다. */}
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/guestbook" element={<Guestbook />} />
+              <Route path="/team-event" element={<TeamEvent />} />
+              <Route path="/NODETREECorpus" element={<Team />} />
+              <Route path="/ocean" element={<OceanData />} />
+              <Route path="/monitor" element={<ClaudeMonitor />} />
+              <Route path="/work/research/:postId" element={<WorkResearch />} />
+              <Route path="*" element={<AppContent />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </AuthProvider>
     </HelmetProvider>
