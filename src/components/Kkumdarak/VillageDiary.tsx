@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import IntroChar from './IntroChar';
 import { useAuth } from '../../contexts/AuthContext';
+import { villageDiaryAPI } from '../../services/api';
 
 type DiaryCardData = { side: 'left' | 'right'; title: string; date: string; dot: string; imageUrl?: string };
 type ProgramDiary = {
@@ -136,9 +137,11 @@ const PROGRAMS_DEFAULT: ProgramDiary[] = [
   },
 ];
 
+// localStorage 는 백엔드가 단일 진실 소스로 승격된 후에는 *오프라인 캐시*로만 사용한다.
+//   마운트 시 먼저 캐시로 즉시 렌더 후, 백엔드 GET 성공 시 교체. 저장 base 는 항상 백엔드 오버라이드(serverOverrideRef).
 const LS_KEY = 'villageDiary_v1';
 
-// localStorage에서 저장된 카드 오버라이드 불러오기
+// localStorage 오프라인 캐시에서 카드 오버라이드 불러오기(빠른 초기 렌더용)
 function loadSavedCards(): Record<string, DiaryCardData[]> {
   if (typeof window === 'undefined') return {};
   try {
@@ -304,6 +307,36 @@ const VillageDiary: React.FC = () => {
   const [selected, setSelected] = useState<string>(PROGRAMS_DEFAULT[0].id);
   const reduced = usePrefersReducedMotion();
 
+  // 저장 base = 백엔드 오버라이드(단일 진실 소스). 초기값은 localStorage 캐시로 시드 —
+  // GET 미완료/실패(레이스·오프라인) 구간에 {} 면 다른 프로그램 오버라이드가 PUT 으로 삭제되므로 방지.
+  const serverOverrideRef = useRef<Record<string, DiaryCardData[]>>(loadSavedCards());
+
+  // 마운트 시 백엔드에서 오버라이드를 불러와 병합 — 백엔드를 단일 진실 소스로.
+  //   초기 렌더는 PROGRAMS_DEFAULT(+localStorage 캐시), fetch 성공 시 setState 로 교체.
+  useEffect(() => {
+    let cancelled = false;
+    villageDiaryAPI
+      .get()
+      .then((override) => {
+        if (cancelled || !override || typeof override !== 'object') return;
+        serverOverrideRef.current = override;
+        setPrograms(mergePrograms(override));
+        // 오프라인 캐시 갱신
+        try {
+          window.localStorage.setItem(LS_KEY, JSON.stringify(override));
+        } catch {
+          // 무시
+        }
+      })
+      .catch((err) => {
+        // 네트워크 실패 시 localStorage 캐시/기본값 유지
+        console.warn('마을일기 백엔드 로드 실패 (캐시/기본값 사용):', err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const program = useMemo(
     () => programs.find((p) => p.id === selected) ?? programs[0],
     [selected, programs],
@@ -337,28 +370,50 @@ const VillageDiary: React.FC = () => {
         [selected]: program.cards.map((c) => ({ ...c })),
       }));
       setIsEditing(true);
-    } else {
-      // 완료: draft → programs에 반영 + localStorage 저장
-      const newPrograms = programs.map((p) => {
-        if (p.id === selected && draftCards[selected] !== undefined) {
-          return { ...p, cards: draftCards[selected] };
-        }
-        return p;
-      });
-      setPrograms(newPrograms);
-
-      // localStorage: 모든 draftCards 항목 병합하여 저장
-      const saved = loadSavedCards();
-      Object.entries(draftCards).forEach(([id, dcards]) => {
-        saved[id] = dcards;
-      });
-      try {
-        window.localStorage.setItem(LS_KEY, JSON.stringify(saved));
-      } catch {
-        // storage full 등
-      }
-      setIsEditing(false);
+      return;
     }
+
+    // 완료: draft → programs에 낙관적 반영
+    const newPrograms = programs.map((p) => {
+      if (p.id === selected && draftCards[selected] !== undefined) {
+        return { ...p, cards: draftCards[selected] };
+      }
+      return p;
+    });
+    setPrograms(newPrograms);
+    setIsEditing(false);
+
+    // 저장 base 는 백엔드 오버라이드(단일 진실 소스) — localStorage 가 아니라 serverOverrideRef.
+    //   이렇게 해야 이번 세션에서 건드리지 않은 다른 프로그램의 백엔드 오버라이드가 보존된다.
+    const merged: Record<string, DiaryCardData[]> = { ...serverOverrideRef.current };
+    Object.entries(draftCards).forEach(([id, dcards]) => {
+      merged[id] = dcards;
+    });
+
+    // 오프라인 캐시(localStorage)도 함께 갱신 — 백엔드 우선, 캐시는 보조
+    try {
+      window.localStorage.setItem(LS_KEY, JSON.stringify(merged));
+    } catch {
+      // storage full 등 — 무시
+    }
+
+    // 백엔드 저장(관리자 전용). 실패를 숨기지 않는다.
+    villageDiaryAPI
+      .save(merged)
+      .then((res) => {
+        // 서버가 저장한 data 로 ref 동기화(반환 형태는 raw 오버라이드 객체)
+        const savedData =
+          res && res.success && res.data && typeof res.data === 'object'
+            ? (res.data as Record<string, DiaryCardData[]>)
+            : merged;
+        serverOverrideRef.current = savedData;
+      })
+      .catch((err) => {
+        console.error('마을일기 저장 실패:', err);
+        if (typeof window !== 'undefined') {
+          window.alert('마을일기 저장에 실패했습니다. 잠시 후 다시 시도해주세요.\n(' + (err?.message || err) + ')');
+        }
+      });
   };
 
   // 탭 변경 시 draft 초기화
@@ -611,7 +666,7 @@ const VillageDiary: React.FC = () => {
         {renderFilters(false)}
 
         {/* 편집 토글 버튼 — 로그인 사용자에게만 표시 */}
-        {user && (
+        {user?.role === 'admin' && (
           <button
             className={`kd-diary-edit-btn${isEditing ? ' is-editing' : ''}`}
             onClick={handleEditToggle}
