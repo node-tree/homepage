@@ -72,12 +72,12 @@ const SKILL_CATEGORIES: Record<string, { label: string }> = {
 };
 
 const FALLBACK_TEAMS: TeamDef[] = [
-  { id: 'dev',        name: '개발팀',           emoji: '■', color: '#1d4ed8', bg: '#eff6ff', desc: '소프트웨어 개발, 배포, 인프라', skills: ['vercel-react-best-practices','kicad-pcb-design','clangd-lsp','cli-anything','mcp-playwright'], agents: [] },
-  { id: 'research',   name: '리서치팀',         emoji: '○', color: '#b45309', bg: '#fffbeb', desc: '정보 수집, 분석, 지식 정리', skills: ['notebooklm-research','youtube-study'], agents: [] },
-  { id: 'art',        name: '예술작업팀',       emoji: '▲', color: '#7c3aed', bg: '#f5f3ff', desc: '사운드 아트, 영상, 퍼포먼스 필름, 설치, 생성 예술', skills: ['algorithmic-art','supercollider-sound-art','td-guide','web-audio-synth','remotion-best-practices','canvas-design'], agents: [] },
+  { id: 'dev',        name: '개발팀',           emoji: '■', color: '#1d4ed8', bg: '#eff6ff', desc: '소프트웨어 개발, 배포, 인프라', skills: ['vercel-react-best-practices','kicad-pcb-design'], agents: [] },
+  { id: 'research',   name: '리서치팀',         emoji: '○', color: '#b45309', bg: '#fffbeb', desc: '정보 수집, 분석, 지식 정리', skills: ['notebooklm-research','youtube-study','deep-research'], agents: [] },
+  { id: 'art',        name: '예술작업팀',       emoji: '▲', color: '#7c3aed', bg: '#f5f3ff', desc: '사운드 아트, 영상, 퍼포먼스 필름, 설치, 생성 예술', skills: ['algorithmic-art','supercollider-sound-art','supercollider-sound-art-for-daisy','td-guide','web-audio-synth','remotion-best-practices','canvas-design','korean-cinema','video-editing'], agents: [] },
   { id: 'accounting', name: '회계팀',           emoji: '□', color: '#059669', bg: '#ecfdf5', desc: '재무 관리, 예산, 지출 추적', skills: ['xlsx','korea-accounting','grant-accounting','pdf','hwpx','pptx'], agents: [] },
-  { id: 'design',     name: '디자인 및 홍보팀', emoji: '●', color: '#e11d48', bg: '#fff1f2', desc: 'UI/UX 디자인, 브랜딩, 홍보', skills: ['pencil-design','taste-skill','frontend-design','photo-grading','figma-generate-design'], agents: [] },
-  { id: 'planning',   name: '기획팀',           emoji: '◆', color: '#0891b2', bg: '#ecfeff', desc: '프로젝트 기획, 제안서, 문서 작성', skills: ['pptx','hwpx','pdf','skill-creator'], agents: [] },
+  { id: 'design',     name: '디자인 및 홍보팀', emoji: '●', color: '#e11d48', bg: '#fff1f2', desc: 'UI/UX 디자인, 브랜딩, 홍보', skills: ['taste-skill','canvas-design','image','frontend-design'], agents: [] },
+  { id: 'planning',   name: '기획팀',           emoji: '◆', color: '#0891b2', bg: '#ecfeff', desc: '프로젝트 기획, 제안서, 문서 작성', skills: ['pptx','hwpx','pdf','xlsx','project-planning','skill-creator'], agents: [] },
 ];
 
 const FALLBACK_GRANTS: GrantItem[] = [
@@ -110,14 +110,17 @@ const CAT_SYMBOL: Record<string, string> = {
 const FALLBACK_SKILLS: SkillDef[] = [
   { id: 'algorithmic-art', type: 'skill', category: 'art', name: 'Algorithmic Art', desc: 'p5.js generative art, flow fields', emoji: '●' },
   { id: 'canvas-design', type: 'skill', category: 'art', name: 'Canvas Design', desc: 'Visual art in .png/.pdf', emoji: '●' },
-  { id: 'photo-grading', type: 'skill', category: 'art', name: 'Photo Grading', desc: '유명 감성 사진작가 스타일 보정', emoji: '●' },
-  { id: 'pencil-design', type: 'skill', category: 'art', name: 'Pencil Design', desc: 'Web/mobile UI in .pen', emoji: '●' },
+  { id: 'korean-cinema', type: 'skill', category: 'art', name: 'Korean Cinema', desc: '한국 영화 미학·연출 레퍼런스', emoji: '●' },
+  { id: 'image', type: 'skill', category: 'art', name: 'Image', desc: '이미지 생성·편집·합성', emoji: '●' },
   { id: 'taste-skill', type: 'skill', category: 'art', name: 'Design Taste', desc: 'Senior UI/UX engineering', emoji: '●' },
   { id: 'web-audio-synth', type: 'skill', category: 'audio', name: 'Web Audio Synth', desc: 'Strudel, Tone.js, Web Audio API', emoji: '◇' },
   { id: 'supercollider-sound-art', type: 'skill', category: 'audio', name: 'SuperCollider', desc: 'Generative music & installations', emoji: '◇' },
   { id: 'supercollider-sound-art-for-daisy', type: 'skill', category: 'audio', name: 'SC × Daisy', desc: 'Daisy Patch SM hardware', emoji: '◇' },
   { id: 'td-guide', type: 'skill', category: 'audio', name: 'TouchDesigner', desc: 'TD operators, GLSL shaders', emoji: '◇' },
   { id: 'remotion-best-practices', type: 'skill', category: 'audio', name: 'Remotion', desc: 'Video creation in React', emoji: '◇' },
+  { id: 'video', type: 'skill', category: 'audio', name: 'Video', desc: '영상 생성·처리', emoji: '◇' },
+  { id: 'audio', type: 'skill', category: 'audio', name: 'Audio', desc: '오디오 생성·처리·TTS', emoji: '◇' },
+  { id: 'video-editing', type: 'skill', category: 'audio', name: 'Video Editing', desc: 'NLE 편집·색보정·사운드믹싱·영화제 출품', emoji: '◇' },
   { id: 'xlsx', type: 'skill', category: 'document', name: 'XLSX', desc: '예산표·지출내역·정산서 Excel 생성', emoji: '□' },
   { id: 'korea-accounting', type: 'skill', category: 'document', name: '한국 세무회계', desc: '법인세·부가세·원천세·4대보험 실무', emoji: '□' },
   { id: 'grant-accounting', type: 'skill', category: 'document', name: '지원사업 회계', desc: 'e나라도움·보탬e·NCAS 집행·정산', emoji: '□' },
@@ -128,11 +131,12 @@ const FALLBACK_SKILLS: SkillDef[] = [
   { id: 'vercel-react-best-practices', type: 'skill', category: 'dev', name: 'Vercel/React', desc: 'React & Next.js performance', emoji: '■' },
   { id: 'notebooklm-research', type: 'skill', category: 'research', name: 'NotebookLM', desc: 'URL → NotebookLM → Obsidian', emoji: '○' },
   { id: 'youtube-study', type: 'skill', category: 'research', name: 'YouTube Study', desc: 'YouTube 영상 분석 및 학습', emoji: '○' },
+  { id: 'project-planning', type: 'skill', category: 'meta', name: 'Project Planning', desc: '일정·WBS·RACI·예산', emoji: '◆' },
+  { id: 'nodetree-orchestrator', type: 'skill', category: 'meta', name: 'NT Orchestrator', desc: '하네스 런타임 오케스트레이터', emoji: '◆' },
   { id: 'skill-creator', type: 'skill', category: 'meta', name: 'Skill Creator', desc: 'Create & optimize skills', emoji: '◆' },
   { id: 'frontend-design', type: 'plugin', category: 'art', name: 'Frontend Design', desc: '1개 스킬 포함', emoji: '●' },
   { id: 'claude-qwen-tts', type: 'plugin', category: 'audio', name: 'Claude Qwen TTS', desc: '1개 스킬 포함', emoji: '◇' },
   { id: 'figma', type: 'plugin', category: 'dev', name: 'Figma', desc: '7개 스킬 포함', emoji: '■' },
-  { id: 'mcp-pencil', type: 'mcp', category: 'dev', name: 'pencil', desc: 'MCP: Pencil design editor', emoji: '×' },
   { id: 'mcp-playwright', type: 'mcp', category: 'dev', name: 'playwright', desc: 'MCP: Browser automation', emoji: '×' },
 ];
 
@@ -158,7 +162,7 @@ const AGENT_DESC_KO: Record<string, string> = {
   'saengsanso-accounting':    '주식회사 생산소 세무·회계·급여·법인카드 처리',
   'grant-accounting-agent':   '공모사업 정산·e나라도움·e보템·NCAS 집행 관리',
   // 기획팀
-  'doc-design':               '포트폴리오·도록·공문서·보고서 제작 (Pencil, HWPX)',
+  'doc-design':               '포트폴리오·도록·공문서·보고서 제작 (Figma 디지털도화서, HWPX)',
   'grant-writer':             '지원서·작가노트·프로젝트 설명문 작성',
   'project-planner':          '일정·예산·역할 분담·진행 상황 관리 (Obsidian)',
 };
@@ -483,6 +487,14 @@ function OverviewPanel({ onClose }: { onClose: () => void }) {
               <div style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color: '#ca8a04', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: 14 }}>◈</span>
                 <span>HARNESS — 전체 시스템</span>
+              </div>
+
+              {/* ORCHESTRATOR */}
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontFamily: MONO, fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', color: C.textMid, marginBottom: 4 }}>◆ ORCHESTRATOR</div>
+                <div style={{ border: `1px solid ${C.border}`, background: C.bg, padding: '7px 12px', fontFamily: MONO, fontSize: 9, color: C.text, lineHeight: 1.5 }}>
+                  · nodetree-orchestrator (스킬) — 다팀 작업을 Planner→Generator→Evaluator로 조율
+                </div>
               </div>
 
               {/* PLANNER */}
