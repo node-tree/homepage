@@ -270,8 +270,6 @@ const scanlineStyle = `
   .monitor-stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); }
   .monitor-teams-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
   .monitor-rec-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
-  .monitor-concept-strip { display: grid; grid-template-columns: repeat(3, 1fr); }
-  .monitor-agents-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
   .monitor-tab-legend { margin-left: auto; display: flex; align-items: center; padding-right: 16px; }
   .monitor-scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
@@ -315,15 +313,6 @@ const scanlineStyle = `
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function DataRow({ label, value, accent }: { label: string; value: string | number; accent?: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '4px 0', borderBottom: `1px solid ${C.border}` }}>
-      <span style={{ fontFamily: MONO, fontSize: 9, color: C.textDim, letterSpacing: '0.1em' }}>{label}</span>
-      <span style={{ fontFamily: MONO, fontSize: 12, fontWeight: 500, color: accent || C.text }}>{value}</span>
-    </div>
-  );
-}
-
 function StatusDot({ active, recent }: { active: boolean; recent?: boolean }) {
   if (!active) return <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#ddd', display: 'inline-block' }} />;
   return (
@@ -332,52 +321,6 @@ function StatusDot({ active, recent }: { active: boolean; recent?: boolean }) {
       background: recent ? C.pulse : '#bbb',
       animation: recent ? 'pulse-line 2s infinite' : 'none',
     }} />
-  );
-}
-
-function AgentCard({ agent, sessions }: { agent: typeof AGENTS[number]; sessions: SessionSummary[] }) {
-  const mySessions = sessions.filter(s => s.modelTier === agent.tier);
-  const pct = sessions.length ? Math.round((mySessions.length / sessions.length) * 100) : 0;
-  const last = mySessions[0];
-  const isActive = last ? (Date.now() - new Date(last.startTime).getTime()) < 86400000 : false;
-
-  return (
-    <div style={{ border: `1px solid ${isActive ? C.borderStrong : C.border}`, padding: '16px', background: C.bg }}>
-      {/* header row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontFamily: MONO, fontSize: 18, color: agent.col, lineHeight: 1 }}>{agent.symbol}</span>
-          <div>
-            <div style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', color: C.text }}>{agent.role}</div>
-            <div style={{ fontFamily: MONO, fontSize: 9, color: C.textDim, letterSpacing: '0.08em' }}>{agent.korean}</div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <StatusDot active={isActive} recent={isActive} />
-          <span style={{ fontFamily: MONO, fontSize: 9, color: isActive ? C.pulse : C.textDim, letterSpacing: '0.08em' }}>
-            {isActive ? 'ACTIVE' : 'IDLE'}
-          </span>
-        </div>
-      </div>
-
-      <p style={{ fontFamily: SANS, fontSize: 11, color: C.textMid, lineHeight: 1.6, margin: '0 0 12px 0' }}>{agent.desc}</p>
-
-      {/* usage bar */}
-      <div style={{ marginBottom: 10 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-          <span style={{ fontFamily: MONO, fontSize: 8, color: C.textDim, letterSpacing: '0.1em' }}>SESSION USAGE</span>
-          <span style={{ fontFamily: MONO, fontSize: 10, color: C.text }}>{mySessions.length} / {pct}%</span>
-        </div>
-        <div style={{ height: 2, background: C.border }}>
-          <div style={{ height: '100%', width: `${pct}%`, background: C.text, transition: 'width 0.6s ease' }} />
-        </div>
-      </div>
-
-      {last && (
-        <DataRow label="LAST PROJECT" value={`${last.projectName} · ${fmtRelDate(last.startTime)}`} />
-      )}
-      <DataRow label="TOOL CALLS" value={mySessions.reduce((s, r) => s + r.toolCallCount, 0).toLocaleString()} />
-    </div>
   );
 }
 
@@ -554,7 +497,9 @@ function OverviewPanel({ onClose }: { onClose: () => void }) {
                 { kw: '리서치, URL 분석, /research', agent: 'nodetree-research' },
                 { kw: '포스터, 홍보물, SNS이미지, 전시 그래픽', agent: 'visual-design' },
                 { kw: '보도자료, SNS캡션, 전시소개글', agent: 'pr-content' },
-                { kw: 'OSC, ArtNet, TouchDesigner, ESP32, TidalCycles', agent: 'media-art-pipeline' },
+                { kw: '소니피케이션, OSC, ArtNet, ESP32, CV/DAC, 센서, 통합·라우팅', agent: 'media-art-pipeline' },
+                { kw: 'SynthDef, SuperCollider, Ableton, TidalCycles, 모듈러신스, 웹오디오', agent: 'sound-art' },
+                { kw: '제너러티브 비주얼, p5.js, Hydra, TouchDesigner/GLSL, 실시간 그래픽', agent: 'generative-visual' },
                 { kw: '촬영, 편집, 색보정, 영화제, 이토록고요한파동', agent: 'film-production' },
                 { kw: '포트폴리오, 도록, 공문서, 보고서', agent: 'doc-design' },
                 { kw: '지원서, 작가노트, 제안서', agent: 'grant-writer' },
@@ -622,7 +567,7 @@ const ClaudeMonitor: React.FC = () => {
   const [isMock, setIsMock] = useState(true);
   const [lastSync, setLastSync] = useState('');
   const [now, setNow] = useState(new Date());
-  const [mainTab, setMainTab] = useState<'teams' | 'agents' | 'skills' | 'grants' | 'todos'>('teams');
+  const [mainTab, setMainTab] = useState<'teams' | 'sessions' | 'skills' | 'grants' | 'todos'>('teams');
   const [skillCategory, setSkillCategory] = useState<string | null>(null);
   const [showOverview, setShowOverview] = useState(false);
   const [grants, setGrants] = useState<GrantItem[]>(FALLBACK_GRANTS);
@@ -833,7 +778,7 @@ const ClaudeMonitor: React.FC = () => {
         <div style={{ borderBottom: `1px solid ${C.border}`, display: 'flex', gap: 0, marginBottom: 0 }}>
           {([
             { key: 'teams', label: `팀 구조  [${String(displayTeams.length).padStart(2,'0')}]` },
-            { key: 'agents', label: `하네스  [04]` },
+            { key: 'sessions', label: `세션  [${String(totalSessions).padStart(2,'0')}]` },
             { key: 'skills', label: `스킬  [${String(skills.filter(s=>s.type!=='agent').length).padStart(2,'0')}]` },
             { key: 'grants', label: `공모  [${String(grants.length).padStart(2,'0')}]` },
             { key: 'todos',  label: `할일  [${String(calendar.filter(e => !e.isPast).length).padStart(2,'0')}]` },
@@ -1122,30 +1067,9 @@ const ClaudeMonitor: React.FC = () => {
           </div>
         )}
 
-        {/* ── AGENTS TAB ──────────────────────────────────────────────────── */}
-        {mainTab === 'agents' && (
+        {/* ── SESSIONS TAB ────────────────────────────────────────────────── */}
+        {mainTab === 'sessions' && (
           <div style={{ padding: '24px 0' }}>
-            {/* Harness concept strip */}
-            <div className="monitor-concept-strip" style={{
-              border: `1px solid ${C.border}`, borderRight: 'none',
-              marginBottom: 24,
-            }}>
-              {[
-                { label: 'PLANNER', desc: '짧은 요청을 상세 설계서로 변환' },
-                { label: 'GENERATOR', desc: 'Sprint Contract 단위 코드 구현' },
-                { label: 'EVALUATOR', desc: 'Playwright 테스트 · 채점 · 피드백' },
-              ].map((item, i) => (
-                <div key={i} style={{ borderRight: `1px solid ${C.border}`, padding: '12px 16px' }}>
-                  <div style={{ fontFamily: MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: C.text, marginBottom: 3 }}>{item.label}</div>
-                  <div style={{ fontFamily: SANS, fontSize: 10, color: C.textDim }}>{item.desc}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="monitor-agents-grid">
-              {AGENTS.map(agent => <AgentCard key={agent.tier} agent={agent} sessions={sessions} />)}
-            </div>
-
             {/* Session log */}
             <div className="monitor-scroll-x" style={{ borderTop: `2px solid ${C.text}` }}>
               <div style={{
