@@ -60,9 +60,9 @@ interface CalendarData { lastUpdated: string; calendarId: string; daysAhead: num
 
 // ── Harness agents ────────────────────────────────────────────────────────────
 const AGENTS = [
-  { tier: 'opus' as const,   role: 'PLANNER',   korean: '전략가', symbol: '▲', desc: 'harness-planner (claude-opus-4-6) — 요청 → Sprint Contract 변환. 다중 팀 작업 설계.', col: '#111' },
-  { tier: 'sonnet' as const, role: 'GENERATOR', korean: '구현자', symbol: '■', desc: '팀 전담 에이전트 (claude-sonnet-4-6) — Sprint Contract 단위 구현. 주력 에이전트.', col: '#444' },
-  { tier: 'sonnet' as const, role: 'EVALUATOR', korean: '평가자', symbol: '○', desc: 'code / design / doc-evaluator (claude-sonnet-4-6) — PASS/REWORK 판정. 자기 편향 제거.', col: '#888' },
+  { tier: 'opus' as const,   role: 'PLANNER',   korean: '전략가', symbol: '▲', desc: 'planner — 요청 → Sprint Contract 변환. 다중 팀 작업 설계.', col: '#111' },
+  { tier: 'sonnet' as const, role: 'GENERATOR', korean: '구현자', symbol: '■', desc: '팀 전담 에이전트 — Sprint Contract 단위 구현. 주력 에이전트.', col: '#444' },
+  { tier: 'sonnet' as const, role: 'EVALUATOR', korean: '평가자', symbol: '○', desc: 'code / design / doc-evaluator — PASS/REWORK 판정. 자기 편향 제거.', col: '#888' },
 ] as const;
 
 const SKILL_CATEGORIES: Record<string, { label: string }> = {
@@ -143,7 +143,7 @@ const FALLBACK_SKILLS: SkillDef[] = [
 // 에이전트 한글 설명 맵
 const AGENT_DESC_KO: Record<string, string> = {
   // 하네스 (Planner + 3 Evaluators)
-  'harness-planner':          '복잡한 요청 → Sprint Contract 변환 · 다중 팀 작업 설계 (Opus)',
+  'planner':                  '복잡한 요청 → Sprint Contract 변환 · 다중 팀 작업 설계',
   'code-evaluator':           '웹/미디어아트 파이프라인 코드 평가 · PASS/REWORK 판정',
   'design-evaluator':         '디자인·홍보물 평가 · NODE TREE 아이덴티티 기준 판정',
   'doc-evaluator':            '지원서·문서·보고서 평가 · 공모 요건 충족 여부 판정',
@@ -153,7 +153,9 @@ const AGENT_DESC_KO: Record<string, string> = {
   'visual-design':            '포스터·인스타 이미지·전시 그래픽·홍보물 제작',
   'pr-content':               '홍보문·보도자료·전시 소개·SNS 캡션 작성',
   // 예술작업팀
-  'media-art-pipeline':       'OSC·ArtNet·ESP32·TidalCycles·TouchDesigner·소니피케이션·Hydra 파이프라인',
+  'media-art-pipeline':       '미디어아트 통합 지휘 · 데이터→감각 매핑 · OSC/ArtNet 라우팅 · ESP32/CV 하드웨어',
+  'sound-art':                '사운드아트·음악·모듈러 · SuperCollider · Ableton · TidalCycles · Eurorack/Daisy · 웹오디오',
+  'generative-visual':        '제너러티브 비주얼·실시간 그래픽 · p5.js · Hydra · TouchDesigner/GLSL · Remotion',
   'film-production':          '퍼포먼스 필름 제작 전담 · 촬영·편집·색보정·사운드믹싱·영화제 출품',
   // 리서치팀
   'nodetree-research':        '작가·작품·이론·기술 리서치 · NotebookLM 분석 · YouTube 요약 · Obsidian 정리',
@@ -168,12 +170,12 @@ const AGENT_DESC_KO: Record<string, string> = {
 };
 
 const SYSTEM_MAP = {
-  planner: 'harness-planner',
+  planner: 'planner',
   evaluators: ['code-evaluator', 'design-evaluator', 'doc-evaluator'],
   generators: [
     { team: '개발팀',           emoji: '■', color: '#1d4ed8', agents: ['nodetreehome-web'] },
     { team: '리서치팀',         emoji: '○', color: '#b45309', agents: ['nodetree-research', 'grant-research'] },
-    { team: '예술작업팀',       emoji: '▲', color: '#7c3aed', agents: ['media-art-pipeline', 'film-production'] },
+    { team: '예술작업팀',       emoji: '▲', color: '#7c3aed', agents: ['media-art-pipeline', 'sound-art', 'generative-visual', 'film-production'] },
     { team: '회계팀',           emoji: '□', color: '#059669', agents: ['saengsanso-accounting', 'grant-accounting-agent'] },
     { team: '디자인 및 홍보팀', emoji: '●', color: '#e11d48', agents: ['visual-design', 'pr-content'] },
     { team: '기획팀',           emoji: '◆', color: '#0891b2', agents: ['doc-design', 'grant-writer', 'project-planner'] },
@@ -181,7 +183,7 @@ const SYSTEM_MAP = {
 };
 
 const FALLBACK_HARNESS: HarnessDef = {
-  planner: { id: 'harness-planner', name: 'harness-planner', desc: '복잡한 요청 → Sprint Contract 변환 · 다중 팀 작업 설계 (Opus)' },
+  planner: { id: 'planner', name: 'planner', desc: '복잡한 요청 → Sprint Contract 변환 · 다중 팀 작업 설계' },
   evaluators: [
     { id: 'code-evaluator',   name: 'code-evaluator',   desc: '웹/미디어아트 파이프라인 코드 평가 · PASS/REWORK 판정' },
     { id: 'design-evaluator', name: 'design-evaluator', desc: '디자인·홍보물 평가 · NODE TREE 아이덴티티 기준 판정' },
@@ -456,7 +458,7 @@ function OverviewPanel({ onClose }: { onClose: () => void }) {
                     <span style={{ fontFamily: MONO, fontSize: 22, color: agent.col, lineHeight: 1, width: 26, textAlign: 'center', flexShrink: 0 }}>{agent.symbol}</span>
                     <div>
                       <div style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', color: C.text }}>{agent.role}</div>
-                      <div style={{ fontFamily: MONO, fontSize: 8, color: C.textDim, letterSpacing: '0.1em', marginTop: 2 }}>{agent.tier.toUpperCase()} · {agent.korean}</div>
+                      <div style={{ fontFamily: MONO, fontSize: 8, color: C.textDim, letterSpacing: '0.1em', marginTop: 2 }}>{agent.korean}</div>
                     </div>
                   </div>
                   <div style={{ fontFamily: SANS, fontSize: 10, color: C.textMid, maxWidth: 150, textAlign: 'right', lineHeight: 1.6 }}>{agent.desc}</div>
@@ -577,9 +579,9 @@ function OverviewPanel({ onClose }: { onClose: () => void }) {
             <div style={{ border: `1px solid ${C.border}`, borderBottom: 'none' }}>
               {([
                 { step: 'USER',      desc: '요청 입력 → Claude Code CLI 실행' },
-                { step: 'PLANNER',   desc: 'OPUS — 요청을 Sprint Contract로 변환' },
-                { step: 'GENERATOR', desc: 'SONNET — 팀 에이전트 파견 · 결과물 생성' },
-                { step: 'EVALUATOR', desc: 'SONNET — code/design/doc-evaluator · PASS / REWORK 판정' },
+                { step: 'PLANNER',   desc: '요청을 Sprint Contract로 변환' },
+                { step: 'GENERATOR', desc: '팀 에이전트 파견 · 결과물 생성' },
+                { step: 'EVALUATOR', desc: 'code/design/doc-evaluator · PASS / REWORK 판정' },
                 { step: 'STOP HOOK', desc: '세션 종료 시 자동 실행 → logs JSON 업데이트' },
                 { step: 'GITHUB',    desc: 'node-tree/claude-code-logs 에 push' },
                 { step: 'MONITOR',   desc: 'nodetree.kr/monitor — 60초마다 자동 동기화' },
@@ -1129,9 +1131,9 @@ const ClaudeMonitor: React.FC = () => {
               marginBottom: 24,
             }}>
               {[
-                { label: 'PLANNER → OPUS', desc: '짧은 요청을 상세 설계서로 변환' },
-                { label: 'GENERATOR → SONNET', desc: 'Sprint Contract 단위 코드 구현' },
-                { label: 'EVALUATOR → HAIKU', desc: 'Playwright 테스트 · 채점 · 피드백' },
+                { label: 'PLANNER', desc: '짧은 요청을 상세 설계서로 변환' },
+                { label: 'GENERATOR', desc: 'Sprint Contract 단위 코드 구현' },
+                { label: 'EVALUATOR', desc: 'Playwright 테스트 · 채점 · 피드백' },
               ].map((item, i) => (
                 <div key={i} style={{ borderRight: `1px solid ${C.border}`, padding: '12px 16px' }}>
                   <div style={{ fontFamily: MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: C.text, marginBottom: 3 }}>{item.label}</div>
