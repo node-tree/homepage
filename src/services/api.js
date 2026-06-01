@@ -869,6 +869,38 @@ export const homeAPI = {
   }
 };
 
+// VillageDiary API — 마을일기 편집 데이터 영속화 (싱글톤 오버라이드 객체)
+//   백엔드를 단일 진실 소스로. get 은 raw 오버라이드 객체 { [programId]: DiaryCardData[] } 를 반환,
+//   save 는 동일한 raw 객체를 PUT body 로 보낸다(관리자 전용, Authorization: Bearer).
+export const villageDiaryAPI = {
+  // 오버라이드 조회 (공개) — mergePrograms 가 직접 소비하는 raw 객체 반환
+  get: async () => {
+    const response = await fetchWithRetry(`${API_BASE_URL}/village-diary`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch village diary');
+    }
+    const data = await response.json();
+    // 백엔드 응답은 { success, data } — raw 오버라이드 객체는 data 안에 있다
+    return data && data.success ? (data.data || {}) : {};
+  },
+
+  // 오버라이드 저장 (관리자만) — raw 오버라이드 객체를 통째로 PUT
+  save: async (overrideData) => {
+    const response = await fetch(`${API_BASE_URL}/village-diary`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(overrideData)
+    });
+    if (!response.ok) {
+      if (response.status === 401) return handle401();
+      if (response.status === 403) throw new Error('관리자 권한이 필요합니다.');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Failed to save village diary (${response.status})`);
+    }
+    return response.json();
+  }
+};
+
 // Contact API
 export const contactAPI = {
   // Contact 설정 조회
