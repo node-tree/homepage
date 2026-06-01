@@ -353,7 +353,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
         } else if (type === '!') { // 이미지: ![alt](url)
           elements.push(
             <div key={`${index}-${offset}`} style={{ textAlign: 'center', margin: '20px 0' }}>
-              <img src={url} alt={alt || '이미지'} style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }} />
+              <img src={url} alt={alt || '이미지'} loading="lazy" decoding="async" style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }} />
             </div>
           );
         }
@@ -548,6 +548,8 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
                       <img
                         src="//nodetree.cafe24.com/mcwjd/work/%BF%A1%B5%F0%BE%C6%C6%F7%B4%D0/webdorok01.png"
                         alt="웹도록 표지"
+                        loading="lazy"
+                        decoding="async"
                       />
                     </div>
                     <div className="pdf-catalog-content">
@@ -615,6 +617,8 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
                       <img
                         src="//nodetree.cafe24.com/mcwjd/work/%B3%B2%B9%CC/IMG_4788.JPG"
                         alt="웹도록 표지"
+                        loading="lazy"
+                        decoding="async"
                       />
                     </div>
                     <div className="pdf-catalog-content">
@@ -950,6 +954,8 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
                     <img
                       src={post.thumbnail.startsWith('//') ? `https:${post.thumbnail}` : post.thumbnail}
                       alt={post.title}
+                      loading="lazy"
+                      decoding="async"
                       style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
                     />
                   ) : (

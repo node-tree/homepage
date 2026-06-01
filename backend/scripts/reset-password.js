@@ -24,6 +24,8 @@ async function resetPassword() {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('MongoDB 연결 성공');
+    console.log(`   host: ${mongoose.connection.host}`);
+    console.log(`   db:   ${mongoose.connection.name}`);
 
     const salt = await bcrypt.genSalt(10);
     const hashed = await bcrypt.hash(newPassword, salt);

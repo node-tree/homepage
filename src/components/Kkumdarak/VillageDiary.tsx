@@ -1,0 +1,755 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import IntroChar from './IntroChar';
+import { useAuth } from '../../contexts/AuthContext';
+
+type DiaryCardData = { side: 'left' | 'right'; title: string; date: string; dot: string; imageUrl?: string };
+type ProgramDiary = {
+  id: string;
+  name: string;
+  accent: string;
+  character: string;
+  cards: DiaryCardData[];
+};
+
+// ── 데스크톱 마을일기 카드: 모바일 "스탬프"형으로 정돈 (후속 작업, 데스크톱 전용) ──
+// 기존 데스크톱은 가로로 길쭉(440px)하고, 사진 없는 카드의 상단 빨강 밴드가
+// 점만 우상단 구석에 박힌 채 "비어 보여" 미완성처럼 읽혔다.
+// 모바일 카드(좋음 — 기준)는: 빨강 밴드 안에 색 점(dot)이 가운데 크게 박힌 스탬프 +
+// 그 아래 흰 영역에 제목/날짜. 컴팩트하고 균형 잡힌 모습.
+// → 데스크톱도 모바일 톤으로:
+//   · 카드 폭 440 → 320 (가로 늘어짐 완화, 균형). 척추 쪽 모서리는 고정하고
+//     바깥쪽으로만 줄여 커넥터(560/880 접점) 위치를 건드리지 않는다.
+//       - 오른쪽 카드: left 880 유지(왼쪽 모서리 = 커넥터 끝 880)
+//       - 왼쪽 카드: 오른쪽 모서리 560 고정 → left 560-320 = 240
+//   · 사진 없는 카드: 빨강 밴드를 "의도적"으로 — 흰 베일/구석 렌즈 제거하고
+//     색 점을 밴드 안에 크게(52px) 박아 모바일과 같은 스탬프로. 커넥터가 점을 가리키도록
+//     점 중심을 카드 상단 기준 115px(커넥터 라인)에 정렬.
+//   · 사진 있는 카드: 기존처럼 이미지가 슬롯을 가득 채우는 이미지 위주 유지.
+//   · 본문 아래 중복 사진(.diary-card-image)은 데스크톱에서 숨김(사진은 위 슬롯에서 큼).
+// 모바일(@media max-width:900px)에는 영향 없도록 min-width:901px 로 한정.
+// ※ 카드 등장(캐릭터 도달 기준) 로직은 JS 상수만 사용 → 이 CSS 변경과 무관, 유지됨.
+const DIARY_DESKTOP_CSS = `
+@media (min-width: 901px) {
+  /* 카드 폭 축소 + 척추쪽 모서리 고정(바깥쪽으로만 축소) — 가로 늘어짐 완화 */
+  .kd-diary-desktop .diary-card { width: 320px; }
+  .kd-diary-desktop .diary-card.left { left: 240px; }   /* 오른쪽 모서리 560 유지 */
+  .kd-diary-desktop .diary-card.right { left: 880px; }  /* 왼쪽 모서리 880 유지 */
+
+  /* 사진 없는(빨강) 카드: 모바일 스탬프형 밴드 (의도적인 빨강 + 가운데 큰 점) */
+  .kd-diary-desktop .diary-photo {
+    height: 150px;
+    transition: height 0.2s ease;
+  }
+  .kd-diary-desktop .diary-photo:has(.diary-photo-img) {
+    height: 240px;                /* 사진 있는 카드: 크게 — 이미지가 주연 */
+  }
+  /* 색 점을 밴드 안에 크게 박은 스탬프 — 모바일과 동일 톤.
+     커넥터(카드 상단 기준 115px)가 점을 향하도록 점 중심을 115px에 정렬. */
+  .kd-diary-desktop .diary-photo i {
+    left: 50%;
+    right: auto;
+    top: 115px;
+    transform: translate(-50%, -50%);
+    width: 52px;
+    height: 52px;
+    border: 2px solid #1a1a1a;
+    z-index: 2;
+    opacity: 1;
+  }
+  /* 사진이 있으면 점(스탬프)은 숨기고 이미지가 주연 */
+  .kd-diary-desktop .diary-photo:has(.diary-photo-img) i {
+    display: none;
+  }
+  /* 사진을 슬롯 전체에 채움 (모바일과 동일 동작) */
+  .kd-diary-desktop .diary-photo-img {
+    display: block;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+  }
+  /* 본문 아래 중복 사진 제거: 사진은 위 슬롯에서 이미 크게 보임 */
+  .kd-diary-desktop .diary-card-image {
+    display: none;
+  }
+}
+`;
+
+// ── 7개 프로그램 — 장암책정만 콘텐츠, 나머지는 추후 제공(빈 배열) ──
+const PROGRAMS_DEFAULT: ProgramDiary[] = [
+  {
+    id: 'jangam-chaekjeong',
+    name: '장암 책정',
+    accent: '#E4352B',
+    character: 'char-18.svg',
+    cards: [
+      { side: 'left', title: '도서관 자리를 함께 측량했어요.', date: '05.24', dot: '#259f3e' },
+      { side: 'right', title: '옛 도서실을 비우고 다 같이 청소했다.', date: '06.07', dot: '#f18bb1' },
+      { side: 'left', title: '목공 — 책장의 뼈대를 세우다.', date: '07.05', dot: '#ffc90e' },
+      { side: 'right', title: '주민들이 책을 채우기 시작했다.', date: '08.20', dot: '#1b55e2' },
+      { side: 'left', title: '〈장암 책정〉 드디어 문을 열다!', date: '09.15', dot: '#ec251f' },
+    ],
+  },
+  {
+    id: 'maeul-signal',
+    name: '마을의 신호',
+    accent: '#2D5BE3',
+    character: 'char-09.svg',
+    cards: [],
+  },
+  {
+    id: 'memory-station',
+    name: '기억순환 정류장',
+    accent: '#3CA03C',
+    character: 'char-14.svg',
+    cards: [],
+  },
+  {
+    id: 'hand-memory',
+    name: '손의 기억',
+    accent: '#F2A0C0',
+    character: 'char-12.svg',
+    cards: [],
+  },
+  {
+    id: 'sound-diary',
+    name: '소리일기',
+    accent: '#F5C518',
+    character: 'char-17.svg',
+    cards: [],
+  },
+  {
+    id: 'scape-diary',
+    name: '풍경일기',
+    accent: '#2D5BE3',
+    character: 'char-15.svg',
+    cards: [],
+  },
+  {
+    id: 'goodbye-again',
+    name: '다시, 안녕',
+    accent: '#E4352B',
+    character: 'char-11.svg',
+    cards: [],
+  },
+];
+
+const LS_KEY = 'villageDiary_v1';
+
+// localStorage에서 저장된 카드 오버라이드 불러오기
+function loadSavedCards(): Record<string, DiaryCardData[]> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(LS_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, DiaryCardData[]>) : {};
+  } catch {
+    return {};
+  }
+}
+
+// PROGRAMS_DEFAULT + saved override 병합
+function mergePrograms(saved: Record<string, DiaryCardData[]>): ProgramDiary[] {
+  return PROGRAMS_DEFAULT.map((p) =>
+    saved[p.id] !== undefined ? { ...p, cards: saved[p.id] } : p,
+  );
+}
+
+// ── 레이아웃 상수(데스크톱) ──────────────────────────────────────
+const PATH_TOP = 320;
+const FIRST_CARD_Y = 482;
+const CARD_GAP = 280;
+const PATH_TAIL = 120;
+const AVATAR_TRAVEL_PAD = 40;
+
+// ── 레이아웃 상수(모바일) — kkumdarak-diary-mobile-patch.css와 동기 ──
+// 카드 디자인: 사진은 거의 유지(108), 텍스트 영역만 축소(8/12/10 padding, h2 14/1.15, time 11)
+//   → 한 줄 카드 ≈ 171px, 두 줄 카드 ≈ 187px (border 포함)
+// 카드 간 gap 210 → 두 줄 카드도 ≈ 23px 여백, 1줄 카드는 ≈ 39px 여백 — 폰트 라운딩 안전 마진 확보
+// path top 260, height 1010 (CSS와 동기)
+//   마지막 dot y = 333 + 4*210 + 43 = 1216, +22 = 1238 → path end 1270
+const MOBILE_FIRST_CARD_Y = 333;
+const MOBILE_CARD_GAP = 210;
+// path 시각 중심 = .diary-path { left: 42 } + border-left-width 12 / 2 = 48
+// dot width 22 → dot 중심을 48에 맞추려면 left = 48 - 11 = 37 → JSX: lx - 11, lx = 48
+const MOBILE_PATH_CENTER_X = 48;
+// dot/connector를 카드 내 photo 영역(높이 108) 가운데에 위치
+//   dot top = y + (108 - 22) / 2 = y + 43
+//   connector top = y + 54 (dot 중심) - 2.5(connector 두께 5/2) ≈ y + 51
+const MOBILE_DOT_Y_OFFSET = 43;
+const MOBILE_CONNECTOR_Y_OFFSET = 51;
+const MOBILE_AVATAR_START = 236;
+const MOBILE_PATH_TOP = 260;
+const MOBILE_PATH_HEIGHT = 1010; // CSS와 동기화
+const MOBILE_AVATAR_END = MOBILE_PATH_TOP + MOBILE_PATH_HEIGHT - 87 - 20; // ≈ 1163
+
+const usePrefersReducedMotion = () => {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const on = () => setReduced(mq.matches);
+    on();
+    mq.addEventListener?.('change', on);
+    return () => mq.removeEventListener?.('change', on);
+  }, []);
+  return reduced;
+};
+
+// ── 편집 가능한 DiaryCard ─────────────────────────────────────────
+const DiaryCard: React.FC<{
+  title: string;
+  date: string;
+  dot: string;
+  accent: string;
+  imageUrl?: string;
+  className?: string;
+  style?: React.CSSProperties;
+  cardRef?: (el: HTMLElement | null) => void;
+  isEditing?: boolean;
+  onUpdate?: (field: 'title' | 'date' | 'dot' | 'side' | 'imageUrl', value: string) => void;
+  onDelete?: () => void;
+  side?: 'left' | 'right';
+}> = ({ title, date, dot, accent, imageUrl, className = '', style, cardRef, isEditing, onUpdate, onDelete, side }) => (
+  <article
+    ref={cardRef as React.Ref<HTMLElement>}
+    className={`diary-card ${className}${isEditing ? ' is-editing-card' : ''}`}
+    style={{ ...style, position: 'absolute' }}
+  >
+    {isEditing && onDelete && (
+      <button className="diary-card-delete" onClick={onDelete} title="삭제">×</button>
+    )}
+    <div className="diary-photo" style={{ background: accent }}>
+      <i style={{ background: dot }} />
+      {imageUrl && (
+        <img
+          src={imageUrl}
+          alt=""
+          className="diary-photo-img"
+        />
+      )}
+    </div>
+    <div className="diary-copy">
+      {isEditing && onUpdate ? (
+        <>
+          <textarea
+            className="diary-edit-textarea"
+            value={title}
+            rows={2}
+            onChange={(e) => onUpdate('title', e.target.value)}
+            style={{ fontSize: '22px', fontWeight: 800, marginBottom: 4 }}
+          />
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
+            <input
+              className="diary-edit-input"
+              value={date}
+              onChange={(e) => onUpdate('date', e.target.value)}
+              style={{ fontSize: '15px', width: 70 }}
+              placeholder="MM.DD"
+            />
+          </div>
+          <div className="diary-dot-picker">
+            <label>도트</label>
+            <input
+              type="color"
+              value={dot}
+              onChange={(e) => onUpdate('dot', e.target.value)}
+            />
+          </div>
+          <div className="diary-side-toggle">
+            <button className={side === 'left' ? 'active' : ''} onClick={() => onUpdate('side', 'left')}>left</button>
+            <button className={side === 'right' ? 'active' : ''} onClick={() => onUpdate('side', 'right')}>right</button>
+          </div>
+          <input
+            type="url"
+            className="diary-edit-input diary-image-url-input"
+            value={imageUrl ?? ''}
+            onChange={(e) => onUpdate('imageUrl', e.target.value)}
+            placeholder="이미지 링크 붙여넣기 (https://...)"
+            style={{ fontSize: '12px', marginTop: 8 }}
+          />
+        </>
+      ) : (
+        <>
+          <h2>{title}</h2>
+          <time>{date}</time>
+          {imageUrl && (
+            <img
+              src={imageUrl}
+              alt=""
+              className="diary-card-image"
+            />
+          )}
+        </>
+      )}
+    </div>
+  </article>
+);
+
+const VillageDiary: React.FC = () => {
+  const { user } = useAuth();
+  // ── 편집 상태 ──────────────────────────────────────────────────
+  const [isEditing, setIsEditing] = useState(false);
+
+  // programs를 state로 관리 (lazy initializer로 localStorage 반영)
+  const [programs, setPrograms] = useState<ProgramDiary[]>(() => {
+    const saved = loadSavedCards();
+    return mergePrograms(saved);
+  });
+
+  // 편집 중 임시 카드 데이터 (완료 버튼 클릭 시 저장)
+  const [draftCards, setDraftCards] = useState<Record<string, DiaryCardData[]>>({});
+
+  const [selected, setSelected] = useState<string>(PROGRAMS_DEFAULT[0].id);
+  const reduced = usePrefersReducedMotion();
+
+  const program = useMemo(
+    () => programs.find((p) => p.id === selected) ?? programs[0],
+    [selected, programs],
+  );
+
+  // 현재 프로그램 카드 (편집 중이면 draft, 아니면 저장된 값)
+  const cards = useMemo(() => {
+    if (isEditing && draftCards[selected] !== undefined) return draftCards[selected];
+    return program.cards;
+  }, [isEditing, draftCards, selected, program.cards]);
+
+  const hasContent = cards.length > 0;
+
+  // 동적 레이아웃 산출
+  const desktopHeight = useMemo(
+    () => (hasContent ? FIRST_CARD_Y + (cards.length - 1) * CARD_GAP + 260 : 760),
+    [hasContent, cards.length],
+  );
+  const pathHeight = useMemo(
+    () => (hasContent ? FIRST_CARD_Y + (cards.length - 1) * CARD_GAP - PATH_TOP + PATH_TAIL : 360),
+    [hasContent, cards.length],
+  );
+  const avatarStart = PATH_TOP;
+  const avatarEnd = PATH_TOP + pathHeight - AVATAR_TRAVEL_PAD - 112;
+
+  // 편집 시작: 현재 프로그램 카드를 draft로 복사
+  const handleEditToggle = () => {
+    if (!isEditing) {
+      setDraftCards((prev) => ({
+        ...prev,
+        [selected]: program.cards.map((c) => ({ ...c })),
+      }));
+      setIsEditing(true);
+    } else {
+      // 완료: draft → programs에 반영 + localStorage 저장
+      const newPrograms = programs.map((p) => {
+        if (p.id === selected && draftCards[selected] !== undefined) {
+          return { ...p, cards: draftCards[selected] };
+        }
+        return p;
+      });
+      setPrograms(newPrograms);
+
+      // localStorage: 모든 draftCards 항목 병합하여 저장
+      const saved = loadSavedCards();
+      Object.entries(draftCards).forEach(([id, dcards]) => {
+        saved[id] = dcards;
+      });
+      try {
+        window.localStorage.setItem(LS_KEY, JSON.stringify(saved));
+      } catch {
+        // storage full 등
+      }
+      setIsEditing(false);
+    }
+  };
+
+  // 탭 변경 시 draft 초기화
+  const handleTabChange = (id: string) => {
+    if (isEditing) {
+      // 현재 탭 draft를 programs에 반영
+      const newPrograms = programs.map((p) => {
+        if (p.id === selected && draftCards[selected] !== undefined) {
+          return { ...p, cards: draftCards[selected] };
+        }
+        return p;
+      });
+      setPrograms(newPrograms);
+      setDraftCards((prev) => ({
+        ...prev,
+        [id]: (newPrograms.find((p) => p.id === id)?.cards ?? []).map((c) => ({ ...c })),
+      }));
+    }
+    setSelected(id);
+  };
+
+  // 카드 필드 업데이트
+  const handleCardUpdate = (index: number, field: 'title' | 'date' | 'dot' | 'side' | 'imageUrl', value: string) => {
+    setDraftCards((prev) => {
+      const arr = [...(prev[selected] ?? cards)];
+      arr[index] = { ...arr[index], [field]: value } as DiaryCardData;
+      return { ...prev, [selected]: arr };
+    });
+  };
+
+  // 카드 삭제
+  const handleCardDelete = (index: number) => {
+    setDraftCards((prev) => {
+      const arr = [...(prev[selected] ?? cards)];
+      arr.splice(index, 1);
+      return { ...prev, [selected]: arr };
+    });
+  };
+
+  // 카드 추가
+  const handleCardAdd = () => {
+    setDraftCards((prev) => {
+      const arr = [...(prev[selected] ?? cards)];
+      const lastSide = arr.length > 0 ? arr[arr.length - 1].side : 'right';
+      arr.push({ side: lastSide === 'left' ? 'right' : 'left', title: '', date: 'MM.DD', dot: program.accent });
+      return { ...prev, [selected]: arr };
+    });
+  };
+
+  // 스크롤 진행도 → 아바타 위치 (데스크톱 + 모바일)
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const avatarRef = useRef<HTMLDivElement | null>(null);
+  const mobileAvatarRef = useRef<HTMLDivElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+
+  // 카드 등장 ref — 아바타(캐릭터) 도달 기준으로 리빌
+  const cardEls = useRef<Array<HTMLElement | null>>([]);
+  const dotEls = useRef<Array<HTMLElement | null>>([]);
+  const connectorEls = useRef<Array<HTMLElement | null>>([]);
+  // 모바일 카드용 별도 ref (데스크톱과 별도 DOM)
+  const mobileCardEls = useRef<Array<HTMLElement | null>>([]);
+  const mobileDotEls = useRef<Array<HTMLElement | null>>([]);
+  const mobileConnectorEls = useRef<Array<HTMLElement | null>>([]);
+  // 스크롤 콜백에서 최신 isEditing 값에 접근하기 위한 ref
+  const isEditingRef = useRef(isEditing);
+  useEffect(() => { isEditingRef.current = isEditing; }, [isEditing]);
+
+  // 아바타(캐릭터) 몸통 중심의 "도달 기준선" 오프셋
+  //   캐릭터는 .diary-avatar(top 기준)에서 시작해 아래로 그려진다.
+  //   데스크톱 캐릭터 ≈ 140*0.86 ≈ 120px, 모바일 ≈ 140*0.62 ≈ 87px.
+  //   캐릭터 몸통 중앙쯤이 카드의 dot Y에 닿으면 "도달"로 본다.
+  //   모바일: progress=1에서 마지막 dot(1216)에 도달하려면
+  //     236 + (1163-236) + reach >= 1216 → reach >= 53. 여유 두고 60.
+  //     progress=0에서는 236 + 60 = 296 < 첫 dot(376) → 로드 시 여전히 숨김.
+  const DESKTOP_AVATAR_REACH = 70; // 아바타 top 기준 아래로 70px ≈ 몸통 중앙
+  const MOBILE_AVATAR_REACH = 60;
+
+  // 아바타 도달 위치(문서 좌표 기준의 논리값)로 카드/dot/connector 리빌.
+  //   reflow-free: getBoundingClientRect 대신 progress + 레이아웃 상수로 계산.
+  //   숨겨진 쪽(display:none) rect가 0이 되는 문제를 피한다.
+  const applyReveal = useCallback(
+    (progress: number) => {
+      // 편집 모드: 별도 effect에서 전부 visible 처리 — 여기선 토글하지 않음
+      if (isEditingRef.current) return;
+
+      // 데스크톱: 아바타 도달 Y = avatarStart + progress*travel + reach
+      const desktopTravel = avatarEnd - avatarStart;
+      const desktopReachY = avatarStart + progress * desktopTravel + DESKTOP_AVATAR_REACH;
+      for (let i = 0; i < cardEls.current.length; i += 1) {
+        const dotY = FIRST_CARD_Y + i * CARD_GAP + 24;
+        const on = desktopReachY >= dotY;
+        cardEls.current[i]?.classList.toggle('is-visible', on);
+        dotEls.current[i]?.classList.toggle('is-visible', on);
+        connectorEls.current[i]?.classList.toggle('is-visible', on);
+      }
+
+      // 모바일: 아바타 도달 Y = MOBILE_AVATAR_START + progress*travel + reach
+      const mobileTravel = MOBILE_AVATAR_END - MOBILE_AVATAR_START;
+      const mobileReachY = MOBILE_AVATAR_START + progress * mobileTravel + MOBILE_AVATAR_REACH;
+      for (let i = 0; i < mobileCardEls.current.length; i += 1) {
+        const dotY = MOBILE_FIRST_CARD_Y + i * MOBILE_CARD_GAP + MOBILE_DOT_Y_OFFSET;
+        const on = mobileReachY >= dotY;
+        mobileCardEls.current[i]?.classList.toggle('is-visible', on);
+        mobileDotEls.current[i]?.classList.toggle('is-visible', on);
+        mobileConnectorEls.current[i]?.classList.toggle('is-visible', on);
+      }
+    },
+    [avatarStart, avatarEnd],
+  );
+
+  const updateAvatar = useCallback(() => {
+    rafRef.current = null;
+    const section = sectionRef.current;
+    if (!section) return;
+    const rect = section.getBoundingClientRect();
+    const sectionHeight = section.offsetHeight;
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    const scrolled = -rect.top;
+    const maxScroll = sectionHeight - vh;
+    const progress = Math.max(0, Math.min(1, scrolled / Math.max(1, maxScroll)));
+
+    const desktopAvatar = avatarRef.current;
+    if (desktopAvatar) {
+      const desktopTravel = avatarEnd - avatarStart;
+      desktopAvatar.style.transform = `translateY(${Math.round(progress * desktopTravel)}px)`;
+    }
+
+    const mobileAvatar = mobileAvatarRef.current;
+    if (mobileAvatar) {
+      const mobileTravel = MOBILE_AVATAR_END - MOBILE_AVATAR_START;
+      mobileAvatar.style.transform = `translateY(${Math.round(progress * mobileTravel)}px)`;
+    }
+
+    // 아바타 위치에 도달한 카드부터 리빌
+    applyReveal(progress);
+  }, [avatarStart, avatarEnd, applyReveal]);
+
+  useEffect(() => {
+    if (reduced) {
+      if (avatarRef.current) avatarRef.current.style.transform = 'translateY(0)';
+      if (mobileAvatarRef.current) mobileAvatarRef.current.style.transform = 'translateY(0)';
+      return;
+    }
+    const onScroll = () => {
+      if (rafRef.current == null) rafRef.current = requestAnimationFrame(updateAvatar);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    updateAvatar();
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [updateAvatar, reduced, selected, desktopHeight]);
+
+  // 리빌 fallback: reduced-motion → 전부 즉시 visible.
+  //   일반 환경에서는 스크롤 핸들러(applyReveal)가 아바타 도달 기준으로 토글한다.
+  //   ref 배열을 현재 카드 수에 맞게 트림(이전 프로그램 잔여 ref 제거)도 겸한다.
+  useEffect(() => {
+    cardEls.current = cardEls.current.slice(0, cards.length);
+    dotEls.current = dotEls.current.slice(0, cards.length);
+    connectorEls.current = connectorEls.current.slice(0, cards.length);
+    mobileCardEls.current = mobileCardEls.current.slice(0, cards.length);
+    mobileDotEls.current = mobileDotEls.current.slice(0, cards.length);
+    mobileConnectorEls.current = mobileConnectorEls.current.slice(0, cards.length);
+    if (reduced) {
+      cardEls.current.forEach((el) => el?.classList.add('is-visible'));
+      dotEls.current.forEach((el) => el?.classList.add('is-visible'));
+      connectorEls.current.forEach((el) => el?.classList.add('is-visible'));
+      mobileCardEls.current.forEach((el) => el?.classList.add('is-visible'));
+      mobileDotEls.current.forEach((el) => el?.classList.add('is-visible'));
+      mobileConnectorEls.current.forEach((el) => el?.classList.add('is-visible'));
+    }
+  }, [cards.length, reduced, selected]);
+
+  // 편집 모드에서 모든 카드/dot/connector 강제 is-visible (도달 기준 리빌 무시)
+  useEffect(() => {
+    if (isEditing) {
+      cardEls.current.forEach((el) => el?.classList.add('is-visible'));
+      dotEls.current.forEach((el) => el?.classList.add('is-visible'));
+      connectorEls.current.forEach((el) => el?.classList.add('is-visible'));
+      mobileCardEls.current.forEach((el) => el?.classList.add('is-visible'));
+      mobileDotEls.current.forEach((el) => el?.classList.add('is-visible'));
+      mobileConnectorEls.current.forEach((el) => el?.classList.add('is-visible'));
+    }
+  }, [isEditing, cards.length]);
+
+  const setCardRef = (i: number) => (el: HTMLElement | null) => {
+    cardEls.current[i] = el;
+  };
+  const setDotRef = (i: number) => (el: HTMLElement | null) => {
+    dotEls.current[i] = el;
+  };
+  const setConnectorRef = (i: number) => (el: HTMLElement | null) => {
+    connectorEls.current[i] = el;
+  };
+  const setMobileCardRef = (i: number) => (el: HTMLElement | null) => {
+    mobileCardEls.current[i] = el;
+  };
+  const setMobileDotRef = (i: number) => (el: HTMLElement | null) => {
+    mobileDotEls.current[i] = el;
+  };
+  const setMobileConnectorRef = (i: number) => (el: HTMLElement | null) => {
+    mobileConnectorEls.current[i] = el;
+  };
+
+  const renderFilters = (mobile = false) => (
+    <div className="diary-filters">
+      {programs.map((p) => (
+        <span
+          key={p.id}
+          role="button"
+          tabIndex={0}
+          className={p.id === selected ? 'active' : ''}
+          style={p.id === selected ? ({ background: p.accent } as React.CSSProperties) : undefined}
+          onClick={() => handleTabChange(p.id)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleTabChange(p.id);
+            }
+          }}
+        >
+          {mobile && p.name === '기억순환 정류장' ? '기억순환' : p.name}
+        </span>
+      ))}
+    </div>
+  );
+
+  return (
+    <section className="kd-figma-diary" ref={sectionRef}>
+      {/* 데스크톱 마을일기 카드 모바일 스탬프형 정돈 — 모바일 무영향(min-width:901px) */}
+      <style>{DIARY_DESKTOP_CSS}</style>
+      <div
+        className="kd-diary-desktop"
+        data-name="마을일기 — Desktop"
+        style={{ height: desktopHeight, '--accent': program.accent } as React.CSSProperties}
+      >
+        <h1>마을일기</h1>
+        <p className="diary-sub">프로그램을 따라 마을의 기록을 걷습니다  ·  스크롤하면 캐릭터가 길을 내려갑니다</p>
+        <div className="diary-scroll-cue" aria-hidden="true">
+          <span>스크롤</span>
+          <svg width="24" height="36" viewBox="0 0 24 36" fill="none">
+            <rect x="1" y="1" width="22" height="34" rx="11" stroke="#1a1a1a" strokeWidth="2"/>
+            <rect className="diary-scroll-wheel" x="10" y="6" width="4" height="8" rx="2" fill="#1a1a1a"/>
+          </svg>
+        </div>
+        <div className="kd-section-rule kd-section-rule--s4" />
+        {renderFilters(false)}
+
+        {/* 편집 토글 버튼 — 로그인 사용자에게만 표시 */}
+        {user && (
+          <button
+            className={`kd-diary-edit-btn${isEditing ? ' is-editing' : ''}`}
+            onClick={handleEditToggle}
+          >
+            {isEditing ? '완료' : '편집'}
+          </button>
+        )}
+
+        {hasContent && (
+          <>
+            <div className="diary-path" style={{ height: pathHeight, borderLeftColor: program.accent }} />
+            <div className="diary-avatar" ref={avatarRef} style={{ top: avatarStart }}>
+              <div className="diary-character-scale">
+                <IntroChar src={program.character} alt={program.name} />
+              </div>
+            </div>
+          </>
+        )}
+
+        {hasContent ? (
+          <>
+            {cards.map((card, index) => {
+              const y = FIRST_CARD_Y + index * CARD_GAP;
+              return (
+                <React.Fragment key={`${program.id}-${card.date}-${index}`}>
+                  <i
+                    ref={setDotRef(index)}
+                    className={`diary-dot ${card.side}`}
+                    style={{ top: y + 24, background: card.dot }}
+                  />
+                  <i
+                    ref={setConnectorRef(index)}
+                    className={`diary-connector ${card.side}`}
+                    style={{ top: y + 35 }}
+                  />
+                  <DiaryCard
+                    title={card.title}
+                    date={card.date}
+                    dot={card.dot}
+                    accent={program.accent}
+                    imageUrl={card.imageUrl}
+                    className={card.side}
+                    style={{ top: y - 80 }}
+                    cardRef={setCardRef(index)}
+                    isEditing={isEditing}
+                    side={card.side}
+                    onUpdate={(field, value) => handleCardUpdate(index, field, value)}
+                    onDelete={() => handleCardDelete(index)}
+                  />
+                </React.Fragment>
+              );
+            })}
+            {/* + 기록 추가 버튼 (편집 중) */}
+            {isEditing && (
+              <button
+                className="diary-add-card-btn"
+                style={{ top: FIRST_CARD_Y + cards.length * CARD_GAP - 40 }}
+                onClick={handleCardAdd}
+              >
+                + 기록 추가
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="diary-empty" style={{ top: 360 }}>
+              <div className="diary-empty-character">
+                <IntroChar src={program.character} alt={program.name} />
+              </div>
+              <h2>{program.name}</h2>
+              <p>일기를 준비하고 있어요.</p>
+              <span>곧 마을의 기록으로 채워집니다.</span>
+            </div>
+            {/* 준비중 프로그램에도 카드 추가 가능 (편집 중) */}
+            {isEditing && (
+              <button
+                className="diary-add-card-btn"
+                style={{ top: 560 }}
+                onClick={handleCardAdd}
+              >
+                + 기록 추가
+              </button>
+            )}
+          </>
+        )}
+      </div>
+
+      <div className="kd-diary-mobile" data-name="마을일기 — Mobile">
+        <div className="kd-section-rule kd-section-rule--s4" />
+        <h1>마을일기</h1>
+        <p className="diary-sub">프로그램을 따라 걷는 기록</p>
+        {renderFilters(true)}
+
+        {hasContent ? (
+          <>
+            <div className="diary-path" style={{ borderLeftColor: program.accent }} />
+            <div
+              className="diary-avatar"
+              ref={mobileAvatarRef}
+              style={{ top: MOBILE_AVATAR_START }}
+            >
+              <div className="diary-character-scale">
+                <IntroChar src={program.character} alt={program.name} />
+              </div>
+            </div>
+            {cards.map((card, index) => {
+              const y = MOBILE_FIRST_CARD_Y + index * MOBILE_CARD_GAP;
+              // dot/connector를 path 시각 중심선(x=48)에 정렬 — side 무관
+              const lx = MOBILE_PATH_CENTER_X;
+              return (
+                <React.Fragment key={`m-${program.id}-${card.date}-${index}`}>
+                  <i ref={setMobileDotRef(index)} className="diary-dot" style={{ top: y + MOBILE_DOT_Y_OFFSET, left: lx - 11, background: card.dot }} />
+                  <i ref={setMobileConnectorRef(index)} className="diary-connector" style={{ top: y + MOBILE_CONNECTOR_Y_OFFSET, left: lx }} />
+                  <DiaryCard
+                    title={card.title}
+                    date={card.date}
+                    dot={card.dot}
+                    accent={program.accent}
+                    imageUrl={card.imageUrl}
+                    style={{ top: y }}
+                    cardRef={setMobileCardRef(index)}
+                  />
+                </React.Fragment>
+              );
+            })}
+          </>
+        ) : (
+          <div className="diary-empty diary-empty-mobile">
+            <div className="diary-empty-character">
+              <IntroChar src={program.character} alt={program.name} />
+            </div>
+            <h2>{program.name}</h2>
+            <p>일기를 준비하고 있어요.</p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
+
+export default VillageDiary;

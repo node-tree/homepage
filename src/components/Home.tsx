@@ -1,9 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
-import GeometricParticles from './GeometricParticles';
 import { homeAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import PageLoader from './PageLoader';
+
+// [perf] three.js(WebGL) 캔버스는 무거우므로 지연 로딩한다.
+// 홈 셸(타이틀/레이아웃)을 먼저 그려 첫 화면을 빠르게 띄우고,
+// 파티클 캔버스는 별도 청크로 뒤따라 로드되어 페이드인된다.
+const GeometricParticles = lazy(() => import('./GeometricParticles'));
 
 interface HomeSettings {
   title: string;
@@ -321,7 +325,11 @@ const Home: React.FC = () => {
           zIndex: 1,
         }}
       >
-        <GeometricParticles height="100%" />
+        {/* [perf] 캔버스 청크 로딩 동안 캔버스 배경색(#f8f8f8)과 동일한 폴백을 깔아
+            플래시 없이 매끄럽게 전환되도록 한다. */}
+        <Suspense fallback={<div style={{ width: '100%', height: '100%', background: '#f8f8f8' }} />}>
+          <GeometricParticles height="100%" />
+        </Suspense>
 
         {/* 타이틀 오버레이 */}
         {isLoaded && (
