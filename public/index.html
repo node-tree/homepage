@@ -2,6 +2,9 @@
 <html lang="ko">
   <head>
     <meta charset="utf-8" />
+    <!-- [perf] 작품 썸네일 등 외부 이미지 호스트 조기 연결 (TCP/TLS 핸드셰이크 선행) -->
+    <link rel="preconnect" href="https://nodetree.cafe24.com" crossorigin />
+    <link rel="dns-prefetch" href="https://nodetree.cafe24.com" />
     <link rel="icon" type="image/png" href="%PUBLIC_URL%/logo.png" />
     <link rel="icon" type="image/svg+xml" href="%PUBLIC_URL%/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

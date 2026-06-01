@@ -1,0 +1,220 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import './kkumdarak.css';
+import { SECTIONS, ANNOUNCE, MOTION } from './data';
+import MainHero from './MainHero';
+import Intro from './Intro';
+import Programs from './Programs';
+import Schedule from './Schedule';
+import VillageDiary from './VillageDiary';
+import Directions from './Directions';
+
+// ═══════════════════════════════════════════════════════════════
+// 꿈다락 문화예술학교 마이크로사이트 — /kkumdarak 독립 라우트
+// 디자인: 크림 종이 위 굵은 라인, 페스티벌 쉐이프, 정리된 파이프 히어로
+// ═══════════════════════════════════════════════════════════════
+
+const getInitialKkumdarakSection = () => {
+  if (typeof window === 'undefined') return 'main';
+  const section = window.location.hash.replace('#', '');
+  return SECTIONS.some((item) => item.id === section) ? section : 'main';
+};
+
+// Google Fonts 로드: Figma 디자인 파일의 Jua / Gothic A1 / Fredoka 조합.
+function useKkumdarakFonts() {
+  useEffect(() => {
+    const id = 'kkumdarak-fonts';
+    if (document.getElementById(id)) return;
+    const pre1 = document.createElement('link');
+    pre1.rel = 'preconnect';
+    pre1.href = 'https://fonts.googleapis.com';
+    const pre2 = document.createElement('link');
+    pre2.rel = 'preconnect';
+    pre2.href = 'https://fonts.gstatic.com';
+    pre2.crossOrigin = 'anonymous';
+    const link = document.createElement('link');
+    link.id = id;
+    link.rel = 'stylesheet';
+    link.href =
+      'https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Gothic+A1:wght@400;700;800&family=Jua&family=Noto+Sans+KR:wght@400;700;800&display=swap';
+    document.head.appendChild(pre1);
+    document.head.appendChild(pre2);
+    document.head.appendChild(link);
+  }, []);
+}
+
+// ── 네비 워킹 캐릭터 ─────────────────────────────────────────
+// 모바일(≤900px)에서도 헤더 로고~햄버거 사이 여백에서 로밍하도록 활성화.
+// kkumdarak.css 의 `@media(max-width:900px){.kd-nav-walker{display:none}}` 를
+// 헤더(항상 마운트되는 컴포넌트) 내 스코프 스타일로 덮어쓴다(데스크톱 무영향).
+// 모바일 헤더(66px)에 맞춰 캐릭터 44px로 축소(로고·햄버거와 겹침/클리핑 방지).
+const NAV_WALKER_MOBILE_CSS = `
+@media (max-width: 900px) {
+  .kkumdarak .kd-nav-walker { display: flex !important; }
+  .kkumdarak .kd-nav-walker-char {
+    width: 44px !important;
+    height: 44px !important;
+    margin-top: -22px !important;
+  }
+  /* 로밍 정지점도 44px 폭에 맞춰(우측 끝에서 햄버거와 안 겹치게) */
+  @keyframes kd-nav-walk-pos-m {
+    0%   { left: 0; }
+    50%  { left: calc(100% - 44px); }
+    100% { left: 0; }
+  }
+  .kkumdarak .kd-nav-walker-char {
+    animation:
+      kd-nav-walk-pos-m 14s ease-in-out infinite,
+      kd-nav-walk-flip  14s steps(1, end) infinite !important;
+  }
+}
+`;
+
+function NavWalker() {
+  return (
+    <div className="kd-nav-walker">
+      <style>{NAV_WALKER_MOBILE_CSS}</style>
+      <div className="kd-nav-walker-char">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <img
+            key={i}
+            src={`/kkumdarak/chars-v2/character-12/frame-0${i}.svg`}
+            alt=""
+            className="kd-loop-frame"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const Kkumdarak: React.FC = () => {
+  useKkumdarakFonts();
+  const reduced = useReducedMotion();
+  const [section, setSection] = useState<string>(getInitialKkumdarakSection);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const go = useCallback((id: string) => {
+    setSection(id);
+    setMenuOpen(false);
+    window.history.replaceState(null, '', id === 'main' ? window.location.pathname : `#${id}`);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
+
+  useEffect(() => {
+    const onHashChange = () => setSection(getInitialKkumdarakSection());
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const renderSection = () => {
+    switch (section) {
+      case 'intro': return <Intro />;
+      case 'programs': return <Programs />;
+      case 'schedule': return <Schedule />;
+      case 'diary': return <VillageDiary />;
+      case 'directions': return <Directions />;
+      case 'main':
+      default: return <MainHero />;
+    }
+  };
+
+  return (
+    <div className="kkumdarak">
+      <div className="kd-announce" aria-hidden="true">
+        <div
+          className="kd-announce-track"
+          style={reduced ? undefined : { animation: 'kd-marquee 26s linear infinite' }}
+        >
+          <span>{ANNOUNCE}</span>
+          <span>{ANNOUNCE}</span>
+        </div>
+      </div>
+
+      <header className="kd-header">
+        <div className="kd-logo" onClick={() => go('main')} role="button" tabIndex={0}>
+          이소異素
+        </div>
+
+        <NavWalker />
+
+        <nav className="kd-nav-desktop">
+          {SECTIONS.map((s) => (
+            <button
+              key={s.id}
+              className={`kd-pill${section === s.id ? ' active' : ''}`}
+              onClick={() => go(s.id)}
+            >
+              {s.label}
+            </button>
+          ))}
+        </nav>
+
+        {/* 모바일 햄버거 */}
+        <button className="kd-hamburger" onClick={() => setMenuOpen(true)} aria-label="메뉴 열기">
+          <span /><span /><span />
+        </button>
+      </header>
+
+      {/* ── 모바일 풀스크린 메뉴 ── */}
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            className="kd-mobile-menu"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: MOTION.durBase }}
+          >
+            <button className="kd-mobile-close" onClick={() => setMenuOpen(false)} aria-label="메뉴 닫기">✕</button>
+            {SECTIONS.map((s, i) => (
+              <motion.button
+                key={s.id}
+                className={`kd-pill${section === s.id ? ' active' : ''}`}
+                onClick={() => go(s.id)}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05, duration: MOTION.durBase, ease: MOTION.ease }}
+              >
+                {s.label}
+              </motion.button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── 콘텐츠 ── */}
+      <AnimatePresence mode="wait">
+        <motion.main
+          key={section}
+          initial={{ opacity: 0, y: 36, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -24, scale: 0.98 }}
+          transition={{ duration: 0.28, ease: MOTION.easeOutBack }}
+        >
+          {renderSection()}
+
+          <footer className="kd-footer">
+            <div className="kd-footer-logo">꿈다락</div>
+            <div>꿈다락 문화예술학교 · 2026 생활거점형 · 충남 부여군 장암면</div>
+            <div>
+              주최 문화체육관광부 · 주관 한국문화예술교육진흥원
+              <span className="kd-footer-sep"> · </span>
+              <span className="kd-footer-line-operator">운영 노드트리 × 장암면 주민자치회</span>
+            </div>
+          </footer>
+        </motion.main>
+      </AnimatePresence>
+    </div>
+  );
+};
+
+export default Kkumdarak;

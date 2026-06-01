@@ -7,7 +7,7 @@ import json
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 SCOPES = ['https://www.googleapis.com/auth/calendar']
-CREDENTIALS = '/Users/kanghyunjung/.claude/tools/google-tools/credentials.json'
+CREDENTIALS = '/Users/kanghyunjung/Downloads/client_secret_2_678329724470-57i58ecdhm310dhuncv68nofbohb609o.apps.googleusercontent.com.json'
 
 flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS, SCOPES)
 creds = flow.run_local_server(port=0)

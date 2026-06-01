@@ -26,6 +26,7 @@ const Work = lazy(() => import('./components/Work'));
 const WorkResearch = lazy(() => import('./components/WorkResearch'));
 const TeamEvent = lazy(() => import('./components/TeamEvent'));
 const Team = lazy(() => import('./components/Team'));
+const Kkumdarak = lazy(() => import('./components/Kkumdarak/Kkumdarak'));
 
 // 도메인 감지 (localhost에서는 ?saengsanso 쿼리로 테스트 가능)
 const isSaengsanso = typeof window !== 'undefined' && (
@@ -405,6 +406,7 @@ function App() {
               <Route path="/team-event" element={<TeamEvent />} />
               <Route path="/NODETREECorpus" element={<Team />} />
               <Route path="/ocean" element={<OceanData />} />
+              <Route path="/kkumdarak" element={<Kkumdarak />} />
               <Route path="/monitor" element={<ClaudeMonitor />} />
               <Route path="/work/research/:postId" element={<WorkResearch />} />
               <Route path="*" element={<AppContent />} />
