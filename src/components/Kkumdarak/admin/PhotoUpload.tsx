@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { fileToDownscaledPng } from './imageToPng';
+import { fileToFramedPng } from './imageToPng';
 
 // ═══════════════════════════════════════════════════════════════
 // 사진 첨부 (출강확인서 진행사진 / 회의록 회의사진 공용).
-//   · accept="image/*" → canvas 로 PNG 변환·다운스케일(가로 ~1280px) → base64(프리픽스 제거).
-//   · 썸네일 미리보기 + 제거 버튼. base64 는 onChange 로 상위에 전달(없으면 '').
+//   · accept="image/*" → canvas 로 템플릿 프레임 비율(≈1.583:1) 레터박스 PNG 변환
+//     (비율보존 contain + 흰 여백) → base64(프리픽스 제거). HWPX 프레임 강제 늘림 왜곡 방지.
+//   · 썸네일 미리보기 = 동일 레터박스 결과(dataUrl). 제거 버튼. base64 는 onChange 로 전달(없으면 '').
 //   · 디자인 --kd-* 토큰(formsView.css).
 // ═══════════════════════════════════════════════════════════════
 
@@ -26,7 +27,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ label, onChange }) => {
     setErr('');
     setWorking(true);
     try {
-      const { base64, dataUrl } = await fileToDownscaledPng(file, 1280);
+      const { base64, dataUrl } = await fileToFramedPng(file, 1280);
       setPreview(dataUrl);
       onChange(base64);
     } catch (e2: any) {
@@ -46,7 +47,7 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({ label, onChange }) => {
 
   return (
     <div className="kd-forms-photo">
-      <span className="kd-field-label">{label} (선택 · PNG 변환·축소)</span>
+      <span className="kd-field-label">{label} (선택 · 프레임 비율 맞춤·흰 여백)</span>
       <div className="kd-forms-photo-row">
         <input
           type="file"

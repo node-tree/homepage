@@ -10,6 +10,7 @@ import PhotoUpload from './PhotoUpload';
 //     "직접 입력"(또는 등록 회차 0건)이면 회차번호·교육일자·실참여를 직접 입력 →
 //     회차 미등록 상태에서도 출강확인서 생성 가능.
 //   · 「AI 초안」 → /forms/ai-draft(docType chulgang)로 본문 6칸 채움(KNUH, grounded).
+//     기존 본문에 내용이 있으면 덮어쓰기 confirm.
 //   · 진행사진 첨부(선택) → BinData/chulgang_photo.png 교체(없으면 더미 유지).
 //   · 클라이언트가 21개 플레이스홀더 값을 모두 조립해 POST → HWPX blob 다운로드.
 //   · {{확인년/월/일}}는 클라이언트 today(KST 환경) 기준 — Vercel UTC 시프트 회피.
@@ -181,9 +182,23 @@ const ChulgangForm: React.FC = () => {
   const canSubmit =
     !!selectedProgram && (isManual ? !!manualSessionNo : !!selectedSession);
 
-  // ── AI 초안 — 본문 6칸 채움(grounded). 프로그램 선택 필수. ──
+  // 본문 6칸 중 내용이 하나라도 있는지(덮어쓰기 confirm 판단용)
+  const hasBodyContent = () => AI_DRAFT_KEYS.some((k) => fields[k] && fields[k].trim());
+
+  // ── AI 초안 — 본문 6칸 채움(grounded). 프로그램 선택 필수. 기존 본문 있으면 confirm. ──
   const handleAiDraft = async () => {
-    if (!selectedProgram || aiBusy) return;
+    if (aiBusy) return;
+    if (!selectedProgram) {
+      setError('AI 초안은 프로그램을 먼저 선택해야 합니다.');
+      return;
+    }
+    if (
+      hasBodyContent() &&
+      typeof window !== 'undefined' &&
+      !window.confirm('기존 본문을 AI 초안으로 덮어쓸까요?')
+    ) {
+      return;
+    }
     setAiBusy(true);
     setError('');
     setNotice('');

@@ -5,9 +5,9 @@ import { kkumdarakAdminAPI } from '../../../services/kkumdarakAdminApi';
 
 // ═══════════════════════════════════════════════════════════════
 // 대시보드 + 프로그램 관리 (프로그램·실적 슬라이스).
-//   · 대시보드: 총 참여자 실적(Σ세션 attendance / Σ정원 228) + 프로그램별 회차 진척 바.
+//   · 대시보드: 누적 참여(연인원, Σ세션 attendance) / Σ정원 228 + 프로그램별 회차 진척 바.
+//     ⚠️ "누적 참여(연인원)"는 회차별 실참여의 단순 합산이라 고유 인원과 다르다(라벨로 명시).
 //   · 프로그램 관리: 회차 등록(POST, 실참여 attendance 포함)/목록/삭제(DELETE).
-//     실참여는 회차 단위로 입력 → 프로그램 실참여 = 그 회차 attendance 합(읽기전용 표시).
 //   · 비목현황·집행장부와 동일하게 조건부 마운트 → 탭 진입 시 자동 refetch.
 //   · 쓰기 후 loadSummary({silent}) 로 즉시 invalidate — 초기 로드만 전체 "불러오는 중"
 //     화면을 띄우고, 쓰기 후 갱신은 화면을 갈아엎지 않는다(Render 콜드스타트 깜빡임 방지).
@@ -143,7 +143,7 @@ const DashboardView: React.FC = () => {
     }
   };
 
-  // 회차 등록(POST, attendance 포함)
+  // 회차 등록(POST, attendance 포함). 회차번호 중복이면 서버가 409 → message 표시.
   const addSession = async (key: string) => {
     if (sessionForm.sessionNo === '') return;
     setNotice('');
@@ -204,11 +204,11 @@ const DashboardView: React.FC = () => {
           <strong className="kd-admin-total-value">{num(summary.totalQuota)}명</strong>
         </div>
         <div className="kd-admin-total-card">
-          <span className="kd-admin-total-label">총 실참여</span>
+          <span className="kd-admin-total-label">누적 참여(연인원)</span>
           <strong className="kd-admin-total-value">{num(summary.totalActualParticipants)}명</strong>
         </div>
         <div className="kd-admin-total-card">
-          <span className="kd-admin-total-label">참여 실적</span>
+          <span className="kd-admin-total-label">정원 대비</span>
           <strong className="kd-admin-total-value">{pct(summary.participantProgress)}</strong>
         </div>
         <div className="kd-admin-total-card">
@@ -218,6 +218,9 @@ const DashboardView: React.FC = () => {
           </strong>
         </div>
       </div>
+      <p className="kd-dash-note">
+        ※ 누적 참여(연인원)는 회차별 실참여의 합으로 고유 인원과 다릅니다. 한 사람이 여러 회차에 참여하면 중복 집계됩니다.
+      </p>
 
       {notice && <div className="kd-ledger-notice" role="status">{notice}</div>}
       {error && <div className="kd-ledger-warning" role="status">{error}</div>}
@@ -257,9 +260,9 @@ const DashboardView: React.FC = () => {
                 </span>
               </div>
 
-              {/* 실참여(회차 attendance 합, 읽기전용) */}
+              {/* 누적 참여(연인원, 회차 attendance 합 — 읽기전용) */}
               <div className="kd-dash-participant">
-                <span className="kd-field-label">실참여(회차 합)</span>
+                <span className="kd-field-label">누적 참여(연인원)</span>
                 <strong className="kd-dash-participant-value">
                   {num(p.actualParticipants)}명
                 </strong>

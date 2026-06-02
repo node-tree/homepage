@@ -7,7 +7,7 @@ import PhotoUpload from './PhotoUpload';
 // 회의록(서식7) 작업창.
 //   · 헤더(회의일시·장소·참석자·주제) + 논의안건 5슬롯(안건명 + 결정 2줄).
 //   · 참석자: 프로그램 선택 시 주강사 prefill(선택적 편의).
-//   · 「AI 초안」 → /forms/ai-draft(docType hoeuirok) → 안건 배열을 5슬롯 평면키로 변환해 채움.
+//   · 「AI 초안」 → /forms/ai-draft(docType hoeuirok) → 반환된 안건 슬롯만 채움(나머지 슬롯 보존).
 //   · 회의사진 첨부(선택) → BinData/hoeuirok_photo.png 교체(없으면 더미 유지).
 //   · 클라이언트가 21개 플레이스홀더 값을 모두 조립해 POST → HWPX blob 다운로드.
 //     {{참석인원}}="총 N명"(참석자 수에서 산출), {{참석자}}=쉼표구분.
@@ -110,11 +110,22 @@ const HoeuirokForm: React.FC = () => {
 
   const canSubmit = !!header.회의일시.trim() || !!header.회의주제.trim();
 
+  // 기존 안건 슬롯에 내용이 있는지(덮어쓰기 confirm 판단용)
+  const hasAgendaContent = () => Object.values(agenda).some((v) => v && v.trim());
+
   // ── AI 초안 — 안건 배열 → 5슬롯 평면키 변환(안건N/안건N_1/안건N_2). ──
   //   ⚠️ AI 는 {안건:[{제목,결정1,결정2}]} 배열을 주지만 폼은 평면키라 키가 겹치지 않는다.
-  //   명시 매핑(naive spread 금지)으로 최대 5개만 채운다.
+  //   명시 매핑(naive spread 금지). 반환된 슬롯(0..arr.length-1)만 채우고 나머지 슬롯은 기존값 유지.
+  //   기존 안건에 내용이 있으면 덮어쓰기 confirm.
   const handleAiDraft = async () => {
     if (aiBusy) return;
+    if (
+      hasAgendaContent() &&
+      typeof window !== 'undefined' &&
+      !window.confirm('기존 안건을 AI 초안으로 덮어쓸까요?')
+    ) {
+      return;
+    }
     setAiBusy(true);
     setError('');
     setNotice('');
@@ -132,7 +143,9 @@ const HoeuirokForm: React.FC = () => {
       if (arr) {
         setAgenda((prev) => {
           const next = { ...prev };
-          for (let i = 0; i < AGENDA_SLOTS.length; i += 1) {
+          // 반환된 안건 수만큼만 채운다(최대 5). 반환 안 한 슬롯은 prev 유지(유실 방지).
+          const count = Math.min(arr.length, AGENDA_SLOTS.length);
+          for (let i = 0; i < count; i += 1) {
             const item = arr[i] || {};
             next[`안건${i + 1}`] = typeof item.제목 === 'string' ? item.제목 : '';
             next[`안건${i + 1}_1`] = typeof item.결정1 === 'string' ? item.결정1 : '';

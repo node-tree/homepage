@@ -3,6 +3,14 @@
    (businessAdmin.css 의 .kd-admin-* / .kd-field-* / .kd-ledger-* 도 함께 사용)
    ═══════════════════════════════════════════════════════════════ */
 
+.kd-dash-note {
+  font-family: var(--kd-font-body);
+  font-size: 12px;
+  color: var(--kd-ink);
+  opacity: 0.6;
+  margin: 8px 0 0;
+}
+
 .kd-dash-section-title {
   margin-top: 26px;
   margin-bottom: 14px;
@@ -73,7 +81,7 @@
   white-space: nowrap;
 }
 
-/* 실참여(회차 합, 읽기전용 표시) */
+/* 누적 참여(연인원, 읽기전용 표시) */
 .kd-dash-participant {
   display: flex;
   align-items: center;
