@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import IntroChar from './IntroChar';
-import { useAuth } from '../../contexts/AuthContext';
 import { villageDiaryAPI } from '../../services/api';
+import { useKkumdarakAuth } from './KkumdarakAuthContext';
 
 type DiaryCardData = { side: 'left' | 'right'; title: string; date: string; dot: string; imageUrl?: string };
 type ProgramDiary = {
@@ -291,7 +291,11 @@ const DiaryCard: React.FC<{
 );
 
 const VillageDiary: React.FC = () => {
-  const { user } = useAuth();
+  // ── 꿈다락 편집 인증 — 최상위 공유 컨텍스트에서 소비 ──────────────
+  //   로그인 진입 버튼/모달은 nav 의 도형 버튼 + Provider 가 담당.
+  //   여기서는 authed 로 편집/완료 게이팅, 401 시 logout()+requestLogin() 만 호출.
+  const { authed, logout, requestLogin } = useKkumdarakAuth();
+
   // ── 편집 상태 ──────────────────────────────────────────────────
   const [isEditing, setIsEditing] = useState(false);
 
@@ -310,6 +314,11 @@ const VillageDiary: React.FC = () => {
   // 저장 base = 백엔드 오버라이드(단일 진실 소스). 초기값은 localStorage 캐시로 시드 —
   // GET 미완료/실패(레이스·오프라인) 구간에 {} 면 다른 프로그램 오버라이드가 PUT 으로 삭제되므로 방지.
   const serverOverrideRef = useRef<Record<string, DiaryCardData[]>>(loadSavedCards());
+
+  // 인증 해제(로그아웃/401 만료) 시 편집 모드 강제 종료 — 카드가 편집 비주얼로 남지 않게.
+  useEffect(() => {
+    if (!authed) setIsEditing(false);
+  }, [authed]);
 
   // 마운트 시 백엔드에서 오버라이드를 불러와 병합 — 백엔드를 단일 진실 소스로.
   //   초기 렌더는 PROGRAMS_DEFAULT(+localStorage 캐시), fetch 성공 시 setState 로 교체.
@@ -397,7 +406,7 @@ const VillageDiary: React.FC = () => {
       // storage full 등 — 무시
     }
 
-    // 백엔드 저장(관리자 전용). 실패를 숨기지 않는다.
+    // 백엔드 저장(꿈다락 편집 인증 전용). 실패를 숨기지 않는다.
     villageDiaryAPI
       .save(merged)
       .then((res) => {
@@ -410,6 +419,15 @@ const VillageDiary: React.FC = () => {
       })
       .catch((err) => {
         console.error('마을일기 저장 실패:', err);
+        // 꿈다락 인증 만료 → 공유 컨텍스트 logout() + 재로그인 모달 오픈 (사이트 세션과 무관)
+        if (err && err.code === 'KKUM_AUTH_EXPIRED') {
+          logout();
+          if (typeof window !== 'undefined') {
+            window.alert('꿈다락 편집 인증이 만료되었습니다. 다시 로그인해주세요.');
+          }
+          requestLogin();
+          return;
+        }
         if (typeof window !== 'undefined') {
           window.alert('마을일기 저장에 실패했습니다. 잠시 후 다시 시도해주세요.\n(' + (err?.message || err) + ')');
         }
@@ -644,6 +662,21 @@ const VillageDiary: React.FC = () => {
     </div>
   );
 
+  // ── 꿈다락 편집 제어 버튼 (인증 시에만 표시) ────────────────────────
+  //   로그인 진입은 nav 의 도형 버튼이 담당 — 여기서는 인증된 사용자에게
+  //   편집/완료 토글만 노출한다. 비인증 시 아무 것도 렌더하지 않는다.
+  const renderEditControls = () => {
+    if (!authed) return null;
+    return (
+      <button
+        className={`kd-diary-edit-btn${isEditing ? ' is-editing' : ''}`}
+        onClick={handleEditToggle}
+      >
+        {isEditing ? '완료' : '편집'}
+      </button>
+    );
+  };
+
   return (
     <section className="kd-figma-diary" ref={sectionRef}>
       {/* 데스크톱 마을일기 카드 모바일 스탬프형 정돈 — 모바일 무영향(min-width:901px) */}
@@ -665,15 +698,8 @@ const VillageDiary: React.FC = () => {
         <div className="kd-section-rule kd-section-rule--s4" />
         {renderFilters(false)}
 
-        {/* 편집 토글 버튼 — 로그인 사용자에게만 표시 */}
-        {user?.role === 'admin' && (
-          <button
-            className={`kd-diary-edit-btn${isEditing ? ' is-editing' : ''}`}
-            onClick={handleEditToggle}
-          >
-            {isEditing ? '완료' : '편집'}
-          </button>
-        )}
+        {/* 꿈다락 전용 편집 제어 (로그인 진입은 nav 도형 버튼이 담당) */}
+        {renderEditControls()}
 
         {hasContent && (
           <>
