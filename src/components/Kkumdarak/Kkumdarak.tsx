@@ -8,12 +8,16 @@ import Programs from './Programs';
 import Schedule from './Schedule';
 import VillageDiary from './VillageDiary';
 import Directions from './Directions';
+import BusinessAdmin from './admin/BusinessAdmin';
 import { KkumdarakAuthProvider, useKkumdarakAuth } from './KkumdarakAuthContext';
 
 // ═══════════════════════════════════════════════════════════════
 // 꿈다락 문화예술학교 마이크로사이트 — /kkumdarak 독립 라우트
 // 디자인: 크림 종이 위 굵은 라인, 페스티벌 쉐이프, 정리된 파이프 히어로
 // ═══════════════════════════════════════════════════════════════
+
+// 사업관리 섹션 id — SECTIONS(공개 nav)에는 넣지 않는다(로그인 전용·DOM 미노출).
+const ADMIN_SECTION = 'admin';
 
 const getInitialKkumdarakSection = () => {
   if (typeof window === 'undefined') return 'main';
@@ -118,6 +122,29 @@ const NavAuthButton: React.FC<{
   );
 };
 
+// ── nav 「사업관리」 링크 (로그인 시에만 노출) ─────────────────────
+//   NavAuthButton 과 동일한 이유로 별도 컴포넌트로 분리한다:
+//   Kkumdarak 본문에서 useKkumdarakAuth() 를 직접 읽으면 Provider 상위라
+//   default(authed:false)만 읽혀 로그인해도 메뉴가 영영 안 보인다.
+//   비로그인 시 null 반환 → DOM 미노출.
+const NavAdminLink: React.FC<{
+  active: boolean;
+  variant?: 'desktop' | 'mobile';
+  onNavigate: () => void;
+}> = ({ active, variant = 'desktop', onNavigate }) => {
+  const { authed } = useKkumdarakAuth();
+  if (!authed) return null;
+  return (
+    <button
+      type="button"
+      className={`kd-pill kd-pill-admin${active ? ' active' : ''} kd-pill-admin--${variant}`}
+      onClick={onNavigate}
+    >
+      사업관리
+    </button>
+  );
+};
+
 const Kkumdarak: React.FC = () => {
   useKkumdarakFonts();
   const reduced = useReducedMotion();
@@ -152,6 +179,8 @@ const Kkumdarak: React.FC = () => {
       case 'schedule': return <Schedule />;
       case 'diary': return <VillageDiary />;
       case 'directions': return <Directions />;
+      // 사업관리 — 로그인 게이트는 BusinessAdmin 내부(authed)에서 처리.
+      case ADMIN_SECTION: return <BusinessAdmin />;
       case 'main':
       default: return <MainHero />;
     }
@@ -187,6 +216,12 @@ const Kkumdarak: React.FC = () => {
                 {s.label}
               </button>
             ))}
+            {/* 로그인 시에만 노출되는 「사업관리」 (데스크톱) */}
+            <NavAdminLink
+              active={section === ADMIN_SECTION}
+              variant="desktop"
+              onNavigate={() => go(ADMIN_SECTION)}
+            />
             {/* "오시는 길" 옆 — 꿈다락 편집 로그인 도형 버튼 */}
             <NavAuthButton variant="desktop" />
           </nav>
@@ -220,11 +255,23 @@ const Kkumdarak: React.FC = () => {
                   {s.label}
                 </motion.button>
               ))}
-              {/* "오시는 길" 옆 — 꿈다락 편집 로그인 도형 버튼 (모바일). 누르면 메뉴 닫기. */}
+              {/* 로그인 시에만 노출되는 「사업관리」 (모바일). 누르면 메뉴 닫기. */}
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: SECTIONS.length * 0.05, duration: MOTION.durBase, ease: MOTION.ease }}
+              >
+                <NavAdminLink
+                  active={section === ADMIN_SECTION}
+                  variant="mobile"
+                  onNavigate={() => go(ADMIN_SECTION)}
+                />
+              </motion.div>
+              {/* "오시는 길" 옆 — 꿈다락 편집 로그인 도형 버튼 (모바일). 누르면 메뉴 닫기. */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: (SECTIONS.length + 1) * 0.05, duration: MOTION.durBase, ease: MOTION.ease }}
               >
                 <NavAuthButton variant="mobile" onAfterAction={() => setMenuOpen(false)} />
               </motion.div>

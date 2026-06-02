@@ -1,0 +1,389 @@
+/* ═══════════════════════════════════════════════════════════════
+   꿈다락 사업관리 셸 스타일 — 기존 꿈다락 디자인 토큰(--kd-*)만 사용.
+   (임의 컬러 금지: 컬러/타이포/스페이싱은 kkumdarak.css :root 토큰 참조)
+   ═══════════════════════════════════════════════════════════════ */
+
+.kd-pill-admin {
+  position: relative;
+}
+/* 로그인 전용 메뉴임을 시각적으로 살짝 구분(점) — 토큰 컬러만 사용 */
+.kd-pill-admin::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--kd-teal);
+  vertical-align: middle;
+}
+.kd-pill-admin.active::before { background: var(--kd-pink-deep); }
+
+/* 셸 컨테이너 */
+.kd-admin {
+  max-width: 1040px;
+  margin: 0 auto;
+}
+.kd-admin-head { margin-bottom: 22px; }
+.kd-admin-title {
+  font-family: var(--kd-font-head);
+  font-weight: 800;
+  color: var(--kd-ink);
+  margin: 0 0 6px;
+}
+.kd-admin-subtitle {
+  font-family: var(--kd-font-body);
+  color: var(--kd-ink);
+  opacity: 0.7;
+  margin: 0;
+}
+
+/* 탭 */
+.kd-admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 24px;
+  border-bottom: var(--kd-outline-bold);
+  padding-bottom: 12px;
+}
+.kd-admin-tab {
+  font-family: var(--kd-font-body);
+  font-weight: 800;
+  font-size: 15px;
+  background: var(--kd-surface);
+  color: var(--kd-ink);
+  border: var(--kd-outline);
+  border-radius: var(--kd-radius-pill);
+  padding: 8px 18px;
+  cursor: pointer;
+  transition: color 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+}
+.kd-admin-tab:hover { transform: translateY(-1px); }
+.kd-admin-tab.active {
+  color: var(--kd-pink-deep);
+  border-color: var(--kd-pink-deep);
+}
+.kd-admin-tab-soon {
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.55;
+}
+
+/* 상태(로딩/에러/플레이스홀더) */
+.kd-admin-state {
+  font-family: var(--kd-font-body);
+  color: var(--kd-ink);
+  padding: 40px 16px;
+  text-align: center;
+}
+.kd-admin-state--error { color: var(--kd-pink-deep); }
+.kd-admin-gate { padding: 56px 16px; }
+.kd-admin-placeholder-sub { opacity: 0.6; margin-top: 6px; }
+.kd-admin-retry {
+  margin-top: 14px;
+  font-family: var(--kd-font-body);
+  font-weight: 800;
+  background: var(--kd-surface);
+  color: var(--kd-ink);
+  border: var(--kd-outline-bold);
+  border-radius: var(--kd-radius-pill);
+  padding: 8px 22px;
+  cursor: pointer;
+}
+.kd-admin-retry:hover { color: var(--kd-pink-deep); border-color: var(--kd-pink-deep); }
+
+/* 총괄 카드 */
+.kd-admin-totals {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.kd-admin-total-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--kd-surface);
+  border: var(--kd-outline);
+  border-radius: var(--kd-radius);
+  padding: 14px 16px;
+}
+.kd-admin-total-label {
+  font-family: var(--kd-font-body);
+  font-size: 13px;
+  color: var(--kd-ink);
+  opacity: 0.65;
+}
+.kd-admin-total-value {
+  font-family: var(--kd-font-head);
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--kd-ink);
+}
+
+/* 편성제한 배지 */
+.kd-admin-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.kd-admin-badge {
+  font-family: var(--kd-font-body);
+  font-weight: 700;
+  font-size: 13px;
+  border-radius: var(--kd-radius-pill);
+  padding: 7px 16px;
+  border: var(--kd-outline-bold);
+}
+.kd-admin-badge.is-ok {
+  color: var(--kd-teal-deep);
+  border-color: var(--kd-teal-deep);
+}
+.kd-admin-badge.is-over {
+  color: var(--kd-pink-deep);
+  border-color: var(--kd-pink-deep);
+}
+
+/* 표 */
+.kd-admin-table-wrap { overflow-x: auto; }
+.kd-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--kd-font-body);
+  color: var(--kd-ink);
+}
+.kd-admin-table th,
+.kd-admin-table td {
+  padding: 11px 12px;
+  border-bottom: var(--kd-outline);
+  font-size: 14px;
+  vertical-align: middle;
+}
+.kd-admin-table thead th {
+  font-weight: 800;
+  border-bottom: var(--kd-outline-bold);
+  text-align: left;
+}
+.kd-admin-th-num, .kd-admin-td-num { text-align: right; white-space: nowrap; }
+.kd-admin-th-name { text-align: left; }
+.kd-admin-td-name { font-weight: 700; }
+.kd-admin-table tfoot td {
+  font-weight: 800;
+  border-top: var(--kd-outline-bold);
+  border-bottom: 0;
+}
+
+/* 펼침 버튼 */
+.kd-admin-expand-btn {
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  background: transparent;
+  border: 0;
+  color: var(--kd-ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+}
+.kd-admin-expand-btn:hover { color: var(--kd-pink-deep); }
+.kd-admin-expand-caret { color: var(--kd-teal); font-size: 12px; }
+
+/* 세세목 행 */
+/* 배경: --kd-ink(#211914)를 3% 알파로 — kkumdarak.css 의 ink-with-alpha 관용(예: --kd-outline)을 따름 */
+.kd-admin-subrow td { background: rgba(33, 25, 20, 0.03); font-size: 13px; }
+.kd-admin-td-sub {
+  padding-left: 26px;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kd-admin-sub-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--kd-yellow);
+}
+.kd-admin-sub-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--kd-purple);
+  border: 1px solid var(--kd-purple);
+  border-radius: var(--kd-radius-pill);
+  padding: 1px 8px;
+  margin-left: 8px;
+}
+
+.kd-admin-period {
+  font-family: var(--kd-font-body);
+  font-size: 13px;
+  opacity: 0.65;
+  margin-top: 16px;
+}
+
+/* 모바일 */
+@media (max-width: 900px) {
+  .kd-admin-totals { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 520px) {
+  .kd-admin-totals { grid-template-columns: 1fr 1fr; }
+  .kd-admin-table th, .kd-admin-table td { padding: 9px 8px; font-size: 13px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   집행 장부 (LedgerView) — 동일 토큰 사용
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 입력 폼 */
+.kd-ledger-form {
+  background: var(--kd-surface);
+  border: var(--kd-outline);
+  border-radius: var(--kd-radius);
+  padding: 20px;
+  margin-bottom: 24px;
+}
+.kd-ledger-form-title {
+  font-family: var(--kd-font-head);
+  font-weight: 800;
+  font-size: 17px;
+  color: var(--kd-ink);
+  margin: 0 0 16px;
+}
+.kd-ledger-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.kd-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kd-field-wide { grid-column: 1 / -1; }
+.kd-field-label {
+  font-family: var(--kd-font-body);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--kd-ink);
+  opacity: 0.8;
+}
+.kd-field-input {
+  font-family: var(--kd-font-body);
+  font-size: 14px;
+  color: var(--kd-ink);
+  background: var(--kd-paper);
+  border: var(--kd-outline);
+  border-radius: var(--kd-radius);
+  padding: 9px 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.kd-field-input:focus {
+  outline: none;
+  border-color: var(--kd-pink-deep);
+}
+.kd-field-readonly,
+.kd-field-input[readonly] {
+  background: rgba(33, 25, 20, 0.04); /* --kd-ink 4% — ink-with-alpha 관용 */
+  opacity: 0.85;
+}
+
+/* 경고/알림 배너 */
+.kd-ledger-warnings {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kd-ledger-warning {
+  font-family: var(--kd-font-body);
+  font-size: 13px;
+  color: var(--kd-pink-deep);
+  border: 1px solid var(--kd-pink-deep);
+  border-radius: var(--kd-radius);
+  padding: 8px 12px;
+}
+.kd-ledger-notice {
+  margin-top: 12px;
+  font-family: var(--kd-font-body);
+  font-size: 13px;
+  color: var(--kd-teal-deep);
+  border: 1px solid var(--kd-teal-deep);
+  border-radius: var(--kd-radius);
+  padding: 8px 12px;
+}
+
+.kd-ledger-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+.kd-ledger-form-actions .kd-admin-retry { margin-top: 0; }
+.kd-ledger-submit {
+  font-family: var(--kd-font-body);
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--kd-cream);
+  background: var(--kd-pink-deep);
+  border: 0;
+  border-radius: var(--kd-radius-pill);
+  padding: 9px 26px;
+  cursor: pointer;
+}
+.kd-ledger-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 필터 */
+.kd-ledger-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.kd-ledger-filters .kd-field-input { width: auto; min-width: 130px; }
+
+/* 목록 상태 배지 + 액션 */
+.kd-status-badge {
+  display: inline-block;
+  font-family: var(--kd-font-body);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--kd-purple);
+  border: 1px solid var(--kd-purple);
+  border-radius: var(--kd-radius-pill);
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+.kd-ledger-actions { white-space: nowrap; }
+.kd-ledger-action {
+  font-family: var(--kd-font-body);
+  font-size: 13px;
+  font-weight: 700;
+  background: transparent;
+  border: var(--kd-outline);
+  border-radius: var(--kd-radius-pill);
+  color: var(--kd-ink);
+  padding: 4px 12px;
+  margin-right: 6px;
+  cursor: pointer;
+}
+.kd-ledger-action:hover { border-color: var(--kd-pink-deep); color: var(--kd-pink-deep); }
+.kd-ledger-action--danger:hover { border-color: var(--kd-pink-deep); color: var(--kd-pink-deep); }
+/* 서식 다운로드 버튼 — teal 강조(액션 구분), 비활성 시 흐리게 */
+.kd-ledger-action--form { border-color: var(--kd-teal-deep); color: var(--kd-teal-deep); }
+.kd-ledger-action--form:hover { border-color: var(--kd-teal-deep); color: var(--kd-teal-deep); opacity: 0.8; }
+.kd-ledger-action:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 집행 장부 모바일 */
+@media (max-width: 760px) {
+  .kd-ledger-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 520px) {
+  .kd-ledger-grid { grid-template-columns: 1fr; }
+  .kd-ledger-filters .kd-field-input { flex: 1 1 45%; min-width: 0; }
+}
