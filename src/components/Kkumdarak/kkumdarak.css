@@ -4667,6 +4667,151 @@
   box-shadow: 4px 4px 0 #1a1a1a;
 }
 
+/* ── 꿈다락 전용 관리자 로그인 모달 (사이트 관리자와 분리) ──────────────── */
+/* 로그인 진입은 nav 도형 버튼(.kd-nav-auth)이 담당. 아래는 비밀번호 입력 모달. */
+/* 비밀번호 입력 모달 */
+.kd-diary-login-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(26, 26, 26, 0.45);
+  padding: 20px;
+}
+.kd-diary-login-modal {
+  width: 100%;
+  max-width: 340px;
+  background: #ffffff;
+  border: 2px solid #1a1a1a;
+  border-radius: 0;
+  box-shadow: 6px 6px 0 #1a1a1a;
+  padding: 24px 22px 20px;
+  box-sizing: border-box;
+}
+.kd-diary-login-modal h3 {
+  margin: 0 0 6px;
+  font-family: var(--kd-font-body);
+  font-size: 18px;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+.kd-diary-login-desc {
+  margin: 0 0 14px;
+  font-family: var(--kd-font-body);
+  font-size: 13px;
+  color: #555;
+}
+.kd-diary-login-input {
+  width: 100%;
+  font-size: 15px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+.kd-diary-login-error {
+  margin: 0 0 8px;
+  font-family: var(--kd-font-body);
+  font-size: 12px;
+  font-weight: 700;
+  color: #E4352B;
+}
+.kd-diary-login-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+.kd-diary-login-actions button {
+  border: 2px solid #1a1a1a;
+  border-radius: 0;
+  font-family: var(--kd-font-body);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 6px 16px;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 #1a1a1a;
+  transition: transform 0.12s ease;
+}
+.kd-diary-login-actions button:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #1a1a1a;
+}
+.kd-diary-login-actions button:disabled {
+  opacity: 0.6;
+  cursor: default;
+  box-shadow: 2px 2px 0 #1a1a1a;
+}
+.kd-diary-login-cancel {
+  background: #ffffff;
+  color: #1a1a1a;
+}
+.kd-diary-login-confirm {
+  background: #F5C518;
+  color: #1a1a1a;
+}
+
+/* ── nav 도형 로그인 버튼 — "오시는 길" 옆 (꿈다락 편집 인증 진입점) ──
+   비인증: 외곽선 다이아몬드(발견 가능하되 과하지 않게).
+   인증됨: accent(핑크)로 채워진 다이아몬드 — 편집 세션이 활성임을 표시. */
+.kd-nav-auth {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  line-height: 0;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.kd-nav-auth .kd-nav-auth-shape {
+  display: block;
+  width: 13px;
+  height: 13px;
+  box-sizing: border-box;
+  background: transparent;
+  border: 2px solid rgba(33, 25, 20, 0.55);
+  border-radius: 2px;
+  transform: rotate(45deg);
+  transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.kd-nav-auth:hover .kd-nav-auth-shape {
+  border-color: var(--kd-ink);
+  transform: rotate(45deg) scale(1.12);
+}
+.kd-nav-auth:focus-visible {
+  outline: none;
+}
+.kd-nav-auth:focus-visible .kd-nav-auth-shape {
+  border-color: var(--kd-pink-deep);
+  box-shadow: 0 0 0 2px rgba(242, 59, 46, 0.28);
+}
+/* 인증 활성 — 채워진 핑크 다이아몬드 */
+.kd-nav-auth.is-authed .kd-nav-auth-shape {
+  background: var(--kd-pink-deep);
+  border-color: var(--kd-ink);
+}
+.kd-nav-auth.is-authed:hover .kd-nav-auth-shape {
+  transform: rotate(45deg) scale(1.12);
+  box-shadow: 0 0 0 2px rgba(242, 59, 46, 0.22);
+}
+
+/* 모바일 풀스크린 메뉴 안에서는 라벨처럼 크게 — pill 리듬에 맞춰 키운다 */
+.kd-nav-auth--mobile .kd-nav-auth-shape {
+  width: 22px;
+  height: 22px;
+  border-width: 2.4px;
+}
+.kd-mobile-menu .kd-nav-auth {
+  margin-top: 6px;
+  padding: 8px;
+}
+
+
 /* ── 카드 이미지 (비편집 모드) ──────────────────────────────────── */
 .diary-card-image {
   display: block;

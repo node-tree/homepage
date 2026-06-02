@@ -871,7 +871,14 @@ export const homeAPI = {
 
 // VillageDiary API — 마을일기 편집 데이터 영속화 (싱글톤 오버라이드 객체)
 //   백엔드를 단일 진실 소스로. get 은 raw 오버라이드 객체 { [programId]: DiaryCardData[] } 를 반환,
-//   save 는 동일한 raw 객체를 PUT body 로 보낸다(관리자 전용, Authorization: Bearer).
+//   save 는 동일한 raw 객체를 PUT body 로 보낸다.
+//
+//   ── 꿈다락 전용 인증(사이트 관리자와 완전 분리) ──
+//   · 사이트 세션은 'auth_token'/'auth_user' 키, getHeaders()/handle401() 를 사용한다.
+//   · 꿈다락 편집은 별개 키 'kkumdarak_token' 만 사용하며 사이트 로그인/로그아웃과 무관하다.
+//   · save() 는 getHeaders()/handle401() 를 절대 재사용하지 않는다(여기서 헤더를 직접 구성).
+const KKUMDARAK_TOKEN_KEY = 'kkumdarak_token';
+
 export const villageDiaryAPI = {
   // 오버라이드 조회 (공개) — mergePrograms 가 직접 소비하는 raw 객체 반환
   get: async () => {
@@ -884,16 +891,71 @@ export const villageDiaryAPI = {
     return data && data.success ? (data.data || {}) : {};
   },
 
-  // 오버라이드 저장 (관리자만) — raw 오버라이드 객체를 통째로 PUT
+  // 꿈다락 편집 토큰 헬퍼 (사이트 auth_token 과 완전히 별개 키)
+  getKkumdarakToken: () => {
+    try {
+      return localStorage.getItem(KKUMDARAK_TOKEN_KEY);
+    } catch (e) {
+      return null;
+    }
+  },
+  clearKkumdarakToken: () => {
+    try {
+      localStorage.removeItem(KKUMDARAK_TOKEN_KEY);
+    } catch (e) {
+      // ignore
+    }
+  },
+
+  // 꿈다락 편집 로그인 — 단일 공유 비밀번호로 scope:'kkumdarak' 토큰 발급/저장
+  //   성공 → kkumdarak_token 저장 후 true. 비밀번호 불일치(401) → false.
+  //   미설정(500)/네트워크 등 그 외 오류 → throw.
+  login: async (password) => {
+    const response = await fetch(`${API_BASE_URL}/village-diary/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    if (response.status === 401) {
+      return false; // 비밀번호 불일치
+    }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `로그인 실패 (${response.status})`);
+    }
+    const data = await response.json();
+    if (!data || !data.success || !data.token) {
+      throw new Error('로그인 응답이 올바르지 않습니다.');
+    }
+    try {
+      localStorage.setItem(KKUMDARAK_TOKEN_KEY, data.token);
+    } catch (e) {
+      // localStorage 사용 불가 — 토큰 메모리 유실되지만 로그인 자체는 성공으로 본다
+    }
+    return true;
+  },
+
+  // 오버라이드 저장 (꿈다락 편집 인증 전용) — raw 오버라이드 객체를 통째로 PUT
+  //   Authorization 은 kkumdarak_token 으로 직접 구성한다(getHeaders 재사용 금지).
+  //   401/403(만료·무효) → clearKkumdarakToken() 후 code 'KKUM_AUTH_EXPIRED' 로 throw.
   save: async (overrideData) => {
+    const token = villageDiaryAPI.getKkumdarakToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
     const response = await fetch(`${API_BASE_URL}/village-diary`, {
       method: 'PUT',
-      headers: getHeaders(),
+      headers,
       body: JSON.stringify(overrideData)
     });
+    if (response.status === 401 || response.status === 403) {
+      villageDiaryAPI.clearKkumdarakToken();
+      const err = new Error('꿈다락 인증이 만료되었습니다. 다시 로그인해주세요.');
+      err.code = 'KKUM_AUTH_EXPIRED';
+      throw err;
+    }
     if (!response.ok) {
-      if (response.status === 401) return handle401();
-      if (response.status === 403) throw new Error('관리자 권한이 필요합니다.');
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || `Failed to save village diary (${response.status})`);
     }

@@ -8,6 +8,7 @@ import Programs from './Programs';
 import Schedule from './Schedule';
 import VillageDiary from './VillageDiary';
 import Directions from './Directions';
+import { KkumdarakAuthProvider, useKkumdarakAuth } from './KkumdarakAuthContext';
 
 // ═══════════════════════════════════════════════════════════════
 // 꿈다락 문화예술학교 마이크로사이트 — /kkumdarak 독립 라우트
@@ -88,6 +89,35 @@ function NavWalker() {
   );
 }
 
+// ── nav 도형 로그인 버튼 ("오시는 길" 옆) ─────────────────────────
+//   진입점: 꿈다락 편집 인증. 컨텍스트(useKkumdarakAuth)를 소비하므로
+//   반드시 KkumdarakAuthProvider 내부에서 렌더되는 별도 컴포넌트여야 한다
+//   (Kkumdarak 본문에서 직접 훅 호출 시 Provider 상위라 default 값을 읽음).
+//   · 비인증: 외곽선 다이아몬드 → 클릭 시 requestLogin()(모달 오픈)
+//   · 인증됨: 채워진 accent 다이아몬드(편집 세션 활성) → 클릭 시 logout()
+const NavAuthButton: React.FC<{
+  variant?: 'desktop' | 'mobile';
+  onAfterAction?: () => void;
+}> = ({ variant = 'desktop', onAfterAction }) => {
+  const { authed, requestLogin, logout } = useKkumdarakAuth();
+  return (
+    <button
+      type="button"
+      className={`kd-nav-auth${authed ? ' is-authed' : ''} kd-nav-auth--${variant}`}
+      aria-label={authed ? '관리자 로그아웃' : '관리자 로그인'}
+      title={authed ? '꿈다락 관리자 로그아웃' : '꿈다락 관리자 로그인'}
+      aria-pressed={authed}
+      onClick={() => {
+        if (authed) logout();
+        else requestLogin();
+        onAfterAction?.();
+      }}
+    >
+      <span className="kd-nav-auth-shape" aria-hidden="true" />
+    </button>
+  );
+};
+
 const Kkumdarak: React.FC = () => {
   useKkumdarakFonts();
   const reduced = useReducedMotion();
@@ -128,92 +158,104 @@ const Kkumdarak: React.FC = () => {
   };
 
   return (
-    <div className="kkumdarak">
-      <div className="kd-announce" aria-hidden="true">
-        <div
-          className="kd-announce-track"
-          style={reduced ? undefined : { animation: 'kd-marquee 26s linear infinite' }}
-        >
-          <span>{ANNOUNCE}</span>
-          <span>{ANNOUNCE}</span>
-        </div>
-      </div>
-
-      <header className="kd-header">
-        <div className="kd-logo" onClick={() => go('main')} role="button" tabIndex={0}>
-          이소異素
-        </div>
-
-        <NavWalker />
-
-        <nav className="kd-nav-desktop">
-          {SECTIONS.map((s) => (
-            <button
-              key={s.id}
-              className={`kd-pill${section === s.id ? ' active' : ''}`}
-              onClick={() => go(s.id)}
-            >
-              {s.label}
-            </button>
-          ))}
-        </nav>
-
-        {/* 모바일 햄버거 */}
-        <button className="kd-hamburger" onClick={() => setMenuOpen(true)} aria-label="메뉴 열기">
-          <span /><span /><span />
-        </button>
-      </header>
-
-      {/* ── 모바일 풀스크린 메뉴 ── */}
-      <AnimatePresence>
-        {menuOpen && (
-          <motion.div
-            className="kd-mobile-menu"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: MOTION.durBase }}
+    <KkumdarakAuthProvider>
+      <div className="kkumdarak">
+        <div className="kd-announce" aria-hidden="true">
+          <div
+            className="kd-announce-track"
+            style={reduced ? undefined : { animation: 'kd-marquee 26s linear infinite' }}
           >
-            <button className="kd-mobile-close" onClick={() => setMenuOpen(false)} aria-label="메뉴 닫기">✕</button>
-            {SECTIONS.map((s, i) => (
-              <motion.button
+            <span>{ANNOUNCE}</span>
+            <span>{ANNOUNCE}</span>
+          </div>
+        </div>
+
+        <header className="kd-header">
+          <div className="kd-logo" onClick={() => go('main')} role="button" tabIndex={0}>
+            이소異素
+          </div>
+
+          <NavWalker />
+
+          <nav className="kd-nav-desktop">
+            {SECTIONS.map((s) => (
+              <button
                 key={s.id}
                 className={`kd-pill${section === s.id ? ' active' : ''}`}
                 onClick={() => go(s.id)}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05, duration: MOTION.durBase, ease: MOTION.ease }}
               >
                 {s.label}
-              </motion.button>
+              </button>
             ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {/* "오시는 길" 옆 — 꿈다락 편집 로그인 도형 버튼 */}
+            <NavAuthButton variant="desktop" />
+          </nav>
 
-      {/* ── 콘텐츠 ── */}
-      <AnimatePresence mode="wait">
-        <motion.main
-          key={section}
-          initial={{ opacity: 0, y: 36, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -24, scale: 0.98 }}
-          transition={{ duration: 0.28, ease: MOTION.easeOutBack }}
-        >
-          {renderSection()}
+          {/* 모바일 햄버거 */}
+          <button className="kd-hamburger" onClick={() => setMenuOpen(true)} aria-label="메뉴 열기">
+            <span /><span /><span />
+          </button>
+        </header>
 
-          <footer className="kd-footer">
-            <div className="kd-footer-logo">꿈다락</div>
-            <div>꿈다락 문화예술학교 · 2026 생활거점형 · 충남 부여군 장암면</div>
-            <div>
-              주최 문화체육관광부 · 주관 한국문화예술교육진흥원
-              <span className="kd-footer-sep"> · </span>
-              <span className="kd-footer-line-operator">운영 노드트리 × 장암면 주민자치회</span>
-            </div>
-          </footer>
-        </motion.main>
-      </AnimatePresence>
-    </div>
+        {/* ── 모바일 풀스크린 메뉴 ── */}
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              className="kd-mobile-menu"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: MOTION.durBase }}
+            >
+              <button className="kd-mobile-close" onClick={() => setMenuOpen(false)} aria-label="메뉴 닫기">✕</button>
+              {SECTIONS.map((s, i) => (
+                <motion.button
+                  key={s.id}
+                  className={`kd-pill${section === s.id ? ' active' : ''}`}
+                  onClick={() => go(s.id)}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05, duration: MOTION.durBase, ease: MOTION.ease }}
+                >
+                  {s.label}
+                </motion.button>
+              ))}
+              {/* "오시는 길" 옆 — 꿈다락 편집 로그인 도형 버튼 (모바일). 누르면 메뉴 닫기. */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: SECTIONS.length * 0.05, duration: MOTION.durBase, ease: MOTION.ease }}
+              >
+                <NavAuthButton variant="mobile" onAfterAction={() => setMenuOpen(false)} />
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── 콘텐츠 ── */}
+        <AnimatePresence mode="wait">
+          <motion.main
+            key={section}
+            initial={{ opacity: 0, y: 36, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -24, scale: 0.98 }}
+            transition={{ duration: 0.28, ease: MOTION.easeOutBack }}
+          >
+            {renderSection()}
+
+            <footer className="kd-footer">
+              <div className="kd-footer-logo">꿈다락</div>
+              <div>꿈다락 문화예술학교 · 2026 생활거점형 · 충남 부여군 장암면</div>
+              <div>
+                주최 문화체육관광부 · 주관 한국문화예술교육진흥원
+                <span className="kd-footer-sep"> · </span>
+                <span className="kd-footer-line-operator">운영 노드트리 × 장암면 주민자치회</span>
+              </div>
+            </footer>
+          </motion.main>
+        </AnimatePresence>
+      </div>
+    </KkumdarakAuthProvider>
   );
 };
 
