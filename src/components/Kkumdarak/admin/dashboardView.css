@@ -1,0 +1,119 @@
+/* ═══════════════════════════════════════════════════════════════
+   꿈다락 대시보드·프로그램 관리 — 기존 꿈다락 토큰(--kd-*)만 사용.
+   (businessAdmin.css 의 .kd-admin-* / .kd-field-* / .kd-ledger-* 도 함께 사용)
+   ═══════════════════════════════════════════════════════════════ */
+
+.kd-dash-section-title {
+  margin-top: 26px;
+  margin-bottom: 14px;
+}
+
+.kd-dash-programs {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.kd-dash-program {
+  background: var(--kd-surface);
+  border: var(--kd-outline);
+  border-radius: var(--kd-radius);
+  padding: 16px 18px;
+}
+
+.kd-dash-program-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.kd-dash-program-name {
+  font-family: var(--kd-font-head);
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--kd-ink);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.kd-dash-program-target {
+  font-family: var(--kd-font-body);
+  font-weight: 400;
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+/* 진척 바 */
+.kd-dash-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.kd-dash-bar-track {
+  flex: 1 1 auto;
+  height: 10px;
+  background: rgba(33, 25, 20, 0.08); /* --kd-ink 8% — ink-with-alpha 관용 */
+  border-radius: var(--kd-radius-pill);
+  overflow: hidden;
+}
+.kd-dash-bar-fill {
+  height: 100%;
+  background: var(--kd-teal);
+  border-radius: var(--kd-radius-pill);
+  transition: width 0.3s ease;
+}
+.kd-dash-bar-label {
+  font-family: var(--kd-font-body);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--kd-ink);
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+/* 실참여(회차 합, 읽기전용 표시) */
+.kd-dash-participant {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.kd-dash-participant .kd-field-label { opacity: 0.8; }
+.kd-dash-participant-input { width: 110px; }
+.kd-dash-participant-value {
+  font-family: var(--kd-font-head);
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--kd-ink);
+}
+.kd-dash-participant-of {
+  font-family: var(--kd-font-body);
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+/* 회차 관리 패널 */
+.kd-dash-sessions {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: var(--kd-outline);
+}
+.kd-dash-session-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.kd-dash-session-form .kd-field-input { width: auto; min-width: 120px; flex: 0 1 auto; }
+.kd-dash-session-add { padding: 9px 20px; }
+.kd-dash-session-table { margin-top: 8px; }
+
+/* 모바일 */
+@media (max-width: 520px) {
+  .kd-dash-session-form { flex-direction: column; align-items: stretch; }
+  .kd-dash-session-form .kd-field-input { width: 100%; min-width: 0; }
+  .kd-dash-bar-label { font-size: 11px; }
+}

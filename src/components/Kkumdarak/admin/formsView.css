@@ -1,0 +1,133 @@
+/* ═══════════════════════════════════════════════════════════════
+   문서/서식(출강확인서·회의록) 작업창 — --kd-* 토큰만.
+   (.kd-admin-* / .kd-field-* / .kd-ledger-* 기본 스타일은 businessAdmin.css)
+   ═══════════════════════════════════════════════════════════════ */
+
+.kd-forms-shell {
+  max-width: 1040px;
+}
+.kd-forms {
+  max-width: 1040px;
+}
+.kd-forms-desc {
+  font-family: var(--kd-font-body);
+  font-size: 13px;
+  color: var(--kd-ink);
+  opacity: 0.7;
+  margin: 0 0 18px;
+}
+.kd-forms-body {
+  background: var(--kd-surface);
+  border: var(--kd-outline);
+  border-radius: var(--kd-radius);
+  padding: 20px;
+}
+
+/* 문서 종류 토글 */
+.kd-forms-doctype {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.kd-forms-doctype-btn {
+  font-family: var(--kd-font-body);
+  font-weight: 800;
+  font-size: 14px;
+  background: var(--kd-surface);
+  color: var(--kd-ink);
+  border: var(--kd-outline);
+  border-radius: var(--kd-radius-pill);
+  padding: 8px 18px;
+  cursor: pointer;
+  transition: color 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+}
+.kd-forms-doctype-btn:hover { transform: translateY(-1px); }
+.kd-forms-doctype-btn.active {
+  color: var(--kd-pink-deep);
+  border-color: var(--kd-pink-deep);
+}
+
+/* AI 초안 줄 (키워드 입력 + 버튼) */
+.kd-forms-ai {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: var(--kd-outline);
+  border-radius: var(--kd-radius);
+  background: rgba(31, 178, 208, 0.06); /* --kd-teal 6% — AI 영역 강조(토큰 알파) */
+}
+.kd-forms-ai-input { flex: 1 1 240px; min-width: 0; }
+
+.kd-forms-textareas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 16px;
+}
+/* 본문 칸은 2열 그리드 — .kd-field-wide 의 전체폭 스팬을 이 영역에선 해제 */
+.kd-forms-textareas .kd-field-wide { grid-column: auto; }
+.kd-forms-textarea {
+  resize: vertical;
+  min-height: 64px;
+  font-family: var(--kd-font-body);
+  line-height: 1.5;
+}
+
+/* 회의록 논의안건 슬롯 */
+.kd-forms-agenda {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+}
+.kd-forms-agenda-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: var(--kd-outline);
+  border-radius: var(--kd-radius);
+  background: rgba(33, 25, 20, 0.02); /* --kd-ink 2% — ink-with-alpha 관용 */
+}
+
+/* 사진 첨부 (진행사진 / 회의사진) */
+.kd-forms-photo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: var(--kd-outline);
+  border-radius: var(--kd-radius);
+}
+.kd-forms-photo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.kd-forms-photo-input {
+  font-family: var(--kd-font-body);
+  font-size: 13px;
+  color: var(--kd-ink);
+}
+.kd-forms-photo-status {
+  font-family: var(--kd-font-body);
+  font-size: 12px;
+  color: var(--kd-teal-deep);
+}
+.kd-forms-photo-thumb {
+  max-width: 240px;
+  max-height: 180px;
+  border: var(--kd-outline);
+  border-radius: var(--kd-radius);
+  object-fit: contain;
+}
+
+@media (max-width: 760px) {
+  .kd-forms-textareas { grid-template-columns: 1fr; }
+}

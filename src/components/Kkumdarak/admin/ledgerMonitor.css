@@ -1,0 +1,65 @@
+/* ═══════════════════════════════════════════════════════════════
+   집행 장부 예산 모니터 바 + 선택 세목 잔액 인라인 — --kd-* 토큰만.
+   (.kd-admin-* / .kd-field-* / .kd-ledger-* 기본 스타일은 businessAdmin.css)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 상단 예산 모니터 바 */
+.kd-ledger-monitor {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.kd-ledger-monitor-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--kd-surface);
+  border: var(--kd-outline);
+  border-radius: var(--kd-radius);
+  padding: 12px 14px;
+}
+.kd-ledger-monitor-label {
+  font-family: var(--kd-font-body);
+  font-size: 12px;
+  color: var(--kd-ink);
+  opacity: 0.65;
+}
+.kd-ledger-monitor-value {
+  font-family: var(--kd-font-head);
+  font-weight: 800;
+  font-size: 17px;
+  color: var(--kd-ink);
+}
+/* 잔액·잔여% 음수(초과) 강조 */
+.kd-ledger-monitor-value.is-over { color: var(--kd-pink-deep); }
+
+/* 선택 세목 잔액 인라인 패널 */
+.kd-ledger-lineinfo {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border: var(--kd-outline);
+  border-radius: var(--kd-radius);
+  background: rgba(33, 25, 20, 0.03); /* --kd-ink 3% — ink-with-alpha 관용 */
+  font-family: var(--kd-font-body);
+  font-size: 13px;
+  color: var(--kd-ink);
+}
+.kd-ledger-lineinfo-name { font-weight: 800; }
+.kd-ledger-lineinfo-stat { opacity: 0.85; }
+.kd-ledger-lineinfo-stat.is-over { color: var(--kd-pink-deep); font-weight: 700; opacity: 1; }
+.kd-ledger-lineinfo-sub {
+  flex-basis: 100%;
+  padding-left: 6px;
+  opacity: 0.8;
+}
+.kd-ledger-lineinfo-sub.is-over { color: var(--kd-pink-deep); font-weight: 700; opacity: 1; }
+
+/* 모바일 */
+@media (max-width: 760px) {
+  .kd-ledger-monitor { grid-template-columns: 1fr 1fr; }
+}
