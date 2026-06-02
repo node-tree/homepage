@@ -58,7 +58,8 @@
   padding: 12px 14px;
   border: var(--kd-outline);
   border-radius: var(--kd-radius);
-  background: rgba(31, 178, 208, 0.06); /* --kd-teal 6% — AI 영역 강조(토큰 알파) */
+  /* --kd-teal 토큰 6% (임의 RGB 채널 제거) */
+  background: color-mix(in srgb, var(--kd-teal) 6%, transparent);
 }
 .kd-forms-ai-input { flex: 1 1 240px; min-width: 0; }
 

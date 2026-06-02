@@ -573,6 +573,7 @@ router.get('/sessions', async (req, res) => {
 
 // ── POST /api/kkumdarak/sessions ─────────────────────────────────────────────
 //   회차 등록 = 도큐먼트 1건 생성. attendance(실참여)는 회차 단위 입력(미지정 0).
+//   {programKey, sessionNo} 중복이면 409(사전 조회 + E11000 매핑 둘 다).
 router.post('/sessions', async (req, res) => {
   try {
     await ensureDBConnection();
@@ -585,9 +586,17 @@ router.post('/sessions', async (req, res) => {
       return res.status(404).json({ success: false, message: '존재하지 않는 프로그램입니다.' });
     }
 
+    const sessionNoNum = Number(sessionNo);
+
+    // 중복 사전 검사(빠른 안내). 경합 시엔 아래 E11000 매핑이 최종 방어.
+    const dup = await KkumdarakSession.findOne({ programKey, sessionNo: sessionNoNum });
+    if (dup) {
+      return res.status(409).json({ success: false, message: '이미 등록된 회차번호입니다.' });
+    }
+
     const session = new KkumdarakSession({
       programKey,
-      sessionNo: Number(sessionNo),
+      sessionNo: sessionNoNum,
       date: date || null,
       title: title || '',
       content: content || '',
@@ -599,6 +608,10 @@ router.post('/sessions', async (req, res) => {
     res.json({ success: true, message: '회차가 등록되었습니다.', data: saved });
   } catch (error) {
     console.error('꿈다락 회차 등록 오류:', error);
+    // 복합 unique 위반(경합 포함) → 409
+    if (error && (error.code === 11000 || error.code === 11001)) {
+      return res.status(409).json({ success: false, message: '이미 등록된 회차번호입니다.' });
+    }
     handleWriteError(res, error, '회차 등록에 실패했습니다.');
   }
 });
