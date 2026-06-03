@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import './kkumdarak.css';
 import { SECTIONS, ANNOUNCE, MOTION } from './data';
 import MainHero from './MainHero';
 import { KkumdarakAuthProvider, useKkumdarakAuth } from './KkumdarakAuthContext';
+import { villageDiaryAPI } from '../../services/api';
 
 // ── 코드 스플리팅 ────────────────────────────────────────────────
 // 초기 진입(메인 히어로)에 필요 없는 섹션은 청크 분리해 초기 번들 축소.
@@ -165,6 +166,19 @@ const Kkumdarak: React.FC = () => {
   const reduced = useReducedMotion();
   const [section, setSection] = useState<string>(getInitialKkumdarakSection);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // ── 백엔드 콜드스타트 선제 워밍업 (마운트 1회) ───────────────────────
+  //   Render 가 idle 로 잠들면 첫 요청이 15~20초 지연된다. 특히 토큰이 살아있는
+  //   재방문 관리자는 로그인 POST 없이 곧장 '사업관리'를 눌러 그 지연을 그대로 맞는다.
+  //   여기서 인증 불필요한 공개 GET(/api/village-diary)을 fire-and-forget 으로 1회
+  //   쏴 두면, 콜드스타트가 사용자가 페이지를 읽고 로그인하는 동안 소진된다.
+  //   에러는 조용히 무시(워밍업 자체가 목적이라 응답 데이터는 쓰지 않는다).
+  const warmedUpRef = useRef(false);
+  useEffect(() => {
+    if (warmedUpRef.current) return; // StrictMode 이중 마운트 등 중복 발사 방지
+    warmedUpRef.current = true;
+    villageDiaryAPI.get().catch(() => {});
+  }, []);
 
   const go = useCallback((id: string) => {
     setSection(id);
