@@ -1,0 +1,11 @@
+/* 체크리스트(인건비·정산) */
+.kd-checklist { display: flex; flex-direction: column; gap: 12px; }
+.kd-checklist-sub { font-weight: 700; color: var(--kd-ink); margin: 8px 0 2px; font-size: 0.92rem; }
+.kd-check-saving { font-size: 0.8rem; color: var(--kd-teal-deep); }
+.kd-check-table-wrap { overflow-x: auto; }
+.kd-check-cell { text-align: center; }
+.kd-check-list { display: flex; flex-direction: column; gap: 6px; }
+.kd-check-item { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer; }
+.kd-check-item .is-done { text-decoration: line-through; opacity: 0.55; }
+.kd-check-step { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px dashed var(--kd-outline); padding: 6px 0; }
+.kd-check-due { font-size: 0.82rem; color: var(--kd-ink); opacity: 0.6; white-space: nowrap; }

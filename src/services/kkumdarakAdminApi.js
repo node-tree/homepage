@@ -267,6 +267,24 @@ export const kkumdarakAdminAPI = {
     return response.blob();
   },
 
+  // ── 체크리스트(인건비·정산 상태) ───────────────────────────────────────────
+  getChecklist: async (key, { signal } = {}) => {
+    const response = await fetch(`${API_BASE_URL}/kkumdarak/checklist/${key}`, {
+      method: 'GET', headers: authHeaders(), signal,
+    });
+    const data = await parseJsonResponse(response, '체크리스트 조회 실패');
+    return data.data || { template: null, checked: {} };
+  },
+  saveChecklist: async (key, checked) => {
+    const response = await fetch(`${API_BASE_URL}/kkumdarak/checklist/${key}`, {
+      method: 'PUT',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ checked }),
+    });
+    const data = await parseJsonResponse(response, '체크리스트 저장 실패');
+    return (data.data && data.data.checked) || {};
+  },
+
   // ── 증빙(Google Drive) ──────────────────────────────────────────────────────
   // 비목별 필수 증빙 체크리스트 { lineKey: [서식…] }
   getEvidenceChecklist: async ({ signal } = {}) => {
