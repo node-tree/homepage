@@ -84,7 +84,7 @@ const Directions: React.FC = () => {
   ];
 
   return (
-    <section className="kd-figma-map">
+    <section className="kd-figma-map kd-directions">
       {/* 모바일 오시는길 캐릭터-그림자 정렬 패치 — 데스크톱 무영향(@media max-width:900px) */}
       <style>{MAP_MOBILE_SHADOW_CSS}</style>
       <div className="kd-map-desktop" data-name="오시는 길 — Desktop">
