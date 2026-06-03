@@ -3586,6 +3586,34 @@
     height: 5px;
   }
 
+  /* ── 모바일 전용: 프로그램별 콘텐츠 박스 좌측 배치(거울상) ──────────────
+     기본(우측)에서 척추(path)+아바타+카드를 컨테이너 오른쪽 끝에 right-anchor 로 미러.
+     dot/connector 는 JSX 인라인 스타일(left↔right)로 뒤집으므로 여기서는 다루지 않는다.
+     데스크톱은 .kd-diary-mobile 자체가 숨겨지므로(min-width:901px) 영향 없음. */
+  .kd-diary-mobile.is-mobile-left .diary-path {
+    left: auto;
+    right: 42px;
+    border-left-width: 0;
+    border-right-width: 12px;
+    border-right-style: solid;
+    /* 우측 모드(.kd-diary-mobile .diary-path)는 후순위 규칙(border-radius:0)으로
+       끝이 일직선이다. 미러 규칙은 specificity(0,3,0)가 더 높아 border-radius:0 을
+       덮으므로, 여기서도 명시적으로 0 으로 맞춰 좌/우 모드 끝 모양을 동일하게 한다.
+       (drop-shadow filter 는 모바일에서 둘 다 none — 비대칭 아님) */
+    border-radius: 0;
+  }
+  .kd-diary-mobile.is-mobile-left .diary-avatar {
+    left: auto;
+    right: 12px;
+  }
+  .kd-diary-mobile.is-mobile-left .diary-character-scale {
+    transform-origin: right top;
+  }
+  .kd-diary-mobile.is-mobile-left .diary-card {
+    left: auto;
+    right: 140px;
+  }
+
   .kd-figma-map {
     min-height: 950px;
   }
