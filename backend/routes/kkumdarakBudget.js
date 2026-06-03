@@ -396,8 +396,8 @@ router.delete('/transactions/:id', async (req, res) => {
 });
 
 // ── POST /api/kkumdarak/transactions/:id/evidence ────────────────────────────
-//   증빙 파일(base64) → Google Drive 업로드(비목명 폴더) → tx.evidenceMeta push.
-//   Drive 미설정(NO_DRIVE) → 503 안내. (사진 업로드와 별개 기능)
+//   증빙 파일(base64) → GridFS(앱 클라우드) 저장 + (자격증명 있으면) Google Drive 미러.
+//   GridFS 가 기본 저장소라 자격증명 없이도 업로드·다운로드 동작.
 router.post('/transactions/:id/evidence', async (req, res) => {
   try {
     await ensureDBConnection();
@@ -418,28 +418,61 @@ router.post('/transactions/:id/evidence', async (req, res) => {
     const ext = (filename && filename.includes('.')) ? filename.split('.').pop() : 'pdf';
     const ymd = tx.date ? new Date(tx.date).toISOString().slice(0, 10) : '';
     const safe = (s) => String(s || '').replace(/[\\/:*?"<>|]/g, '').slice(0, 30);
-    const driveName = [safe(tx.majorName), safe(tx.subName), safe(formCode || '증빙'), ymd, safe(tx.description)]
+    const evName = [safe(tx.majorName), safe(tx.subName), safe(formCode || '증빙'), ymd, safe(tx.description)]
       .filter(Boolean).join('_') + '.' + ext;
+    const mimeType = extToMime(ext);
 
-    const { uploadEvidence } = require('../lib/driveUpload');
-    const up = await uploadEvidence({
-      buffer,
-      filename: driveName,
-      mimeType: extToMime(ext),
-      majorName: `${tx.majorName}-${tx.subName}`,
-    });
+    // 1) GridFS(기본 저장) — 항상
+    const { put } = require('../lib/evidenceStore');
+    const stored = await put(buffer, evName, mimeType);
+
+    // 2) Google Drive 미러(자격증명 있을 때만 — 없으면 조용히 건너뜀)
+    let driveFileId = '';
+    let webViewLink = '';
+    try {
+      const { uploadEvidence } = require('../lib/driveUpload');
+      const up = await uploadEvidence({ buffer, filename: evName, mimeType, majorName: `${tx.majorName}-${tx.subName}` });
+      driveFileId = up.fileId;
+      webViewLink = up.webViewLink;
+    } catch (e) {
+      if (e.code !== 'NO_DRIVE') console.error('Drive 미러 실패(GridFS 저장은 성공):', e.message);
+    }
+
     tx.evidenceMeta.push({
-      name: driveName, formCode: formCode || '', status: '첨부',
-      driveFileId: up.fileId, webViewLink: up.webViewLink, uploadedAt: new Date(), size: buffer.length,
+      name: evName, formCode: formCode || '', status: '첨부',
+      storageId: stored.fileId, driveFileId, webViewLink,
+      uploadedAt: new Date(), size: buffer.length,
     });
     const saved = await tx.save();
-    res.json({ success: true, message: '증빙을 Drive에 업로드했습니다.', data: saved });
+    res.json({ success: true, message: '증빙을 업로드했습니다.', data: saved });
   } catch (error) {
-    if (error && error.code === 'NO_DRIVE') {
-      return res.status(503).json({ success: false, message: 'Google Drive가 설정되지 않았습니다. 관리자에게 GOOGLE_DRIVE_REFRESH_TOKEN·KKUMDARAK_DRIVE_FOLDER_ID 설정을 요청하세요.' });
-    }
     console.error('꿈다락 증빙 업로드 오류:', error);
     handleWriteError(res, error, '증빙 업로드에 실패했습니다.');
+  }
+});
+
+// ── GET /api/kkumdarak/transactions/:id/evidence/:evId/download ───────────────
+//   GridFS 에서 파일 스트림 다운로드.
+router.get('/transactions/:id/evidence/:evId/download', async (req, res) => {
+  try {
+    await ensureDBConnection();
+    const { id, evId } = req.params;
+    const tx = await KkumdarakTransaction.findById(id);
+    if (!tx) return res.status(404).json({ success: false, message: '집행 건을 찾을 수 없습니다.' });
+    const ev = tx.evidenceMeta.id(evId);
+    if (!ev || !ev.storageId) return res.status(404).json({ success: false, message: '증빙 파일을 찾을 수 없습니다.' });
+
+    const { openDownload } = require('../lib/evidenceStore');
+    const dl = await openDownload(ev.storageId);
+    if (!dl) return res.status(404).json({ success: false, message: '저장된 파일이 없습니다.' });
+
+    res.setHeader('Content-Type', dl.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="evidence"; filename*=UTF-8''${encodeURIComponent(ev.name)}`);
+    if (dl.length) res.setHeader('Content-Length', dl.length);
+    dl.stream.on('error', () => { if (!res.headersSent) res.status(500).end(); }).pipe(res);
+  } catch (error) {
+    console.error('꿈다락 증빙 다운로드 오류:', error);
+    if (!res.headersSent) res.status(500).json({ success: false, message: '증빙 다운로드에 실패했습니다.' });
   }
 });
 
@@ -452,6 +485,10 @@ router.delete('/transactions/:id/evidence/:evId', async (req, res) => {
     if (!tx) return res.status(404).json({ success: false, message: '집행 건을 찾을 수 없습니다.' });
     const ev = tx.evidenceMeta.id(evId);
     if (!ev) return res.status(404).json({ success: false, message: '증빙 항목을 찾을 수 없습니다.' });
+    if (ev.storageId) {
+      try { await require('../lib/evidenceStore').remove(ev.storageId); }
+      catch (e) { console.error('GridFS 삭제 실패(메타는 제거):', e.message); }
+    }
     if (ev.driveFileId) {
       try { await require('../lib/driveUpload').deleteEvidence(ev.driveFileId); }
       catch (e) { console.error('Drive 삭제 실패(메타는 제거):', e.message); }
