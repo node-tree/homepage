@@ -125,3 +125,15 @@
   .kd-dash-session-form .kd-field-input { width: 100%; min-width: 0; }
   .kd-dash-bar-label { font-size: 11px; }
 }
+
+/* ── 마감·일정 알림 ──────────────────────────────────────────── */
+.kd-deadlines { border: 1px solid var(--kd-outline); border-radius: 12px; padding: 16px 18px; margin-bottom: 18px; background: var(--kd-paper); }
+.kd-deadlines-title { font-size: 1rem; font-weight: 700; color: var(--kd-ink); margin: 0 0 10px; }
+.kd-deadlines-recurring { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.86rem; color: var(--kd-teal-deep); }
+.kd-deadlines-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.kd-deadlines-list li { display: grid; grid-template-columns: 84px 96px 1fr; gap: 10px; align-items: center; font-size: 0.9rem; padding: 4px 0; border-top: 1px dashed var(--kd-outline); }
+.kd-deadlines-dday { font-weight: 700; color: var(--kd-ink); }
+.kd-deadlines-date { color: var(--kd-ink); opacity: 0.6; font-variant-numeric: tabular-nums; }
+.kd-deadlines-list li.is-soon .kd-deadlines-dday { color: var(--kd-pink-deep); }
+.kd-deadlines-list li.is-past { opacity: 0.45; }
+.kd-deadlines-list li.is-past .kd-deadlines-dday { color: var(--kd-ink); }

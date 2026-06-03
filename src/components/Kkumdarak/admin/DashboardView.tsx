@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import './dashboardView.css';
 import { useKkumdarakAuth } from '../KkumdarakAuthContext';
 import { kkumdarakAdminAPI } from '../../../services/kkumdarakAdminApi';
+import DeadlinesCard from './DeadlinesCard';
 
 // ═══════════════════════════════════════════════════════════════
 // 대시보드 + 프로그램 관리 (프로그램·실적 슬라이스).
@@ -197,6 +198,8 @@ const DashboardView: React.FC = () => {
 
   return (
     <div className="kd-admin-dashboard">
+      <DeadlinesCard />
+
       {/* 총괄 카드 */}
       <div className="kd-admin-totals">
         <div className="kd-admin-total-card">

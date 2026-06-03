@@ -249,6 +249,33 @@ export const kkumdarakAdminAPI = {
     }
     return { data: data.data || null, raw: data.raw || '', message: data.message || '' };
   },
+
+  // ── 증빙(Google Drive) ──────────────────────────────────────────────────────
+  // 비목별 필수 증빙 체크리스트 { lineKey: [서식…] }
+  getEvidenceChecklist: async ({ signal } = {}) => {
+    const response = await fetch(`${API_BASE_URL}/kkumdarak/evidence/checklist`, {
+      method: 'GET', headers: authHeaders(), signal,
+    });
+    const data = await parseJsonResponse(response, '증빙 체크리스트 조회 실패');
+    return data.data || {};
+  },
+  // 증빙 파일 업로드(base64) → Drive. 미설정 시 503 메시지 throw.
+  uploadEvidence: async (txId, { file, filename, formCode }) => {
+    const response = await fetch(`${API_BASE_URL}/kkumdarak/transactions/${txId}/evidence`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ file, filename, formCode }),
+    });
+    const data = await parseJsonResponse(response, '증빙 업로드 실패');
+    return data.data || null;
+  },
+  deleteEvidence: async (txId, evId) => {
+    const response = await fetch(`${API_BASE_URL}/kkumdarak/transactions/${txId}/evidence/${evId}`, {
+      method: 'DELETE', headers: authHeaders(),
+    });
+    const data = await parseJsonResponse(response, '증빙 삭제 실패');
+    return data.data || null;
+  },
 };
 
 export default kkumdarakAdminAPI;
