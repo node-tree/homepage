@@ -9,6 +9,8 @@ const { PROGRAM_MAP, TOTAL_QUOTA, TOTAL_SESSIONS } = require('../data/kkumdarakP
 const { generateChulgangForm } = require('../lib/chulgangForm');
 const { generateHoeuirokForm } = require('../lib/hoeuirokForm');
 const { generateGyeolgwaForm } = require('../lib/gyeolgwaForm');
+const KkumdarakChecklist = require('../models/KkumdarakChecklist');
+const { PERSONNEL, SETTLEMENT } = require('../data/checklistTemplates');
 const { buildProgramStats } = require('../lib/programStats');
 const { runAiDraft } = require('../lib/aiDraft');
 const { decodePhoto } = require('../lib/photoDecode');
@@ -772,6 +774,43 @@ router.get('/dashboard/summary', async (req, res) => {
   } catch (error) {
     console.error('꿈다락 대시보드 집계 오류:', error);
     res.status(500).json({ success: false, message: '대시보드 집계에 실패했습니다.', error: error.message });
+  }
+});
+
+// ── 체크리스트(인건비·정산 상태 트래커) ─────────────────────────────────────
+const CHECKLIST_TEMPLATES = { personnel: PERSONNEL, settlement: SETTLEMENT };
+
+// GET /api/kkumdarak/checklist/:key — 템플릿 + 저장된 체크 상태
+router.get('/checklist/:key', async (req, res) => {
+  try {
+    const { key } = req.params;
+    const template = CHECKLIST_TEMPLATES[key];
+    if (!template) return res.status(404).json({ success: false, message: '존재하지 않는 체크리스트입니다.' });
+    await ensureDBConnection();
+    const doc = await KkumdarakChecklist.findOne({ key });
+    res.json({ success: true, data: { template, checked: (doc && doc.data) || {} } });
+  } catch (error) {
+    console.error('꿈다락 체크리스트 조회 오류:', error);
+    res.status(500).json({ success: false, message: '체크리스트 조회에 실패했습니다.', error: error.message });
+  }
+});
+
+// PUT /api/kkumdarak/checklist/:key — 체크 상태 저장(전체 교체)
+router.put('/checklist/:key', async (req, res) => {
+  try {
+    const { key } = req.params;
+    if (!CHECKLIST_TEMPLATES[key]) return res.status(404).json({ success: false, message: '존재하지 않는 체크리스트입니다.' });
+    await ensureDBConnection();
+    const data = (req.body && req.body.checked) || {};
+    const doc = await KkumdarakChecklist.findOneAndUpdate(
+      { key },
+      { $set: { data } },
+      { new: true, upsert: true, setDefaultsOnInsert: true },
+    );
+    res.json({ success: true, message: '저장되었습니다.', data: { checked: doc.data } });
+  } catch (error) {
+    console.error('꿈다락 체크리스트 저장 오류:', error);
+    handleWriteError(res, error, '체크리스트 저장에 실패했습니다.');
   }
 });
 

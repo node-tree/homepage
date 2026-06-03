@@ -7,6 +7,7 @@ import { kkumdarakAdminAPI } from '../../../services/kkumdarakAdminApi';
 import LedgerView from './LedgerView';
 import DashboardView from './DashboardView';
 import FormsView from './FormsView';
+import ChecklistView from './ChecklistView';
 
 // ═══════════════════════════════════════════════════════════════
 // 꿈다락 사업관리 셸 — 로그인(kkumdarak scope) 전용.
@@ -17,13 +18,15 @@ import FormsView from './FormsView';
 //   → 한 탭의 쓰기 결과가 다른 탭 복귀 시 즉시 반영(별도 invalidate 불필요).
 // ═══════════════════════════════════════════════════════════════
 
-type AdminTab = 'budget' | 'ledger' | 'dashboard' | 'forms';
+type AdminTab = 'budget' | 'ledger' | 'dashboard' | 'forms' | 'personnel' | 'settlement';
 
 const TABS: { id: AdminTab; label: string; ready: boolean }[] = [
   { id: 'budget', label: '비목 현황', ready: true },
   { id: 'ledger', label: '집행 장부', ready: true },
   { id: 'dashboard', label: '대시보드', ready: true },
   { id: 'forms', label: '문서/서식', ready: true },
+  { id: 'personnel', label: '인건비·4대보험', ready: true },
+  { id: 'settlement', label: '정산', ready: true },
 ];
 
 // ── 백엔드 GET /api/kkumdarak/budget/summary 응답 타입 ──
@@ -302,6 +305,8 @@ const BusinessAdmin: React.FC = () => {
         {tab === 'ledger' && <LedgerView />}
         {tab === 'dashboard' && <DashboardView />}
         {tab === 'forms' && <FormsView />}
+        {tab === 'personnel' && <ChecklistView kind="personnel" />}
+        {tab === 'settlement' && <ChecklistView kind="settlement" />}
       </div>
     </section>
   );
