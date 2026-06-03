@@ -8,6 +8,7 @@ const budget = require('../data/kkumdarakBudget');
 const { PROGRAM_MAP, TOTAL_QUOTA, TOTAL_SESSIONS } = require('../data/kkumdarakPrograms');
 const { generateChulgangForm } = require('../lib/chulgangForm');
 const { generateHoeuirokForm } = require('../lib/hoeuirokForm');
+const { generateGyeolgwaForm } = require('../lib/gyeolgwaForm');
 const { buildProgramStats } = require('../lib/programStats');
 const { runAiDraft } = require('../lib/aiDraft');
 const { decodePhoto } = require('../lib/photoDecode');
@@ -550,6 +551,27 @@ router.post('/forms/hoeuirok', async (req, res) => {
       message: '회의록 생성에 실패했습니다.',
       error: error.message,
     });
+  }
+});
+
+// ── POST /api/kkumdarak/forms/gyeolgwa ───────────────────────────────────────
+//   서식6 기획·개발 결과보고서 — body(32개 값) → HWPX 다운로드. (chulgang/hoeuirok 동일 패턴)
+router.post('/forms/gyeolgwa', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const { buffer, filenameBase } = await generateGyeolgwaForm(body);
+    const utf8Name = `${filenameBase}.hwpx`;
+    res.setHeader('Content-Type', 'application/haansofthwp+zip');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="gyeolgwa.hwpx"; filename*=UTF-8''${encodeURIComponent(utf8Name)}`,
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Length', buffer.length);
+    return res.status(200).send(buffer);
+  } catch (error) {
+    console.error('꿈다락 결과보고서 생성 오류:', error);
+    return res.status(500).json({ success: false, message: '결과보고서 생성에 실패했습니다.', error: error.message });
   }
 });
 

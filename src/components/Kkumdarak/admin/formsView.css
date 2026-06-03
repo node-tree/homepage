@@ -132,3 +132,5 @@
 @media (max-width: 760px) {
   .kd-forms-textareas { grid-template-columns: 1fr; }
 }
+
+.kd-forms-section-title { font-weight: 700; color: var(--kd-ink); margin: 14px 0 6px; font-size: 0.95rem; }

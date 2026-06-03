@@ -78,13 +78,33 @@ function buildHoeuirokMessages({ program, 회의주제, 키워드 }) {
   ];
 }
 
+// 서식6 결과보고서 — 세부내용 4항목(역할·과정·실행·평가) JSON
+function buildGyeolgwaMessages({ program, 키워드 }) {
+  const ctx = programContext(program);
+  const user = [
+    ctx,
+    키워드 ? `키워드: ${키워드}` : '',
+    '',
+    '위 정보에만 근거해 프로그램 기획·개발 결과보고서의 세부내용을 작성하라. 아래 JSON 형식으로만 출력한다:',
+    '{"내용_역할":"…","내용_과정":"…","내용_실행":"…","내용_평가":"…"}',
+    '역할=기획개발 과정에서의 나의 역할, 과정=발상·개발·관리 과정, 실행=참여자 상호작용, 평가=피드백·성과·개선점.',
+    '각 항목 2~4문장, 한국어 공문 톤. 제공되지 않은 사실은 쓰지 마라.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  return [
+    { role: 'system', content: SYSTEM_GUARD },
+    { role: 'user', content: user },
+  ];
+}
+
 // 라우트 진입점. body 검증 + 프롬프트 + KNUH 호출 + 파싱.
 //   반환: { parsed, raw } (parsed=null 이면 파싱 실패 — 라우트가 raw 동봉).
 //   throw: KNUH_NO_KEY / KNUH_TIMEOUT / KNUH_HTTP_ERROR 등(라우트가 503 매핑).
 async function runAiDraft(body) {
   const { docType, programKey } = body || {};
-  if (docType !== 'chulgang' && docType !== 'hoeuirok') {
-    const err = new Error("docType 은 'chulgang' 또는 'hoeuirok' 이어야 합니다.");
+  if (docType !== 'chulgang' && docType !== 'hoeuirok' && docType !== 'gyeolgwa') {
+    const err = new Error("docType 은 'chulgang'·'hoeuirok'·'gyeolgwa' 중 하나여야 합니다.");
     err.code = 'BAD_REQUEST';
     throw err;
   }
@@ -95,19 +115,23 @@ async function runAiDraft(body) {
     throw err;
   }
 
-  const messages =
-    docType === 'chulgang'
-      ? buildChulgangMessages({
-          program,
-          회차: body.회차,
-          교육주제: body.교육주제,
-          키워드: body.키워드,
-        })
-      : buildHoeuirokMessages({
-          program,
-          회의주제: body.회의주제,
-          키워드: body.키워드,
-        });
+  let messages;
+  if (docType === 'chulgang') {
+    messages = buildChulgangMessages({
+      program,
+      회차: body.회차,
+      교육주제: body.교육주제,
+      키워드: body.키워드,
+    });
+  } else if (docType === 'hoeuirok') {
+    messages = buildHoeuirokMessages({
+      program,
+      회의주제: body.회의주제,
+      키워드: body.키워드,
+    });
+  } else {
+    messages = buildGyeolgwaMessages({ program, 키워드: body.키워드 });
+  }
 
   const content = await chat(messages, { maxTokens: 2000 });
   return parseJsonContent(content);
