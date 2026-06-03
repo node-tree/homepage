@@ -519,13 +519,29 @@ router.get('/evidences', async (req, res) => {
   }
 });
 
-// POST /api/kkumdarak/evidences — 파일(base64) 업로드 + 태그 → GridFS + 레코드.
+// POST /api/kkumdarak/evidences — 파일(base64) 업로드 또는 링크(url) → 레코드.
 router.post('/evidences', async (req, res) => {
   try {
     await ensureDBConnection();
-    const { file, filename, majorCode, subCode, formCode, note } = req.body || {};
+    const { file, url, filename, majorCode, subCode, formCode, note } = req.body || {};
+
+    // 링크(URL) 증빙 — 파일 없이 외부 링크만 등록
+    if (url && typeof url === 'string' && !file) {
+      const trimmed = url.trim();
+      if (!/^https?:\/\//i.test(trimmed)) {
+        return res.status(400).json({ success: false, message: '링크는 http(s):// 로 시작해야 합니다.' });
+      }
+      const doc = await KkumdarakEvidence.create({
+        filename: (filename && filename.trim()) || trimmed.slice(0, 80),
+        kind: 'link', url: trimmed,
+        majorCode: majorCode || '', subCode: subCode || '',
+        formCode: formCode || '', note: note || '', size: 0,
+      });
+      return res.json({ success: true, message: '링크 증빙을 추가했습니다.', data: doc });
+    }
+
     if (!file || typeof file !== 'string') {
-      return res.status(400).json({ success: false, message: '증빙 파일(base64)이 필요합니다.' });
+      return res.status(400).json({ success: false, message: '증빙 파일(base64) 또는 링크(url)가 필요합니다.' });
     }
     const buffer = Buffer.from(file.replace(/^data:[^;]+;base64,/, ''), 'base64');
     if (!buffer.length) return res.status(400).json({ success: false, message: '빈 파일입니다.' });

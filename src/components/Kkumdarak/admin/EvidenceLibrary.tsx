@@ -18,6 +18,8 @@ interface Line {
 interface Ev {
   _id: string;
   filename: string;
+  kind?: 'file' | 'link';
+  url?: string;
   majorCode: string;
   subCode: string;
   formCode: string;
@@ -53,6 +55,7 @@ const EvidenceLibrary: React.FC = () => {
   const [upLine, setUpLine] = useState('');
   const [formCode, setFormCode] = useState('');
   const [note, setNote] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
 
   const onAuthErr = useCallback(
     (err: any): boolean => {
@@ -135,6 +138,37 @@ const EvidenceLibrary: React.FC = () => {
     }
   };
 
+  const handleAddLink = async () => {
+    const u = linkUrl.trim();
+    if (!u || busy) return;
+    if (!/^https?:\/\//i.test(u)) {
+      setError('링크는 http(s):// 로 시작해야 합니다.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const [majorCode, subCode] = upLine ? upLine.split('-') : ['', ''];
+      await kkumdarakAdminAPI.uploadEvidenceFile({
+        url: u,
+        filename: formCode || u,
+        majorCode,
+        subCode,
+        formCode,
+        note,
+      });
+      setLinkUrl('');
+      setNote('');
+      setFormCode('');
+      await loadRows();
+    } catch (err: any) {
+      if (onAuthErr(err)) return;
+      setError(err?.message || '링크 추가에 실패했습니다.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleDownload = async (ev: Ev) => {
     if (busy) return;
     setBusy(true);
@@ -187,9 +221,23 @@ const EvidenceLibrary: React.FC = () => {
         <input className="kd-field-input" placeholder="서식/증빙명 (예: 서식11 지출결의서)" value={formCode} onChange={(e) => setFormCode(e.target.value)} />
         <input className="kd-field-input" placeholder="메모(선택)" value={note} onChange={(e) => setNote(e.target.value)} />
         <label className={`kd-ledger-action kd-ledger-action--form${busy ? ' is-busy' : ''}`}>
-          {busy ? '업로드 중…' : '＋ 증빙 업로드'}
+          {busy ? '업로드 중…' : '＋ 파일 업로드'}
           <input type="file" hidden onChange={handleUpload} disabled={busy} />
         </label>
+      </div>
+
+      {/* 링크(URL) 증빙 추가 — 위 비목·서식·메모 태그 공유 */}
+      <div className="kd-evlib-upload">
+        <input
+          className="kd-field-input"
+          style={{ minWidth: 280, flex: 1 }}
+          placeholder="증빙 링크 (https:// … — 예: 구글드라이브 공유 링크)"
+          value={linkUrl}
+          onChange={(e) => setLinkUrl(e.target.value)}
+        />
+        <button type="button" className="kd-ledger-action kd-ledger-action--form" onClick={handleAddLink} disabled={busy || !linkUrl.trim()}>
+          ＋ 링크 추가
+        </button>
       </div>
 
       {/* 필터 + 체크리스트 */}
@@ -244,12 +292,18 @@ const EvidenceLibrary: React.FC = () => {
                   <td className="kd-admin-td-name">{ev.filename}</td>
                   <td className="kd-admin-td-name">{lineLabel[`${ev.majorCode}-${ev.subCode}`] || '—'}</td>
                   <td className="kd-admin-td-name">{ev.formCode || '—'}</td>
-                  <td className="kd-admin-td-name">{won(ev.size)}</td>
+                  <td className="kd-admin-td-name">{ev.kind === 'link' ? '🔗 링크' : won(ev.size)}</td>
                   <td className="kd-admin-td-name">{(ev.createdAt || '').slice(0, 10)}</td>
                   <td className="kd-admin-td-name kd-ledger-actions">
-                    <button type="button" className="kd-ledger-action" onClick={() => handleDownload(ev)} disabled={busy}>
-                      다운로드
-                    </button>
+                    {ev.kind === 'link' ? (
+                      <a className="kd-ledger-action" href={ev.url} target="_blank" rel="noreferrer">
+                        열기
+                      </a>
+                    ) : (
+                      <button type="button" className="kd-ledger-action" onClick={() => handleDownload(ev)} disabled={busy}>
+                        다운로드
+                      </button>
+                    )}
                     {ev.webViewLink ? (
                       <a className="kd-evidence-drive" href={ev.webViewLink} target="_blank" rel="noreferrer">Drive</a>
                     ) : null}

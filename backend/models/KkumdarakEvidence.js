@@ -7,7 +7,9 @@ const mongoose = require('mongoose');
 // ─────────────────────────────────────────────────────────────────────────────
 const kkumdarakEvidenceSchema = new mongoose.Schema(
   {
-    filename: { type: String, required: true }, // 표시 파일명
+    filename: { type: String, required: true }, // 표시 이름(파일명 또는 링크 제목)
+    kind: { type: String, default: 'file' }, // 'file'(GridFS 업로드) | 'link'(외부 URL)
+    url: { type: String, default: '' }, // kind='link' 일 때 외부 링크
     majorCode: { type: String, default: '' }, // 비목 코드(태그, 선택)
     subCode: { type: String, default: '' }, // 세목 코드(태그, 선택)
     formCode: { type: String, default: '' }, // 서식/증빙 종류(예: 서식11 지출결의서)
