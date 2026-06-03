@@ -10,6 +10,7 @@ const { generateChulgangForm } = require('../lib/chulgangForm');
 const { generateHoeuirokForm } = require('../lib/hoeuirokForm');
 const { generateGyeolgwaForm } = require('../lib/gyeolgwaForm');
 const KkumdarakChecklist = require('../models/KkumdarakChecklist');
+const KkumdarakEvidence = require('../models/KkumdarakEvidence');
 const { PERSONNEL, SETTLEMENT } = require('../data/checklistTemplates');
 const { buildProgramStats } = require('../lib/programStats');
 const { runAiDraft } = require('../lib/aiDraft');
@@ -496,6 +497,97 @@ router.delete('/transactions/:id/evidence/:evId', async (req, res) => {
     ev.deleteOne();
     const saved = await tx.save();
     res.json({ success: true, message: '증빙을 삭제했습니다.', data: saved });
+  } catch (error) {
+    console.error('꿈다락 증빙 삭제 오류:', error);
+    handleWriteError(res, error, '증빙 삭제에 실패했습니다.');
+  }
+});
+
+// ── 증빙 라이브러리(독립 메뉴) — 집행 건과 분리된 증빙 파일 관리 ───────────────
+// GET /api/kkumdarak/evidences?majorCode= — 목록(비목 필터). 본문 제외 메타만.
+router.get('/evidences', async (req, res) => {
+  try {
+    await ensureDBConnection();
+    const q = {};
+    if (req.query.majorCode) q.majorCode = req.query.majorCode;
+    if (req.query.subCode) q.subCode = req.query.subCode;
+    const rows = await KkumdarakEvidence.find(q).sort({ createdAt: -1 }).lean();
+    res.json({ success: true, data: rows, count: rows.length });
+  } catch (error) {
+    console.error('꿈다락 증빙 목록 오류:', error);
+    res.status(500).json({ success: false, message: '증빙 목록 조회에 실패했습니다.', error: error.message });
+  }
+});
+
+// POST /api/kkumdarak/evidences — 파일(base64) 업로드 + 태그 → GridFS + 레코드.
+router.post('/evidences', async (req, res) => {
+  try {
+    await ensureDBConnection();
+    const { file, filename, majorCode, subCode, formCode, note } = req.body || {};
+    if (!file || typeof file !== 'string') {
+      return res.status(400).json({ success: false, message: '증빙 파일(base64)이 필요합니다.' });
+    }
+    const buffer = Buffer.from(file.replace(/^data:[^;]+;base64,/, ''), 'base64');
+    if (!buffer.length) return res.status(400).json({ success: false, message: '빈 파일입니다.' });
+    if (buffer.length > 7 * 1024 * 1024) return res.status(400).json({ success: false, message: '증빙 파일은 7MB 이하만 가능합니다.' });
+
+    const ext = (filename && filename.includes('.')) ? filename.split('.').pop() : 'pdf';
+    const mimeType = extToMime(ext);
+    const safe = (s) => String(s || '').replace(/[\\/:*?"<>|]/g, '').slice(0, 40);
+    const displayName = filename ? safe(filename) : `${safe(formCode || '증빙')}.${ext}`;
+
+    const { put } = require('../lib/evidenceStore');
+    const stored = await put(buffer, displayName, mimeType);
+
+    let driveFileId = '', webViewLink = '';
+    try {
+      const { uploadEvidence } = require('../lib/driveUpload');
+      const major = (budget.BUDGET_LINE_MAP[`${majorCode}-${subCode}`] || {});
+      const up = await uploadEvidence({ buffer, filename: displayName, mimeType, majorName: major.majorName || '증빙' });
+      driveFileId = up.fileId; webViewLink = up.webViewLink;
+    } catch (e) { if (e.code !== 'NO_DRIVE') console.error('Drive 미러 실패(GridFS 성공):', e.message); }
+
+    const doc = await KkumdarakEvidence.create({
+      filename: displayName, majorCode: majorCode || '', subCode: subCode || '',
+      formCode: formCode || '', note: note || '', storageId: stored.fileId,
+      driveFileId, webViewLink, size: buffer.length, mimeType,
+    });
+    res.json({ success: true, message: '증빙을 업로드했습니다.', data: doc });
+  } catch (error) {
+    console.error('꿈다락 증빙 업로드 오류:', error);
+    handleWriteError(res, error, '증빙 업로드에 실패했습니다.');
+  }
+});
+
+// GET /api/kkumdarak/evidences/:id/download — GridFS 스트림.
+router.get('/evidences/:id/download', async (req, res) => {
+  try {
+    await ensureDBConnection();
+    const doc = await KkumdarakEvidence.findById(req.params.id);
+    if (!doc || !doc.storageId) return res.status(404).json({ success: false, message: '증빙 파일을 찾을 수 없습니다.' });
+    const { openDownload } = require('../lib/evidenceStore');
+    const dl = await openDownload(doc.storageId);
+    if (!dl) return res.status(404).json({ success: false, message: '저장된 파일이 없습니다.' });
+    res.setHeader('Content-Type', dl.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="evidence"; filename*=UTF-8''${encodeURIComponent(doc.filename)}`);
+    if (dl.length) res.setHeader('Content-Length', dl.length);
+    dl.stream.on('error', () => { if (!res.headersSent) res.status(500).end(); }).pipe(res);
+  } catch (error) {
+    console.error('꿈다락 증빙 다운로드 오류:', error);
+    if (!res.headersSent) res.status(500).json({ success: false, message: '증빙 다운로드에 실패했습니다.' });
+  }
+});
+
+// DELETE /api/kkumdarak/evidences/:id
+router.delete('/evidences/:id', async (req, res) => {
+  try {
+    await ensureDBConnection();
+    const doc = await KkumdarakEvidence.findById(req.params.id);
+    if (!doc) return res.status(404).json({ success: false, message: '증빙을 찾을 수 없습니다.' });
+    if (doc.storageId) { try { await require('../lib/evidenceStore').remove(doc.storageId); } catch (e) { console.error('GridFS 삭제 실패:', e.message); } }
+    if (doc.driveFileId) { try { await require('../lib/driveUpload').deleteEvidence(doc.driveFileId); } catch (e) { console.error('Drive 삭제 실패:', e.message); } }
+    await doc.deleteOne();
+    res.json({ success: true, message: '증빙을 삭제했습니다.', data: { id: doc._id.toString() } });
   } catch (error) {
     console.error('꿈다락 증빙 삭제 오류:', error);
     handleWriteError(res, error, '증빙 삭제에 실패했습니다.');

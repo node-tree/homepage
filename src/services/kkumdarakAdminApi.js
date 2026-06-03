@@ -286,6 +286,43 @@ export const kkumdarakAdminAPI = {
   },
 
   // ── 증빙(Google Drive) ──────────────────────────────────────────────────────
+  // ── 증빙 라이브러리(독립 메뉴) ──────────────────────────────────────────────
+  getEvidences: async (majorCode, { signal } = {}) => {
+    const qs = majorCode ? `?majorCode=${encodeURIComponent(majorCode)}` : '';
+    const response = await fetch(`${API_BASE_URL}/kkumdarak/evidences${qs}`, {
+      method: 'GET', headers: authHeaders(), signal,
+    });
+    const data = await parseJsonResponse(response, '증빙 목록 조회 실패');
+    return data.data || [];
+  },
+  uploadEvidenceFile: async (payload) => {
+    const response = await fetch(`${API_BASE_URL}/kkumdarak/evidences`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload),
+    });
+    const data = await parseJsonResponse(response, '증빙 업로드 실패');
+    return data.data || null;
+  },
+  downloadEvidenceFile: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/kkumdarak/evidences/${id}/download`, {
+      method: 'GET', headers: authHeaders(),
+    });
+    if (response.status === 401 || response.status === 403) throw handleAuthExpiry();
+    if (!response.ok) {
+      const e = await response.json().catch(() => ({}));
+      throw new Error(e.message || `다운로드 실패 (${response.status})`);
+    }
+    return response.blob();
+  },
+  deleteEvidenceFile: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/kkumdarak/evidences/${id}`, {
+      method: 'DELETE', headers: authHeaders(),
+    });
+    const data = await parseJsonResponse(response, '증빙 삭제 실패');
+    return data.data || null;
+  },
+
   // 비목별 필수 증빙 체크리스트 { lineKey: [서식…] }
   getEvidenceChecklist: async ({ signal } = {}) => {
     const response = await fetch(`${API_BASE_URL}/kkumdarak/evidence/checklist`, {

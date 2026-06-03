@@ -8,6 +8,7 @@ import LedgerView from './LedgerView';
 import DashboardView from './DashboardView';
 import FormsView from './FormsView';
 import ChecklistView from './ChecklistView';
+import EvidenceLibrary from './EvidenceLibrary';
 
 // ═══════════════════════════════════════════════════════════════
 // 꿈다락 사업관리 셸 — 로그인(kkumdarak scope) 전용.
@@ -18,11 +19,12 @@ import ChecklistView from './ChecklistView';
 //   → 한 탭의 쓰기 결과가 다른 탭 복귀 시 즉시 반영(별도 invalidate 불필요).
 // ═══════════════════════════════════════════════════════════════
 
-type AdminTab = 'budget' | 'ledger' | 'dashboard' | 'forms' | 'personnel' | 'settlement';
+type AdminTab = 'budget' | 'ledger' | 'evidence' | 'dashboard' | 'forms' | 'personnel' | 'settlement';
 
 const TABS: { id: AdminTab; label: string; ready: boolean }[] = [
   { id: 'budget', label: '비목 현황', ready: true },
   { id: 'ledger', label: '집행 장부', ready: true },
+  { id: 'evidence', label: '증빙 관리', ready: true },
   { id: 'dashboard', label: '대시보드', ready: true },
   { id: 'forms', label: '문서/서식', ready: true },
   { id: 'personnel', label: '인건비·4대보험', ready: true },
@@ -303,6 +305,7 @@ const BusinessAdmin: React.FC = () => {
       <div className="kd-admin-panel">
         {tab === 'budget' && <BudgetView />}
         {tab === 'ledger' && <LedgerView />}
+        {tab === 'evidence' && <EvidenceLibrary />}
         {tab === 'dashboard' && <DashboardView />}
         {tab === 'forms' && <FormsView />}
         {tab === 'personnel' && <ChecklistView kind="personnel" />}
