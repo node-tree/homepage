@@ -311,6 +311,18 @@ export const kkumdarakAdminAPI = {
     const data = await parseJsonResponse(response, '증빙 삭제 실패');
     return data.data || null;
   },
+  // GridFS 에서 증빙 파일 다운로드(blob)
+  downloadEvidence: async (txId, evId) => {
+    const response = await fetch(`${API_BASE_URL}/kkumdarak/transactions/${txId}/evidence/${evId}/download`, {
+      method: 'GET', headers: authHeaders(),
+    });
+    if (response.status === 401 || response.status === 403) throw handleAuthExpiry();
+    if (!response.ok) {
+      const e = await response.json().catch(() => ({}));
+      throw new Error(e.message || `증빙 다운로드 실패 (${response.status})`);
+    }
+    return response.blob();
+  },
 };
 
 export default kkumdarakAdminAPI;

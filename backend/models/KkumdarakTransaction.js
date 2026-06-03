@@ -28,8 +28,9 @@ const evidenceMetaSchema = new mongoose.Schema(
     name: { type: String, required: true }, // 증빙 파일/서식 표시명(서식명 규칙 파일명)
     formCode: { type: String, default: '' }, // 서식 코드 (예: 서식11, 서식5, 세금계산서)
     status: { type: String, default: '미첨부' }, // 미첨부 | 첨부 | 확인 등 (메타만)
-    driveFileId: { type: String, default: '' }, // Google Drive 파일 ID
-    webViewLink: { type: String, default: '' }, // Drive 열람 링크
+    storageId: { type: String, default: '' }, // GridFS 파일 ID(기본 저장소 — 다운로드)
+    driveFileId: { type: String, default: '' }, // Google Drive 파일 ID(옵션)
+    webViewLink: { type: String, default: '' }, // Drive 열람 링크(옵션)
     uploadedAt: { type: Date, default: null }, // 업로드 시각
     size: { type: Number, default: 0 }, // 바이트 크기
   },

@@ -72,6 +72,28 @@ const EvidencePanel: React.FC<Props> = ({ tx, checklist, onChanged, onAuthErr })
     }
   };
 
+  const handleDownload = async (it: EvidenceItem) => {
+    if (!it._id || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const blob = await kkumdarakAdminAPI.downloadEvidence(tx._id, it._id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = it.name || '증빙';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      if (onAuthErr(err)) return;
+      setError(err?.message || '다운로드에 실패했습니다.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleDelete = async (evId?: string) => {
     if (!evId || busy) return;
     if (typeof window !== 'undefined' && !window.confirm('이 증빙을 삭제할까요?')) return;
@@ -125,12 +147,21 @@ const EvidencePanel: React.FC<Props> = ({ tx, checklist, onChanged, onAuthErr })
         <ul className="kd-evidence-list">
           {items.map((it) => (
             <li key={it._id || it.name}>
-              {it.webViewLink ? (
-                <a href={it.webViewLink} target="_blank" rel="noreferrer">{it.name}</a>
-              ) : (
-                <span>{it.name}</span>
-              )}
+              <span className="kd-evidence-name">{it.name}</span>
               {it.formCode ? <em className="kd-evidence-form"> · {it.formCode}</em> : null}
+              <button
+                type="button"
+                className="kd-ledger-action"
+                onClick={() => handleDownload(it)}
+                disabled={busy}
+              >
+                다운로드
+              </button>
+              {it.webViewLink ? (
+                <a className="kd-evidence-drive" href={it.webViewLink} target="_blank" rel="noreferrer">
+                  Drive
+                </a>
+              ) : null}
               <button
                 type="button"
                 className="kd-ledger-action kd-ledger-action--danger"
