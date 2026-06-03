@@ -56,6 +56,7 @@ const EvidenceLibrary: React.FC = () => {
   const [formCode, setFormCode] = useState('');
   const [note, setNote] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
+  const [mode, setMode] = useState<'file' | 'link'>('file'); // 증빙 추가 방식
 
   const onAuthErr = useCallback(
     (err: any): boolean => {
@@ -208,7 +209,15 @@ const EvidenceLibrary: React.FC = () => {
 
   return (
     <div className="kd-evlib">
-      {/* 업로드 */}
+      {/* 증빙 추가 — 파일/링크 중 선택 */}
+      <div className="kd-evlib-modetoggle" role="tablist">
+        <button type="button" className={mode === 'file' ? 'active' : ''} onClick={() => setMode('file')}>
+          파일 업로드
+        </button>
+        <button type="button" className={mode === 'link' ? 'active' : ''} onClick={() => setMode('link')}>
+          링크 추가
+        </button>
+      </div>
       <div className="kd-evlib-upload">
         <select className="kd-field-input" value={upLine} onChange={(e) => setUpLine(e.target.value)} title="비목(선택)">
           <option value="">비목 선택(선택)</option>
@@ -220,24 +229,26 @@ const EvidenceLibrary: React.FC = () => {
         </select>
         <input className="kd-field-input" placeholder="서식/증빙명 (예: 서식11 지출결의서)" value={formCode} onChange={(e) => setFormCode(e.target.value)} />
         <input className="kd-field-input" placeholder="메모(선택)" value={note} onChange={(e) => setNote(e.target.value)} />
-        <label className={`kd-ledger-action kd-ledger-action--form${busy ? ' is-busy' : ''}`}>
-          {busy ? '업로드 중…' : '＋ 파일 업로드'}
-          <input type="file" hidden onChange={handleUpload} disabled={busy} />
-        </label>
-      </div>
 
-      {/* 링크(URL) 증빙 추가 — 위 비목·서식·메모 태그 공유 */}
-      <div className="kd-evlib-upload">
-        <input
-          className="kd-field-input"
-          style={{ minWidth: 280, flex: 1 }}
-          placeholder="증빙 링크 (https:// … — 예: 구글드라이브 공유 링크)"
-          value={linkUrl}
-          onChange={(e) => setLinkUrl(e.target.value)}
-        />
-        <button type="button" className="kd-ledger-action kd-ledger-action--form" onClick={handleAddLink} disabled={busy || !linkUrl.trim()}>
-          ＋ 링크 추가
-        </button>
+        {mode === 'file' ? (
+          <label className={`kd-ledger-action kd-ledger-action--form${busy ? ' is-busy' : ''}`}>
+            {busy ? '업로드 중…' : '＋ 파일 선택'}
+            <input type="file" hidden onChange={handleUpload} disabled={busy} />
+          </label>
+        ) : (
+          <>
+            <input
+              className="kd-field-input"
+              style={{ minWidth: 260, flex: 1 }}
+              placeholder="증빙 링크 (https:// … — 예: 구글드라이브 공유 링크)"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+            />
+            <button type="button" className="kd-ledger-action kd-ledger-action--form" onClick={handleAddLink} disabled={busy || !linkUrl.trim()}>
+              ＋ 링크 추가
+            </button>
+          </>
+        )}
       </div>
 
       {/* 필터 + 체크리스트 */}
