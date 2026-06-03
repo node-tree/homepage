@@ -392,6 +392,94 @@ router.delete('/transactions/:id', async (req, res) => {
   }
 });
 
+// ── POST /api/kkumdarak/transactions/:id/evidence ────────────────────────────
+//   증빙 파일(base64) → Google Drive 업로드(비목명 폴더) → tx.evidenceMeta push.
+//   Drive 미설정(NO_DRIVE) → 503 안내. (사진 업로드와 별개 기능)
+router.post('/transactions/:id/evidence', async (req, res) => {
+  try {
+    await ensureDBConnection();
+    const { id } = req.params;
+    const { file, filename, formCode } = req.body || {};
+    if (!file || typeof file !== 'string') {
+      return res.status(400).json({ success: false, message: '증빙 파일(base64)이 필요합니다.' });
+    }
+    const buffer = Buffer.from(file.replace(/^data:[^;]+;base64,/, ''), 'base64');
+    if (!buffer.length) return res.status(400).json({ success: false, message: '빈 파일입니다.' });
+    if (buffer.length > 7 * 1024 * 1024) {
+      return res.status(400).json({ success: false, message: '증빙 파일은 7MB 이하만 가능합니다.' });
+    }
+    const tx = await KkumdarakTransaction.findById(id);
+    if (!tx) return res.status(404).json({ success: false, message: '집행 건을 찾을 수 없습니다.' });
+
+    // 서식명 규칙 파일명: {비목}_{세목}_{서식}_{날짜}_{내용}.ext
+    const ext = (filename && filename.includes('.')) ? filename.split('.').pop() : 'pdf';
+    const ymd = tx.date ? new Date(tx.date).toISOString().slice(0, 10) : '';
+    const safe = (s) => String(s || '').replace(/[\\/:*?"<>|]/g, '').slice(0, 30);
+    const driveName = [safe(tx.majorName), safe(tx.subName), safe(formCode || '증빙'), ymd, safe(tx.description)]
+      .filter(Boolean).join('_') + '.' + ext;
+
+    const { uploadEvidence } = require('../lib/driveUpload');
+    const up = await uploadEvidence({
+      buffer,
+      filename: driveName,
+      mimeType: extToMime(ext),
+      majorName: `${tx.majorName}-${tx.subName}`,
+    });
+    tx.evidenceMeta.push({
+      name: driveName, formCode: formCode || '', status: '첨부',
+      driveFileId: up.fileId, webViewLink: up.webViewLink, uploadedAt: new Date(), size: buffer.length,
+    });
+    const saved = await tx.save();
+    res.json({ success: true, message: '증빙을 Drive에 업로드했습니다.', data: saved });
+  } catch (error) {
+    if (error && error.code === 'NO_DRIVE') {
+      return res.status(503).json({ success: false, message: 'Google Drive가 설정되지 않았습니다. 관리자에게 GOOGLE_DRIVE_REFRESH_TOKEN·KKUMDARAK_DRIVE_FOLDER_ID 설정을 요청하세요.' });
+    }
+    console.error('꿈다락 증빙 업로드 오류:', error);
+    handleWriteError(res, error, '증빙 업로드에 실패했습니다.');
+  }
+});
+
+// ── DELETE /api/kkumdarak/transactions/:id/evidence/:evId ─────────────────────
+router.delete('/transactions/:id/evidence/:evId', async (req, res) => {
+  try {
+    await ensureDBConnection();
+    const { id, evId } = req.params;
+    const tx = await KkumdarakTransaction.findById(id);
+    if (!tx) return res.status(404).json({ success: false, message: '집행 건을 찾을 수 없습니다.' });
+    const ev = tx.evidenceMeta.id(evId);
+    if (!ev) return res.status(404).json({ success: false, message: '증빙 항목을 찾을 수 없습니다.' });
+    if (ev.driveFileId) {
+      try { await require('../lib/driveUpload').deleteEvidence(ev.driveFileId); }
+      catch (e) { console.error('Drive 삭제 실패(메타는 제거):', e.message); }
+    }
+    ev.deleteOne();
+    const saved = await tx.save();
+    res.json({ success: true, message: '증빙을 삭제했습니다.', data: saved });
+  } catch (error) {
+    console.error('꿈다락 증빙 삭제 오류:', error);
+    handleWriteError(res, error, '증빙 삭제에 실패했습니다.');
+  }
+});
+
+// ── GET /api/kkumdarak/evidence/checklist ─────────────────────────────────────
+//   비목별 필수 증빙 체크리스트(정본 기준) — 프론트가 첨부 formCode 와 대조.
+router.get('/evidence/checklist', async (req, res) => {
+  const { EVIDENCE_CHECKLIST } = require('../data/evidenceChecklist');
+  res.json({ success: true, data: EVIDENCE_CHECKLIST });
+});
+
+// 확장자 → MIME (Drive 업로드용)
+function extToMime(ext) {
+  const m = {
+    pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+    gif: 'image/gif', hwp: 'application/x-hwp', hwpx: 'application/haansofthwp+zip',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  };
+  return m[String(ext || '').toLowerCase()] || 'application/octet-stream';
+}
+
 // ── POST /api/kkumdarak/forms/chulgang ───────────────────────────────────────
 //   body(클라이언트가 조립한 21개 값) + 선택 photo(base64 PNG)로 서식5 출강확인서 HWPX 다운로드.
 //   photo 있으면 BinData/chulgang_photo.png 교체. (/forms prefix — 충돌 없음)

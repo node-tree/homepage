@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useKkumdarakAuth } from '../KkumdarakAuthContext';
 import { kkumdarakAdminAPI } from '../../../services/kkumdarakAdminApi';
+import EvidencePanel from './EvidencePanel';
 
 // ═══════════════════════════════════════════════════════════════
 // 집행 장부 (흐름 A) — 집행 입력 폼 + 목록 + 필터 + 수정/삭제.
@@ -14,6 +15,8 @@ import { kkumdarakAdminAPI } from '../../../services/kkumdarakAdminApi';
 // ═══════════════════════════════════════════════════════════════
 
 const GENERAL_SUPPLY_KEY = '210-01';
+const BUSINESS_PROMO_KEY = '240-01'; // 업무추진비/사업추진비
+const BUSINESS_PROMO_SUBITEMS = ['다과비', '회의식비']; // 회의식비 누계 ≤100만 검증 입력경로
 
 // 백엔드 enum 과 1:1 (Korean 라벨은 표시용, value 는 enum 그대로 전송)
 const PAYMENT_METHODS: { value: 'transfer' | 'card'; label: string }[] = [
@@ -74,6 +77,7 @@ interface Transaction {
   payeeName: string;
   paymentMethod: 'transfer' | 'card';
   incomeType: IncomeType | null;
+  evidenceMeta?: any[];
 }
 
 interface FormState {
@@ -134,6 +138,10 @@ const LedgerView: React.FC = () => {
   const [rows, setRows] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // 증빙 패널(확장 행) + 비목별 필수증빙 체크리스트
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [checklist, setChecklist] = useState<Record<string, string[]>>({});
 
   // 폼
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -205,6 +213,16 @@ const LedgerView: React.FC = () => {
     return () => controller.abort();
   }, [loadRows]);
 
+  // 비목별 필수 증빙 체크리스트 1회 로드(증빙 패널용, 실패는 비치명)
+  useEffect(() => {
+    const controller = new AbortController();
+    kkumdarakAdminAPI
+      .getEvidenceChecklist({ signal: controller.signal })
+      .then((c) => setChecklist(c || {}))
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+
   // 드롭다운/라벨 — summary 에서 파생(중복 상태 제거)
   const lineOpts = useMemo(() => summary?.lines || [], [summary]);
   const subItemOpts = useMemo(
@@ -229,6 +247,7 @@ const LedgerView: React.FC = () => {
   // ── 폼 파생값 ──
   const grossNum = Number(form.grossAmount) || 0;
   const isGeneralSupply = form.lineKey === GENERAL_SUPPLY_KEY;
+  const isBusinessPromo = form.lineKey === BUSINESS_PROMO_KEY;
   const autoWh = autoWithholding(form.incomeType, grossNum);
   const isAutoWh = autoWh !== null; // 3.3/8.8 → 자동·잠금
   const effectiveWh = isAutoWh ? (autoWh as number) : Number(form.withholdingAmount) || 0;
@@ -299,7 +318,7 @@ const LedgerView: React.FC = () => {
       date: form.date, // YYYY-MM-DD 그대로(TZ 시프트 방지)
       majorCode,
       subCode,
-      subItem: isGeneralSupply && form.subItem ? form.subItem : null,
+      subItem: (isGeneralSupply || isBusinessPromo) && form.subItem ? form.subItem : null,
       description: form.description.trim(),
       grossAmount: grossNum,
       withholdingAmount: effectiveWh,
@@ -411,7 +430,8 @@ const LedgerView: React.FC = () => {
               value={form.lineKey}
               onChange={(e) => {
                 setField('lineKey', e.target.value);
-                if (e.target.value !== GENERAL_SUPPLY_KEY) setField('subItem', '');
+                if (e.target.value !== GENERAL_SUPPLY_KEY && e.target.value !== BUSINESS_PROMO_KEY)
+                  setField('subItem', '');
               }}
               required
             >
@@ -436,6 +456,24 @@ const LedgerView: React.FC = () => {
                 {subItemOpts.map((s) => (
                   <option key={s.key} value={s.key}>
                     {s.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {isBusinessPromo && (
+            <label className="kd-field">
+              <span className="kd-field-label">세세목 (업무추진비)</span>
+              <select
+                className="kd-field-input"
+                value={form.subItem}
+                onChange={(e) => setField('subItem', e.target.value)}
+              >
+                <option value="">선택…</option>
+                {BUSINESS_PROMO_SUBITEMS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
                   </option>
                 ))}
               </select>
@@ -506,6 +544,15 @@ const LedgerView: React.FC = () => {
               placeholder="0"
               required
             />
+            {grossNum >= 300000 && (
+              <p className="kd-evidence-threshold">
+                {grossNum >= 5000000
+                  ? '⚠ 500만원↑ — 계약서 + 비교견적서 필요'
+                  : grossNum >= 2000000
+                    ? '⚠ 200만원↑ — 비교견적서 필요'
+                    : '※ 30만원↑ — 적격증빙(세금계산서/계산서/카드/현금영수증) 필수'}
+              </p>
+            )}
           </label>
 
           <label className="kd-field">
@@ -643,33 +690,59 @@ const LedgerView: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {rows.map((tx) => (
-                <tr key={tx._id}>
-                  <td className="kd-admin-td-name">{(tx.date || '').slice(0, 10)}</td>
-                  <td className="kd-admin-td-name">
-                    {lineLabel[`${tx.majorCode}-${tx.subCode}`] || `${tx.majorCode}-${tx.subCode}`}
-                  </td>
-                  <td className="kd-admin-td-name">
-                    {tx.description}
-                    {tx.subItem && <span className="kd-admin-sub-tag">{tx.subItem}</span>}
-                  </td>
-                  <td className="kd-admin-td-num">{won(tx.grossAmount)}</td>
-                  <td className="kd-admin-td-num">{won(tx.netAmount)}</td>
-                  <td className="kd-admin-td-name">{tx.payeeName || '—'}</td>
-                  <td className="kd-admin-td-name kd-ledger-actions">
-                    <button type="button" className="kd-ledger-action" onClick={() => beginEdit(tx)}>
-                      수정
-                    </button>
-                    <button
-                      type="button"
-                      className="kd-ledger-action kd-ledger-action--danger"
-                      onClick={() => handleDelete(tx._id)}
-                    >
-                      삭제
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {rows.map((tx) => {
+                const evN = Array.isArray(tx.evidenceMeta) ? tx.evidenceMeta.length : 0;
+                return (
+                  <React.Fragment key={tx._id}>
+                    <tr>
+                      <td className="kd-admin-td-name">{(tx.date || '').slice(0, 10)}</td>
+                      <td className="kd-admin-td-name">
+                        {lineLabel[`${tx.majorCode}-${tx.subCode}`] || `${tx.majorCode}-${tx.subCode}`}
+                      </td>
+                      <td className="kd-admin-td-name">
+                        {tx.description}
+                        {tx.subItem && <span className="kd-admin-sub-tag">{tx.subItem}</span>}
+                      </td>
+                      <td className="kd-admin-td-num">{won(tx.grossAmount)}</td>
+                      <td className="kd-admin-td-num">{won(tx.netAmount)}</td>
+                      <td className="kd-admin-td-name">{tx.payeeName || '—'}</td>
+                      <td className="kd-admin-td-name kd-ledger-actions">
+                        <button
+                          type="button"
+                          className={`kd-ledger-action${expandedId === tx._id ? ' active' : ''}`}
+                          onClick={() => setExpandedId(expandedId === tx._id ? null : tx._id)}
+                        >
+                          증빙{evN ? ` (${evN})` : ''}
+                        </button>
+                        <button type="button" className="kd-ledger-action" onClick={() => beginEdit(tx)}>
+                          수정
+                        </button>
+                        <button
+                          type="button"
+                          className="kd-ledger-action kd-ledger-action--danger"
+                          onClick={() => handleDelete(tx._id)}
+                        >
+                          삭제
+                        </button>
+                      </td>
+                    </tr>
+                    {expandedId === tx._id && (
+                      <tr className="kd-evidence-row">
+                        <td colSpan={7}>
+                          <EvidencePanel
+                            tx={tx}
+                            checklist={checklist}
+                            onChanged={(updated) =>
+                              setRows((rs) => rs.map((r) => (r._id === updated._id ? updated : r)))
+                            }
+                            onAuthErr={onAuthErr}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>

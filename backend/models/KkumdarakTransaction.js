@@ -17,15 +17,23 @@ const mongoose = require('mongoose');
 // 회의식비 누계 규칙(기획 §1-1 편성제한): subItem === '회의식비' 인 건의 grossAmount 합.
 //   (회의식비는 편성 라인이 아니라 트랜잭션 단위 누계로만 검증된다 — summary 라우트 참조)
 //   TODO: 후속 단계에서 subItem 을 코드화(코드테이블/enum)할 예정 — 현재는 자유텍스트 일치.
+//
+// 증빙(evidenceMeta): Google Drive 업로드 메타. 각 항목에 _id 를 둬(자동) DELETE 가 evidenceId
+//   로 개별 항목을 pull 할 수 있게 한다(_id:false 면 DocumentArray.id()/pull() 이 동작 안 함).
+//   driveFileId/webViewLink/uploadedAt/size 는 업로드 시 채워진다(미업로드 항목은 비어 있음).
 // ─────────────────────────────────────────────────────────────────────────────
 
 const evidenceMetaSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true }, // 증빙 파일/서식 표시명
-    formCode: { type: String, default: '' }, // 서식 코드 (예: 서식5, 지출결의서)
+    name: { type: String, required: true }, // 증빙 파일/서식 표시명(서식명 규칙 파일명)
+    formCode: { type: String, default: '' }, // 서식 코드 (예: 서식11, 서식5, 세금계산서)
     status: { type: String, default: '미첨부' }, // 미첨부 | 첨부 | 확인 등 (메타만)
+    driveFileId: { type: String, default: '' }, // Google Drive 파일 ID
+    webViewLink: { type: String, default: '' }, // Drive 열람 링크
+    uploadedAt: { type: Date, default: null }, // 업로드 시각
+    size: { type: Number, default: 0 }, // 바이트 크기
   },
-  { _id: false }
+  // _id 활성(기본) — DELETE /evidence/:evId 가 subdoc 을 id 로 pull 하려면 필요.
 );
 
 const kkumdarakTransactionSchema = new mongoose.Schema(
@@ -72,7 +80,7 @@ const kkumdarakTransactionSchema = new mongoose.Schema(
       default: null,
     },
 
-    // 증빙 메타만 (실제 파일은 흐름 B에서 Google Drive)
+    // 증빙 메타 (실제 파일은 Google Drive — driveUpload.js)
     evidenceMeta: { type: [evidenceMetaSchema], default: [] },
 
     note: { type: String, default: '' },

@@ -63,3 +63,21 @@
 @media (max-width: 760px) {
   .kd-ledger-monitor { grid-template-columns: 1fr 1fr; }
 }
+
+/* ── 증빙 패널 (집행 행 확장) ───────────────────────────────── */
+.kd-evidence-row > td { background: color-mix(in srgb, var(--kd-ink) 3%, transparent); padding: 14px 16px; }
+.kd-evidence { display: flex; flex-direction: column; gap: 10px; }
+.kd-evidence-checklist { font-size: 0.86rem; color: var(--kd-ink); }
+.kd-evidence-checklist .kd-evidence-label { font-weight: 700; margin-right: 8px; }
+.kd-evidence-checklist ul { list-style: none; display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 6px 0 0; padding: 0; }
+.kd-evidence-checklist li.is-covered { color: var(--kd-teal-deep); }
+.kd-evidence-checklist li.is-missing { color: var(--kd-ink); opacity: 0.6; }
+.kd-evidence-upload { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.kd-evidence-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.kd-evidence-list li { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; }
+.kd-evidence-list a { color: var(--kd-teal-deep); text-decoration: underline; }
+.kd-evidence-form { color: var(--kd-ink); opacity: 0.6; font-style: normal; }
+.kd-evidence-empty { font-size: 0.85rem; color: var(--kd-ink); opacity: 0.55; margin: 0; }
+
+/* ── 증빙 임계 안내(총액 기준) ─────────────────────────────── */
+.kd-evidence-threshold { margin: 4px 0 0; font-size: 0.8rem; color: var(--kd-pink-deep); }
