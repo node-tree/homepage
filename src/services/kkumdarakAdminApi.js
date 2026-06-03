@@ -250,6 +250,23 @@ export const kkumdarakAdminAPI = {
     return { data: data.data || null, raw: data.raw || '', message: data.message || '' };
   },
 
+  // 서식6 결과보고서 HWPX (blob)
+  downloadGyeolgwaForm: async (body) => {
+    const response = await fetch(`${API_BASE_URL}/kkumdarak/forms/gyeolgwa`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(body || {}),
+    });
+    if (response.status === 401 || response.status === 403) {
+      throw handleAuthExpiry();
+    }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `결과보고서 생성 실패 (${response.status})`);
+    }
+    return response.blob();
+  },
+
   // ── 증빙(Google Drive) ──────────────────────────────────────────────────────
   // 비목별 필수 증빙 체크리스트 { lineKey: [서식…] }
   getEvidenceChecklist: async ({ signal } = {}) => {
