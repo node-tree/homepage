@@ -1,15 +1,29 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import './kkumdarak.css';
 import { SECTIONS, ANNOUNCE, MOTION } from './data';
 import MainHero from './MainHero';
-import Intro from './Intro';
-import Programs from './Programs';
-import Schedule from './Schedule';
-import VillageDiary from './VillageDiary';
-import Directions from './Directions';
-import BusinessAdmin from './admin/BusinessAdmin';
 import { KkumdarakAuthProvider, useKkumdarakAuth } from './KkumdarakAuthContext';
+
+// ── 코드 스플리팅 ────────────────────────────────────────────────
+// 초기 진입(메인 히어로)에 필요 없는 섹션은 청크 분리해 초기 번들 축소.
+// 특히 admin/BusinessAdmin 은 로그인 게이트 + 무거운 폼/장부/이미지 처리(imageToPng·PhotoUpload)를
+// 포함하므로 공개 방문자 번들에서 반드시 분리한다(정적 import 시 히어로와 같은 청크에 동봉됨).
+const Intro = lazy(() => import('./Intro'));
+const Programs = lazy(() => import('./Programs'));
+const Schedule = lazy(() => import('./Schedule'));
+const VillageDiary = lazy(() => import('./VillageDiary'));
+const Directions = lazy(() => import('./Directions'));
+const BusinessAdmin = lazy(() => import('./admin/BusinessAdmin'));
+
+// 섹션 청크 로딩 폴백 — 화면 점프 없이 최소 높이만 확보.
+const SectionFallback: React.FC = () => (
+  <div className="kd-section-loading" aria-busy="true" aria-live="polite">
+    <span className="kd-section-loading-dot" />
+    <span className="kd-section-loading-dot" />
+    <span className="kd-section-loading-dot" />
+  </div>
+);
 
 // ═══════════════════════════════════════════════════════════════
 // 꿈다락 문화예술학교 마이크로사이트 — /kkumdarak 독립 라우트
@@ -86,6 +100,7 @@ function NavWalker() {
             src={`/kkumdarak/chars-v2/character-12/frame-0${i}.svg`}
             alt=""
             className="kd-loop-frame"
+            decoding="async"
           />
         ))}
       </div>
@@ -288,7 +303,10 @@ const Kkumdarak: React.FC = () => {
             exit={{ opacity: 0, y: -24, scale: 0.98 }}
             transition={{ duration: 0.28, ease: MOTION.easeOutBack }}
           >
-            {renderSection()}
+            {/* 레이지 섹션 청크 로딩 경계 — main(MainHero)은 정적이라 폴백 없이 즉시 표시 */}
+            <Suspense fallback={<SectionFallback />}>
+              {renderSection()}
+            </Suspense>
 
             <footer className="kd-footer">
               <div className="kd-footer-logo">꿈다락</div>
