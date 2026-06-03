@@ -64,7 +64,25 @@ const ChecklistView: React.FC<Props> = ({ kind }) => {
     }
   };
 
-  if (loading) return <p className="kd-admin-loading">불러오는 중…</p>;
+  if (loading) {
+    return (
+      <div
+        className="kd-checklist"
+        role="status"
+        aria-busy="true"
+        aria-live="polite"
+        aria-label="불러오는 중"
+      >
+        <span className="kd-skel-sronly">불러오는 중…</span>
+        <span className="kd-skel-bar" style={{ width: '32%', height: 14 }} aria-hidden="true" />
+        <div className="kd-check-list" aria-hidden="true">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <span key={i} className="kd-skel-bar" style={{ width: `${72 - i * 6}%`, height: 18 }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
   if (!template) return <p className="kd-forms-error">{error || '템플릿이 없습니다.'}</p>;
 
   const Box = ({ k, label }: { k: string; label: string }) => (

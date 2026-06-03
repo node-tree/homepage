@@ -659,7 +659,30 @@ const LedgerView: React.FC = () => {
       )}
 
       {loading ? (
-        <div className="kd-admin-state">집행 내역을 불러오는 중…</div>
+        <div
+          className="kd-admin-table-wrap"
+          role="status"
+          aria-busy="true"
+          aria-live="polite"
+          aria-label="집행 내역을 불러오는 중"
+        >
+          <span className="kd-skel-sronly">집행 내역을 불러오는 중…</span>
+          <table className="kd-admin-table kd-ledger-table kd-skel-table" aria-hidden="true">
+            <tbody>
+              {[0, 1, 2, 3, 4, 5].map((r) => (
+                <tr key={r}>
+                  <td className="kd-admin-td-name"><span className="kd-skel-bar" style={{ width: '70%' }} /></td>
+                  <td className="kd-admin-td-name"><span className="kd-skel-bar" style={{ width: '60%' }} /></td>
+                  <td className="kd-admin-td-name"><span className="kd-skel-bar" style={{ width: '85%' }} /></td>
+                  <td className="kd-admin-td-num"><span className="kd-skel-bar" style={{ width: '55%' }} /></td>
+                  <td className="kd-admin-td-num"><span className="kd-skel-bar" style={{ width: '55%' }} /></td>
+                  <td className="kd-admin-td-name"><span className="kd-skel-bar" style={{ width: '50%' }} /></td>
+                  <td className="kd-admin-td-name"><span className="kd-skel-bar" style={{ width: '60%' }} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : rows.length === 0 ? (
         <div className="kd-admin-state">등록된 집행 건이 없습니다.</div>
       ) : (

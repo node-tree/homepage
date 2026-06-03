@@ -85,6 +85,57 @@ const pct = (n: number): string => `${(n ?? 0).toFixed(2)}%`;
 // 일반수용비 라인 식별자(세세목 펼침 대상)
 const GENERAL_SUPPLY_KEY = '210-01';
 
+// ── 로딩 스켈레톤 (블로킹 전체화면 "불러오는 중…" 대체) ──────────────────────
+//   레이아웃(총괄 카드 그리드 + 표 골격)은 즉시 그려지고 데이터만 비워둔다.
+//   색·반짝임은 businessAdmin.css 의 --kd-* 토큰/ink-with-alpha 만 사용(임의 컬러 금지).
+//   총괄 카드는 .kd-admin-totals 반응형 그리드를 재사용 → 데스크톱·모바일 공통.
+const SkelBar: React.FC<{ w?: string; h?: number }> = ({ w = '100%', h = 14 }) => (
+  <span className="kd-skel-bar" style={{ width: w, height: h }} aria-hidden="true" />
+);
+
+const SkelTotals: React.FC = () => (
+  <div className="kd-admin-totals" aria-hidden="true">
+    {[0, 1, 2, 3].map((i) => (
+      <div key={i} className="kd-admin-total-card">
+        <SkelBar w="52%" h={12} />
+        <SkelBar w="78%" h={20} />
+      </div>
+    ))}
+  </div>
+);
+
+const BudgetSkeleton: React.FC = () => (
+  <div
+    className="kd-admin-budget kd-skel"
+    role="status"
+    aria-busy="true"
+    aria-live="polite"
+    aria-label="예산 현황을 불러오는 중"
+  >
+    <span className="kd-skel-sronly">예산 현황을 불러오는 중…</span>
+    <SkelTotals />
+    <div className="kd-admin-badges" aria-hidden="true">
+      <span className="kd-skel-badge" />
+      <span className="kd-skel-badge" />
+    </div>
+    <div className="kd-admin-table-wrap" aria-hidden="true">
+      <table className="kd-admin-table kd-skel-table">
+        <tbody>
+          {[0, 1, 2, 3, 4, 5, 6].map((r) => (
+            <tr key={r}>
+              <td className="kd-admin-td-name"><SkelBar w="70%" /></td>
+              <td className="kd-admin-td-num"><SkelBar w="60%" /></td>
+              <td className="kd-admin-td-num"><SkelBar w="60%" /></td>
+              <td className="kd-admin-td-num"><SkelBar w="60%" /></td>
+              <td className="kd-admin-td-num"><SkelBar w="40%" /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
+
 const BudgetView: React.FC = () => {
   const { logout } = useKkumdarakAuth();
   const [data, setData] = useState<BudgetSummary | null>(null);
@@ -121,7 +172,7 @@ const BudgetView: React.FC = () => {
   }, [load]);
 
   if (loading) {
-    return <div className="kd-admin-state">예산 현황을 불러오는 중…</div>;
+    return <BudgetSkeleton />;
   }
 
   if (error) {
