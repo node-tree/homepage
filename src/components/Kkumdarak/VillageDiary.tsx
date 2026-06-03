@@ -32,9 +32,32 @@ type ProgramDiary = {
 const DIARY_DESKTOP_CSS = `
 @media (min-width: 901px) {
   /* 카드 폭 축소 + 척추쪽 모서리 고정(바깥쪽으로만 축소) — 가로 늘어짐 완화 */
-  .kd-diary-desktop .diary-card { width: 320px; }
+  .kd-diary-desktop .diary-card { width: 320px; transition: width 0.2s ease, left 0.2s ease; }
   .kd-diary-desktop .diary-card.left { left: 240px; }   /* 오른쪽 모서리 560 유지 */
   .kd-diary-desktop .diary-card.right { left: 880px; }  /* 왼쪽 모서리 880 유지 */
+
+  /* ── 사진 있는 카드만 데스크톱에서 가로로 넓힘 — 폭 확장(양옆 여백 축소) ──
+     사용자 요청: "높이말고 폭을 늘려라, 양 사이드 여백이 많이 남는다".
+     스탬프(사진 없는) 카드는 320px 유지(정돈된 균형 보존),
+     사진 카드만 320 → 470px 로 넓혀 풀블리드 커버 이미지가 가로로 시원하게.
+     커넥터 접점(왼쪽 카드 오른쪽 모서리 560, 오른쪽 카드 왼쪽 모서리 880)은
+     반드시 고정 → 바깥쪽으로만 확장해 척추/커넥터 정렬을 건드리지 않는다.
+     1440 고정 캔버스는 overflow:hidden 로 가운데 정렬·클리핑되며, 풀 가시성의
+     최저 뷰포트(1280px)에서 보이는 창은 [80, 1360]. 접점 고정 시 가능한 최대 폭은
+     좌우 480px → 여유 두고 470px 로 확장.
+       · 오른쪽 카드: left 880 고정, width 470 → 오른쪽 모서리 880+470=1350
+         (1280px 가시창 우측 1360 안쪽 — 10px 여유)
+       · 왼쪽 카드: 오른쪽 모서리 560 고정 → left = 560-470 = 90
+         (1280px 가시창 좌측 80 바깥 — 10px 여유, 외곽 여백 140→90 으로 축소)
+     모바일(max-width:900px)에는 무영향 — 이 블록은 min-width:901px 한정. */
+  .kd-diary-desktop .diary-card.left:has(.diary-photo-img) {
+    width: 470px;
+    left: 90px;                   /* 오른쪽 모서리 560 유지 (560-470) */
+  }
+  .kd-diary-desktop .diary-card.right:has(.diary-photo-img) {
+    width: 470px;
+    left: 880px;                  /* 왼쪽 모서리 880 유지, 오른쪽 모서리 1350 */
+  }
 
   /* 사진 없는(빨강) 카드: 모바일 스탬프형 밴드 (의도적인 빨강 + 가운데 큰 점) */
   .kd-diary-desktop .diary-photo {
@@ -42,7 +65,7 @@ const DIARY_DESKTOP_CSS = `
     transition: height 0.2s ease;
   }
   .kd-diary-desktop .diary-photo:has(.diary-photo-img) {
-    height: 240px;                /* 사진 있는 카드: 크게 — 이미지가 주연 */
+    height: 290px;                /* 가로(470) 확장 위주 — 세로는 290으로, 470/290≈1.62:1 와이드 비율 */
   }
   /* 색 점을 밴드 안에 크게 박은 스탬프 — 모바일과 동일 톤.
      커넥터(카드 상단 기준 115px)가 점을 향하도록 점 중심을 115px에 정렬. */
@@ -139,6 +162,17 @@ const PROGRAMS_DEFAULT: ProgramDiary[] = [
 
 // localStorage 는 백엔드가 단일 진실 소스로 승격된 후에는 *오프라인 캐시*로만 사용한다.
 //   마운트 시 먼저 캐시로 즉시 렌더 후, 백엔드 GET 성공 시 교체. 저장 base 는 항상 백엔드 오버라이드(serverOverrideRef).
+// ── 모바일 전용: 프로그램별 콘텐츠 박스 정렬 방향 ──────────────────
+// 모바일에서만 마을일기 카드(콘텐츠 박스)를 척추(세로 path) 기준으로 좌/우 어디에 둘지
+// program.id 로 매핑한다. 데스크톱은 card.side 로 카드별 좌우가 정해지므로 전혀 영향 없음.
+// 기본값은 'right'(현재 동작: 카드가 척추 오른쪽). 명시 매핑된 프로그램만 거울상(left)으로 뒤집힌다.
+// mergePrograms 는 .cards 만 오버라이드하므로 이 맵은 백엔드 병합과 무관하게 항상 유지된다.
+type MobileSide = 'left' | 'right';
+const MOBILE_SIDE_MAP: Record<string, MobileSide> = {
+  'jangam-chaekjeong': 'right', // 장암 책정 — 현행 유지(오른쪽)
+  'maeul-signal': 'left',      // 마을의 신호 — 왼쪽
+};
+
 const LS_KEY = 'villageDiary_v1';
 
 // localStorage 오프라인 캐시에서 카드 오버라이드 불러오기(빠른 초기 렌더용)
@@ -350,6 +384,10 @@ const VillageDiary: React.FC = () => {
     () => programs.find((p) => p.id === selected) ?? programs[0],
     [selected, programs],
   );
+
+  // 모바일 전용 콘텐츠 박스 정렬 방향 — program.id 매핑(미지정 시 'right' = 현행).
+  //   데스크톱은 card.side 로 카드별 좌우가 정해지므로 이 값과 무관하다.
+  const mobileSide: MobileSide = MOBILE_SIDE_MAP[program.id] ?? 'right';
 
   // 현재 프로그램 카드 (편집 중이면 draft, 아니면 저장된 값)
   const cards = useMemo(() => {
@@ -717,7 +755,7 @@ const VillageDiary: React.FC = () => {
             {cards.map((card, index) => {
               const y = FIRST_CARD_Y + index * CARD_GAP;
               return (
-                <React.Fragment key={`${program.id}-${card.date}-${index}`}>
+                <React.Fragment key={`${program.id}-${index}`}>
                   <i
                     ref={setDotRef(index)}
                     className={`diary-dot ${card.side}`}
@@ -780,7 +818,10 @@ const VillageDiary: React.FC = () => {
         )}
       </div>
 
-      <div className="kd-diary-mobile" data-name="마을일기 — Mobile">
+      <div
+        className={`kd-diary-mobile${mobileSide === 'left' ? ' is-mobile-left' : ''}`}
+        data-name="마을일기 — Mobile"
+      >
         <div className="kd-section-rule kd-section-rule--s4" />
         <h1>마을일기</h1>
         <p className="diary-sub">프로그램을 따라 걷는 기록</p>
@@ -788,7 +829,10 @@ const VillageDiary: React.FC = () => {
 
         {hasContent ? (
           <>
-            <div className="diary-path" style={{ borderLeftColor: program.accent }} />
+            <div
+              className="diary-path"
+              style={{ borderLeftColor: program.accent, borderRightColor: program.accent }}
+            />
             <div
               className="diary-avatar"
               ref={mobileAvatarRef}
@@ -803,9 +847,25 @@ const VillageDiary: React.FC = () => {
               // dot/connector를 path 시각 중심선(x=48)에 정렬 — side 무관
               const lx = MOBILE_PATH_CENTER_X;
               return (
-                <React.Fragment key={`m-${program.id}-${card.date}-${index}`}>
-                  <i ref={setMobileDotRef(index)} className="diary-dot" style={{ top: y + MOBILE_DOT_Y_OFFSET, left: lx - 11, background: card.dot }} />
-                  <i ref={setMobileConnectorRef(index)} className="diary-connector" style={{ top: y + MOBILE_CONNECTOR_Y_OFFSET, left: lx }} />
+                <React.Fragment key={`m-${program.id}-${index}`}>
+                  <i
+                    ref={setMobileDotRef(index)}
+                    className="diary-dot"
+                    style={
+                      mobileSide === 'left'
+                        ? { top: y + MOBILE_DOT_Y_OFFSET, right: lx - 11, background: card.dot }
+                        : { top: y + MOBILE_DOT_Y_OFFSET, left: lx - 11, background: card.dot }
+                    }
+                  />
+                  <i
+                    ref={setMobileConnectorRef(index)}
+                    className="diary-connector"
+                    style={
+                      mobileSide === 'left'
+                        ? { top: y + MOBILE_CONNECTOR_Y_OFFSET, right: lx }
+                        : { top: y + MOBILE_CONNECTOR_Y_OFFSET, left: lx }
+                    }
+                  />
                   <DiaryCard
                     title={card.title}
                     date={card.date}
