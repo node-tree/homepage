@@ -2,7 +2,7 @@
 // 꿈다락 예산 마스터 (고정 상수) — e나라도움 비목/세목 코드와 1:1 정합.
 //
 // 기획서: Obsidian Vault/NODE TREE/회계/2026/꿈다락/꿈다락-관리페이지-기획.md §1-1
-// 출처(검증): 꿈다락-회계-실무정리.md(합계·39.79%), 꿈다락-오리엔테이션-요약.md L194
+// 출처(검증): 변경교부신청서 산출식표(검산 diff 0). 합계·세세목·인력활동비 모두 정합.
 //   (인력활동비 합계 = 상용임금+일용임금+고용부담금+기획/개발활동비 ≤ 총사업비 40%)
 //
 // 이 모듈은 순수 상수 + 검증(assert)만 한다. DB 접근/쓰기 없음.
@@ -27,12 +27,13 @@ const PROJECT_PERIOD = {
 
 // 일반수용비(210/01) 세세목 — 한 단계 더 쪼갠 내부 항목.
 // isPersonnelActivity: 인력활동비(40% 제한)에 합산되는 항목 표시.
+// 출처: 변경교부신청서 산출식표(합 66,453,000 검산 diff 0).
 const GENERAL_SUPPLY_SUBITEMS = [
   { key: '기획개발활동비', label: '기획개발활동비', amount: 34294850, isPersonnelActivity: true },
   { key: '교육강사비', label: '교육강사비', amount: 13335000, isPersonnelActivity: false },
-  { key: '특별강의비', label: '특별강의비', amount: 2250000, isPersonnelActivity: false },
+  { key: '특별강의비', label: '특별강의비', amount: 1625000, isPersonnelActivity: false },
   { key: '원고료', label: '원고료', amount: 1750000, isPersonnelActivity: false },
-  { key: '교육재료비', label: '교육재료비', amount: 12285850, isPersonnelActivity: false },
+  { key: '교육재료비', label: '교육재료비', amount: 12858150, isPersonnelActivity: false },
   { key: '인쇄물출력비', label: '인쇄물출력비', amount: 1040000, isPersonnelActivity: false },
   { key: '회계검증수수료', label: '회계검증수수료', amount: 1100000, isPersonnelActivity: false },
   { key: '기타진행비', label: '기타진행비', amount: 450000, isPersonnelActivity: false },
@@ -55,7 +56,7 @@ const BUDGET_LINES = [
     lineKey: '210-01',
     majorCode: '210', majorName: '운영비',
     subCode: '01', subName: '일반수용비',
-    amount: 66505700,
+    amount: 66453000,
     paymentHint: '이체+카드',
     isPersonnelActivity: false, // 세세목 단위로 판정 (기획개발활동비만 해당)
     subItems: GENERAL_SUPPLY_SUBITEMS,
@@ -64,7 +65,7 @@ const BUDGET_LINES = [
     lineKey: '210-02',
     majorCode: '210', majorName: '운영비',
     subCode: '02', subName: '공공요금및제세',
-    amount: 2322000,
+    amount: 2381000,
     paymentHint: '카드',
     isPersonnelActivity: false,
   },
@@ -72,7 +73,7 @@ const BUDGET_LINES = [
     lineKey: '210-07',
     majorCode: '210', majorName: '운영비',
     subCode: '07', subName: '임차료',
-    amount: 1400000,
+    amount: 1200000,
     paymentHint: '이체/카드',
     isPersonnelActivity: false,
   },
@@ -80,7 +81,7 @@ const BUDGET_LINES = [
     lineKey: '210-14',
     majorCode: '210', majorName: '운영비',
     subCode: '14', subName: '일반용역비',
-    amount: 17580000,
+    amount: 17330000,
     paymentHint: '계좌이체',
     isPersonnelActivity: false,
   },
@@ -88,7 +89,7 @@ const BUDGET_LINES = [
     lineKey: '220-01',
     majorCode: '220', majorName: '여비',
     subCode: '01', subName: '국내여비',
-    amount: 1500000,
+    amount: 1441000,
     paymentHint: '이체/카드',
     isPersonnelActivity: false,
   },
@@ -96,7 +97,7 @@ const BUDGET_LINES = [
     lineKey: '240-01',
     majorCode: '240', majorName: '업무추진비',
     subCode: '01', subName: '사업추진비',
-    amount: 5200000,
+    amount: 5650000,
     paymentHint: '카드',
     isPersonnelActivity: false,
   },
@@ -104,14 +105,14 @@ const BUDGET_LINES = [
     lineKey: '320-01',
     majorCode: '320', majorName: '민간이전',
     subCode: '01', subName: '고용부담금',
-    amount: 492300,
+    amount: 545000,
     paymentHint: '이체',
     isPersonnelActivity: true,
   },
 ];
 
 // 인력활동비 합계 = 라인 플래그(상용임금·고용부담금) + 일반수용비 세세목 중 인력활동비(기획개발활동비).
-//   출처 L194: 상용임금 + 일용임금(편성 없음) + 고용부담금 + 기획/개발활동비.
+//   출처: 상용임금 + 일용임금(편성 없음) + 고용부담금 + 기획/개발활동비.
 function computePersonnelActivityTotal() {
   let total = 0;
   for (const line of BUDGET_LINES) {
@@ -137,7 +138,7 @@ assert.strictEqual(
   `예산 라인 합계 불일치: ${linesSum} ≠ ${TOTAL_BUDGET}`
 );
 
-// 2) 일반수용비 세세목 합계 = 66,505,700
+// 2) 일반수용비 세세목 합계 = 66,453,000
 const generalSupplyLine = BUDGET_LINES.find((l) => l.lineKey === '210-01');
 const subItemsSum = GENERAL_SUPPLY_SUBITEMS.reduce((s, si) => s + si.amount, 0);
 assert.strictEqual(
@@ -149,10 +150,11 @@ assert.strictEqual(
 const keySet = new Set(BUDGET_LINES.map((l) => l.lineKey));
 assert.strictEqual(keySet.size, BUDGET_LINES.length, 'lineKey 중복 존재');
 
-// 4) 인력활동비 합계 = 39,787,150 (= 39.79%), 40% 이하
+// 4) 인력활동비 합계 = 39,839,850 (= 39.84%), 40% 이하
+//    구성 = 상용임금 5,000,000 + 일용임금 0 + 고용부담금 545,000 + 기획개발활동비 34,294,850
 assert.strictEqual(
-  PERSONNEL_ACTIVITY_TOTAL, 39787150,
-  `인력활동비 합계 불일치: ${PERSONNEL_ACTIVITY_TOTAL} ≠ 39,787,150`
+  PERSONNEL_ACTIVITY_TOTAL, 39839850,
+  `인력활동비 합계 불일치: ${PERSONNEL_ACTIVITY_TOTAL} ≠ 39,839,850`
 );
 assert.ok(
   PERSONNEL_ACTIVITY_TOTAL <= PERSONNEL_ACTIVITY_LIMIT,
@@ -173,7 +175,7 @@ module.exports = {
   TOTAL_BUDGET,
   PERSONNEL_LIMIT_RATIO,
   PERSONNEL_ACTIVITY_LIMIT,
-  PERSONNEL_ACTIVITY_TOTAL, // 39,787,150 (편성 기준 인력활동비 합계)
+  PERSONNEL_ACTIVITY_TOTAL, // 39,839,850 (편성 기준 인력활동비 합계)
   MEETING_MEAL_LIMIT,
   PROJECT_PERIOD,
   BUDGET_LINES,

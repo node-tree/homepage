@@ -134,3 +134,43 @@
 }
 
 .kd-forms-section-title { font-weight: 700; color: var(--kd-ink); margin: 14px 0 6px; font-size: 0.95rem; }
+
+/* ── 사례비 지급내역서(서식4-1) — 행 단위 편집 표 ───────────────────── */
+.kd-sarebi-row {
+  border: 1px solid var(--kd-outline);
+  border-radius: var(--kd-radius);
+  padding: 12px;
+  margin: 12px 0;
+  background: var(--kd-surface);
+}
+.kd-sarebi-row-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.kd-sarebi-row-no {
+  font-weight: 700;
+  color: var(--kd-teal-deep);
+}
+.kd-sarebi-rep {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--kd-ink);
+}
+.kd-sarebi-del { margin-left: auto; }
+.kd-sarebi-sessions {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--kd-outline);
+}
+.kd-sarebi-session { align-items: end; }
+.kd-sarebi-addrow { margin-top: 4px; }
+
+@media (max-width: 760px) {
+  .kd-sarebi-row-head { gap: 8px; }
+  .kd-sarebi-del { margin-left: 0; }
+}

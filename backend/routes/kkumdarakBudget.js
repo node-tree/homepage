@@ -9,6 +9,8 @@ const { PROGRAM_MAP, TOTAL_QUOTA, TOTAL_SESSIONS } = require('../data/kkumdarakP
 const { generateChulgangForm } = require('../lib/chulgangForm');
 const { generateHoeuirokForm } = require('../lib/hoeuirokForm');
 const { generateGyeolgwaForm } = require('../lib/gyeolgwaForm');
+const { generateJichulForm } = require('../lib/jichulForm');
+const { generateSarebiForm } = require('../lib/sarebiForm');
 const KkumdarakChecklist = require('../models/KkumdarakChecklist');
 const KkumdarakEvidence = require('../models/KkumdarakEvidence');
 const { PERSONNEL, SETTLEMENT } = require('../data/checklistTemplates');
@@ -212,7 +214,7 @@ router.get('/budget/summary', async (req, res) => {
       personnelActivity: {
         total: budget.PERSONNEL_ACTIVITY_TOTAL,
         limit: budget.PERSONNEL_ACTIVITY_LIMIT,
-        ratioPercent: Math.round(personnelRatio * 10000) / 100, // 39.79
+        ratioPercent: Math.round(personnelRatio * 10000) / 100, // 39.84
         limitPercent: budget.PERSONNEL_LIMIT_RATIO * 100, // 40
         exceeded: budget.PERSONNEL_ACTIVITY_TOTAL > budget.PERSONNEL_ACTIVITY_LIMIT,
       },
@@ -722,6 +724,61 @@ router.post('/forms/gyeolgwa', async (req, res) => {
   }
 });
 
+// ── POST /api/kkumdarak/forms/sarebi ─────────────────────────────────────────
+//   서식 제4-1호 「일반수용비 사례비 지급내역서」 — body { month(1~12), rows[] } → xlsx 다운로드.
+//   chulgang/hoeuirok/gyeolgwa(hwpx)와 동일한 stateless 매퍼 패턴의 xlsx 판(exceljs).
+//   rows 각 항목: { category, name, bank, account, residentNo, taxType, unitPrice,
+//     sessions:[{date,hours}], distanceKm, transportPay, isRepresentative, note }.
+//   대표(isRepresentative)는 원천징수 없음(소득세·주민세 0, 실지급=세전) — sarebiForm 이 처리.
+//   DB 미접근(트랜잭션 모델 미참조) — 스키마 변경 없음.
+router.post('/forms/sarebi', async (req, res) => {
+  try {
+    const { month, rows } = req.body || {};
+    const { buffer, filenameBase } = await generateSarebiForm({ month, rows });
+    const utf8Name = `${filenameBase}.xlsx`;
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="sarebi.xlsx"; filename*=UTF-8''${encodeURIComponent(utf8Name)}`,
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Length', buffer.length);
+    return res.status(200).send(buffer);
+  } catch (error) {
+    console.error('꿈다락 사례비 지급내역서 생성 오류:', error);
+    if (error.code === 'BAD_REQUEST') {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    return res.status(500).json({ success: false, message: '사례비 지급내역서 생성에 실패했습니다.', error: error.message });
+  }
+});
+
+// ── POST /api/kkumdarak/forms/jichul ─────────────────────────────────────────
+//   서식11 지출결의서 — body(단체명·담당자·결제일·결의일·항·목·세·추진명·추진일시·
+//   amount·지급처) → HWPX 다운로드. chulgang/hoeuirok/gyeolgwa 동일 패턴.
+//   금액은 amount 하나에서 한글/숫자 파생(jichulForm). 미치환 토큰은 fillHwpx 가 throw → 500.
+router.post('/forms/jichul', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const { buffer, filenameBase } = await generateJichulForm(body);
+    const utf8Name = `${filenameBase}.hwpx`;
+    res.setHeader('Content-Type', 'application/haansofthwp+zip');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="jichul.hwpx"; filename*=UTF-8''${encodeURIComponent(utf8Name)}`,
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Length', buffer.length);
+    return res.status(200).send(buffer);
+  } catch (error) {
+    console.error('꿈다락 지출결의서 생성 오류:', error);
+    return res.status(500).json({ success: false, message: '지출결의서 생성에 실패했습니다.', error: error.message });
+  }
+});
+
 // ── POST /api/kkumdarak/forms/ai-draft ───────────────────────────────────────
 //   AI 초안(KNUH). body { docType, programKey, 회차?, 교육주제?, 회의주제?, 키워드 }.
 //   grounding 은 백엔드 PROGRAM_MAP 에서만 읽어 프롬프트에 주입(클라이언트 미노출).
@@ -906,7 +963,7 @@ router.get('/dashboard/summary', async (req, res) => {
     res.json({
       success: true,
       data: {
-        totalQuota: TOTAL_QUOTA, // 228
+        totalQuota: TOTAL_QUOTA, // 222
         totalActualParticipants,
         participantProgress: Math.round(participantRatio * 10000) / 100, // % (소수 2자리)
         totalSessions: TOTAL_SESSIONS, // 63

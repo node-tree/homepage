@@ -11,7 +11,7 @@
 //     grounding). 클라이언트로 내보내지 않는다(buildProgramStats 미노출). 옵시디안 03-프로그램.md
 //     ·01-사업개념.md 를 읽어 프로그램별 3~6문장으로 요약해 baked(런타임 옵시디안 접근 불가).
 //
-//   require() 시점에 합계(정원 228·총회차 63·시수 192)를 assert 한다.
+//   require() 시점에 합계(정원 222·총회차 63·시수 192)를 assert 한다.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const assert = require('assert');
@@ -91,7 +91,7 @@ const PROGRAMS = [
     key: 'sori-ilgi',
     name: '소리일기',
     targetGroup: '전생애',
-    quota: 12,
+    quota: 6,
     totalSessions: 6,
     totalHours: 18,
     schedule: '2026.5 ~ 2026.11',
@@ -99,7 +99,7 @@ const PROGRAMS = [
       '하루의 소리를 모아 일기로 엮는 전생애 사운드스케이프 프로그램. 마을의 소리 지형을 함께 기록한다.',
     주강사: ['정강현'],
     grounding:
-      '마을의 소리 환경에 귀 기울이고 녹음하고 이름 붙여 기록하는 미디어(사운드) 프로그램이다. 전생애(청소년~노년 혼합) 12명 대상, 6회 18시수로 8~9월 매주 목요일 생산소와 마을 현장에서 운영한다. 주강사는 정강현. R. Murray Schafer의 사운드스케이프 방법론을 다세대에 적용한다. 회차 구성은 ① 듣기의 기쁨 → ② 자연의 소리 → ③ 사람의 소리 → ④ 사물의 소리(가축·옛 도구) → ⑤ 소리에 이름 붙이기와 Soundscape 매핑 → ⑥ 결과 정리·전시(작은도서관 청취 부스)다. 외부 특강으로 조중현(인식전환) 1회가 포함된다.',
+      '마을의 소리 환경에 귀 기울이고 녹음하고 이름 붙여 기록하는 미디어(사운드) 프로그램이다. 전생애(청소년~노년 혼합) 6명 대상, 6회 18시수로 8~9월 매주 화요일 생산소와 마을 현장에서 운영한다. 주강사는 정강현. R. Murray Schafer의 사운드스케이프 방법론을 다세대에 적용한다. 회차 구성은 ① 듣기의 기쁨 → ② 자연의 소리 → ③ 사람의 소리 → ④ 사물의 소리(가축·옛 도구) → ⑤ 소리에 이름 붙이기와 Soundscape 매핑 → ⑥ 결과 정리·전시(작은도서관 청취 부스)다. 외부 특강으로 조중현(인식전환) 1회가 포함된다.',
   },
   {
     key: 'punggyeong-ilgi',
@@ -122,7 +122,7 @@ const TOTAL_QUOTA = PROGRAMS.reduce((s, p) => s + p.quota, 0);
 const TOTAL_SESSIONS = PROGRAMS.reduce((s, p) => s + p.totalSessions, 0);
 const TOTAL_HOURS = PROGRAMS.reduce((s, p) => s + p.totalHours, 0);
 
-assert.strictEqual(TOTAL_QUOTA, 228, `정원 합계 불일치: ${TOTAL_QUOTA} ≠ 228`);
+assert.strictEqual(TOTAL_QUOTA, 222, `정원 합계 불일치: ${TOTAL_QUOTA} ≠ 222`);
 assert.strictEqual(TOTAL_SESSIONS, 63, `총회차 합계 불일치: ${TOTAL_SESSIONS} ≠ 63`);
 assert.strictEqual(TOTAL_HOURS, 192, `시수 합계 불일치: ${TOTAL_HOURS} ≠ 192`);
 
@@ -138,7 +138,7 @@ const PROGRAM_MAP = PROGRAMS.reduce((m, p) => {
 module.exports = {
   PROGRAMS,
   PROGRAM_MAP,
-  TOTAL_QUOTA, // 228
+  TOTAL_QUOTA, // 222
   TOTAL_SESSIONS, // 63
   TOTAL_HOURS, // 192
 };

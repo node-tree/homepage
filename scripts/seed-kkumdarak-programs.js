@@ -3,7 +3,7 @@
 // 꿈다락 프로그램 시드/검증 스크립트.
 //
 // 현재 동작: 프로그램 상수(backend/data/kkumdarakPrograms.js)를 로드해 무결성을
-//   확인·출력만 한다. require() 시점에 합계(정원 228·총회차 63·시수 192) assert 가
+//   확인·출력만 한다. require() 시점에 합계(정원 222·총회차 63·시수 192) assert 가
 //   실행되므로, 이 스크립트가 통과하면 프로그램 상수가 정합한 것이다.
 //
 //   ⚠️ 프로그램 마스터는 코드 상수(불변)라 DB 저장 대상이 아니다(budget 상수와 동일 원칙).
@@ -29,7 +29,7 @@ function printSummary() {
   }
   console.log('');
   console.log(`  합계 — 정원 ${programs.TOTAL_QUOTA}명 / 총회차 ${programs.TOTAL_SESSIONS} / 시수 ${programs.TOTAL_HOURS}`);
-  console.log('  (검증 기대치: 정원 228 · 총회차 63 · 시수 192)');
+  console.log('  (검증 기대치: 정원 222 · 총회차 63 · 시수 192)');
   console.log('\n✅ 합계 assert 통과 — require 단계에서 검증됨.\n');
 }
 
