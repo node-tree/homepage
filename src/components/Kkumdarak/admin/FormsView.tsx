@@ -5,6 +5,7 @@ import HoeuirokForm from './HoeuirokForm';
 import GyeolgwaForm from './GyeolgwaForm';
 import SarebiForm from './SarebiForm';
 import JichulForm from './JichulForm';
+import GeomsuForm from './GeomsuForm';
 
 // ═══════════════════════════════════════════════════════════════
 // 문서/서식 — 문서 종류 토글 셸. 선택에 따라 작업창을 조건부 마운트.
@@ -13,11 +14,12 @@ import JichulForm from './JichulForm';
 //   · 결과보고서(서식6) — GyeolgwaForm
 //   · 사례비 지급내역서(서식4-1) — SarebiForm (월별 xlsx)
 //   · 지출결의서(서식11) — JichulForm
+//   · 검수조서(일반용역비) — GeomsuForm (사진 2슬롯)
 //   각 작업창은 자신의 프로그램/회차를 마운트 시 독립 fetch(상태 lift 없음).
 //   단일 컴포넌트 + 반응형 CSS라 데스크톱·모바일 자동 동시 반영.
 // ═══════════════════════════════════════════════════════════════
 
-type DocType = 'chulgang' | 'hoeuirok' | 'gyeolgwa' | 'sarebi' | 'jichul';
+type DocType = 'chulgang' | 'hoeuirok' | 'gyeolgwa' | 'sarebi' | 'jichul' | 'geomsu';
 
 const DOC_TYPES: { id: DocType; label: string }[] = [
   { id: 'chulgang', label: '출강확인서 (서식5)' },
@@ -25,6 +27,7 @@ const DOC_TYPES: { id: DocType; label: string }[] = [
   { id: 'gyeolgwa', label: '결과보고서 (서식6)' },
   { id: 'sarebi', label: '사례비 지급내역서 (서식4-1)' },
   { id: 'jichul', label: '지출결의서 (서식11)' },
+  { id: 'geomsu', label: '검수조서 (일반용역비)' },
 ];
 
 const FormsView: React.FC = () => {
@@ -52,6 +55,7 @@ const FormsView: React.FC = () => {
       {docType === 'gyeolgwa' && <GyeolgwaForm />}
       {docType === 'sarebi' && <SarebiForm />}
       {docType === 'jichul' && <JichulForm />}
+      {docType === 'geomsu' && <GeomsuForm />}
     </div>
   );
 };

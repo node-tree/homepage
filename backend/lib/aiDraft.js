@@ -78,17 +78,61 @@ function buildHoeuirokMessages({ program, 회의주제, 키워드 }) {
   ];
 }
 
-// 서식6 결과보고서 — 세부내용 4항목(역할·과정·실행·평가) JSON
-function buildGyeolgwaMessages({ program, 키워드 }) {
+// 서식6 결과보고서 — 「기획·개발 세부내용」(5개 번호 소제목 narrative)을 템플릿의 4개 셀
+//   (내용_역할/내용_과정/내용_실행/내용_평가)에 매핑해 채운다. 템플릿 무수정(셀 4개 그대로).
+//   소제목 1=역할, 2=대상 분석(셀 부족 → 3 과정 셀 첫 단락으로 흡수), 3=발상/개발/관리(가장 길게),
+//   4=실행 계획, 5=평가·성과. reportMonth 로 시제(계획/예정형 ↔ 과거형) 제어.
+function buildGyeolgwaMessages({ program, 키워드, reportMonth }) {
   const ctx = programContext(program);
+  const tense = reportMonth
+    ? `보고 기준 시점: ${reportMonth}. 이 시점에 아직 시작하지 않았거나 진행 예정인 활동은 계획·예정형(\"~할 예정이다/~한다\")으로, 이미 끝난 회차는 과거형(\"~하였다\")으로 시제를 구분해 서술하라.`
+    : '아직 시작 전인 활동은 계획·예정형으로, 끝난 활동은 과거형으로 시제를 구분하라.';
   const user = [
     ctx,
     키워드 ? `키워드: ${키워드}` : '',
     '',
-    '위 정보에만 근거해 프로그램 기획·개발 결과보고서의 세부내용을 작성하라. 아래 JSON 형식으로만 출력한다:',
+    '위 「프로그램 정보」 grounding 본문에만 근거해 서식6 결과보고서의 「기획·개발 세부내용」을 작성하라.',
+    '세부내용은 5개 번호 소제목으로 구성되며, 이를 아래 4개 JSON 키에 다음과 같이 나눠 담는다:',
     '{"내용_역할":"…","내용_과정":"…","내용_실행":"…","내용_평가":"…"}',
-    '역할=기획개발 과정에서의 나의 역할, 과정=발상·개발·관리 과정, 실행=참여자 상호작용, 평가=피드백·성과·개선점.',
-    '각 항목 2~4문장, 한국어 공문 톤. 제공되지 않은 사실은 쓰지 마라.',
+    '· 내용_역할 = [소제목1] 기획·개발 참여인력 역할 — 참여인력(주강사) 1인당 1문장으로 역할을 기술.',
+    '· 내용_과정 = [소제목2] 대상 분석(2~3문장)을 먼저 쓰고, 이어 [소제목3] 기획개발 과정을 ' +
+      '○발상 / ○개발 / ○관리 세 부분으로 가장 길고 구체적으로(이 키 전체 600~750자) 작성. ' +
+      '세 부분은 같은 줄에 \"○발상: … ○개발: … ○관리: …\" 형태로 ○ 머리표를 구분자로 이어 쓴다. ' +
+      '줄바꿈(개행)은 셀에서 렌더되지 않으니 사용하지 말고, ○ 머리표로만 단락을 구분하라.',
+    '· 내용_실행 = [소제목4] 프로그램 실행 계획 — 2~4문장.',
+    '· 내용_평가 = [소제목5] 평가 및 성과 계획 — 같은 줄에 \"○피드백: … ○학습성과: …\" 형태로 ○ 머리표를 구분자로 이어 쓴다(줄바꿈 금지).',
+    '',
+    '제약: ① 4개 키 합산 분량 1,100~1,300자 수준의 연구보고서 톤. ② ' + tense,
+    '③ grounding 본문에 없는 고유명사·수치·인용·강사명(특히 외부 특강 강사명)을 절대 지어내지 마라. ' +
+      'grounding에 명시된 이름·수치만 사용하고, 근거가 없으면 그 부분은 일반적 서술로 비워 둔다. ' +
+      '④ 3인칭 평서체. ⑤ 과장·홍보 수사 금지. ⑥ 각 값 내부에 줄바꿈 금지 — ○ 머리표로만 구분. ⑦ JSON 외 텍스트·코드펜스 금지.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  return [
+    { role: 'system', content: SYSTEM_GUARD },
+    { role: 'user', content: user },
+  ];
+}
+
+// 검수조서(일반용역비) — 검수의견 1~2문장(프로그램명·산출물·검수결과 grounding). AI 비중 낮음.
+//   환각가드: grounding/입력에 없는 사실 금지. 결과 라벨(합격/보완 후 합격/불합격)에 맞춰 톤 조정.
+function buildInspectionMessages({ program, 용역명, 산출물, 검수결과, 키워드 }) {
+  const ctx = programContext(program);
+  const resultLabel =
+    검수결과 === 'fail' ? '불합격' : 검수결과 === 'conditional' ? '보완 후 합격' : '합격';
+  const user = [
+    ctx,
+    용역명 ? `용역명: ${용역명}` : '',
+    산출물 ? `산출물(링크/설명): ${산출물}` : '',
+    `검수결과: ${resultLabel}`,
+    키워드 ? `키워드: ${키워드}` : '',
+    '',
+    '위 정보에만 근거해 일반용역비 검수조서의 「검수의견」을 1~2문장으로 작성하라. 아래 JSON 형식으로만 출력한다:',
+    '{"검수의견":"…"}',
+    '예: \"기획·개발 결과물이 계약 내용대로 수행되었으며, 산출물의 품질·규격이 적정하고 증빙이 충실함을 확인함.\"',
+    '검수결과가 \"보완 후 합격\"이면 보완 필요사항을, \"불합격\"이면 사유를 간결히 덧붙인다. ' +
+      '제공되지 않은 사실·수치는 쓰지 마라. 3인칭 평서체, 한국어 공문 톤.',
   ]
     .filter(Boolean)
     .join('\n');
@@ -101,10 +145,12 @@ function buildGyeolgwaMessages({ program, 키워드 }) {
 // 라우트 진입점. body 검증 + 프롬프트 + KNUH 호출 + 파싱.
 //   반환: { parsed, raw } (parsed=null 이면 파싱 실패 — 라우트가 raw 동봉).
 //   throw: KNUH_NO_KEY / KNUH_TIMEOUT / KNUH_HTTP_ERROR 등(라우트가 503 매핑).
+const VALID_DOCTYPES = ['chulgang', 'hoeuirok', 'gyeolgwa', 'inspection'];
+
 async function runAiDraft(body) {
   const { docType, programKey } = body || {};
-  if (docType !== 'chulgang' && docType !== 'hoeuirok' && docType !== 'gyeolgwa') {
-    const err = new Error("docType 은 'chulgang'·'hoeuirok'·'gyeolgwa' 중 하나여야 합니다.");
+  if (!VALID_DOCTYPES.includes(docType)) {
+    const err = new Error("docType 은 'chulgang'·'hoeuirok'·'gyeolgwa'·'inspection' 중 하나여야 합니다.");
     err.code = 'BAD_REQUEST';
     throw err;
   }
@@ -116,6 +162,7 @@ async function runAiDraft(body) {
   }
 
   let messages;
+  let maxTokens = 2000;
   if (docType === 'chulgang') {
     messages = buildChulgangMessages({
       program,
@@ -129,11 +176,25 @@ async function runAiDraft(body) {
       회의주제: body.회의주제,
       키워드: body.키워드,
     });
+  } else if (docType === 'inspection') {
+    messages = buildInspectionMessages({
+      program,
+      용역명: body.용역명,
+      산출물: body.산출물,
+      검수결과: body.검수결과,
+      키워드: body.키워드,
+    });
   } else {
-    messages = buildGyeolgwaMessages({ program, 키워드: body.키워드 });
+    // gyeolgwa: 1,100~1,300자 narrative + JSON 래핑 → 토큰 여유 확대(truncation 방지).
+    messages = buildGyeolgwaMessages({
+      program,
+      키워드: body.키워드,
+      reportMonth: body.reportMonth,
+    });
+    maxTokens = 4000;
   }
 
-  const content = await chat(messages, { maxTokens: 2000 });
+  const content = await chat(messages, { maxTokens });
   return parseJsonContent(content);
 }
 
@@ -141,5 +202,7 @@ module.exports = {
   runAiDraft,
   buildChulgangMessages,
   buildHoeuirokMessages,
+  buildGyeolgwaMessages,
+  buildInspectionMessages,
   SYSTEM_GUARD,
 };
