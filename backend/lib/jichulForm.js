@@ -9,6 +9,8 @@ const { fillHwpx, numToKorean, formatKoreanDate } = require('./hwpxFill');
 //   안내문구·예산분류 나열·하단 임차물품 반납표는 원본 리터럴 그대로(토큰 아님).
 //
 //   금액은 단일 amount 에서 한글(numToKorean)·숫자(toLocaleString) 둘 다 파생 — 불일치 방지.
+//   ⚠️ amount 는 콤마·'원'·통화기호가 섞인 문자열일 수 있어 숫자만 추출해 파싱한다
+//      (Number('129,000')=NaN → 0 채움 버그 방지 — UI 정제와 이중 방어).
 //   날짜는 formatKoreanDate(UTC 게터)로 'YYYY. M. D.' — YYYY-MM-DD 가 UTC 자정 저장돼도 하루 밀림 없음.
 //   주요내용은 지출 내용 셀 '주요내용' 첫 항목에 들어가고(' - {{주요내용}}'),
 //   지출방법은 4택 체크박스 토큰(선택 1개만 '■', 나머지 '□').
@@ -60,12 +62,23 @@ function buildPaymentMethodBoxes(method) {
   return boxes;
 }
 
-// body → 치환맵. amount(숫자) 하나에서 금액한글/금액숫자를 함께 산출한다.
+// 금액 → 정수. number 면 그대로(소수 버림), 문자열이면 숫자만 추출(콤마·'원'·통화기호·전각숫자 허용).
+//   Number('129,000')=NaN 으로 금액이 0 으로 채워지던 버그의 백엔드 방어막.
+function parseAmount(raw) {
+  if (raw == null) return 0;
+  if (typeof raw === 'number') return Number.isFinite(raw) ? Math.floor(Math.abs(raw)) : 0;
+  // 전각 숫자(０-９) → 반각 후 숫자 외 제거.
+  const half = String(raw).replace(/[０-９]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0xfee0));
+  const digits = half.replace(/[^\d]/g, '');
+  return digits ? Number(digits) : 0;
+}
+
+// body → 치환맵. amount(숫자/문자열) 하나에서 금액한글/금액숫자를 함께 산출한다.
 //   날짜(결제일/결의일)는 YYYY-MM-DD 또는 빈값 허용 → 'YYYY. M. D.'.
 function buildJichulReplacements(body) {
   const b = body || {};
 
-  const amount = Number(b.amount != null ? b.amount : b.금액) || 0;
+  const amount = parseAmount(b.amount != null ? b.amount : b.금액);
   const 금액숫자 = amount.toLocaleString('ko-KR');
   const 금액한글 = numToKorean(amount); // 예: 100000 → '일십만'
 
@@ -115,6 +128,7 @@ module.exports = {
   generateJichulForm,
   buildJichulReplacements,
   buildPaymentMethodBoxes,
+  parseAmount,
   PLACEHOLDER_KEYS,
   PAYMENT_METHOD_KEYS,
 };

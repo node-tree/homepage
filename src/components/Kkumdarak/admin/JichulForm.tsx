@@ -8,6 +8,8 @@ import { kkumdarakAdminAPI } from '../../../services/kkumdarakAdminApi';
 //   비목을 선택하면 항/목/세가 자동 기입(편집 가능). 금액(amount) 하나에서
 //   한글·숫자 금액을 백엔드가 함께 산출. POST → hwpx blob 다운로드.
 //   지출내용(주요내용)·지출방법(4택)도 입력값으로 문서에 반영.
+//   금액은 사용자가 콤마·'원'·통화기호를 섞어 입력해도 숫자만 추출해 전송한다
+//   (Number('129,000')=NaN → 0 채움 버그 방지). 빈칸/0 이면 제출 차단(0·"영" 문서 방지).
 //   DB 미사용. 다운로드 후 한글에서 직접 수정 가능(하단 임차물품 반납표 등).
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -26,6 +28,18 @@ const PAYMENT_METHODS: { value: string; label: string }[] = [
   { value: '카드', label: '보조금카드결제' },
   { value: '기타', label: '기타' },
 ];
+
+// 금액 문자열에서 숫자만 추출(콤마·'원'·통화기호·공백·전각숫자 허용) → 정수.
+//   Number('129,000')=NaN 으로 0 이 채워지던 버그의 직접 차단막.
+const toAmountNumber = (raw: string): number => {
+  if (raw == null) return 0;
+  // 전각 숫자(０-９) → 반각 변환 후 숫자 외 문자 제거.
+  const half = String(raw).replace(/[０-９]/g, (d) =>
+    String.fromCharCode(d.charCodeAt(0) - 0xfee0),
+  );
+  const digits = half.replace(/[^\d]/g, '');
+  return digits ? Number(digits) : 0;
+};
 
 const JichulForm: React.FC = () => {
   const { logout } = useKkumdarakAuth();
@@ -88,11 +102,17 @@ const JichulForm: React.FC = () => {
 
   const handleDownload = async () => {
     if (busy) return;
+    // 빈칸/0 금액 가드 — 0·"영" 문서 생성 대신 안내(파싱 후 기준).
+    const amountValue = toAmountNumber(f.amount);
+    if (amountValue <= 0) {
+      setError('지출금액을 입력하세요.');
+      return;
+    }
     setBusy(true);
     setError('');
     const body = {
       ...f,
-      amount: Number(f.amount) || 0,
+      amount: amountValue,
     };
     try {
       const blob = await kkumdarakAdminAPI.downloadJichulForm(body);
