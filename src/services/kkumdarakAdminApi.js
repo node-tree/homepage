@@ -267,6 +267,40 @@ export const kkumdarakAdminAPI = {
     return response.blob();
   },
 
+  // 서식 제4-1호 사례비 지급내역서 — { month, rows[] } → xlsx blob.
+  downloadSarebiForm: async (body) => {
+    const response = await fetch(`${API_BASE_URL}/kkumdarak/forms/sarebi`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(body || {}),
+    });
+    if (response.status === 401 || response.status === 403) {
+      throw handleAuthExpiry();
+    }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `사례비 지급내역서 생성 실패 (${response.status})`);
+    }
+    return response.blob();
+  },
+
+  // 서식11 지출결의서 — body → hwpx blob.
+  downloadJichulForm: async (body) => {
+    const response = await fetch(`${API_BASE_URL}/kkumdarak/forms/jichul`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(body || {}),
+    });
+    if (response.status === 401 || response.status === 403) {
+      throw handleAuthExpiry();
+    }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `지출결의서 생성 실패 (${response.status})`);
+    }
+    return response.blob();
+  },
+
   // ── 체크리스트(인건비·정산 상태) ───────────────────────────────────────────
   getChecklist: async (key, { signal } = {}) => {
     const response = await fetch(`${API_BASE_URL}/kkumdarak/checklist/${key}`, {
