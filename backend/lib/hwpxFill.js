@@ -21,6 +21,19 @@ function replaceAll(haystack, find, replacement) {
   return haystack.split(find).join(replacement == null ? '' : String(replacement));
 }
 
+// 텍스트 플레이스홀더 주입 값의 XML 텍스트 이스케이프.
+//   값은 <hp:t> 요소 텍스트 노드로만 들어가므로 메타문자 &,<,> 만 처리(속성 아님 → ",' 불필요).
+//   & 를 최우선으로 치환(이미 만든 엔티티의 & 가 다시 escape 되는 이중치환 방지).
+//   금액 콤마·날짜·■/□ 검수결과 라인 등 사전조립 값은 메타문자가 없어 무해(no-op).
+//   ⚠️ 텍스트 치환 경로에서만 호출 — imageReplacements(BinData 바이너리)에는 적용하지 않는다.
+function escapeXmlText(value) {
+  if (value == null) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 // 템플릿 zip 을 로드해 replacements({ '{{키}}': '값' }) + imageReplacements({ '<binFile>': Buffer })
 //   를 적용한 새 .hwpx Buffer 반환. async (Promise<Buffer>) — 라우트에서 await.
 //   imageReplacements 키는 BinData 의 파일 basename(예 'chulgang_photo.png'). 템플릿에 없으면 무시.
@@ -74,7 +87,8 @@ async function fillHwpx(templatePath, replacements, imageReplacements = {}) {
     } else if (isContentsXml) {
       let xml = await entry.async('string'); // UTF-8 디코드
       for (const key of replKeys) {
-        xml = replaceAll(xml, key, replacements[key]);
+        // 주입 값만 XML 이스케이프(템플릿의 키 {{...}} 는 메타문자 없음 — find 는 그대로).
+        xml = replaceAll(xml, key, escapeXmlText(replacements[key]));
       }
       // 미치환 {{...}} 검출(자가검증 — 라운드트립 불가 환경의 런타임 가드)
       const leftover = xml.match(/\{\{[^}]+\}\}/g);
@@ -140,4 +154,4 @@ function formatKoreanDate(input) {
   return `${d.getUTCFullYear()}. ${d.getUTCMonth() + 1}. ${d.getUTCDate()}.`;
 }
 
-module.exports = { fillHwpx, numToKorean, formatKoreanDate };
+module.exports = { fillHwpx, numToKorean, formatKoreanDate, escapeXmlText };

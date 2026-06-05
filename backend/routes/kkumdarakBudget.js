@@ -10,6 +10,7 @@ const { generateChulgangForm } = require('../lib/chulgangForm');
 const { generateHoeuirokForm } = require('../lib/hoeuirokForm');
 const { generateGyeolgwaForm } = require('../lib/gyeolgwaForm');
 const { generateJichulForm } = require('../lib/jichulForm');
+const { generateGeomsuForm } = require('../lib/geomsuForm');
 const { generateSarebiForm } = require('../lib/sarebiForm');
 const KkumdarakChecklist = require('../models/KkumdarakChecklist');
 const KkumdarakEvidence = require('../models/KkumdarakEvidence');
@@ -776,6 +777,43 @@ router.post('/forms/jichul', async (req, res) => {
   } catch (error) {
     console.error('꿈다락 지출결의서 생성 오류:', error);
     return res.status(500).json({ success: false, message: '지출결의서 생성에 실패했습니다.', error: error.message });
+  }
+});
+
+// ── POST /api/kkumdarak/forms/geomsu ─────────────────────────────────────────
+//   검수조서(일반용역비) — body(용역명·계약상대자·amount·검수일자·산출물링크·검수결과·검수의견)
+//   + 선택 photo1/photo2(base64 PNG) → HWPX 다운로드. jichul(텍스트)+chulgang(photo) 결합.
+//   사진 2슬롯은 BinData/geomsu_photo1.png·geomsu_photo2.png 교체. 무저장 즉시 다운로드.
+//   미치환 토큰은 fillHwpx 가 throw → 500. 잘못된 사진 → 400.
+router.post('/forms/geomsu', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const p1 = decodePhoto(body.photo1);
+    if (p1.error) {
+      return res.status(400).json({ success: false, message: p1.error });
+    }
+    const p2 = decodePhoto(body.photo2);
+    if (p2.error) {
+      return res.status(400).json({ success: false, message: p2.error });
+    }
+
+    const { buffer, filenameBase } = await generateGeomsuForm(body, p1.buffer, p2.buffer);
+
+    const asciiFallback = 'geomsu.hwpx';
+    const utf8Name = `${filenameBase}.hwpx`;
+    const encoded = encodeURIComponent(utf8Name);
+
+    res.setHeader('Content-Type', 'application/haansofthwp+zip');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encoded}`,
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Length', buffer.length);
+    return res.status(200).send(buffer);
+  } catch (error) {
+    console.error('꿈다락 검수조서 생성 오류:', error);
+    return res.status(500).json({ success: false, message: '검수조서 생성에 실패했습니다.', error: error.message });
   }
 });
 

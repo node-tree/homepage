@@ -5,7 +5,8 @@ import { kkumdarakAdminAPI } from '../../../services/kkumdarakAdminApi';
 // ─────────────────────────────────────────────────────────────────────────────
 // 서식6 기획·개발 결과보고서 작업창.
 //   프로그램 선택 → 운영기관명·프로그램명·교육대상·참여인력 자동기입.
-//   활동개요 5행(일시/주제/참석) 수동입력. 세부내용 4칸 「AI 초안」(KNUH, grounded).
+//   활동개요 5행(일시/주제/참석) 수동입력. 세부내용 4칸 「AI 초안」(KNUH, grounded — 5개 소제목
+//   narrative를 4셀에 매핑·시제는 보고 기준월로 제어).
 //   클라이언트가 32개 플레이스홀더 값을 조립해 POST → HWPX blob 다운로드.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,7 @@ const GyeolgwaForm: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
   const [키워드, set키워드] = useState('');
+  const [reportMonth, setReportMonth] = useState('');
 
   const [f, setF] = useState({
     세부대상: '',
@@ -88,7 +90,7 @@ const GyeolgwaForm: React.FC = () => {
     setError('');
     setNotice('');
     try {
-      const res = await kkumdarakAdminAPI.aiDraftForm({ docType: 'gyeolgwa', programKey, 키워드 });
+      const res = await kkumdarakAdminAPI.aiDraftForm({ docType: 'gyeolgwa', programKey, 키워드, reportMonth });
       if (res.data && typeof res.data === 'object') {
         setF((prev) => {
           const next = { ...prev };
@@ -228,6 +230,13 @@ const GyeolgwaForm: React.FC = () => {
 
       {/* 세부내용 (AI) */}
       <div className="kd-forms-ai">
+        <input
+          className="kd-field-input"
+          placeholder="보고 기준월 (예: 2026년 6월) — 시제(예정/완료) 판단용"
+          value={reportMonth}
+          onChange={(e) => setReportMonth(e.target.value)}
+          aria-label="보고 기준월"
+        />
         <input
           className="kd-field-input"
           placeholder="키워드 (예: 대상분석, 커리큘럼 개발, 오픈클래스 피드백)"

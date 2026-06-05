@@ -301,6 +301,23 @@ export const kkumdarakAdminAPI = {
     return response.blob();
   },
 
+  // 검수조서(일반용역비) — body(+ photo1/photo2 base64) → hwpx blob.
+  downloadGeomsuForm: async (body) => {
+    const response = await fetch(`${API_BASE_URL}/kkumdarak/forms/geomsu`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(body || {}),
+    });
+    if (response.status === 401 || response.status === 403) {
+      throw handleAuthExpiry();
+    }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `검수조서 생성 실패 (${response.status})`);
+    }
+    return response.blob();
+  },
+
   // ── 체크리스트(인건비·정산 상태) ───────────────────────────────────────────
   getChecklist: async (key, { signal } = {}) => {
     const response = await fetch(`${API_BASE_URL}/kkumdarak/checklist/${key}`, {

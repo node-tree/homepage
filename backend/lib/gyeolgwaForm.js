@@ -48,12 +48,24 @@ const PLACEHOLDER_KEYS = [
   '담당자',
 ];
 
+// 세부내용(AI) 4개 키는 단일 셀(=단일 run)이라 개행이 한글에서 렌더되지 않는다.
+//   AI/사용자 입력에 줄바꿈이 섞이면 한 줄로 뭉개지므로, 들어온 \n·\r 을 공백으로 정규화한다.
+//   (프롬프트는 이미 ○ 머리표 인라인 구분을 지시 — 이건 방어적 belt.)
+const AI_NARRATIVE_KEYS = new Set(['내용_역할', '내용_과정', '내용_실행', '내용_평가']);
+
+function normalizeCellText(key, value) {
+  let v = value == null ? '' : String(value);
+  if (AI_NARRATIVE_KEYS.has(key)) {
+    v = v.replace(/\s*[\r\n]+\s*/g, ' ').trim();
+  }
+  return v;
+}
+
 function buildGyeolgwaReplacements(body) {
   const b = body || {};
   const repl = {};
   for (const key of PLACEHOLDER_KEYS) {
-    const v = b[key];
-    repl[`{{${key}}}`] = v == null ? '' : String(v);
+    repl[`{{${key}}}`] = normalizeCellText(key, b[key]);
   }
   return repl;
 }
