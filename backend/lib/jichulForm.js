@@ -10,6 +10,8 @@ const { fillHwpx, numToKorean, formatKoreanDate } = require('./hwpxFill');
 //
 //   금액은 단일 amount 에서 한글(numToKorean)·숫자(toLocaleString) 둘 다 파생 — 불일치 방지.
 //   날짜는 formatKoreanDate(UTC 게터)로 'YYYY. M. D.' — YYYY-MM-DD 가 UTC 자정 저장돼도 하루 밀림 없음.
+//   주요내용은 지출 내용 셀 '주요내용' 첫 항목에 들어가고(' - {{주요내용}}'),
+//   지출방법은 4택 체크박스 토큰(선택 1개만 '■', 나머지 '□').
 //   미치환 토큰은 fillHwpx 가 throw(누락 가드).
 // ═══════════════════════════════════════════════════════════════
 
@@ -22,7 +24,9 @@ const TEMPLATE_PATH = path.join(
   '서식11_지출결의서.hwpx',
 );
 
-// 템플릿의 12개 플레이스홀더(단일run). 누락 키는 ''(미치환 토큰 방지).
+// 템플릿의 플레이스홀더(단일run). 누락 키는 ''(미치환 토큰 방지).
+//   주요내용: 지출 내용 셀 '주요내용' 첫 항목(' - {{주요내용}}').
+//   지출방법_*: 지출방법 셀 4개 체크박스 토큰 — 선택 1개만 '■', 나머지 '□'.
 const PLACEHOLDER_KEYS = [
   '단체명',
   '담당자',
@@ -33,10 +37,28 @@ const PLACEHOLDER_KEYS = [
   '세',
   '추진명',
   '추진일시',
+  '주요내용',
   '금액한글',
   '금액숫자',
   '지급처',
+  '지출방법_계좌이체',
+  '지출방법_전자계산서',
+  '지출방법_카드',
+  '지출방법_기타',
 ];
+
+// 지출방법 4택 → 체크박스 토큰('■' 선택 / '□' 미선택). 원본 양식 라벨 기준.
+//   계좌이체 / 계좌이체(전자(세금)계산서) / 보조금카드결제 / 기타
+const PAYMENT_METHOD_KEYS = ['계좌이체', '전자계산서', '카드', '기타'];
+
+function buildPaymentMethodBoxes(method) {
+  const chosen = PAYMENT_METHOD_KEYS.includes(method) ? method : null;
+  const boxes = {};
+  for (const k of PAYMENT_METHOD_KEYS) {
+    boxes[`지출방법_${k}`] = k === chosen ? '■' : '□';
+  }
+  return boxes;
+}
 
 // body → 치환맵. amount(숫자) 하나에서 금액한글/금액숫자를 함께 산출한다.
 //   날짜(결제일/결의일)는 YYYY-MM-DD 또는 빈값 허용 → 'YYYY. M. D.'.
@@ -65,9 +87,11 @@ function buildJichulReplacements(body) {
     세: b.세 || '',
     추진명: b.추진명 || '',
     추진일시: b.추진일시 || '',
+    주요내용: b.주요내용 || '',
     금액한글,
     금액숫자,
     지급처: b.지급처 || '',
+    ...buildPaymentMethodBoxes(b.지출방법),
   };
 
   const repl = {};
@@ -87,4 +111,10 @@ async function generateJichulForm(body) {
   return { buffer, filenameBase };
 }
 
-module.exports = { generateJichulForm, buildJichulReplacements, PLACEHOLDER_KEYS };
+module.exports = {
+  generateJichulForm,
+  buildJichulReplacements,
+  buildPaymentMethodBoxes,
+  PLACEHOLDER_KEYS,
+  PAYMENT_METHOD_KEYS,
+};

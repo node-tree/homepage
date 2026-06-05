@@ -7,6 +7,7 @@ import { kkumdarakAdminAPI } from '../../../services/kkumdarakAdminApi';
 //   chulgang/hoeuirok/gyeolgwa 와 동일한 stateless 패턴 — 입력값이 곧 문서.
 //   비목을 선택하면 항/목/세가 자동 기입(편집 가능). 금액(amount) 하나에서
 //   한글·숫자 금액을 백엔드가 함께 산출. POST → hwpx blob 다운로드.
+//   지출내용(주요내용)·지출방법(4택)도 입력값으로 문서에 반영.
 //   DB 미사용. 다운로드 후 한글에서 직접 수정 가능(하단 임차물품 반납표 등).
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -17,6 +18,14 @@ interface BudgetLine {
   subCode: string;
   subName: string;
 }
+
+// 지출방법 4택 — 원본 양식 라벨/키 그대로(백엔드 PAYMENT_METHOD_KEYS 와 일치).
+const PAYMENT_METHODS: { value: string; label: string }[] = [
+  { value: '계좌이체', label: '계좌이체' },
+  { value: '전자계산서', label: '계좌이체(전자(세금)계산서)' },
+  { value: '카드', label: '보조금카드결제' },
+  { value: '기타', label: '기타' },
+];
 
 const JichulForm: React.FC = () => {
   const { logout } = useKkumdarakAuth();
@@ -34,8 +43,10 @@ const JichulForm: React.FC = () => {
     세: '',
     추진명: '',
     추진일시: '',
+    주요내용: '',
     amount: '',
     지급처: '',
+    지출방법: '계좌이체',
   });
 
   const onAuthErr = useCallback(
@@ -156,6 +167,16 @@ const JichulForm: React.FC = () => {
           <span className="kd-field-label">지출금액(원)</span>
           <input className="kd-field-input" inputMode="numeric" value={f.amount} onChange={(e) => setField('amount', e.target.value)} placeholder="129000" />
         </label>
+        <label className="kd-field">
+          <span className="kd-field-label">지출방법</span>
+          <select className="kd-field-input" value={f.지출방법} onChange={(e) => setField('지출방법', e.target.value)}>
+            {PAYMENT_METHODS.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="kd-field kd-field-wide">
           <span className="kd-field-label">추진명</span>
           <input className="kd-field-input" value={f.추진명} onChange={(e) => setField('추진명', e.target.value)} placeholder="소리일기 4회차 강사비" />
@@ -163,6 +184,10 @@ const JichulForm: React.FC = () => {
         <label className="kd-field kd-field-wide">
           <span className="kd-field-label">추진일시</span>
           <input className="kd-field-input" value={f.추진일시} onChange={(e) => setField('추진일시', e.target.value)} placeholder="2026. 8. 20.(목) 14:00~17:00 (3시간)" />
+        </label>
+        <label className="kd-field kd-field-wide">
+          <span className="kd-field-label">지출내용(주요내용)</span>
+          <input className="kd-field-input" value={f.주요내용} onChange={(e) => setField('주요내용', e.target.value)} placeholder="강사비 지급 (소리일기 4회차)" />
         </label>
       </div>
 
