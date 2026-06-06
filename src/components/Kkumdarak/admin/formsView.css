@@ -174,3 +174,13 @@
   .kd-sarebi-row-head { gap: 8px; }
   .kd-sarebi-del { margin-left: 0; }
 }
+
+/* 회의록 결정사항 — 단일줄 input → 작은 textarea(긴 "맥락+결정" 문장이 잘려보이지 않게).
+   AI "자세하게" 강화 대응. 데스크톱·모바일 공통(반응형 그리드 안에서 전체폭). */
+.kd-forms-decision {
+  resize: vertical;
+  min-height: 48px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

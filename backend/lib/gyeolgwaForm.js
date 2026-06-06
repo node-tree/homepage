@@ -53,10 +53,33 @@ const PLACEHOLDER_KEYS = [
 //   (프롬프트는 이미 ○ 머리표 인라인 구분을 지시 — 이건 방어적 belt.)
 const AI_NARRATIVE_KEYS = new Set(['내용_역할', '내용_과정', '내용_실행', '내용_평가']);
 
+// 셀 안전 상한 — "자세하게" 강화로 길어진 AI 출력이 한글 셀을 넘치지 않게 하는 2차 방어.
+//   프롬프트 가이드(과정 600~780·실행 180~280 등)가 1차 통제. 여유를 둔 hard cap.
+//   내용_과정은 ○발상/개발/관리 3단락이라 가장 크게.
+const AI_CELL_CAPS = {
+  내용_역할: 320,
+  내용_과정: 900,
+  내용_실행: 360,
+  내용_평가: 480,
+};
+
 function normalizeCellText(key, value) {
   let v = value == null ? '' : String(value);
   if (AI_NARRATIVE_KEYS.has(key)) {
     v = v.replace(/\s*[\r\n]+\s*/g, ' ').trim();
+    const cap = AI_CELL_CAPS[key];
+    if (cap && v.length > cap) {
+      const slice = v.slice(0, cap);
+      // ○ 머리표 경계 우선(○발상/개발/관리/피드백/학습성과 구조 보존) → 문장 → 공백.
+      const mark = slice.lastIndexOf('○');
+      const sent = Math.max(slice.lastIndexOf('다. '), slice.lastIndexOf('다.'));
+      if (sent > cap * 0.6) v = slice.slice(0, sent + 2).trim();
+      else if (mark > cap * 0.5) v = slice.slice(0, mark).trim();
+      else {
+        const sp = slice.lastIndexOf(' ');
+        v = (sp > cap * 0.6 ? slice.slice(0, sp) : slice).trim() + '…';
+      }
+    }
   }
   return v;
 }
@@ -100,6 +123,8 @@ module.exports = {
   generateGyeolgwaForm,
   buildGyeolgwaReplacements,
   buildFilenameBase,
+  normalizeCellText,
+  AI_CELL_CAPS,
   PLACEHOLDER_KEYS,
   PHOTO_BINDATA_KEY,
   TEMPLATE_PATH,
