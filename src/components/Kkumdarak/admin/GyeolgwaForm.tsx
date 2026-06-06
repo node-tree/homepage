@@ -239,7 +239,7 @@ const GyeolgwaForm: React.FC = () => {
         />
         <input
           className="kd-field-input"
-          placeholder="키워드 (예: 대상분석, 커리큘럼 개발, 오픈클래스 피드백)"
+          placeholder="키워드를 쉼표로 나열 — 예: 대상분석, 커리큘럼 개발, 목공 워크숍, 오픈클래스 피드백"
           value={키워드}
           onChange={(e) => set키워드(e.target.value)}
         />
@@ -252,7 +252,7 @@ const GyeolgwaForm: React.FC = () => {
           ([k, label]) => (
             <label key={k} className="kd-field kd-field-wide">
               <span className="kd-field-label">{label}</span>
-              <textarea className="kd-field-input" rows={3} value={f[k]} onChange={(e) => setField(k, e.target.value)} />
+              <textarea className="kd-field-input" rows={5} value={f[k]} onChange={(e) => setField(k, e.target.value)} />
             </label>
           ),
         )}

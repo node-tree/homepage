@@ -210,7 +210,7 @@ const GeomsuForm: React.FC = () => {
           </div>
           <textarea
             className="kd-field-input"
-            rows={3}
+            rows={4}
             value={f.검수의견}
             onChange={(e) => setField('검수의견', e.target.value)}
             placeholder="계약 내용대로 산출물이 납품되었으며, 품질·규격이 적정함을 확인함. (용역명·산출물·검수결과 입력 후 「AI 초안」 가능)"

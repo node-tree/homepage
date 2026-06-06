@@ -469,7 +469,7 @@ const ChulgangForm: React.FC = () => {
             className="kd-field-input kd-forms-ai-input"
             value={키워드}
             onChange={(e) => set키워드(e.target.value)}
-            placeholder="키워드(쉼표/자유) — 예: 목공, 진열대 제작, 안전교육"
+            placeholder="키워드를 쉼표로 나열 — 예: 목공 실습, 진열대 제작, 사포·코팅, 안전교육"
           />
           <button
             type="button"
@@ -489,7 +489,7 @@ const ChulgangForm: React.FC = () => {
               <span className="kd-field-label">{t.label}</span>
               <textarea
                 className="kd-field-input kd-forms-textarea"
-                rows={3}
+                rows={5}
                 value={fields[t.key as keyof typeof fields]}
                 onChange={(e) => setField(t.key as keyof typeof fields, e.target.value)}
               />

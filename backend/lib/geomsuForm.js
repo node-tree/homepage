@@ -11,6 +11,9 @@ const { fillHwpx, formatKoreanDate } = require('./hwpxFill');
 //
 //   금액은 amount(숫자) 하나에서 toLocaleString 산출. 날짜는 formatKoreanDate(UTC) —
 //   YYYY-MM-DD 가 UTC 자정 저장돼도 하루 밀림 없음. 미치환 토큰은 fillHwpx 가 throw.
+//
+//   ── 검수의견 belt(2026-06) ──
+//   AI "자세하게" 강화로 검수의견이 2~4문장(140~260자)으로 길어져, 셀 상한(OPINION_CAP)을 둔다.
 // ═══════════════════════════════════════════════════════════════
 
 // backend/lib → ../templates/forms/검수조서_일반용역비.hwpx
@@ -36,6 +39,19 @@ const PLACEHOLDER_KEYS = [
   '검수결과',
   '검수의견',
 ];
+
+// 검수의견 셀 상한 — 2~4문장 풍부 출력이 셀을 넘치지 않게.
+const OPINION_CAP = 320;
+
+function clampOpinion(value) {
+  const v = (value == null ? '' : String(value)).replace(/\s*[\r\n]+\s*/g, ' ').trim();
+  if (v.length <= OPINION_CAP) return v;
+  const slice = v.slice(0, OPINION_CAP);
+  const sent = Math.max(slice.lastIndexOf('다. '), slice.lastIndexOf('다.'), slice.lastIndexOf('함.'));
+  if (sent > OPINION_CAP * 0.6) return slice.slice(0, sent + 2).trim();
+  const sp = slice.lastIndexOf(' ');
+  return (sp > OPINION_CAP * 0.6 ? slice.slice(0, sp) : slice).trim() + '…';
+}
 
 // 검수결과 3택 → 체크박스 라인('■' 선택 / '□' 미선택). 라벨은 양식 원문과 동일.
 const RESULT_LABELS = {
@@ -77,7 +93,7 @@ function buildGeomsuReplacements(body) {
     검수일자: fmtDate(b.검수일자),
     산출물링크,
     검수결과: buildResultLine(b.검수결과),
-    검수의견: b.검수의견 || '',
+    검수의견: clampOpinion(b.검수의견),
   };
 
   const repl = {};
@@ -121,6 +137,8 @@ module.exports = {
   buildGeomsuReplacements,
   buildResultLine,
   buildFilenameBase,
+  clampOpinion,
+  OPINION_CAP,
   PLACEHOLDER_KEYS,
   PHOTO_BINDATA_KEY_1,
   PHOTO_BINDATA_KEY_2,

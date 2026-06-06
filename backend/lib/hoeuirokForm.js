@@ -6,6 +6,10 @@ const { fillHwpx } = require('./hwpxFill');
 //   chulgangForm.js 와 동일 패턴: 서버는 얇은 매퍼, 클라이언트가 합성문자열 조립.
 //   템플릿 경로는 __dirname 기준(서버리스 번들) — vercel.json includeFiles 로 포함.
 //   회의사진(선택): BinData/hoeuirok_photo.png 바이트를 업로드 PNG 로 교체(없으면 더미 유지).
+//
+//   ── 안건 셀 belt(2026-06) ──
+//   AI "자세하게" 강화로 결정사항(안건N_1·_2)이 "맥락 한 문장 + 결정"으로 길어질 수 있어,
+//   해당 셀에 글자수 상한(DECISION_CAP)을 둔다. 개행은 한글 단일run 셀에서 렌더 안 되므로 공백화.
 // ═══════════════════════════════════════════════════════════════
 
 // backend/lib → ../templates/forms/서식7_회의록.hwpx
@@ -36,12 +40,33 @@ const PLACEHOLDER_KEYS = [
   '안건5', '안건5_1', '안건5_2',
 ];
 
+// 결정사항(안건N_1/_2) 셀 상한 — "맥락 + 결정" 한 줄이 회의록 셀을 넘치지 않게.
+const DECISION_CAP = 130;
+// 안건 제목(안건N) 셀 상한.
+const TITLE_CAP = 60;
+const isDecisionKey = (k) => /^안건\d+_[12]$/.test(k);
+const isTitleKey = (k) => /^안건\d+$/.test(k);
+
+function clampCell(value, cap) {
+  const v = (value == null ? '' : String(value)).replace(/\s*[\r\n]+\s*/g, ' ').trim();
+  if (!cap || v.length <= cap) return v;
+  const slice = v.slice(0, cap);
+  const sent = Math.max(slice.lastIndexOf('다. '), slice.lastIndexOf('. '), slice.lastIndexOf('함. '));
+  if (sent > cap * 0.6) return slice.slice(0, sent + 1).trim();
+  const sp = slice.lastIndexOf(' ');
+  return (sp > cap * 0.6 ? slice.slice(0, sp) : slice).trim() + '…';
+}
+
 function buildHoeuirokReplacements(body) {
   const b = body || {};
   const repl = {};
   for (const key of PLACEHOLDER_KEYS) {
     const v = b[key];
-    repl[`{{${key}}}`] = v == null ? '' : String(v);
+    let out;
+    if (isDecisionKey(key)) out = clampCell(v, DECISION_CAP);
+    else if (isTitleKey(key)) out = clampCell(v, TITLE_CAP);
+    else out = v == null ? '' : String(v);
+    repl[`{{${key}}}`] = out;
   }
   return repl;
 }
@@ -76,6 +101,8 @@ module.exports = {
   generateHoeuirokForm,
   buildHoeuirokReplacements,
   buildFilenameBase,
+  clampCell,
+  DECISION_CAP,
   PLACEHOLDER_KEYS,
   PHOTO_BINDATA_KEY,
   TEMPLATE_PATH,

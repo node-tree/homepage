@@ -12,6 +12,8 @@ import PhotoUpload from './PhotoUpload';
 //   · 클라이언트가 21개 플레이스홀더 값을 모두 조립해 POST → HWPX blob 다운로드.
 //     {{참석인원}}="총 N명"(참석자 수에서 산출), {{참석자}}=쉼표구분.
 //   · 안 쓰는 안건 슬롯은 빈 문자열 전송(서버 매퍼가 ''로 치환 — 미치환 토큰 없음).
+//   · 결정사항은 AI "자세하게" 강화로 "맥락 한 문장 + 결정"의 다문장이 들어올 수 있어
+//     단일줄 input → textarea 로 바꿔 긴 문장이 잘려 보이지 않게 한다(데스크톱·모바일 동일).
 // ═══════════════════════════════════════════════════════════════
 
 interface ProgramOpt {
@@ -205,7 +207,7 @@ const HoeuirokForm: React.FC = () => {
   return (
     <div className="kd-forms">
       <p className="kd-forms-desc">
-        회의 정보와 논의안건(최대 5개)을 입력해 회의록을 생성합니다. 참석자는 쉼표로 구분하며, 프로그램을 고르면 주강사를 채우거나 「AI 초안」으로 안건을 생성할 수 있습니다.
+        회의 정보와 논의안건(최대 5개)을 입력해 회의록을 생성합니다. 참석자는 쉼표로 구분하며, 프로그램을 고르면 주강사를 채우거나 「AI 초안」으로 안건을 생성할 수 있습니다. 결정사항은 "논의 맥락 + 결정"으로 풍부하게 작성됩니다.
       </p>
 
       <div className="kd-forms-body">
@@ -301,7 +303,7 @@ const HoeuirokForm: React.FC = () => {
             className="kd-field-input kd-forms-ai-input"
             value={키워드}
             onChange={(e) => set키워드(e.target.value)}
-            placeholder="키워드(쉼표/자유) — 예: 일정 점검, 예산, 안전"
+            placeholder="키워드를 쉼표로 나열 — 예: 일정 점검, 예산 집행, 안전 관리, 출결 편차"
           />
           <button
             type="button"
@@ -330,20 +332,22 @@ const HoeuirokForm: React.FC = () => {
               </label>
               <label className="kd-field kd-field-wide">
                 <span className="kd-field-label">└ 결정사항 1</span>
-                <input
-                  type="text"
-                  className="kd-field-input"
+                <textarea
+                  className="kd-field-input kd-forms-textarea kd-forms-decision"
+                  rows={2}
                   value={agenda[`안건${n}_1`]}
                   onChange={(e) => setAgendaField(`안건${n}_1`, e.target.value)}
+                  placeholder="논의 맥락 + 결정사항"
                 />
               </label>
               <label className="kd-field kd-field-wide">
                 <span className="kd-field-label">└ 결정사항 2</span>
-                <input
-                  type="text"
-                  className="kd-field-input"
+                <textarea
+                  className="kd-field-input kd-forms-textarea kd-forms-decision"
+                  rows={2}
                   value={agenda[`안건${n}_2`]}
                   onChange={(e) => setAgendaField(`안건${n}_2`, e.target.value)}
+                  placeholder="논의 맥락 + 결정사항"
                 />
               </label>
             </div>
