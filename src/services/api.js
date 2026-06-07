@@ -963,6 +963,52 @@ export const villageDiaryAPI = {
   }
 };
 
+
+// KkumdarakSettings API — 꿈다락 공개 페이지 설정(프로그램 신청 링크/마감) 영속화
+//   백엔드 단일 진실 소스. get 은 raw 설정 객체 { programs: { [name]: { applyUrl?, closed? } } } 반환,
+//   save 는 동일한 raw 객체를 PUT body 로 보낸다.
+//   인증은 마을일기와 동일한 꿈다락 전용 토큰(kkumdarak_token)을 그대로 재사용한다
+//   (사이트 auth_token 과 완전 분리, getHeaders()/handle401() 재사용 금지).
+export const kkumdarakSettingsAPI = {
+  // 설정 조회 (공개) — Programs 가 직접 소비하는 raw 객체 반환(없으면 {})
+  get: async () => {
+    const response = await fetchWithRetry(`${API_BASE_URL}/kkumdarak-settings`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch kkumdarak settings');
+    }
+    const data = await response.json();
+    return data && data.success ? (data.data || {}) : {};
+  },
+
+  // 설정 저장 (꿈다락 편집 인증 전용) — raw 설정 객체를 통째로 PUT
+  //   Authorization 은 kkumdarak_token 으로 직접 구성한다(getHeaders 재사용 금지).
+  //   401/403(만료·무효) → clearKkumdarakToken() 후 code 'KKUM_AUTH_EXPIRED' 로 throw.
+  save: async (settingsData) => {
+    const token = villageDiaryAPI.getKkumdarakToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${API_BASE_URL}/kkumdarak-settings`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(settingsData)
+    });
+    if (response.status === 401 || response.status === 403) {
+      villageDiaryAPI.clearKkumdarakToken();
+      const err = new Error('꿈다락 인증이 만료되었습니다. 다시 로그인해주세요.');
+      err.code = 'KKUM_AUTH_EXPIRED';
+      throw err;
+    }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Failed to save kkumdarak settings (${response.status})`);
+    }
+    const data = await response.json();
+    return data && data.success ? (data.data || {}) : {};
+  }
+};
+
 // Contact API
 export const contactAPI = {
   // Contact 설정 조회

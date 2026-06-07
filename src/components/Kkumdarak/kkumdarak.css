@@ -3069,6 +3069,77 @@
   color: #1a1a1a;
 }
 
+/* ── 신청 버튼: 마감/대기 상태 + 편집 패널 (데스크톱) ──────────────── */
+.program-action.is-closed,
+.program-action.is-pending {
+  background: #d8d2c4;
+  border-color: #8d8675;
+  box-shadow: 3px 3px 0 #8d8675;
+  color: #5b5547;
+  cursor: not-allowed;
+}
+
+.program-edit-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border: 2px dashed #1a1a1a;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.program-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--kd-font-body);
+  font-size: 12px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.program-edit-input {
+  width: 100%;
+  padding: 7px 9px;
+  border: 2px solid #1a1a1a;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  font-family: var(--kd-font-body);
+}
+
+.program-edit-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--kd-font-body);
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a1a1a;
+  cursor: pointer;
+}
+
+.program-edit-toggle input { width: 16px; height: 16px; cursor: pointer; }
+
+.program-edit-save {
+  align-self: flex-end;
+  padding: 7px 18px;
+  border: 2px solid #1a1a1a;
+  border-radius: 999px;
+  background: #1a1a1a;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+  color: #fff;
+  font-family: var(--kd-font-body);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.program-edit-save:disabled { opacity: 0.45; cursor: not-allowed; }
+
 .program-badge {
   position: relative;
   display: block;
@@ -3906,6 +3977,18 @@
   .kd-footer-line-operator {
     display: block;
   }
+}
+
+@media (max-width: 900px) {
+  .mobile-program-action.is-closed,
+  .mobile-program-action.is-pending {
+    background: #d8d2c4;
+    border-color: #8d8675;
+    box-shadow: 3px 3px 0 #8d8675;
+    color: #5b5547;
+  }
+
+  .mobile-program-edit-panel-spacer { display: none; }
 }
 
 @media (max-width: 900px) {
