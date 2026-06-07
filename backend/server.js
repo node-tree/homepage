@@ -60,6 +60,7 @@ const oceanRoutes = require('./routes/ocean');
 const calendarRoutes = require('./routes/calendar');
 const villageDiaryRoutes = require('./routes/villageDiary');
 const kkumdarakBudgetRoutes = require('./routes/kkumdarakBudget');
+const kkumdarakSettingsRoutes = require('./routes/kkumdarakSettings');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/work', workRoutes);
@@ -76,6 +77,7 @@ app.use('/api/ocean', oceanRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/village-diary', villageDiaryRoutes);
 app.use('/api/kkumdarak', kkumdarakBudgetRoutes);
+app.use('/api/kkumdarak-settings', kkumdarakSettingsRoutes);
 
 // 기본 라우트
 app.get('/', (req, res) => {

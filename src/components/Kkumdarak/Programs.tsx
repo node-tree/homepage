@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { KKUMDARAK_APPLY_URL } from './data';
 import MotionCharacter from './MotionCharacter';
+import { useKkumdarakAuth } from './KkumdarakAuthContext';
+import { kkumdarakSettingsAPI } from '../../services/api';
 
 const PROGRAMS: Array<{
   name: string;
@@ -112,7 +114,125 @@ const PROGRAMS: Array<{
   },
 ];
 
-const ProgramCard: React.FC<{ program: typeof PROGRAMS[number]; walkPhase: 'left' | 'right' }> = ({ program, walkPhase }) => {
+// ── 설정 오버라이드 타입 ──────────────────────────────────────────
+//   백엔드 KkumdarakSettings.data = { programs: { [program.name]: ProgramSetting } }
+//   식별자는 Programs 가 렌더하는 인라인 PROGRAMS 의 name (id 가 없어 name 으로 key).
+interface ProgramSetting {
+  applyUrl?: string;
+  closed?: boolean;
+}
+type ProgramSettingsMap = Record<string, ProgramSetting>;
+
+// 프로그램별 실효 신청 URL: 오버라이드 > data.ts 기본값.
+const resolveApplyUrl = (setting?: ProgramSetting): string =>
+  (setting?.applyUrl && setting.applyUrl.trim()) || KKUMDARAK_APPLY_URL;
+
+// 링크가 유효(실제 URL)한지 — '#' 또는 빈 값이면 비활성 처리.
+const isLiveUrl = (url: string): boolean => !!url && url !== '#';
+
+// ── 신청 버튼 (데스크톱·모바일 공용 로직) ───────────────────────────
+//   · 마감(closed) → 비활성 버튼 "마감되었습니다"
+//   · 축제(festival) → 기존 라벨(무료 개방) 그대로, 링크 없이 표시
+//   · 그 외 → 항상 "신청하기 →" 라벨 노출(요구사항 1). URL 이 아직 '#'(미설정)이면
+//     클릭만 막고(preventDefault) 라벨은 그대로 — 기존 동작과 동일하게 유지한다.
+const ApplyButton: React.FC<{
+  program: typeof PROGRAMS[number];
+  setting?: ProgramSetting;
+  className: string;
+}> = ({ program, setting, className }) => {
+  const closed = !!setting?.closed;
+
+  // 축제 카드는 신청 개념이 없다 — 마감만 반영, 아니면 정보성 라벨 유지.
+  if (program.festival && !closed) {
+    return <span className={className} aria-disabled="true">{program.action}</span>;
+  }
+
+  if (closed) {
+    return (
+      <span className={`${className} is-closed`} aria-disabled="true">
+        마감되었습니다
+      </span>
+    );
+  }
+
+  // 신청 링크 — 라벨은 항상 노출, URL 미설정('#') 시에만 이동을 막는다.
+  const url = resolveApplyUrl(setting);
+  const live = isLiveUrl(url);
+
+  return (
+    <a
+      className={className}
+      href={url}
+      target={live ? '_blank' : undefined}
+      rel={live ? 'noopener noreferrer' : undefined}
+      onClick={(event) => { if (!live) event.preventDefault(); }}
+    >
+      {program.action}
+    </a>
+  );
+};
+
+// ── 편집 패널 (로그인 시에만 렌더) ─────────────────────────────────
+//   신청 URL 입력 + 마감 토글. 저장은 부모(onSave)로 위임.
+const EditPanel: React.FC<{
+  program: typeof PROGRAMS[number];
+  setting?: ProgramSetting;
+  saving: boolean;
+  onSave: (name: string, next: ProgramSetting) => void;
+}> = ({ program, setting, saving, onSave }) => {
+  const [url, setUrl] = useState<string>(setting?.applyUrl ?? '');
+  const [closed, setClosed] = useState<boolean>(!!setting?.closed);
+
+  // 외부(다른 카드 저장 후 refetch 등)에서 setting 이 바뀌면 입력값 동기화.
+  useEffect(() => {
+    setUrl(setting?.applyUrl ?? '');
+    setClosed(!!setting?.closed);
+  }, [setting?.applyUrl, setting?.closed]);
+
+  const dirty = (setting?.applyUrl ?? '') !== url || !!setting?.closed !== closed;
+
+  return (
+    <div className="program-edit-panel" data-name="신청 링크 편집">
+      <label className="program-edit-field">
+        <span>신청 URL</span>
+        <input
+          type="url"
+          className="program-edit-input"
+          value={url}
+          placeholder="https://… (신청 폼 주소)"
+          onChange={(e) => setUrl(e.target.value)}
+          disabled={saving}
+        />
+      </label>
+      <label className="program-edit-toggle">
+        <input
+          type="checkbox"
+          checked={closed}
+          onChange={(e) => setClosed(e.target.checked)}
+          disabled={saving}
+        />
+        <span>모집 마감</span>
+      </label>
+      <button
+        type="button"
+        className="program-edit-save"
+        disabled={saving || !dirty}
+        onClick={() => onSave(program.name, { applyUrl: url.trim(), closed })}
+      >
+        {saving ? '저장 중…' : '저장'}
+      </button>
+    </div>
+  );
+};
+
+const ProgramCard: React.FC<{
+  program: typeof PROGRAMS[number];
+  walkPhase: 'left' | 'right';
+  setting?: ProgramSetting;
+  authed: boolean;
+  saving: boolean;
+  onSave: (name: string, next: ProgramSetting) => void;
+}> = ({ program, walkPhase, setting, authed, saving, onSave }) => {
   const labelLines = program.label ?? [program.name];
   return (
     <article className="program-card" style={{ '--accent': program.color } as React.CSSProperties}>
@@ -130,20 +250,21 @@ const ProgramCard: React.FC<{ program: typeof PROGRAMS[number]; walkPhase: 'left
           <p key={key}><span>{key}</span><b>{value}</b></p>
         ))}
       </div>
-      <a
-        className="program-action"
-        href={KKUMDARAK_APPLY_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(event) => { if (KKUMDARAK_APPLY_URL === '#') event.preventDefault(); }}
-      >
-        {program.action}
-      </a>
+      <ApplyButton program={program} setting={setting} className="program-action" />
+      {authed && (
+        <EditPanel program={program} setting={setting} saving={saving} onSave={onSave} />
+      )}
     </article>
   );
 };
 
-const MobileProgramCard: React.FC<{ program: typeof PROGRAMS[number] }> = ({ program }) => (
+const MobileProgramCard: React.FC<{
+  program: typeof PROGRAMS[number];
+  setting?: ProgramSetting;
+  authed: boolean;
+  saving: boolean;
+  onSave: (name: string, next: ProgramSetting) => void;
+}> = ({ program, setting, authed, saving, onSave }) => (
   <article className="mobile-program-card" style={{ '--accent': program.color, '--mark': program.mobileMark } as React.CSSProperties}>
     <div className="mobile-program-head">
       <div className="mobile-program-character" aria-hidden="true">
@@ -158,25 +279,57 @@ const MobileProgramCard: React.FC<{ program: typeof PROGRAMS[number] }> = ({ pro
       <span>{program.field}</span>
       <b>{program.brief}</b>
     </div>
-    <a
-      className="mobile-program-action"
-      href={KKUMDARAK_APPLY_URL}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={(event) => { if (KKUMDARAK_APPLY_URL === '#') event.preventDefault(); }}
-    >
-      {program.action}
-    </a>
+    <ApplyButton program={program} setting={setting} className="mobile-program-action" />
+    {authed && (
+      <EditPanel program={program} setting={setting} saving={saving} onSave={onSave} />
+    )}
   </article>
 );
 
 const Programs: React.FC = () => {
   const [walkPhase, setWalkPhase] = useState<'left' | 'right'>('left');
+  const { authed } = useKkumdarakAuth();
+
+  // 신청 링크/마감 오버라이드 (백엔드 단일 진실 소스, name 으로 key)
+  const [settings, setSettings] = useState<ProgramSettingsMap>({});
+  const [savingName, setSavingName] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setInterval(() => setWalkPhase(p => p === 'left' ? 'right' : 'left'), 420);
     return () => clearInterval(t);
   }, []);
+
+  // 설정 로드 (공개 GET) — 언마운트 후 setState 방지.
+  useEffect(() => {
+    let alive = true;
+    kkumdarakSettingsAPI.get()
+      .then((data) => {
+        if (!alive) return;
+        const programs = (data && data.programs) || {};
+        setSettings(programs as ProgramSettingsMap);
+      })
+      .catch(() => { /* 폴백: 오버라이드 없음(기본 동작 유지) */ });
+    return () => { alive = false; };
+  }, []);
+
+  // 저장 — 단일 프로그램 설정을 머지해 통째로 PUT, 성공 시 로컬 상태 낙관적 갱신.
+  //   (GET 응답에 SWR 캐시가 걸려 있어 refetch 만으로는 최대 1분 지연 → 직접 갱신.)
+  const handleSave = useCallback(async (name: string, next: ProgramSetting) => {
+    setSavingName(name);
+    const optimistic: ProgramSettingsMap = { ...settings, [name]: next };
+    try {
+      await kkumdarakSettingsAPI.save({ programs: optimistic });
+      setSettings(optimistic);
+    } catch (err: any) {
+      if (err?.code === 'KKUM_AUTH_EXPIRED') {
+        alert('꿈다락 인증이 만료되었습니다. 다시 로그인해주세요.');
+      } else {
+        alert(err?.message || '저장에 실패했습니다.');
+      }
+    } finally {
+      setSavingName(null);
+    }
+  }, [settings]);
 
   return (
     <section className="kd-figma-programs">
@@ -187,7 +340,15 @@ const Programs: React.FC = () => {
         <div className="program-soft-field" />
         <div className="program-grid">
           {PROGRAMS.map((program) => (
-            <ProgramCard key={program.name} program={program} walkPhase={walkPhase} />
+            <ProgramCard
+              key={program.name}
+              program={program}
+              walkPhase={walkPhase}
+              setting={settings[program.name]}
+              authed={authed}
+              saving={savingName === program.name}
+              onSave={handleSave}
+            />
           ))}
         </div>
       </div>
@@ -197,7 +358,14 @@ const Programs: React.FC = () => {
         <h1>프로그램</h1>
         <div className="mobile-program-list">
           {PROGRAMS.map((program) => (
-            <MobileProgramCard key={program.name} program={program} />
+            <MobileProgramCard
+              key={program.name}
+              program={program}
+              setting={settings[program.name]}
+              authed={authed}
+              saving={savingName === program.name}
+              onSave={handleSave}
+            />
           ))}
         </div>
       </div>
