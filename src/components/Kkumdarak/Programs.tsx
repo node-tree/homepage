@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { KKUMDARAK_APPLY_URL } from './data';
 import MotionCharacter from './MotionCharacter';
 import { useKkumdarakAuth } from './KkumdarakAuthContext';
@@ -177,9 +177,10 @@ const ApplyButton: React.FC<{
 const EditPanel: React.FC<{
   program: typeof PROGRAMS[number];
   setting?: ProgramSetting;
-  saving: boolean;
+  saving: boolean;   // 이 카드의 저장이 진행 중
+  locked: boolean;   // 다른 어떤 카드든 저장이 진행 중(전역 in-flight)
   onSave: (name: string, next: ProgramSetting) => void;
-}> = ({ program, setting, saving, onSave }) => {
+}> = ({ program, setting, saving, locked, onSave }) => {
   const [url, setUrl] = useState<string>(setting?.applyUrl ?? '');
   const [closed, setClosed] = useState<boolean>(!!setting?.closed);
 
@@ -201,7 +202,7 @@ const EditPanel: React.FC<{
           value={url}
           placeholder="https://… (신청 폼 주소)"
           onChange={(e) => setUrl(e.target.value)}
-          disabled={saving}
+          disabled={locked}
         />
       </label>
       <label className="program-edit-toggle">
@@ -209,14 +210,17 @@ const EditPanel: React.FC<{
           type="checkbox"
           checked={closed}
           onChange={(e) => setClosed(e.target.checked)}
-          disabled={saving}
+          disabled={locked}
         />
         <span>모집 마감</span>
       </label>
       <button
         type="button"
         className="program-edit-save"
-        disabled={saving || !dirty}
+        // ⚠️ 저장 직렬화: 전체 맵을 통째로 PUT(last-write-wins)하는 구조라, 한 카드의 저장이
+        //   비행 중일 때 다른 카드를 저장하면 base 맵이 옛 값이라 방금 저장한 변경이 덮어써진다.
+        //   → 어떤 카드든 저장 중(locked)이면 모든 저장 버튼을 비활성화해 저장을 직렬화한다.
+        disabled={locked || !dirty}
         onClick={() => onSave(program.name, { applyUrl: url.trim(), closed })}
       >
         {saving ? '저장 중…' : '저장'}
@@ -231,8 +235,9 @@ const ProgramCard: React.FC<{
   setting?: ProgramSetting;
   authed: boolean;
   saving: boolean;
+  locked: boolean;
   onSave: (name: string, next: ProgramSetting) => void;
-}> = ({ program, walkPhase, setting, authed, saving, onSave }) => {
+}> = ({ program, walkPhase, setting, authed, saving, locked, onSave }) => {
   const labelLines = program.label ?? [program.name];
   return (
     <article className="program-card" style={{ '--accent': program.color } as React.CSSProperties}>
@@ -252,7 +257,7 @@ const ProgramCard: React.FC<{
       </div>
       <ApplyButton program={program} setting={setting} className="program-action" />
       {authed && (
-        <EditPanel program={program} setting={setting} saving={saving} onSave={onSave} />
+        <EditPanel program={program} setting={setting} saving={saving} locked={locked} onSave={onSave} />
       )}
     </article>
   );
@@ -263,8 +268,9 @@ const MobileProgramCard: React.FC<{
   setting?: ProgramSetting;
   authed: boolean;
   saving: boolean;
+  locked: boolean;
   onSave: (name: string, next: ProgramSetting) => void;
-}> = ({ program, setting, authed, saving, onSave }) => (
+}> = ({ program, setting, authed, saving, locked, onSave }) => (
   <article className="mobile-program-card" style={{ '--accent': program.color, '--mark': program.mobileMark } as React.CSSProperties}>
     <div className="mobile-program-head">
       <div className="mobile-program-character" aria-hidden="true">
@@ -281,7 +287,7 @@ const MobileProgramCard: React.FC<{
     </div>
     <ApplyButton program={program} setting={setting} className="mobile-program-action" />
     {authed && (
-      <EditPanel program={program} setting={setting} saving={saving} onSave={onSave} />
+      <EditPanel program={program} setting={setting} saving={saving} locked={locked} onSave={onSave} />
     )}
   </article>
 );
@@ -294,31 +300,85 @@ const Programs: React.FC = () => {
   const [settings, setSettings] = useState<ProgramSettingsMap>({});
   const [savingName, setSavingName] = useState<string | null>(null);
 
+  // 저장 시 머지 기준이 되는 '최신' settings 스냅샷.
+  //   stale-closure 방지 + 초기 GET 미완료 상태에서 저장 시 다른 프로그램 값이 누락되는
+  //   사고를 막기 위해 ref 로 항상 최신 맵을 들고 있는다(handleSave 가 이 ref 를 머지한다).
+  const settingsRef = useRef<ProgramSettingsMap>({});
+  // GET(로드)이 한 번이라도 완료됐는지. 로드 전에는 저장을 막아 빈 맵으로 덮어쓰는 사고를 차단.
+  const loadedRef = useRef<boolean>(false);
+  // 직전 GET 이 '실패'로 끝났는지(네트워크 일시 오류 등). 이 경우 settingsRef 가 신뢰 불가
+  //   (다른 프로그램 값이 비어 있을 수 있음)이라, 저장 전 GET 을 한 번 더 시도해 base 맵을 복구한다.
+  const loadFailedRef = useRef<boolean>(false);
+  // 저장 in-flight 가드(방어적 직렬화). UI 의 locked 비활성화가 우회돼도 한 번에 한 PUT 만 보낸다.
+  const savingRef = useRef<boolean>(false);
+
   useEffect(() => {
     const t = setInterval(() => setWalkPhase(p => p === 'left' ? 'right' : 'left'), 420);
     return () => clearInterval(t);
   }, []);
 
   // 설정 로드 (공개 GET) — 언마운트 후 setState 방지.
+  //   ⚠️ kkumdarakSettingsAPI.get() 은 내부에서 cdnBustUrl 로 Vercel Edge Cache 를
+  //   우회한다(저장 직후 5분 창 한정 ?_t= 부착; 서버 GET 라우트의 s-maxage=60·
+  //   stale-while-revalidate=300 때문). 이 우회가 없으면 '모집 마감' 저장 직후 재진입 시
+  //   엣지 캐시의 저장 이전 응답을 받아 체크가 풀린다.
   useEffect(() => {
     let alive = true;
     kkumdarakSettingsAPI.get()
       .then((data) => {
         if (!alive) return;
         const programs = (data && data.programs) || {};
+        settingsRef.current = programs as ProgramSettingsMap;
+        loadedRef.current = true;
+        loadFailedRef.current = false;
         setSettings(programs as ProgramSettingsMap);
       })
-      .catch(() => { /* 폴백: 오버라이드 없음(기본 동작 유지) */ });
+      .catch(() => {
+        if (!alive) return;
+        // 폴백: 오버라이드 없음(기본 동작 유지). 로드는 '완료'로 보되 '실패'로 표시한다.
+        //   (네트워크 일시 실패까지 저장을 영구 차단하지 않되, 저장 직전 GET 재시도로 base 복구.)
+        loadedRef.current = true;
+        loadFailedRef.current = true;
+      });
     return () => { alive = false; };
   }, []);
 
-  // 저장 — 단일 프로그램 설정을 머지해 통째로 PUT, 성공 시 로컬 상태 낙관적 갱신.
-  //   (GET 응답에 SWR 캐시가 걸려 있어 refetch 만으로는 최대 1분 지연 → 직접 갱신.)
+  // 저장 — 단일 프로그램 설정을 '최신 ref 맵'에 머지해 통째로 PUT, 성공 시 로컬 상태 낙관적 갱신.
+  //   · 머지 기준을 state(settings) 대신 settingsRef.current 로 잡아 stale-closure 로
+  //     인한 다른 프로그램 값 유실을 방지한다.
+  //   · 초기 GET 미완료(loadedRef=false) 상태면 저장을 막는다(빈 맵 덮어쓰기 차단).
   const handleSave = useCallback(async (name: string, next: ProgramSetting) => {
+    if (!loadedRef.current) {
+      alert('설정을 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+    // 방어적 직렬화: 이미 다른 저장이 비행 중이면 무시(UI locked 우회 대비).
+    //   전체 맵 PUT(last-write-wins) 구조라 동시 저장은 base 맵을 옛 값으로 만들어 변경을 덮어쓴다.
+    if (savingRef.current) {
+      alert('다른 항목을 저장하는 중입니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+    savingRef.current = true;
     setSavingName(name);
-    const optimistic: ProgramSettingsMap = { ...settings, [name]: next };
     try {
+      // 직전 GET 이 실패했다면 settingsRef(base 맵)가 비어 있을 수 있어, 저장 전 GET 을 한 번
+      //   더 시도해 다른 프로그램 값을 복구한다(빈 맵으로 통째 덮어쓰기 방지). 재시도도 실패하면
+      //   사용자에게 알리고 저장을 중단한다(타 프로그램 값 유실 위험을 무릅쓰지 않는다).
+      if (loadFailedRef.current) {
+        try {
+          const data = await kkumdarakSettingsAPI.get();
+          const programs = (data && data.programs) || {};
+          settingsRef.current = programs as ProgramSettingsMap;
+          loadFailedRef.current = false;
+          setSettings(programs as ProgramSettingsMap);
+        } catch {
+          alert('설정을 다시 불러오지 못했습니다. 네트워크 확인 후 다시 시도해주세요.');
+          return;
+        }
+      }
+      const optimistic: ProgramSettingsMap = { ...settingsRef.current, [name]: next };
       await kkumdarakSettingsAPI.save({ programs: optimistic });
+      settingsRef.current = optimistic;
       setSettings(optimistic);
     } catch (err: any) {
       if (err?.code === 'KKUM_AUTH_EXPIRED') {
@@ -327,9 +387,10 @@ const Programs: React.FC = () => {
         alert(err?.message || '저장에 실패했습니다.');
       }
     } finally {
+      savingRef.current = false;
       setSavingName(null);
     }
-  }, [settings]);
+  }, []);
 
   return (
     <section className="kd-figma-programs">
@@ -347,6 +408,7 @@ const Programs: React.FC = () => {
               setting={settings[program.name]}
               authed={authed}
               saving={savingName === program.name}
+              locked={savingName !== null}
               onSave={handleSave}
             />
           ))}
@@ -364,6 +426,7 @@ const Programs: React.FC = () => {
               setting={settings[program.name]}
               authed={authed}
               saving={savingName === program.name}
+              locked={savingName !== null}
               onSave={handleSave}
             />
           ))}

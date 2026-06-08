@@ -881,8 +881,14 @@ const KKUMDARAK_TOKEN_KEY = 'kkumdarak_token';
 
 export const villageDiaryAPI = {
   // 오버라이드 조회 (공개) — mergePrograms 가 직접 소비하는 raw 객체 반환
+  //   ⚠️ Vercel Edge Cache 우회(saengsanso 공개 GET 과 동일한 cdnBustUrl 패턴):
+  //   GET 라우트가 Cache-Control s-maxage=60, stale-while-revalidate=300 을 보내므로
+  //   저장(PUT)은 엣지 캐시를 무효화하지 못한다. 캐시버스터가 없으면 저장 직후 재진입 시
+  //   엣지 캐시의 '저장 이전' 응답을 받아 편집값이 풀려버린다.
+  //   → 저장 시 markCdnDirty 로 표식, 이후 5분 창에서만 ?_t= 로 우회(=저장 직후 재진입 구간).
+  //     그 외 일반 방문자는 엣지 캐시를 그대로 활용해 공개 페이지 성능을 유지한다.
   get: async () => {
-    const response = await fetchWithRetry(`${API_BASE_URL}/village-diary`);
+    const response = await fetchWithRetry(cdnBustUrl(`${API_BASE_URL}/village-diary`, 'village_diary_updated'));
     if (!response.ok) {
       throw new Error('Failed to fetch village diary');
     }
@@ -959,6 +965,8 @@ export const villageDiaryAPI = {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || `Failed to save village diary (${response.status})`);
     }
+    // 저장 성공 — 이후 5분 동안 get()이 ?_t= 로 엣지 캐시를 우회하도록 표식(재진입 시 최신값 보장)
+    markCdnDirty('village_diary_updated');
     return response.json();
   }
 };
@@ -971,8 +979,14 @@ export const villageDiaryAPI = {
 //   (사이트 auth_token 과 완전 분리, getHeaders()/handle401() 재사용 금지).
 export const kkumdarakSettingsAPI = {
   // 설정 조회 (공개) — Programs 가 직접 소비하는 raw 객체 반환(없으면 {})
+  //   ⚠️ Vercel Edge Cache 우회(saengsanso 공개 GET 과 동일한 cdnBustUrl 패턴):
+  //   GET 라우트가 Cache-Control s-maxage=60, stale-while-revalidate=300 을 보내므로
+  //   저장(PUT)은 엣지 캐시를 무효화하지 못한다. 캐시버스터가 없으면 '모집 마감' 토글을
+  //   저장한 직후 재진입/새로고침 시 엣지 캐시의 '저장 이전' 응답(closed:false)을 받아
+  //   체크가 풀려버린다(=원래 버그). → 저장 시 markCdnDirty 로 표식, 이후 5분 창에서만 ?_t=
+  //   로 우회(저장 직후 재진입 구간). 그 외 일반 방문자는 엣지 캐시를 그대로 활용한다.
   get: async () => {
-    const response = await fetchWithRetry(`${API_BASE_URL}/kkumdarak-settings`);
+    const response = await fetchWithRetry(cdnBustUrl(`${API_BASE_URL}/kkumdarak-settings`, 'kkum_settings_updated'));
     if (!response.ok) {
       throw new Error('Failed to fetch kkumdarak settings');
     }
@@ -1004,6 +1018,8 @@ export const kkumdarakSettingsAPI = {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || `Failed to save kkumdarak settings (${response.status})`);
     }
+    // 저장 성공 — 이후 5분 동안 get()이 ?_t= 로 엣지 캐시를 우회하도록 표식(재진입 시 최신값 보장)
+    markCdnDirty('kkum_settings_updated');
     const data = await response.json();
     return data && data.success ? (data.data || {}) : {};
   }
