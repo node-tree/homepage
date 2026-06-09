@@ -34,17 +34,28 @@ export interface IkAuthParams {
   urlEndpoint: string;
 }
 
+// ImageKit listFiles 응답 항목.
+//   · 파일(type:'file'): fileId/url/size/fileType 등 보유.
+//   · 폴더(type:'folder'): folderId/folderPath 만 있고 url/size/fileType 는 없다.
+//   파일/폴더 공통으로 다루기 위해 폴더 전용 필드와 type 을 optional 로 둔다.
 export interface IkFile {
+  // 파일 전용 (폴더 항목엔 없을 수 있음)
   fileId: string;
-  name: string;
-  filePath: string;
   url: string;
-  thumbnail?: string;
   fileType: string;
   size: number;
+  thumbnail?: string;
   height?: number;
   width?: number;
+  // 공통
+  name: string;
+  filePath: string;
   createdAt: string;
+  // 항목 종류 — 'file' | 'folder' (구버전/검색 응답엔 없을 수 있어 optional)
+  type?: 'file' | 'folder';
+  // 폴더 전용
+  folderId?: string;
+  folderPath?: string;
 }
 
 export interface IkUploadResult {
@@ -56,6 +67,12 @@ export interface IkUploadResult {
   height?: number;
   width?: number;
   size?: number;
+}
+
+// 라이브러리 사용 용량 — 현재 버전 파일(type:'file') 합계 기준.
+export interface IkUsage {
+  totalBytes: number;
+  fileCount: number;
 }
 
 // 401(미인증/만료) → AUTH_EXPIRED(로그인 유도), 403(비admin) → FORBIDDEN(안내).
@@ -110,6 +127,23 @@ export const imagekitAdminAPI = {
     const data = await res.json();
     if (!data.success) throw new Error('목록 응답이 올바르지 않습니다.');
     return (data.files || []) as IkFile[];
+  },
+
+  // 사용 용량 조회 (백엔드가 type:'file' 전체를 페이지네이션 합산)
+  getUsage: async (signal?: AbortSignal): Promise<IkUsage> => {
+    const res = await fetch(`${API_BASE_URL}/imagekit/usage`, {
+      method: 'GET',
+      headers: authHeaders(),
+      signal,
+    });
+    await handleAuthErrors(res);
+    if (!res.ok) throw new Error(`용량 조회 실패 (${res.status})`);
+    const data = await res.json();
+    if (!data.success) throw new Error('용량 응답이 올바르지 않습니다.');
+    return {
+      totalBytes: Number(data.totalBytes) || 0,
+      fileCount: Number(data.fileCount) || 0,
+    };
   },
 
   // 파일 삭제

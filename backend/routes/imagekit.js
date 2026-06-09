@@ -68,6 +68,11 @@ router.get('/auth', (req, res) => {
 
 // GET /api/imagekit/list?path=&searchQuery=&skip=&limit=
 //   미디어 라이브러리 브라우징.
+//   · ImageKit GET /v1/files/ 의 type 기본값은 'file' 이라 폴더가 빠진다.
+//     폴더 탐색을 위해 검색이 아닐 때는 type:'all' 로 폴더+파일을 함께 받는다.
+//     검색(searchQuery) 중에는 파일명 검색 의미를 보존하기 위해 type 미지정(파일만).
+//   · 폴더 항목은 { type:'folder', folderId, name, folderPath } 형태로 url/size 가 없다.
+//     프론트는 type 으로 분기해 방어적으로 처리한다.
 router.get('/list', async (req, res) => {
   try {
     const { path = '', searchQuery = '', skip = '0', limit = '40' } = req.query;
@@ -78,13 +83,56 @@ router.get('/list', async (req, res) => {
       sort: 'DESC_CREATED',
     };
     if (path) options.path = path;
-    if (searchQuery) options.searchQuery = searchQuery;
+    if (searchQuery) {
+      options.searchQuery = searchQuery; // 파일명 검색 — 파일만(type 미지정)
+    } else {
+      options.type = 'all'; // 폴더 탐색 — 폴더 + 파일 함께 반환
+    }
 
     const files = await imagekit.listFiles(options);
     res.json({ success: true, files });
   } catch (error) {
     console.error('ImageKit listFiles 오류:', error.message);
     res.status(500).json({ success: false, message: '파일 목록 조회 실패' });
+  }
+});
+
+// GET /api/imagekit/usage
+//   라이브러리 사용 용량 합산. type:'file' 만(폴더/버전 제외) 페이지네이션으로 전부
+//   순회하며 size 합산 → { totalBytes, fileCount }.
+//   · 현재 버전 파일 합계 기준(file-version 미포함).
+//   · 무료 한도 3GB 기준 퍼센트는 프론트에서 계산.
+//   · ~983개 규모면 limit 1000 으로 보통 1~2 콜. 안전상 최대 콜 수를 제한한다.
+router.get('/usage', async (req, res) => {
+  try {
+    const PAGE = 1000; // ImageKit listFiles limit 최대값
+    const MAX_CALLS = 50; // 무한 루프 방지 가드(최대 5만 개)
+    let totalBytes = 0;
+    let fileCount = 0;
+    let skip = 0;
+    let calls = 0;
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const batch = await imagekit.listFiles({
+        type: 'file',
+        limit: PAGE,
+        skip,
+        sort: 'DESC_CREATED',
+      });
+      calls += 1;
+      for (const f of batch) {
+        if (typeof f.size === 'number') totalBytes += f.size;
+        fileCount += 1;
+      }
+      if (batch.length < PAGE || calls >= MAX_CALLS) break;
+      skip += PAGE;
+    }
+
+    res.json({ success: true, totalBytes, fileCount });
+  } catch (error) {
+    console.error('ImageKit usage 집계 오류:', error.message);
+    res.status(500).json({ success: false, message: '용량 조회 실패' });
   }
 });
 

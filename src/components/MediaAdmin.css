@@ -17,6 +17,27 @@
   font-size: 15px;
 }
 
+/* 헤더 상단 — 홈으로 돌아가는 링크 */
+.ma-header-top {
+  margin-bottom: 10px;
+}
+.ma-home-link {
+  display: inline-block;
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #555;
+  text-decoration: none;
+  background: #fff;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.ma-home-link:hover {
+  background: #f0f0f0;
+  border-color: #ccc;
+  color: #1a1a1a;
+}
+
 .ma-header h1 {
   font-size: 24px;
   font-weight: 700;
@@ -26,6 +47,35 @@
   color: #777;
   font-size: 13px;
   margin: 0 0 8px;
+}
+
+/* 현재 용량 표시 */
+.ma-usage {
+  margin: 10px 0 4px;
+  max-width: 420px;
+}
+.ma-usage-text {
+  font-size: 13px;
+  color: #555;
+}
+.ma-usage-text strong {
+  color: #1a1a1a;
+}
+.ma-usage-text.muted {
+  color: #999;
+}
+.ma-usage-bar {
+  margin-top: 6px;
+  height: 6px;
+  background: #ececec;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.ma-usage-fill {
+  height: 100%;
+  background: #4a7cff;
+  border-radius: 999px;
+  transition: width 0.3s ease;
 }
 
 .ma-section {
@@ -134,6 +184,41 @@
   white-space: nowrap;
 }
 
+/* 브레드크럼 — 현재 경로 표시 + 세그먼트 점프 + 상위 폴더 */
+.ma-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+.ma-crumb {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  font-size: 13px;
+  color: #4a7cff;
+  cursor: pointer;
+  border-radius: 6px;
+  font-family: inherit;
+}
+button.ma-crumb:hover {
+  background: #f0f4ff;
+  text-decoration: underline;
+}
+.ma-crumb.current {
+  color: #1a1a1a;
+  font-weight: 600;
+  cursor: default;
+}
+.ma-crumb-sep {
+  color: #bbb;
+}
+.ma-up-btn {
+  margin-left: 8px;
+}
+
 /* 브라우징 컨트롤 */
 .ma-browse-controls {
   display: flex;
@@ -166,6 +251,10 @@
 }
 .ma-btn:hover {
   background: #f0f0f0;
+}
+.ma-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .ma-btn.danger {
   color: #c0392b;
@@ -210,6 +299,28 @@
   font-size: 12px;
   text-transform: uppercase;
 }
+
+/* 폴더 카드 — 클릭 진입 가능한 버튼 */
+.ma-card.ma-folder {
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  font-family: inherit;
+  color: inherit;
+  transition: border-color 0.12s, background 0.12s;
+}
+.ma-card.ma-folder:hover {
+  border-color: #c8d4ff;
+  background: #fafbff;
+}
+.ma-folder-thumb {
+  background: #f7f9ff;
+}
+.ma-folder-icon {
+  font-size: 44px;
+  line-height: 1;
+}
+
 .ma-card-meta {
   padding: 8px 10px 4px;
 }
@@ -224,6 +335,9 @@
   font-size: 11px;
   color: #999;
   margin-top: 2px;
+}
+.ma-card.ma-folder .ma-card-meta {
+  padding-bottom: 10px;
 }
 .ma-card-actions {
   display: flex;
@@ -256,6 +370,9 @@
   .media-admin {
     padding: 20px 12px 60px;
   }
+  .ma-usage {
+    max-width: none;
+  }
   .ma-grid {
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     gap: 10px;
@@ -270,5 +387,8 @@
   .ma-browse-controls input[type='text'] {
     flex: 1;
     min-width: 0;
+  }
+  .ma-up-btn {
+    margin-left: 0;
   }
 }
