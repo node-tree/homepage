@@ -34,3 +34,6 @@ yarn-debug.log*
 yarn-error.log*
 .vercel
 /build
+
+# cafe24->ImageKit DB 마이그레이션 백업 (커밋 제외)
+cafe24-db-backup-*/
