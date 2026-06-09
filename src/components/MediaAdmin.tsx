@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// 이소 異素 — ImageKit 관리자 미디어 페이지 (admin 전용)
+// 이미지호스팅 — ImageKit 관리자 미디어 페이지 (admin 전용)
 //   · 업로드: 드래그앤드롭 + 파일선택. 업로드 전 브라우저 자동 리사이즈(긴 변 2400px,
 //     JPEG 0.82, GIF 제외). ImageKit 으로 직접 multipart 업로드(백엔드 /auth 서명).
 //   · 브라우징: /list 그리드. 썸네일은 ikUrl 헬퍼(?tr=w-300,f-auto, GIF 제외).
@@ -64,7 +64,7 @@ const MediaAdmin: React.FC = () => {
   // 문서 제목
   useEffect(() => {
     const prev = document.title;
-    document.title = '이소 異素 · NODE TREE';
+    document.title = '이미지호스팅 · NODE TREE';
     return () => {
       document.title = prev;
     };
@@ -239,12 +239,12 @@ const MediaAdmin: React.FC = () => {
     return (
       <div className="media-admin">
         <header className="ma-header">
-          <h1>이소 異素</h1>
+          <h1>이미지호스팅</h1>
         </header>
         <section className="ma-section">
           <p className="ma-error">관리자 권한이 필요합니다.</p>
           <p className="ma-sub">
-            이 페이지(이소)는 관리자(admin) 계정만 접근할 수 있습니다. 권한이 필요한
+            이 페이지(이미지호스팅)는 관리자(admin) 계정만 접근할 수 있습니다. 권한이 필요한
             경우 사이트 관리자에게 문의해주세요.
           </p>
         </section>
@@ -255,7 +255,7 @@ const MediaAdmin: React.FC = () => {
   return (
     <div className="media-admin">
       <header className="ma-header">
-        <h1>이소 異素</h1>
+        <h1>이미지호스팅</h1>
         <p className="ma-sub">
           이미지는 ImageKit 라이브러리에만 저장됩니다(자체 DB 미저장). 무료 플랜 용량 3GB.
         </p>

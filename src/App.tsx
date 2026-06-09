@@ -356,7 +356,7 @@ function AppContent() {
               MONITOR
             </a>
             <a href="/admin/media" className="logout-button" style={{ textDecoration: 'none', marginRight: '4px' }}>
-              이소
+              이미지호스팅
             </a>
             <button onClick={logout} className="logout-button">
               로그아웃
