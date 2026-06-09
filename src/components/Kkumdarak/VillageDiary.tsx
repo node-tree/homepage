@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import IntroChar from './IntroChar';
 import { villageDiaryAPI } from '../../services/api';
+import { ikUrl } from '../../utils/ikUrl';
 import { useKkumdarakAuth } from './KkumdarakAuthContext';
 
 type DiaryCardData = { side: 'left' | 'right'; title: string; date: string; dot: string; imageUrl?: string };
@@ -261,7 +262,7 @@ const DiaryCard: React.FC<{
       <i style={{ background: dot }} />
       {imageUrl && (
         <img
-          src={imageUrl}
+          src={ikUrl(imageUrl, { w: 1200 })}
           alt=""
           className="diary-photo-img"
         />
@@ -313,7 +314,7 @@ const DiaryCard: React.FC<{
           <time>{date}</time>
           {imageUrl && (
             <img
-              src={imageUrl}
+              src={ikUrl(imageUrl, { w: 1200 })}
               alt=""
               className="diary-card-image"
             />

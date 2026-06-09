@@ -31,6 +31,10 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // MongoDB 연결 (별도 모듈 — 순환 참조 방지 + 서버리스 연결 캐싱)
 const connectDB = require('./db');
 
+// 인증 미들웨어 (디버그 라우트 보호용 — 민감정보 노출 방지)
+const authMw = require('./middleware/auth');
+const adminOnlyMw = authMw.adminOnly;
+
 // 연결 상태 모니터링
 mongoose.connection.on('connected', () => {
   console.log('🟢 MongoDB 연결됨');
@@ -61,6 +65,7 @@ const calendarRoutes = require('./routes/calendar');
 const villageDiaryRoutes = require('./routes/villageDiary');
 const kkumdarakBudgetRoutes = require('./routes/kkumdarakBudget');
 const kkumdarakSettingsRoutes = require('./routes/kkumdarakSettings');
+const imagekitRoutes = require('./routes/imagekit');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/work', workRoutes);
@@ -78,10 +83,11 @@ app.use('/api/calendar', calendarRoutes);
 app.use('/api/village-diary', villageDiaryRoutes);
 app.use('/api/kkumdarak', kkumdarakBudgetRoutes);
 app.use('/api/kkumdarak-settings', kkumdarakSettingsRoutes);
+app.use('/api/imagekit', imagekitRoutes);
 
 // 기본 라우트
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: '노드트리 홈페이지 백엔드 서버가 실행 중입니다.',
     mongoConnection: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     database: mongoose.connection.name,
@@ -96,39 +102,11 @@ app.get('/', (req, res) => {
   });
 });
 
-// 환경변수 테스트 라우트 (보안상 일부만 표시)
-app.get('/api/env-test', (req, res) => {
-  res.json({
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    vercel: {
-      isVercel: !!process.env.VERCEL,
-      vercelEnv: process.env.VERCEL_ENV || 'NOT_SET',
-      vercelUrl: process.env.VERCEL_URL || 'NOT_SET'
-    },
-    jwt: {
-      envVarExists: !!process.env.JWT_SECRET,
-      envVarLength: process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0,
-      usingHardcoded: 'nodetree-jwt-secret-2024-fixed-key'
-    },
-    mongodb: {
-      uriExists: !!process.env.MONGODB_URI,
-      uriLength: process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0,
-      uriStart: process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 20) + '...' : 'NOT_SET',
-      uriContainsAtlas: process.env.MONGODB_URI ? process.env.MONGODB_URI.includes('mongodb+srv') : false,
-      uriContainsHomepage: process.env.MONGODB_URI ? process.env.MONGODB_URI.includes('homepage') : false
-    },
-    allEnvKeys: Object.keys(process.env).filter(key =>
-      key.includes('MONGO') || key.includes('VERCEL') || key.includes('NODE_ENV') || key.includes('JWT')
-    ).sort()
-  });
-});
-
 // 디버그 라우트 - MongoDB 연결 상태 확인
-app.get('/api/debug', async (req, res) => {
+app.get('/api/debug', authMw, adminOnlyMw, async (req, res) => {
   try {
     console.log('디버그 라우트 호출됨');
-    
+
     // 기본 환경 정보
     const debugInfo = {
       timestamp: new Date().toISOString(),
@@ -148,7 +126,7 @@ app.get('/api/debug', async (req, res) => {
         connectionState: mongoose.connection.readyState,
         connectionStates: {
           0: 'disconnected',
-          1: 'connected', 
+          1: 'connected',
           2: 'connecting',
           3: 'disconnecting'
         }
@@ -177,43 +155,43 @@ app.get('/api/debug', async (req, res) => {
       console.log('MongoDB 연결 시도...');
       await connectDB();
       connectionResult = '✅ 연결 성공';
-      
+
       // 컬렉션 데이터 직접 확인
       const Work = require('./models/Work');
       const Filed = require('./models/Filed');
       const User = require('./models/User');
-      
+
       console.log('데이터베이스 쿼리 시작...');
       workCount = await Work.countDocuments();
       console.log('Work 문서 개수:', workCount);
-      
+
       if (workCount > 0) {
         workSample = await Work.findOne().limit(1);
         console.log('Work 샘플 데이터 조회 완료');
       }
-      
+
       filedCount = await Filed.countDocuments();
       console.log('Filed 문서 개수:', filedCount);
-      
+
       if (filedCount > 0) {
         filedSample = await Filed.findOne().limit(1);
         console.log('Filed 샘플 데이터 조회 완료');
       }
-      
+
       // Users 컬렉션 정보 추가
       userCount = await User.countDocuments();
       console.log('User 문서 개수:', userCount);
-      
+
       if (userCount > 0) {
         userSample = await User.findOne().limit(1);
         console.log('User 샘플 데이터 조회 완료');
       }
-      
+
       // 모든 컬렉션 목록 확인
       const collections = await mongoose.connection.db.listCollections().toArray();
       collectionNames = collections.map(col => col.name);
       console.log('MongoDB 컬렉션 목록:', collectionNames);
-      
+
       // users 컬렉션 직접 확인
       try {
         directUserCount = await mongoose.connection.db.collection('users').countDocuments();
@@ -221,7 +199,7 @@ app.get('/api/debug', async (req, res) => {
       } catch (err) {
         console.log('users 컬렉션 직접 조회 실패:', err.message);
       }
-      
+
     } catch (error) {
       console.error('MongoDB 연결/쿼리 오류:', error);
       connectionResult = `❌ 연결 실패: ${error.message}`;
@@ -232,7 +210,7 @@ app.get('/api/debug', async (req, res) => {
         codeName: error.codeName,
         stack: error.stack?.split('\n').slice(0, 5) // 스택 트레이스 일부만
       };
-      
+
       // 특정 에러 타입별 추가 정보
       if (error.name === 'MongoServerSelectionError') {
         errorDetails.possibleCauses = [
@@ -301,10 +279,10 @@ app.get('/api/debug', async (req, res) => {
 });
 
 // 테스트 데이터 생성 라우트 (개발용)
-app.post('/api/debug/create-test-data', async (req, res) => {
+app.post('/api/debug/create-test-data', authMw, adminOnlyMw, async (req, res) => {
   try {
     await connectDB();
-    
+
     const Work = require('./models/Work');
     const Filed = require('./models/Filed');
 

@@ -5,6 +5,7 @@ import { saengsansoAPI as _ssoAPI, saengsansoAboutAPI, saengsansoMembersAPI } fr
 import Login from './Login';
 import SeoHead from './SeoHead';
 import { FALLBACK_EXHIBITIONS, FALLBACK_PROJECTS, FALLBACK_NEWS, FALLBACK_ARCHIVES, FALLBACK_SLIDES, FALLBACK_ABOUT_DESC, FALLBACK_MEMBERS } from '../data/saengsansoFallback';
+import { ikUrl } from '../utils/ikUrl';
 
 // API 타입 캐스팅
 const saengsansoAPI = _ssoAPI as Record<string, any>;
@@ -333,7 +334,7 @@ function PageMain({ goToSlide, currentSlide, slides, isAdmin, onEditSlide, onAdd
           >
             {/* 블러 배경 레이어 */}
             {slide.image && (
-              <img src={slide.image} alt="" aria-hidden="true" style={{
+              <img src={ikUrl(slide.image, { w: 1600 })} alt="" aria-hidden="true" style={{
                 position: 'absolute', inset: 0, width: '100%', height: '100%',
                 objectFit: 'cover', objectPosition: 'center', display: 'block',
                 filter: 'blur(24px) brightness(0.55)',
@@ -343,7 +344,7 @@ function PageMain({ goToSlide, currentSlide, slides, isAdmin, onEditSlide, onAdd
             {/* 실제 이미지 — 균일 여백 */}
             {slide.image && (
               <div style={{ position: 'absolute', inset: '5%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src={slide.image} alt="" loading="lazy" decoding="async" style={{
+                <img src={ikUrl(slide.image, { w: 1600 })} alt="" loading="lazy" decoding="async" style={{
                   maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block',
                 }} />
               </div>
@@ -556,7 +557,7 @@ function PageAbout({ isAdmin }: { isAdmin: boolean }) {
                 <div key={i} className="sso-member-card" style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: TR(0.25), borderRight: i < 4 ? `1px solid ${C.dark}` : 'none' }}>
                     {m.image ? (
-                      <img src={m.image} alt={m.name || `멤버 ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      <img src={ikUrl(m.image, { w: 800 })} alt={m.name || `멤버 ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                     ) : (
                       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <span style={{ ...TEXT_SM, color: C.gray65 }}>{i + 1}</span>
@@ -625,7 +626,7 @@ function PageAbout({ isAdmin }: { isAdmin: boolean }) {
               }}>
                 {p.logo ? (
                   <img
-                    src={p.logo}
+                    src={ikUrl(p.logo, { w: 400 })}
                     alt={p.name}
                     style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: 'grayscale(100%)', opacity: 0.7 }}
                     onError={(e) => {
@@ -1064,7 +1065,7 @@ function PageNews({ filter, news, isAdmin, onSave, onDelete, onReorder }: {
             {noticeImages.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
                 {noticeImages.map((url: string, i: number) => (
-                  <img key={i} src={url} alt={`첨부 이미지 ${i + 1}`}
+                  <img key={i} src={ikUrl(url, { w: 1600 })} alt={`첨부 이미지 ${i + 1}`}
                     style={{ width: '100%', height: 'auto', display: 'block' }}
                   />
                 ))}
@@ -1104,7 +1105,10 @@ function useExtractedBg(imgSrc: string | null, fallback: string): string {
   useEffect(() => {
     if (!imgSrc) return;
     let cancelled = false;
-    const proxyUrl = `${PROXY_BASE}/saengsanso/image-proxy?url=${encodeURIComponent(imgSrc)}`;
+    // ImageKit URL 은 프록시 우회(Render 콜드스타트 제거), 그 외 외부 URL 만 프록시 폴백
+    const fetchUrl = imgSrc.includes('ik.imagekit.io')
+      ? ikUrl(imgSrc, { w: 40 })
+      : `${PROXY_BASE}/saengsanso/image-proxy?url=${encodeURIComponent(imgSrc)}`;
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
@@ -1126,7 +1130,7 @@ function useExtractedBg(imgSrc: string | null, fallback: string): string {
         if (!cancelled) setBg(`rgb(${Math.round(r/n)},${Math.round(g/n)},${Math.round(b/n)})`);
       } catch {}
     };
-    img.src = proxyUrl;
+    img.src = fetchUrl;
     return () => { cancelled = true; };
   }, [imgSrc]);
   return bg;
@@ -1153,7 +1157,7 @@ function ArchiveCard({ item, isAdmin, onEdit, onDelete: onDel }: {
     >
       {vid ? (
         vid.type === 'gif' ? (
-          <img src={vid.embedUrl} alt={item.title}
+          <img src={ikUrl(vid.embedUrl, { w: 1600 })} alt={item.title}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
         ) : vid.type === 'direct' ? (
           <video src={vid.embedUrl} autoPlay muted loop playsInline
@@ -1164,7 +1168,7 @@ function ArchiveCard({ item, isAdmin, onEdit, onDelete: onDel }: {
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', pointerEvents: 'none' }} />
         )
       ) : item.image ? (
-        <img src={item.image} alt={item.title}
+        <img src={ikUrl(item.image, { w: 1600 })} alt={item.title}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
       ) : null}
       <p style={{ color: C.accent, fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', margin: '0 0 6px 0', position: 'relative', zIndex: 1 }}>

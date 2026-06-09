@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import { filedAPI } from '../services/api';
 import WritePost from './WritePost';
@@ -9,6 +9,7 @@ import { playHoverSound, playClickSound } from '../utils/sound';
 import { useEditorialLayout } from '../hooks/useEditorialLayout';
 import PageLoader from './PageLoader';
 import ImageGallery, { ImageLayoutItem } from './ImageGallery';
+import { ikUrl, ikRewriteHtml } from '../utils/ikUrl';
 
 // 카테고리 타입
 type CategoryType = '전체' | '문화예술교육' | '커뮤니티';
@@ -33,6 +34,7 @@ interface CommonsProps {
 const Commons: React.FC<CommonsProps> = ({ onPostsLoaded }) => {
   const { isAuthenticated } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
   const [headerLoading, setHeaderLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(true);
@@ -279,6 +281,8 @@ const Commons: React.FC<CommonsProps> = ({ onPostsLoaded }) => {
       '<div class="video-container"><iframe$1></iframe></div>'
     );
     structured = addParagraphBreaks(structured);
+    // ImageKit <img src> 에 변환 파라미터 부착(GIF 제외)
+    structured = ikRewriteHtml(structured, { w: 1600 });
     return structured;
   };
 
@@ -387,7 +391,7 @@ const Commons: React.FC<CommonsProps> = ({ onPostsLoaded }) => {
         } else if (type === '!') { // 이미지: ![alt](url)
           elements.push(
             <div key={`${index}-${offset}`} style={{ textAlign: 'center', margin: '20px 0' }}>
-              <img src={url} alt={alt || '이미지'} style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }} />
+              <img src={ikUrl(url, { w: 1600 })} alt={alt || '이미지'} style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }} />
             </div>
           );
         }
@@ -500,7 +504,7 @@ const Commons: React.FC<CommonsProps> = ({ onPostsLoaded }) => {
               {selectedPost.images && selectedPost.images.length > 0 && (
                 <ImageGallery
                   images={selectedPost.images.map(src => ({
-                    src: src.startsWith('//') ? `https:${src}` : src
+                    src: ikUrl(src.startsWith('//') ? `https:${src}` : src, { w: 1600 })
                   }))}
                   imageLayout={selectedPost.imageLayout}
                   isAdmin={isAuthenticated}
@@ -697,6 +701,53 @@ const Commons: React.FC<CommonsProps> = ({ onPostsLoaded }) => {
       </div>
 
       <div className="filed-container">
+        {/* 꿈다락 진입 배너 — 문화예술교육 마이크로사이트(/kkumdarak)로 이동 */}
+        <div
+          className="kkumdarak-entry"
+          role="link"
+          tabIndex={0}
+          onClick={() => navigate('/kkumdarak')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              navigate('/kkumdarak');
+            }
+          }}
+          onMouseEnter={() => playHoverSound()}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            maxWidth: 720,
+            margin: '0 auto 28px',
+            padding: '20px 24px',
+            border: '1px solid var(--border-color, #e0e0e0)',
+            borderRadius: 0,
+            cursor: 'pointer',
+            background: 'transparent',
+            fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace",
+            transition: 'background 0.2s ease, color 0.2s ease',
+          }}
+          onFocus={(e) => { e.currentTarget.style.outline = '1px solid var(--border-color, #c0c0c0)'; }}
+          onBlur={(e) => { e.currentTarget.style.outline = 'none'; }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+            <span style={{ fontSize: '0.72rem', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-muted, #777)' }}>
+              문화예술교육 · 마이크로사이트
+            </span>
+            <span style={{ fontSize: '1.05rem', fontWeight: 600, letterSpacing: '0.02em', color: '#1a1a1a' }}>
+              꿈다락 토요문화학교
+            </span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted, #777)', lineHeight: 1.5 }}>
+              지역 어린이·청소년과 함께한 예술교육 프로그램 기록
+            </span>
+          </div>
+          <span aria-hidden="true" style={{ fontSize: '0.85rem', letterSpacing: '0.1em', color: '#1a1a1a', whiteSpace: 'nowrap' }}>
+            바로가기 →
+          </span>
+        </div>
+
         {/* 카테고리 필터 탭 */}
         <div className="category-tabs" style={{
           display: 'flex',
@@ -847,7 +898,7 @@ const Commons: React.FC<CommonsProps> = ({ onPostsLoaded }) => {
                 >
                   {post.thumbnail ? (
                     <img
-                      src={post.thumbnail.startsWith('//') ? `https:${post.thumbnail}` : post.thumbnail}
+                      src={ikUrl(post.thumbnail.startsWith('//') ? `https:${post.thumbnail}` : post.thumbnail, { w: 800 })}
                       alt={post.title}
                       style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
                     />
