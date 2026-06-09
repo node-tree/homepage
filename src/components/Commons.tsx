@@ -737,10 +737,10 @@ const Commons: React.FC<CommonsProps> = ({ onPostsLoaded }) => {
               문화예술교육 · 마이크로사이트
             </span>
             <span style={{ fontSize: '1.05rem', fontWeight: 600, letterSpacing: '0.02em', color: '#1a1a1a' }}>
-              꿈다락 토요문화학교
+              이소 異素
             </span>
             <span style={{ fontSize: '0.78rem', color: 'var(--text-muted, #777)', lineHeight: 1.5 }}>
-              지역 어린이·청소년과 함께한 예술교육 프로그램 기록
+              꿈다락 토요문화학교 · 지역 어린이·청소년 예술교육 프로그램
             </span>
           </div>
           <span aria-hidden="true" style={{ fontSize: '0.85rem', letterSpacing: '0.1em', color: '#1a1a1a', whiteSpace: 'nowrap' }}>
