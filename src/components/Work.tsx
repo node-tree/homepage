@@ -546,7 +546,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
                   <div className="pdf-catalog-card">
                     <div className="pdf-catalog-thumbnail">
                       <img
-                        src="//nodetree.cafe24.com/mcwjd/work/%BF%A1%B5%F0%BE%C6%C6%F7%B4%D0/webdorok01.png"
+                        src="https://ik.imagekit.io/gc3jtyt9o/mcwjd/work/에디아포닉/webdorok01.png"
                         alt="웹도록 표지"
                         loading="lazy"
                         decoding="async"
@@ -615,7 +615,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
                   <div className="pdf-catalog-card">
                     <div className="pdf-catalog-thumbnail">
                       <img
-                        src="//nodetree.cafe24.com/mcwjd/work/%B3%B2%B9%CC/IMG_4788.JPG"
+                        src="https://ik.imagekit.io/gc3jtyt9o/mcwjd/work/남미/IMG_4788.JPG"
                         alt="웹도록 표지"
                         loading="lazy"
                         decoding="async"

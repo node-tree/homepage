@@ -448,13 +448,13 @@ export const FALLBACK_ARCHIVES = [
     "year": "",
     "bg": "",
     "image": "",
-    "video": "https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/talkv_high_4.gif"
+    "video": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/생산소/포스터/talkv_high_4.gif"
   },
   {
     "title": "",
     "year": "",
     "bg": "",
-    "image": "https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/IMG_2091.PNG",
+    "image": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/생산소/포스터/IMG_2091.PNG",
     "video": ""
   },
   {
@@ -462,27 +462,27 @@ export const FALLBACK_ARCHIVES = [
     "year": "",
     "bg": "",
     "image": "",
-    "video": "https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/talkv_output8.gif"
+    "video": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/생산소/포스터/talkv_output8.gif"
   },
   {
     "title": "",
     "year": "",
     "bg": "",
-    "image": "https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/IMG_5605.PNG",
+    "image": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/생산소/포스터/IMG_5605.PNG",
     "video": ""
   },
   {
     "title": "",
     "year": "",
     "bg": "",
-    "image": "https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/IMG_9909.PNG",
+    "image": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/생산소/포스터/IMG_9909.PNG",
     "video": ""
   },
   {
     "title": "",
     "year": "",
     "bg": "",
-    "image": "https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/IMG_9109.PNG",
+    "image": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/생산소/포스터/IMG_9109.PNG",
     "video": ""
   },
   {
@@ -490,41 +490,41 @@ export const FALLBACK_ARCHIVES = [
     "year": "",
     "bg": "linear-gradient(135deg, #2a1a1a, #3a2a1a)",
     "image": "",
-    "video": "https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/talkv_high.gif"
+    "video": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/생산소/포스터/talkv_high.gif"
   },
   {
     "title": "",
     "year": "",
     "bg": "",
     "image": "",
-    "video": "https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/talkv_output4.gif"
+    "video": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/생산소/포스터/talkv_output4.gif"
   },
   {
     "title": "",
     "year": "",
     "bg": "",
     "image": "",
-    "video": "https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/talkv_output2.gif"
+    "video": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/생산소/포스터/talkv_output2.gif"
   },
   {
     "title": "",
     "year": "",
     "bg": "",
     "image": "",
-    "video": "https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/talkv_output3.gif"
+    "video": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/생산소/포스터/talkv_output3.gif"
   },
   {
     "title": "",
     "year": "",
     "bg": "",
     "image": "",
-    "video": "https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/talkv_output.gif"
+    "video": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/생산소/포스터/talkv_output.gif"
   },
   {
     "title": "",
     "year": "",
     "bg": "",
-    "image": "https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/IMG_6472.PNG",
+    "image": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/생산소/포스터/IMG_6472.PNG",
     "video": ""
   },
   {
@@ -532,20 +532,20 @@ export const FALLBACK_ARCHIVES = [
     "year": "",
     "bg": "",
     "image": "",
-    "video": "https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/talkv_high_2.gif"
+    "video": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/생산소/포스터/talkv_high_2.gif"
   },
   {
     "title": "",
     "year": "",
     "bg": "linear-gradient(135deg, #2a1a20, #3a2a30)",
     "image": "",
-    "video": "https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/talkv_high_3.gif"
+    "video": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/생산소/포스터/talkv_high_3.gif"
   },
   {
     "title": "",
     "year": "",
     "bg": "",
-    "image": "https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/IMG_5748.PNG",
+    "image": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/생산소/포스터/IMG_5748.PNG",
     "video": ""
   },
   {
@@ -553,21 +553,21 @@ export const FALLBACK_ARCHIVES = [
     "year": "",
     "bg": "",
     "image": "",
-    "video": "https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/IMG_5219_output.gif"
+    "video": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/생산소/포스터/IMG_5219_output.gif"
   },
   {
     "title": "",
     "year": "",
     "bg": "",
     "image": "",
-    "video": "https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/video.gif"
+    "video": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/생산소/포스터/video.gif"
   },
   {
     "title": "",
     "year": "",
     "bg": "",
     "image": "",
-    "video": "https://nodetree.cafe24.com/mcwjd/%BB%FD%BB%EA%BC%D2/%C6%F7%BD%BA%C5%CD/video_1_911f6389_output.gif"
+    "video": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/생산소/포스터/video_1_911f6389_output.gif"
   }
 ];
 
@@ -576,37 +576,37 @@ export const FALLBACK_SLIDES = [
     "_id": "a504",
     "bg": "linear-gradient(135deg, #1A1A14 0%, #2A2A1E 50%, #1A1A14 100%)",
     "caption": "",
-    "image": "https://nodetree.cafe24.com/mcwjd/workshop/%C6%DB%B7%B9%C0%CC%B5%E5%BB%A7%BB%A7/IMG_4034.JPG"
+    "image": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/workshop/퍼레이드빵빵/IMG_4034.JPG"
   },
   {
     "_id": "a511",
     "bg": "",
     "caption": "",
-    "image": "https://nodetree.cafe24.com/mcwjd/%B3%EB%B5%F0/13.jpeg"
+    "image": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/노디/13.jpeg"
   },
   {
     "_id": "a518",
     "bg": "",
     "caption": "",
-    "image": "https://nodetree.cafe24.com/mcwjd/workshop/%BB%E7%BF%EE%B5%E5%BF%C0%C4%C9%BD%BA%C6%AE%B6%F3/IMG_0084.PNG"
+    "image": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/workshop/사운드오케스트라/IMG_0084.PNG"
   },
   {
     "_id": "a530",
     "bg": "",
     "caption": "",
-    "image": "https://nodetree.cafe24.com/mcwjd/workshop/%C0%AF%BE%C6%BB%E7%BF%EE%B5%E5%BD%BA%C4%C9%C0%CC%C7%C1/IMG_9415.JPG"
+    "image": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/workshop/유아사운드스케이프/IMG_9415.JPG"
   },
   {
     "_id": "a553",
     "bg": "",
     "caption": "",
-    "image": "https://nodetree.cafe24.com/mcwjd/workshop/%BB%E7%BF%EE%B5%E5%C5%B0%B9%DA%BD%BA/DSC08162.JPG"
+    "image": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/workshop/사운드키박스/DSC08162.JPG"
   },
   {
     "_id": "a55a",
     "bg": "",
     "caption": "",
-    "image": "https://nodetree.cafe24.com/mcwjd/workshop/%B2%DE%C0%C7%BA%F1%C7%E0/03.png"
+    "image": "https://ik.imagekit.io/gc3jtyt9o/mcwjd/workshop/꿈의비행/03.png"
   },
   {
     "_id": "a68c",
