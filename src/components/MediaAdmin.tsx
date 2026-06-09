@@ -2,19 +2,21 @@
 // 이미지호스팅 — ImageKit 관리자 미디어 페이지 (admin 전용)
 //   · 업로드: 드래그앤드롭 + 파일선택. 업로드 전 브라우저 자동 리사이즈(긴 변 2400px,
 //     JPEG 0.82, GIF 제외). ImageKit 으로 직접 multipart 업로드(백엔드 /auth 서명).
-//   · 브라우징: /list 그리드. 썸네일은 ikUrl 헬퍼(?tr=w-300,f-auto, GIF 제외).
+//   · 브라우징: /list 그리드. 폴더(상단)·파일을 구분해 표시. 폴더 클릭으로 진입,
+//     브레드크럼/상위(..) 로 이동. 썸네일은 ikUrl 헬퍼(?tr=w-300,f-auto, GIF 제외).
 //   · 자체 DB 저장 없음 — 반환 URL 표시 + 복사. 삭제는 확인 다이얼로그.
 //   · 인증: 사이트 세션(auth_token). 비로그인 → /login 리다이렉트(isLoading 대기).
 //   · 인가: role:'admin' 만 접근. 비admin(role:'user') 은 백엔드가 403 을 반환하므로
 //     API 호출 전에 클라이언트에서 차단하고 안내 문구를 표시한다.
 // ═══════════════════════════════════════════════════════════════
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   imagekitAdminAPI,
   IkFile,
   IkUploadResult,
+  IkUsage,
 } from '../services/imagekitAdminApi';
 import { prepareImageForUpload } from '../utils/imageResize';
 import { ikUrl } from '../utils/ikUrl';
@@ -31,6 +33,9 @@ interface UploadRow {
 
 const PAGE_SIZE = 40;
 
+// ImageKit 무료 플랜 미디어 저장 한도 3GB.
+const FREE_LIMIT_BYTES = 3 * 1024 * 1024 * 1024;
+
 function formatBytes(n: number): string {
   if (!n && n !== 0) return '-';
   if (n < 1024) return `${n} B`;
@@ -38,26 +43,73 @@ function formatBytes(n: number): string {
   return `${(n / (1024 * 1024)).toFixed(2)} MB`;
 }
 
+function formatGB(n: number): string {
+  return (n / (1024 * 1024 * 1024)).toFixed(2);
+}
+
+// 폴더 판별 — 백엔드가 type:'folder' 를 주거나, url 이 없고 folderPath 가 있으면 폴더.
+function isFolder(f: IkFile): boolean {
+  return f.type === 'folder' || (!f.url && !!(f.folderPath || f.folderId));
+}
+
+// 경로 정규화: 항상 '/' 시작, 중복 슬래시 합치기, 끝 슬래시 제거(루트 제외).
+function normalizePath(p: string): string {
+  if (!p) return '/';
+  let out = p.trim();
+  if (!out.startsWith('/')) out = `/${out}`;
+  out = out.replace(/\/+/g, '/'); // 중복 슬래시(//) 방지 — 루트('/') 하위 결합 시 안전
+  if (out.length > 1) out = out.replace(/\/+$/, '');
+  return out || '/';
+}
+
+// 브레드크럼 세그먼트 목록. 루트는 항상 첫 항목.
+//   '/' → [{label:'루트', path:'/'}]
+//   '/mcwjd/work' → 루트, mcwjd(/mcwjd), work(/mcwjd/work)
+function breadcrumbSegments(path: string): { label: string; path: string }[] {
+  const norm = normalizePath(path);
+  const segs: { label: string; path: string }[] = [{ label: '루트', path: '/' }];
+  if (norm === '/') return segs;
+  const parts = norm.split('/').filter(Boolean);
+  let acc = '';
+  for (const part of parts) {
+    acc += `/${part}`;
+    segs.push({ label: part, path: acc });
+  }
+  return segs;
+}
+
+// 상위 폴더 경로. 루트면 null.
+function parentPath(path: string): string | null {
+  const norm = normalizePath(path);
+  if (norm === '/') return null;
+  const idx = norm.lastIndexOf('/');
+  return idx <= 0 ? '/' : norm.slice(0, idx);
+}
+
 const MediaAdmin: React.FC = () => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
-  // 업로드 설정
+  // 업로드 설정 (업로드 기본 폴더는 /uploads 유지)
   const [folder, setFolder] = useState('/uploads');
   const [useUnique, setUseUnique] = useState(true);
   const [uploads, setUploads] = useState<UploadRow[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 브라우징
+  // 브라우징 — 기본 진입 경로는 루트('/') 라 최상위 폴더들이 바로 보인다.
   const [files, setFiles] = useState<IkFile[]>([]);
-  const [browsePath, setBrowsePath] = useState('/uploads');
-  const [pathInput, setPathInput] = useState('/uploads');
+  const [browsePath, setBrowsePath] = useState('/');
+  const [pathInput, setPathInput] = useState('/');
   const [search, setSearch] = useState('');
   const [skip, setSkip] = useState(0);
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
+
+  // 사용 용량 (현재 버전 파일 합계 기준)
+  const [usage, setUsage] = useState<IkUsage | null>(null);
+  const [usageLoading, setUsageLoading] = useState(false);
 
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -87,7 +139,7 @@ const MediaAdmin: React.FC = () => {
         const result = await imagekitAdminAPI.listFiles({
           path: search ? undefined : browsePath || undefined,
           searchQuery: search
-            ? `name LIKE "%${search.replace(/["%\\]/g, "\\$&")}%"`
+            ? `name LIKE "%${search.replace(/["%\\]/g, '\\$&')}%"`
             : undefined,
           skip: nextSkip,
           limit: PAGE_SIZE,
@@ -112,6 +164,23 @@ const MediaAdmin: React.FC = () => {
     [browsePath, search, skip]
   );
 
+  // 사용 용량 로드 (마운트 + 업로드/삭제 성공 후 갱신). 실패해도 페이지는 동작.
+  const loadUsage = useCallback(async () => {
+    setUsageLoading(true);
+    try {
+      const u = await imagekitAdminAPI.getUsage();
+      setUsage(u);
+    } catch (e: any) {
+      if (e?.code === 'AUTH_EXPIRED') {
+        window.location.href = '/login';
+        return;
+      }
+      // 용량 조회 실패는 치명적이지 않음 — 표시만 생략한다.
+    } finally {
+      setUsageLoading(false);
+    }
+  }, []);
+
   // 최초 + 경로/검색 변경 시 새로 로드 (admin 만)
   useEffect(() => {
     if (!isAuthenticated || !isAdmin) return;
@@ -119,6 +188,23 @@ const MediaAdmin: React.FC = () => {
     loadList(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isAdmin, browsePath, search]);
+
+  // 마운트 시 용량 1회 로드 (admin 만)
+  useEffect(() => {
+    if (!isAuthenticated || !isAdmin) return;
+    loadUsage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, isAdmin]);
+
+  // 폴더로 진입 — 검색 상태를 해제하고 경로 갱신.
+  const enterFolder = useCallback((target: string) => {
+    const norm = normalizePath(target);
+    setSearch('');
+    const el = document.getElementById('ma-search') as HTMLInputElement | null;
+    if (el) el.value = '';
+    setBrowsePath(norm);
+    setPathInput(norm);
+  }, []);
 
   const copyUrl = useCallback((url: string) => {
     const finalUrl = url;
@@ -137,29 +223,34 @@ const MediaAdmin: React.FC = () => {
     }
   }, []);
 
-  const handleDelete = useCallback(async (file: IkFile) => {
-    if (!window.confirm(`"${file.name}" 을(를) 영구 삭제합니다. 계속하시겠습니까?`)) return;
-    try {
-      await imagekitAdminAPI.deleteFile(file.fileId);
-      setFiles((prev) => prev.filter((f) => f.fileId !== file.fileId));
-    } catch (e: any) {
-      if (e?.code === 'FORBIDDEN') {
-        alert('관리자 권한이 필요합니다.');
-        return;
+  const handleDelete = useCallback(
+    async (file: IkFile) => {
+      if (!window.confirm(`"${file.name}" 을(를) 영구 삭제합니다. 계속하시겠습니까?`)) return;
+      try {
+        await imagekitAdminAPI.deleteFile(file.fileId);
+        setFiles((prev) => prev.filter((f) => f.fileId !== file.fileId));
+        loadUsage(); // 삭제 후 용량 갱신
+      } catch (e: any) {
+        if (e?.code === 'FORBIDDEN') {
+          alert('관리자 권한이 필요합니다.');
+          return;
+        }
+        if (e?.code === 'AUTH_EXPIRED') {
+          window.location.href = '/login';
+          return;
+        }
+        alert(e?.message || '삭제에 실패했습니다.');
       }
-      if (e?.code === 'AUTH_EXPIRED') {
-        window.location.href = '/login';
-        return;
-      }
-      alert(e?.message || '삭제에 실패했습니다.');
-    }
-  }, []);
+    },
+    [loadUsage]
+  );
 
   const processFiles = useCallback(
     async (fileList: FileList | File[]) => {
       const arr = Array.from(fileList).filter((f) => f.type.startsWith('image/'));
       if (arr.length === 0) return;
 
+      let anyDone = false;
       for (const file of arr) {
         const rowId = `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         setUploads((prev) => [
@@ -180,6 +271,7 @@ const MediaAdmin: React.FC = () => {
             prepared.fileName,
             { folder: folder || '/uploads', useUniqueFileName: useUnique }
           );
+          anyDone = true;
           setUploads((prev) =>
             prev.map((r) =>
               r.id === rowId
@@ -211,12 +303,13 @@ const MediaAdmin: React.FC = () => {
           );
         }
       }
-      // 업로드 후 현재 폴더를 보고 있으면 목록 갱신
-      if (!search && (folder || '/uploads') === browsePath) {
+      // 업로드 후 현재 폴더(업로드 대상)를 보고 있으면 목록 갱신.
+      if (!search && normalizePath(folder || '/uploads') === normalizePath(browsePath)) {
         loadList(true);
       }
+      if (anyDone) loadUsage(); // 업로드 성공 시 용량 갱신
     },
-    [folder, useUnique, search, browsePath, loadList]
+    [folder, useUnique, search, browsePath, loadList, loadUsage]
   );
 
   const onDrop = useCallback(
@@ -227,6 +320,20 @@ const MediaAdmin: React.FC = () => {
     },
     [processFiles]
   );
+
+  // 폴더 먼저, 그 다음 파일. (검색 중에는 보통 파일만 오지만 동일 규칙 적용.)
+  const { folders, plainFiles } = useMemo(() => {
+    const fol: IkFile[] = [];
+    const fil: IkFile[] = [];
+    for (const f of files) {
+      if (isFolder(f)) fol.push(f);
+      else fil.push(f);
+    }
+    return { folders: fol, plainFiles: fil };
+  }, [files]);
+
+  const crumbs = useMemo(() => breadcrumbSegments(browsePath), [browsePath]);
+  const parent = useMemo(() => parentPath(browsePath), [browsePath]);
 
   if (isLoading) {
     return <div className="media-admin-loading">불러오는 중…</div>;
@@ -239,6 +346,11 @@ const MediaAdmin: React.FC = () => {
     return (
       <div className="media-admin">
         <header className="ma-header">
+          <div className="ma-header-top">
+            <a href="/" className="ma-home-link">
+              ← NODE TREE
+            </a>
+          </div>
           <h1>이미지호스팅</h1>
         </header>
         <section className="ma-section">
@@ -252,13 +364,43 @@ const MediaAdmin: React.FC = () => {
     );
   }
 
+  // 사용량 퍼센트 (0~100 클램프)
+  const usagePct = usage
+    ? Math.min(100, Math.max(0, (usage.totalBytes / FREE_LIMIT_BYTES) * 100))
+    : 0;
+
   return (
     <div className="media-admin">
       <header className="ma-header">
+        <div className="ma-header-top">
+          <a href="/" className="ma-home-link">
+            ← NODE TREE
+          </a>
+        </div>
         <h1>이미지호스팅</h1>
         <p className="ma-sub">
           이미지는 ImageKit 라이브러리에만 저장됩니다(자체 DB 미저장). 무료 플랜 용량 3GB.
         </p>
+
+        {/* 현재 용량 — 현재 버전 파일 합계 기준 */}
+        <div className="ma-usage" aria-live="polite">
+          {usage ? (
+            <>
+              <div className="ma-usage-text">
+                현재 용량 <strong>{formatGB(usage.totalBytes)} GB</strong> / 3 GB
+                {' '}
+                ({usage.fileCount.toLocaleString()}개) · {usagePct.toFixed(1)}%
+              </div>
+              <div className="ma-usage-bar" role="presentation">
+                <div className="ma-usage-fill" style={{ width: `${usagePct}%` }} />
+              </div>
+            </>
+          ) : (
+            <div className="ma-usage-text muted">
+              {usageLoading ? '용량 계산 중…' : '용량 정보를 불러오지 못했습니다.'}
+            </div>
+          )}
+        </div>
       </header>
 
       {/* 업로드 영역 */}
@@ -339,12 +481,46 @@ const MediaAdmin: React.FC = () => {
       {/* 브라우징 영역 */}
       <section className="ma-section">
         <h2>라이브러리</h2>
+
+        {/* 브레드크럼 + 상위 폴더 (검색 중에는 폴더 탐색 맥락이 없어 숨김) */}
+        {!search && (
+          <nav className="ma-breadcrumb" aria-label="현재 경로">
+            {crumbs.map((c, i) => (
+              <React.Fragment key={c.path}>
+                {i > 0 && <span className="ma-crumb-sep">/</span>}
+                {i === crumbs.length - 1 ? (
+                  <span className="ma-crumb current" aria-current="page">
+                    {c.label}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className="ma-crumb"
+                    onClick={() => enterFolder(c.path)}
+                  >
+                    {c.label}
+                  </button>
+                )}
+              </React.Fragment>
+            ))}
+            {parent !== null && (
+              <button
+                type="button"
+                className="ma-btn ghost ma-up-btn"
+                onClick={() => enterFolder(parent)}
+                title="상위 폴더로 이동"
+              >
+                ↑ 상위 폴더
+              </button>
+            )}
+          </nav>
+        )}
+
         <div className="ma-browse-controls">
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              setSearch('');
-              setBrowsePath(pathInput || '/');
+              enterFolder(pathInput || '/');
             }}
           >
             <input
@@ -383,14 +559,46 @@ const MediaAdmin: React.FC = () => {
           </form>
         </div>
 
+        {search && (
+          <p className="ma-sub">전체 라이브러리에서 “{search}” 파일명 검색 결과</p>
+        )}
+
         {listError && <p className="ma-error">{listError}</p>}
 
         <div className="ma-grid">
-          {files.map((f) => {
+          {/* 폴더 — 상단 먼저, 클릭 시 진입 */}
+          {!search &&
+            folders.map((f) => {
+              const target = f.folderPath || `${normalizePath(browsePath)}/${f.name}`;
+              return (
+                <button
+                  type="button"
+                  className="ma-card ma-folder"
+                  key={f.folderId || f.folderPath || `folder-${f.name}`}
+                  onClick={() => enterFolder(target)}
+                  title={`${f.name} 폴더 열기`}
+                >
+                  <div className="ma-thumb ma-folder-thumb">
+                    <span className="ma-folder-icon" aria-hidden="true">
+                      📁
+                    </span>
+                  </div>
+                  <div className="ma-card-meta">
+                    <div className="ma-card-name" title={f.name}>
+                      {f.name}
+                    </div>
+                    <div className="ma-card-info">폴더</div>
+                  </div>
+                </button>
+              );
+            })}
+
+          {/* 파일 — 썸네일 + URL복사/삭제 */}
+          {plainFiles.map((f) => {
             const isImage = f.fileType === 'image' || f.fileType === 'IMAGE';
-            const thumb = isImage ? ikUrl(f.url, { w: 300 }) : null;
+            const thumb = isImage && f.url ? ikUrl(f.url, { w: 300 }) : null;
             return (
-              <div className="ma-card" key={f.fileId}>
+              <div className="ma-card" key={f.fileId || f.filePath || f.name}>
                 <div className="ma-thumb">
                   {thumb ? (
                     <img src={thumb} alt={f.name} loading="lazy" />
@@ -408,7 +616,11 @@ const MediaAdmin: React.FC = () => {
                   </div>
                 </div>
                 <div className="ma-card-actions">
-                  <button className="ma-btn" onClick={() => copyUrl(f.url)}>
+                  <button
+                    className="ma-btn"
+                    onClick={() => copyUrl(f.url)}
+                    disabled={!f.url}
+                  >
                     {copied === f.url ? '복사됨' : 'URL 복사'}
                   </button>
                   <button className="ma-btn danger" onClick={() => handleDelete(f)}>
@@ -421,7 +633,9 @@ const MediaAdmin: React.FC = () => {
         </div>
 
         {!listLoading && files.length === 0 && !listError && (
-          <p className="ma-empty">표시할 파일이 없습니다.</p>
+          <p className="ma-empty">
+            {search ? '검색 결과가 없습니다.' : '이 폴더에 표시할 항목이 없습니다.'}
+          </p>
         )}
 
         <div className="ma-list-footer">
