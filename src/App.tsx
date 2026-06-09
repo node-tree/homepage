@@ -27,6 +27,8 @@ const WorkResearch = lazy(() => import('./components/WorkResearch'));
 const TeamEvent = lazy(() => import('./components/TeamEvent'));
 const Team = lazy(() => import('./components/Team'));
 const Kkumdarak = lazy(() => import('./components/Kkumdarak/Kkumdarak'));
+const Buyeo = lazy(() => import('./components/Buyeo'));
+const MediaAdmin = lazy(() => import('./components/MediaAdmin'));
 
 // 도메인 감지 (localhost에서는 ?saengsanso 쿼리로 테스트 가능)
 const isSaengsanso = typeof window !== 'undefined' && (
@@ -347,8 +349,14 @@ function AppContent() {
             whileHover={{ opacity: 1 }}
           >
             <span className="user-info">{user?.username}님</span>
+            <a href="/buyeo/1" className="logout-button" style={{ textDecoration: 'none', marginRight: '4px' }}>
+              부여 가이드
+            </a>
             <a href="/monitor" className="logout-button" style={{ textDecoration: 'none', marginRight: '4px' }}>
               MONITOR
+            </a>
+            <a href="/admin/media" className="logout-button" style={{ textDecoration: 'none', marginRight: '4px' }}>
+              이소
             </a>
             <button onClick={logout} className="logout-button">
               로그아웃
@@ -407,7 +415,9 @@ function App() {
               <Route path="/NODETREECorpus" element={<Team />} />
               <Route path="/ocean" element={<OceanData />} />
               <Route path="/kkumdarak" element={<Kkumdarak />} />
+              <Route path="/buyeo/:stop" element={<Buyeo />} />
               <Route path="/monitor" element={<ClaudeMonitor />} />
+              <Route path="/admin/media" element={<MediaAdmin />} />
               <Route path="/work/research/:postId" element={<WorkResearch />} />
               <Route path="*" element={<AppContent />} />
             </Routes>

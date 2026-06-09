@@ -1,0 +1,274 @@
+/* ImageKit 관리자 미디어 페이지 — 데스크톱/모바일 대응 */
+
+.media-admin {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 16px 80px;
+  color: #1a1a1a;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.media-admin-loading {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 15px;
+}
+
+.ma-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+.ma-sub {
+  color: #777;
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+
+.ma-section {
+  margin-top: 32px;
+  border-top: 1px solid #ececec;
+  padding-top: 20px;
+}
+.ma-section h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 14px;
+}
+
+/* 업로드 옵션 */
+.ma-upload-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.ma-upload-options label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #555;
+}
+.ma-upload-options input[type='text'] {
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  min-width: 200px;
+}
+.ma-checkbox {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px !important;
+  font-size: 13px !important;
+}
+.ma-checkbox input {
+  width: 16px;
+  height: 16px;
+}
+
+/* 드롭존 */
+.ma-dropzone {
+  border: 2px dashed #cfcfcf;
+  border-radius: 12px;
+  padding: 36px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  background: #fafafa;
+}
+.ma-dropzone:hover,
+.ma-dropzone.drag {
+  border-color: #4a7cff;
+  background: #f2f6ff;
+}
+.ma-dropzone p {
+  margin: 0;
+  font-size: 14px;
+  color: #444;
+}
+.ma-hint {
+  margin-top: 6px !important;
+  font-size: 12px !important;
+  color: #999 !important;
+}
+
+/* 업로드 목록 */
+.ma-upload-list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ma-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #f7f7f7;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.ma-upload-row.done {
+  background: #eefaf0;
+}
+.ma-upload-row.error {
+  background: #fdeeee;
+}
+.ma-up-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ma-up-status {
+  color: #666;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* 브라우징 컨트롤 */
+.ma-browse-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.ma-browse-controls form {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ma-browse-controls input[type='text'] {
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+/* 버튼 */
+.ma-btn {
+  padding: 7px 12px;
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+.ma-btn:hover {
+  background: #f0f0f0;
+}
+.ma-btn.danger {
+  color: #c0392b;
+  border-color: #e3b4ae;
+}
+.ma-btn.danger:hover {
+  background: #fceae8;
+}
+.ma-btn.ghost {
+  color: #888;
+}
+
+/* 그리드 */
+.ma-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+}
+.ma-card {
+  border: 1px solid #ececec;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+}
+.ma-thumb {
+  aspect-ratio: 1 / 1;
+  background: #f3f3f3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.ma-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ma-noimg {
+  color: #aaa;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+.ma-card-meta {
+  padding: 8px 10px 4px;
+}
+.ma-card-name {
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ma-card-info {
+  font-size: 11px;
+  color: #999;
+  margin-top: 2px;
+}
+.ma-card-actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px 10px;
+  margin-top: auto;
+}
+.ma-card-actions .ma-btn {
+  flex: 1;
+  text-align: center;
+}
+
+.ma-error {
+  color: #c0392b;
+  font-size: 13px;
+}
+.ma-empty {
+  color: #999;
+  font-size: 13px;
+}
+.ma-list-footer {
+  margin-top: 20px;
+  text-align: center;
+  color: #888;
+  font-size: 13px;
+}
+
+/* 모바일 */
+@media (max-width: 600px) {
+  .media-admin {
+    padding: 20px 12px 60px;
+  }
+  .ma-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
+  }
+  .ma-upload-options input[type='text'] {
+    min-width: 0;
+    width: 100%;
+  }
+  .ma-browse-controls form {
+    width: 100%;
+  }
+  .ma-browse-controls input[type='text'] {
+    flex: 1;
+    min-width: 0;
+  }
+}

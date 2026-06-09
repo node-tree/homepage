@@ -10,6 +10,7 @@ import { playHoverSound, playClickSound } from '../utils/sound';
 import { useEditorialLayout } from '../hooks/useEditorialLayout';
 import PageLoader from './PageLoader';
 import { ImageLayoutItem } from './ImageGallery';
+import { ikUrl, ikRewriteHtml } from '../utils/ikUrl';
 
 interface Post {
   id: string;
@@ -244,6 +245,8 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
     );
     // 긴 텍스트에 문단 나누기
     structured = addParagraphBreaks(structured);
+    // ImageKit <img src> 에 변환 파라미터 부착(GIF 제외)
+    structured = ikRewriteHtml(structured, { w: 1600 });
     return structured;
   };
 
@@ -353,7 +356,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
         } else if (type === '!') { // 이미지: ![alt](url)
           elements.push(
             <div key={`${index}-${offset}`} style={{ textAlign: 'center', margin: '20px 0' }}>
-              <img src={url} alt={alt || '이미지'} loading="lazy" decoding="async" style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }} />
+              <img src={ikUrl(url, { w: 1600 })} alt={alt || '이미지'} loading="lazy" decoding="async" style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }} />
             </div>
           );
         }
@@ -546,7 +549,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
                   <div className="pdf-catalog-card">
                     <div className="pdf-catalog-thumbnail">
                       <img
-                        src="https://ik.imagekit.io/gc3jtyt9o/mcwjd/work/에디아포닉/webdorok01.png"
+                        src={ikUrl("https://ik.imagekit.io/gc3jtyt9o/mcwjd/work/에디아포닉/webdorok01.png", { w: 800 })}
                         alt="웹도록 표지"
                         loading="lazy"
                         decoding="async"
@@ -615,7 +618,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
                   <div className="pdf-catalog-card">
                     <div className="pdf-catalog-thumbnail">
                       <img
-                        src="https://ik.imagekit.io/gc3jtyt9o/mcwjd/work/남미/IMG_4788.JPG"
+                        src={ikUrl("https://ik.imagekit.io/gc3jtyt9o/mcwjd/work/남미/IMG_4788.JPG", { w: 800 })}
                         alt="웹도록 표지"
                         loading="lazy"
                         decoding="async"
@@ -952,7 +955,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
                 >
                   {post.thumbnail ? (
                     <img
-                      src={post.thumbnail.startsWith('//') ? `https:${post.thumbnail}` : post.thumbnail}
+                      src={ikUrl(post.thumbnail.startsWith('//') ? `https:${post.thumbnail}` : post.thumbnail, { w: 800 })}
                       alt={post.title}
                       loading="lazy"
                       decoding="async"
