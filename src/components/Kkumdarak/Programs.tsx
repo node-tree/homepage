@@ -115,13 +115,37 @@ const PROGRAMS: Array<{
 ];
 
 // ── 설정 오버라이드 타입 ──────────────────────────────────────────
-//   백엔드 KkumdarakSettings.data = { programs: { [program.name]: ProgramSetting } }
+//   백엔드 KkumdarakSettings.data = {
+//     programs:       { [program.name]: ProgramSetting }     // 신청 링크/마감
+//     programContent: { [program.name]: ProgramContent }     // 인라인 텍스트 편집(이번 추가)
+//   }
 //   식별자는 Programs 가 렌더하는 인라인 PROGRAMS 의 name (id 가 없어 name 으로 key).
 interface ProgramSetting {
   applyUrl?: string;
   closed?: boolean;
 }
 type ProgramSettingsMap = Record<string, ProgramSetting>;
+
+// 모집 상태(인라인 토글). 'open' = 진행중, 'closed' = 모집마감.
+//   미설정(undefined) 시 레거시 setting.closed 로 폴백한다(아래 resolveClosed 참고).
+type ProgramStatus = 'open' | 'closed';
+
+// 인라인 편집으로 덮어쓸 수 있는 텍스트 필드. 값이 없으면(빈 문자열·undefined) 하드코딩 기본값 사용.
+//   status 는 모집 상태(진행중/마감) — 표시 배지 + 신청 버튼 활성화의 1차 소스.
+interface ProgramContent {
+  name?: string;
+  en?: string;
+  summary?: string;
+  desc?: string;
+  status?: ProgramStatus;
+}
+type ProgramContentMap = Record<string, ProgramContent>;
+
+// 백엔드 단일 진실 소스 전체 형태(둘 다 선택적).
+interface KkumdarakSettingsData {
+  programs?: ProgramSettingsMap;
+  programContent?: ProgramContentMap;
+}
 
 // 프로그램별 실효 신청 URL: 오버라이드 > data.ts 기본값.
 const resolveApplyUrl = (setting?: ProgramSetting): string =>
@@ -130,18 +154,70 @@ const resolveApplyUrl = (setting?: ProgramSetting): string =>
 // 링크가 유효(실제 URL)한지 — '#' 또는 빈 값이면 비활성 처리.
 const isLiveUrl = (url: string): boolean => !!url && url !== '#';
 
+// 텍스트 필드 실효값: 오버라이드(공백 트림 후 비어있지 않을 때) > 하드코딩 기본값.
+//   '한 글자라도 지운 채 저장'으로 빈 문자열이 들어오면 기본값으로 자연 복귀한다.
+const pick = (override: string | undefined, fallback: string): string => {
+  const v = (override ?? '').trim();
+  return v ? v : fallback;
+};
+
+// 하드코딩 프로그램 + 콘텐츠 오버라이드 → 화면에 실제로 그릴 '실효 프로그램'.
+type Program = typeof PROGRAMS[number];
+const resolveProgram = (program: Program, content?: ProgramContent): Program => {
+  if (!content) return program;
+  const name = pick(content.name, program.name);
+  return {
+    ...program,
+    name,
+    en: pick(content.en, program.en),
+    summary: pick(content.summary, program.summary),
+    desc: pick(content.desc, program.desc),
+    // label 은 줄바꿈용 보조 표기 — name 을 편집하면 더 이상 유효하지 않으므로
+    //   오버라이드가 name 을 바꾼 경우 label 을 떨어뜨려 새 name 한 줄로 렌더한다.
+    label: name === program.name ? program.label : undefined,
+  };
+};
+
+// ── 모집 상태 통합 해석 ─────────────────────────────────────────────
+//   소스가 둘이다: (신규) programContent.status, (레거시) settings.programs[].closed.
+//   중복/충돌을 피하기 위해 '실효 마감' 을 단일 함수로 통합한다:
+//     · content.status 가 명시되면 그 값이 우선('open'→진행중, 'closed'→마감)
+//     · status 미설정이면 레거시 setting.closed(boolean)로 폴백
+//   이렇게 하면 기존에 저장된 closed 데이터도 그대로 동작하고, 새 status 가 1차 컨트롤이 된다.
+const resolveClosed = (content?: ProgramContent, setting?: ProgramSetting): boolean => {
+  if (content?.status === 'closed') return true;
+  if (content?.status === 'open') return false;
+  return !!setting?.closed;
+};
+
+// 공개 표시용 모집 상태 배지 (진행중 / 모집마감). 축제 카드는 신청 개념이 없어 렌더하지 않는다.
+const ProgramStatusBadge: React.FC<{
+  program: Program;
+  closed: boolean;
+  className?: string;
+}> = ({ program, closed, className }) => {
+  if (program.festival) return null;
+  return (
+    <span
+      className={`program-status-badge ${closed ? 'is-closed' : 'is-open'}${className ? ' ' + className : ''}`}
+      data-name="모집 상태"
+    >
+      {closed ? '모집마감' : '진행중'}
+    </span>
+  );
+};
+
 // ── 신청 버튼 (데스크톱·모바일 공용 로직) ───────────────────────────
 //   · 마감(closed) → 비활성 버튼 "마감되었습니다"
 //   · 축제(festival) → 기존 라벨(무료 개방) 그대로, 링크 없이 표시
 //   · 그 외 → 항상 "신청하기 →" 라벨 노출(요구사항 1). URL 이 아직 '#'(미설정)이면
 //     클릭만 막고(preventDefault) 라벨은 그대로 — 기존 동작과 동일하게 유지한다.
 const ApplyButton: React.FC<{
-  program: typeof PROGRAMS[number];
+  program: Program;
   setting?: ProgramSetting;
+  closed: boolean;           // resolveClosed() 로 통합된 실효 마감 상태
   className: string;
-}> = ({ program, setting, className }) => {
-  const closed = !!setting?.closed;
-
+}> = ({ program, setting, closed, className }) => {
   // 축제 카드는 신청 개념이 없다 — 마감만 반영, 아니면 정보성 라벨 유지.
   if (program.festival && !closed) {
     return <span className={className} aria-disabled="true">{program.action}</span>;
@@ -150,7 +226,7 @@ const ApplyButton: React.FC<{
   if (closed) {
     return (
       <span className={`${className} is-closed`} aria-disabled="true">
-        마감되었습니다
+        모집마감
       </span>
     );
   }
@@ -172,25 +248,24 @@ const ApplyButton: React.FC<{
   );
 };
 
-// ── 편집 패널 (로그인 시에만 렌더) ─────────────────────────────────
-//   신청 URL 입력 + 마감 토글. 저장은 부모(onSave)로 위임.
-const EditPanel: React.FC<{
-  program: typeof PROGRAMS[number];
+// ── 신청 링크 편집 패널 (로그인 시에만 렌더) ───────────────────────
+//   신청 URL 입력만 담당. 모집 상태(진행중/마감)는 ContentEditPanel 의 status 로 일원화했다
+//   (중복 컨트롤 제거). 단, 저장 시 레거시 setting.closed 값은 그대로 보존해 폴백 동작을 깨지 않는다.
+const SettingEditPanel: React.FC<{
+  program: Program;
   setting?: ProgramSetting;
   saving: boolean;   // 이 카드의 저장이 진행 중
   locked: boolean;   // 다른 어떤 카드든 저장이 진행 중(전역 in-flight)
   onSave: (name: string, next: ProgramSetting) => void;
 }> = ({ program, setting, saving, locked, onSave }) => {
   const [url, setUrl] = useState<string>(setting?.applyUrl ?? '');
-  const [closed, setClosed] = useState<boolean>(!!setting?.closed);
 
   // 외부(다른 카드 저장 후 refetch 등)에서 setting 이 바뀌면 입력값 동기화.
   useEffect(() => {
     setUrl(setting?.applyUrl ?? '');
-    setClosed(!!setting?.closed);
-  }, [setting?.applyUrl, setting?.closed]);
+  }, [setting?.applyUrl]);
 
-  const dirty = (setting?.applyUrl ?? '') !== url || !!setting?.closed !== closed;
+  const dirty = (setting?.applyUrl ?? '') !== url;
 
   return (
     <div className="program-edit-panel" data-name="신청 링크 편집">
@@ -205,23 +280,15 @@ const EditPanel: React.FC<{
           disabled={locked}
         />
       </label>
-      <label className="program-edit-toggle">
-        <input
-          type="checkbox"
-          checked={closed}
-          onChange={(e) => setClosed(e.target.checked)}
-          disabled={locked}
-        />
-        <span>모집 마감</span>
-      </label>
       <button
         type="button"
         className="program-edit-save"
         // ⚠️ 저장 직렬화: 전체 맵을 통째로 PUT(last-write-wins)하는 구조라, 한 카드의 저장이
         //   비행 중일 때 다른 카드를 저장하면 base 맵이 옛 값이라 방금 저장한 변경이 덮어써진다.
         //   → 어떤 카드든 저장 중(locked)이면 모든 저장 버튼을 비활성화해 저장을 직렬화한다.
+        //   레거시 closed 는 status 로 대체했으나 기존 값은 보존(폴백 호환).
         disabled={locked || !dirty}
-        onClick={() => onSave(program.name, { applyUrl: url.trim(), closed })}
+        onClick={() => onSave(program.name, { applyUrl: url.trim(), closed: !!setting?.closed })}
       >
         {saving ? '저장 중…' : '저장'}
       </button>
@@ -229,16 +296,158 @@ const EditPanel: React.FC<{
   );
 };
 
+// ── 텍스트 콘텐츠 편집 패널 (로그인 시에만 렌더) ───────────────────
+//   프로그램 제목/영문/한줄소개/본문을 인라인 편집해 DB(programContent)로 저장한다.
+//   · baseProgram = 하드코딩 기본값(빈 입력 시 어디로 복귀하는지 placeholder 로 안내)
+//   · 식별 키는 '편집 시작 시점의 name'(baseProgram.name) 으로 고정해, 제목을 바꿔도
+//     같은 슬롯에 저장된다(저장 키가 입력값을 따라 떠다니지 않도록).
+const ContentEditPanel: React.FC<{
+  baseProgram: Program;        // 하드코딩 기본값(placeholder·저장 키 기준)
+  content?: ProgramContent;    // 현재 저장된 오버라이드
+  setting?: ProgramSetting;    // 레거시 closed 폴백(status 미설정 시 기본 선택값)
+  saving: boolean;
+  locked: boolean;
+  onSave: (name: string, next: ProgramContent) => void;
+}> = ({ baseProgram, content, setting, saving, locked, onSave }) => {
+  const [name, setName] = useState<string>(content?.name ?? '');
+  const [en, setEn] = useState<string>(content?.en ?? '');
+  const [summary, setSummary] = useState<string>(content?.summary ?? '');
+  const [desc, setDesc] = useState<string>(content?.desc ?? '');
+  // 모집 상태 — 미설정 시 레거시 setting.closed 를 기본 선택값으로 끌어와 토글 일관성 유지.
+  const [status, setStatus] = useState<ProgramStatus>(
+    content?.status ?? (setting?.closed ? 'closed' : 'open'),
+  );
+
+  useEffect(() => {
+    setName(content?.name ?? '');
+    setEn(content?.en ?? '');
+    setSummary(content?.summary ?? '');
+    setDesc(content?.desc ?? '');
+    setStatus(content?.status ?? (setting?.closed ? 'closed' : 'open'));
+  }, [content?.name, content?.en, content?.summary, content?.desc, content?.status, setting?.closed]);
+
+  // dirty: status 는 '실효 상태' 기준으로 비교(미설정 content + 동일 폴백이면 변경 없음으로 본다).
+  const effectiveSavedStatus: ProgramStatus =
+    content?.status ?? (setting?.closed ? 'closed' : 'open');
+  const dirty =
+    (content?.name ?? '') !== name ||
+    (content?.en ?? '') !== en ||
+    (content?.summary ?? '') !== summary ||
+    (content?.desc ?? '') !== desc ||
+    effectiveSavedStatus !== status;
+
+  return (
+    <div className="program-edit-panel program-content-edit" data-name="텍스트 편집">
+      <p className="program-content-edit-title">텍스트 편집</p>
+      <label className="program-edit-field">
+        <span>제목</span>
+        <input
+          type="text"
+          className="program-edit-input"
+          value={name}
+          placeholder={baseProgram.name}
+          onChange={(e) => setName(e.target.value)}
+          disabled={locked}
+        />
+      </label>
+      <label className="program-edit-field">
+        <span>영문</span>
+        <input
+          type="text"
+          className="program-edit-input"
+          value={en}
+          placeholder={baseProgram.en}
+          onChange={(e) => setEn(e.target.value)}
+          disabled={locked}
+        />
+      </label>
+      <label className="program-edit-field">
+        <span>한 줄 소개</span>
+        <input
+          type="text"
+          className="program-edit-input"
+          value={summary}
+          placeholder={baseProgram.summary}
+          onChange={(e) => setSummary(e.target.value)}
+          disabled={locked}
+        />
+      </label>
+      <label className="program-edit-field">
+        <span>설명</span>
+        <textarea
+          className="program-edit-input program-edit-textarea"
+          value={desc}
+          placeholder={baseProgram.desc}
+          rows={3}
+          onChange={(e) => setDesc(e.target.value)}
+          disabled={locked}
+        />
+      </label>
+      {!baseProgram.festival && (
+        <div className="program-edit-field program-status-field" role="group" aria-label="모집 상태">
+          <span>모집 상태</span>
+          <div className="program-status-options">
+            <label className="program-status-radio">
+              <input
+                type="radio"
+                name={`status-${baseProgram.name}`}
+                checked={status === 'open'}
+                onChange={() => setStatus('open')}
+                disabled={locked}
+              />
+              <span>진행중</span>
+            </label>
+            <label className="program-status-radio">
+              <input
+                type="radio"
+                name={`status-${baseProgram.name}`}
+                checked={status === 'closed'}
+                onChange={() => setStatus('closed')}
+                disabled={locked}
+              />
+              <span>모집마감</span>
+            </label>
+          </div>
+        </div>
+      )}
+      <button
+        type="button"
+        className="program-edit-save"
+        disabled={locked || !dirty}
+        onClick={() =>
+          onSave(baseProgram.name, {
+            name: name.trim(),
+            en: en.trim(),
+            summary: summary.trim(),
+            desc: desc.trim(),
+            // 축제 카드는 모집 개념이 없어 status 를 저장하지 않는다.
+            ...(baseProgram.festival ? {} : { status }),
+          })
+        }
+      >
+        {saving ? '저장 중…' : '텍스트 저장'}
+      </button>
+      <p className="program-content-edit-hint">
+        비워두면 기본 문구로 돌아갑니다.
+      </p>
+    </div>
+  );
+};
+
 const ProgramCard: React.FC<{
-  program: typeof PROGRAMS[number];
+  baseProgram: Program;        // 하드코딩 원본(편집 placeholder·저장 키)
+  program: Program;            // 오버라이드 반영된 실효 표시값
   walkPhase: 'left' | 'right';
   setting?: ProgramSetting;
+  content?: ProgramContent;
   authed: boolean;
   saving: boolean;
   locked: boolean;
-  onSave: (name: string, next: ProgramSetting) => void;
-}> = ({ program, walkPhase, setting, authed, saving, locked, onSave }) => {
+  onSaveSetting: (name: string, next: ProgramSetting) => void;
+  onSaveContent: (name: string, next: ProgramContent) => void;
+}> = ({ baseProgram, program, walkPhase, setting, content, authed, saving, locked, onSaveSetting, onSaveContent }) => {
   const labelLines = program.label ?? [program.name];
+  const closed = resolveClosed(content, setting);
   return (
     <article className="program-card" style={{ '--accent': program.color } as React.CSSProperties}>
       <div className="program-card-art">
@@ -246,7 +455,10 @@ const ProgramCard: React.FC<{
           <MotionCharacter src={program.character} alt={labelLines.join(' ')} className="program-rig" />
         </div>
       </div>
-      <h3 className="program-name">{program.name}</h3>
+      <div className="program-title-row">
+        <h3 className="program-name">{program.name}</h3>
+        <ProgramStatusBadge program={program} closed={closed} />
+      </div>
       <p className="program-en">{program.en}</p>
       <h2>{program.summary}</h2>
       <p className="program-desc">{program.desc}</p>
@@ -255,59 +467,89 @@ const ProgramCard: React.FC<{
           <p key={key}><span>{key}</span><b>{value}</b></p>
         ))}
       </div>
-      <ApplyButton program={program} setting={setting} className="program-action" />
+      <ApplyButton program={program} setting={setting} closed={closed} className="program-action" />
       {authed && (
-        <EditPanel program={program} setting={setting} saving={saving} locked={locked} onSave={onSave} />
+        <>
+          <ContentEditPanel
+            baseProgram={baseProgram}
+            content={content}
+            setting={setting}
+            saving={saving}
+            locked={locked}
+            onSave={onSaveContent}
+          />
+          <SettingEditPanel program={baseProgram} setting={setting} saving={saving} locked={locked} onSave={onSaveSetting} />
+        </>
       )}
     </article>
   );
 };
 
 const MobileProgramCard: React.FC<{
-  program: typeof PROGRAMS[number];
+  baseProgram: Program;
+  program: Program;
   setting?: ProgramSetting;
+  content?: ProgramContent;
   authed: boolean;
   saving: boolean;
   locked: boolean;
-  onSave: (name: string, next: ProgramSetting) => void;
-}> = ({ program, setting, authed, saving, locked, onSave }) => (
+  onSaveSetting: (name: string, next: ProgramSetting) => void;
+  onSaveContent: (name: string, next: ProgramContent) => void;
+}> = ({ baseProgram, program, setting, content, authed, saving, locked, onSaveSetting, onSaveContent }) => {
+  const closed = resolveClosed(content, setting);
+  return (
   <article className="mobile-program-card" style={{ '--accent': program.color, '--mark': program.mobileMark } as React.CSSProperties}>
     <div className="mobile-program-head">
       <div className="mobile-program-character" aria-hidden="true">
         <MotionCharacter src={program.character} alt="" className="program-rig-mobile" />
       </div>
-      <div>
-        <h2>{program.name}</h2>
+      <div className="mobile-program-titles">
+        <div className="mobile-program-title-row">
+          <h2>{program.name}</h2>
+          <ProgramStatusBadge program={program} closed={closed} className="is-mobile" />
+        </div>
         <p>{program.en}</p>
       </div>
     </div>
+    <p className="mobile-program-summary">{program.summary}</p>
     <div className="mobile-program-meta">
       <span>{program.field}</span>
       <b>{program.brief}</b>
     </div>
-    <ApplyButton program={program} setting={setting} className="mobile-program-action" />
+    <ApplyButton program={program} setting={setting} closed={closed} className="mobile-program-action" />
     {authed && (
-      <EditPanel program={program} setting={setting} saving={saving} locked={locked} onSave={onSave} />
+      <>
+        <ContentEditPanel
+          baseProgram={baseProgram}
+          content={content}
+          setting={setting}
+          saving={saving}
+          locked={locked}
+          onSave={onSaveContent}
+        />
+        <SettingEditPanel program={baseProgram} setting={setting} saving={saving} locked={locked} onSave={onSaveSetting} />
+      </>
     )}
   </article>
-);
+  );
+};
 
 const Programs: React.FC = () => {
   const [walkPhase, setWalkPhase] = useState<'left' | 'right'>('left');
   const { authed } = useKkumdarakAuth();
 
-  // 신청 링크/마감 오버라이드 (백엔드 단일 진실 소스, name 으로 key)
+  // 신청 링크/마감 오버라이드 + 텍스트 콘텐츠 오버라이드 (백엔드 단일 진실 소스, name 으로 key)
   const [settings, setSettings] = useState<ProgramSettingsMap>({});
+  const [contentMap, setContentMap] = useState<ProgramContentMap>({});
   const [savingName, setSavingName] = useState<string | null>(null);
 
-  // 저장 시 머지 기준이 되는 '최신' settings 스냅샷.
-  //   stale-closure 방지 + 초기 GET 미완료 상태에서 저장 시 다른 프로그램 값이 누락되는
-  //   사고를 막기 위해 ref 로 항상 최신 맵을 들고 있는다(handleSave 가 이 ref 를 머지한다).
-  const settingsRef = useRef<ProgramSettingsMap>({});
+  // 저장 시 머지 기준이 되는 '최신' 전체 data 스냅샷({ programs, programContent }).
+  //   stale-closure 방지 + 초기 GET 미완료 상태에서 저장 시 다른 값이 누락되는 사고를 막기 위해
+  //   ref 로 항상 최신 맵을 들고 있는다(handleSave* 가 이 ref 를 머지한다).
+  const dataRef = useRef<KkumdarakSettingsData>({});
   // GET(로드)이 한 번이라도 완료됐는지. 로드 전에는 저장을 막아 빈 맵으로 덮어쓰는 사고를 차단.
   const loadedRef = useRef<boolean>(false);
-  // 직전 GET 이 '실패'로 끝났는지(네트워크 일시 오류 등). 이 경우 settingsRef 가 신뢰 불가
-  //   (다른 프로그램 값이 비어 있을 수 있음)이라, 저장 전 GET 을 한 번 더 시도해 base 맵을 복구한다.
+  // 직전 GET 이 '실패'로 끝났는지. 이 경우 dataRef 가 신뢰 불가라, 저장 전 GET 을 한 번 더 시도해 복구한다.
   const loadFailedRef = useRef<boolean>(false);
   // 저장 in-flight 가드(방어적 직렬화). UI 의 locked 비활성화가 우회돼도 한 번에 한 PUT 만 보낸다.
   const savingRef = useRef<boolean>(false);
@@ -317,117 +559,140 @@ const Programs: React.FC = () => {
     return () => clearInterval(t);
   }, []);
 
+  // 전체 data 를 ref·상태에 반영하는 헬퍼.
+  const applyData = useCallback((data: KkumdarakSettingsData) => {
+    dataRef.current = data || {};
+    setSettings((data && data.programs) || {});
+    setContentMap((data && data.programContent) || {});
+  }, []);
+
   // 설정 로드 (공개 GET) — 언마운트 후 setState 방지.
-  //   ⚠️ kkumdarakSettingsAPI.get() 은 내부에서 cdnBustUrl 로 Vercel Edge Cache 를
-  //   우회한다(저장 직후 5분 창 한정 ?_t= 부착; 서버 GET 라우트의 s-maxage=60·
-  //   stale-while-revalidate=300 때문). 이 우회가 없으면 '모집 마감' 저장 직후 재진입 시
-  //   엣지 캐시의 저장 이전 응답을 받아 체크가 풀린다.
+  //   kkumdarakSettingsAPI.get() 은 내부에서 cdnBustUrl 로 Vercel Edge Cache 를 우회한다
+  //   (저장 직후 5분 창 한정). 이 우회가 없으면 저장 직후 재진입 시 저장 이전 응답을 받는다.
   useEffect(() => {
     let alive = true;
     kkumdarakSettingsAPI.get()
-      .then((data) => {
+      .then((data: KkumdarakSettingsData) => {
         if (!alive) return;
-        const programs = (data && data.programs) || {};
-        settingsRef.current = programs as ProgramSettingsMap;
+        applyData(data || {});
         loadedRef.current = true;
         loadFailedRef.current = false;
-        setSettings(programs as ProgramSettingsMap);
       })
       .catch(() => {
         if (!alive) return;
         // 폴백: 오버라이드 없음(기본 동작 유지). 로드는 '완료'로 보되 '실패'로 표시한다.
-        //   (네트워크 일시 실패까지 저장을 영구 차단하지 않되, 저장 직전 GET 재시도로 base 복구.)
         loadedRef.current = true;
         loadFailedRef.current = true;
       });
     return () => { alive = false; };
-  }, []);
+  }, [applyData]);
 
-  // 저장 — 단일 프로그램 설정을 '최신 ref 맵'에 머지해 통째로 PUT, 성공 시 로컬 상태 낙관적 갱신.
-  //   · 머지 기준을 state(settings) 대신 settingsRef.current 로 잡아 stale-closure 로
-  //     인한 다른 프로그램 값 유실을 방지한다.
+  // 공통 저장 코어 — 최신 ref(data)에 한 항목을 머지해 전체 data 를 통째로 PUT.
+  //   key 는 'programs' | 'programContent', next 는 해당 맵에 머지될 단일 항목.
+  //   · 머지 기준을 state 대신 dataRef.current 로 잡아 stale-closure 유실을 방지한다.
   //   · 초기 GET 미완료(loadedRef=false) 상태면 저장을 막는다(빈 맵 덮어쓰기 차단).
-  const handleSave = useCallback(async (name: string, next: ProgramSetting) => {
-    if (!loadedRef.current) {
-      alert('설정을 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
-      return;
-    }
-    // 방어적 직렬화: 이미 다른 저장이 비행 중이면 무시(UI locked 우회 대비).
-    //   전체 맵 PUT(last-write-wins) 구조라 동시 저장은 base 맵을 옛 값으로 만들어 변경을 덮어쓴다.
-    if (savingRef.current) {
-      alert('다른 항목을 저장하는 중입니다. 잠시 후 다시 시도해주세요.');
-      return;
-    }
-    savingRef.current = true;
-    setSavingName(name);
-    try {
-      // 직전 GET 이 실패했다면 settingsRef(base 맵)가 비어 있을 수 있어, 저장 전 GET 을 한 번
-      //   더 시도해 다른 프로그램 값을 복구한다(빈 맵으로 통째 덮어쓰기 방지). 재시도도 실패하면
-      //   사용자에게 알리고 저장을 중단한다(타 프로그램 값 유실 위험을 무릅쓰지 않는다).
-      if (loadFailedRef.current) {
-        try {
-          const data = await kkumdarakSettingsAPI.get();
-          const programs = (data && data.programs) || {};
-          settingsRef.current = programs as ProgramSettingsMap;
-          loadFailedRef.current = false;
-          setSettings(programs as ProgramSettingsMap);
-        } catch {
-          alert('설정을 다시 불러오지 못했습니다. 네트워크 확인 후 다시 시도해주세요.');
-          return;
+  const saveCore = useCallback(
+    async <K extends keyof KkumdarakSettingsData>(
+      bucket: K,
+      name: string,
+      next: ProgramSetting | ProgramContent,
+    ) => {
+      if (!loadedRef.current) {
+        alert('설정을 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+        return;
+      }
+      if (savingRef.current) {
+        alert('다른 항목을 저장하는 중입니다. 잠시 후 다시 시도해주세요.');
+        return;
+      }
+      savingRef.current = true;
+      setSavingName(name);
+      try {
+        // 직전 GET 실패 시 base(dataRef)가 비어 있을 수 있어, 저장 전 GET 을 재시도해 복구한다
+        //   (빈 맵으로 통째 덮어쓰기 방지). 재시도도 실패하면 알리고 저장을 중단한다.
+        if (loadFailedRef.current) {
+          try {
+            const data: KkumdarakSettingsData = await kkumdarakSettingsAPI.get();
+            applyData(data || {});
+            loadFailedRef.current = false;
+          } catch {
+            alert('설정을 다시 불러오지 못했습니다. 네트워크 확인 후 다시 시도해주세요.');
+            return;
+          }
         }
+        const base = dataRef.current || {};
+        const currentBucket = (base[bucket] as Record<string, unknown>) || {};
+        const optimistic: KkumdarakSettingsData = {
+          ...base,
+          [bucket]: { ...currentBucket, [name]: next },
+        };
+        await kkumdarakSettingsAPI.save(optimistic);
+        applyData(optimistic);
+      } catch (err: any) {
+        if (err?.code === 'KKUM_AUTH_EXPIRED') {
+          alert('꿈다락 인증이 만료되었습니다. 다시 로그인해주세요.');
+        } else {
+          alert(err?.message || '저장에 실패했습니다.');
+        }
+      } finally {
+        savingRef.current = false;
+        setSavingName(null);
       }
-      const optimistic: ProgramSettingsMap = { ...settingsRef.current, [name]: next };
-      await kkumdarakSettingsAPI.save({ programs: optimistic });
-      settingsRef.current = optimistic;
-      setSettings(optimistic);
-    } catch (err: any) {
-      if (err?.code === 'KKUM_AUTH_EXPIRED') {
-        alert('꿈다락 인증이 만료되었습니다. 다시 로그인해주세요.');
-      } else {
-        alert(err?.message || '저장에 실패했습니다.');
-      }
-    } finally {
-      savingRef.current = false;
-      setSavingName(null);
-    }
-  }, []);
+    },
+    [applyData],
+  );
+
+  const handleSaveSetting = useCallback(
+    (name: string, next: ProgramSetting) => saveCore('programs', name, next),
+    [saveCore],
+  );
+  const handleSaveContent = useCallback(
+    (name: string, next: ProgramContent) => saveCore('programContent', name, next),
+    [saveCore],
+  );
 
   return (
-    <section className="kd-figma-programs">
-      <div className="kd-program-desktop" data-name="프로그램 — Desktop">
+    <section className={`kd-figma-programs${authed ? ' is-editing' : ''}`}>
+      <div className={`kd-program-desktop${authed ? ' is-editing' : ''}`} data-name="프로그램 — Desktop">
         <div className="kd-section-rule kd-section-rule--s2" />
         <p className="program-kicker">7개의 프로그램은 한 줄로 흐른다</p>
         <h1>프로그램</h1>
         <div className="program-soft-field" />
         <div className="program-grid">
-          {PROGRAMS.map((program) => (
+          {PROGRAMS.map((base) => (
             <ProgramCard
-              key={program.name}
-              program={program}
+              key={base.name}
+              baseProgram={base}
+              program={resolveProgram(base, contentMap[base.name])}
               walkPhase={walkPhase}
-              setting={settings[program.name]}
+              setting={settings[base.name]}
+              content={contentMap[base.name]}
               authed={authed}
-              saving={savingName === program.name}
+              saving={savingName === base.name}
               locked={savingName !== null}
-              onSave={handleSave}
+              onSaveSetting={handleSaveSetting}
+              onSaveContent={handleSaveContent}
             />
           ))}
         </div>
       </div>
 
-      <div className="kd-program-mobile" data-name="프로그램 — Mobile">
+      <div className={`kd-program-mobile${authed ? ' is-editing' : ''}`} data-name="프로그램 — Mobile">
         <div className="kd-section-rule kd-section-rule--s2" />
         <h1>프로그램</h1>
         <div className="mobile-program-list">
-          {PROGRAMS.map((program) => (
+          {PROGRAMS.map((base) => (
             <MobileProgramCard
-              key={program.name}
-              program={program}
-              setting={settings[program.name]}
+              key={base.name}
+              baseProgram={base}
+              program={resolveProgram(base, contentMap[base.name])}
+              setting={settings[base.name]}
+              content={contentMap[base.name]}
               authed={authed}
-              saving={savingName === program.name}
+              saving={savingName === base.name}
               locked={savingName !== null}
-              onSave={handleSave}
+              onSaveSetting={handleSaveSetting}
+              onSaveContent={handleSaveContent}
             />
           ))}
         </div>
