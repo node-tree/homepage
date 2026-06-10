@@ -20,6 +20,24 @@ import './BlockEditor.css';
 
 const PAGE_SIZE = 40;
 
+// 마지막 사용 폴더 기억(같은 탭 세션 한정). 전역 단일 키 — 편집 세션 내 Work/마을일기 등에서 이어감.
+const LAST_PATH_KEY = 'ikp:lastPath';
+function readLastPath(): string {
+  try {
+    const v = sessionStorage.getItem(LAST_PATH_KEY);
+    return v && typeof v === 'string' ? v : '/';
+  } catch {
+    return '/';
+  }
+}
+function writeLastPath(path: string): void {
+  try {
+    sessionStorage.setItem(LAST_PATH_KEY, path || '/');
+  } catch {
+    /* sessionStorage 불가 환경 — 무시(기능만 비활성) */
+  }
+}
+
 function isFolder(f: IkFile): boolean {
   return f.type === 'folder' || (!f.url && !!(f.folderPath || f.folderId));
 }
@@ -63,7 +81,7 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
   title = '이미지 선택',
 }) => {
   const [files, setFiles] = useState<IkFile[]>([]);
-  const [browsePath, setBrowsePath] = useState('/');
+  const [browsePath, setBrowsePath] = useState<string>(() => readLastPath());
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [skip, setSkip] = useState(0);
@@ -105,6 +123,13 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
           setListError('관리자 권한이 필요합니다.');
           return;
         }
+        // 복원한 폴더가 삭제됐거나 목록 실패 → 루트로 graceful 폴백(검색 중이 아닐 때, 비루트일 때).
+        if (!search && browsePath && browsePath !== '/') {
+          writeLastPath('/');
+          setBrowsePath('/'); // browsePath 변경 → 위 effect 가 루트로 재로드
+          setListError(null);
+          return;
+        }
         setListError(e?.message || '목록을 불러오지 못했습니다.');
       } finally {
         setListLoading(false);
@@ -112,6 +137,18 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
     },
     [browsePath, search, skip]
   );
+
+  // 열릴 때마다 마지막 사용 폴더(sessionStorage)를 복원 — 다른 마운트/페이지에서도 이어진다.
+  //   검색어는 복원하지 않는다. 저장값과 현재 경로가 같으면 그대로 둔다(불필요한 재로드 방지).
+  const prevOpenRef = useRef(false);
+  useEffect(() => {
+    if (open && !prevOpenRef.current) {
+      const last = readLastPath();
+      if (last !== browsePath) setBrowsePath(last);
+    }
+    prevOpenRef.current = open;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -122,6 +159,8 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
 
   useEffect(() => {
     if (!open) {
+      // 닫힐 때 현재 폴더를 기억(검색어는 기억하지 않음 — 아래에서 초기화).
+      writeLastPath(browsePath);
       setSelected(new Set());
       setUploads([]);
       setSearch('');
@@ -130,12 +169,15 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
       setNewFolderOpen(false);
       setNewFolderName('');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const enterFolder = useCallback((target: string) => {
     setSearch('');
     setSearchInput('');
-    setBrowsePath(normalizePath(target));
+    const norm = normalizePath(target);
+    setBrowsePath(norm);
+    writeLastPath(norm);
   }, []);
 
   // 현재 경로 아래 새 폴더 생성 → 성공 시 해당 폴더로 진입.
