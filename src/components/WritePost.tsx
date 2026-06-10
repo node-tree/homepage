@@ -272,6 +272,7 @@ const WritePost: React.FC<WritePostProps> = ({ onSavePost, onBackToWork, postTyp
             value={content}
             onChange={(html) => { setContent(html); dirtyRef.current = true; }}
             placeholder="내용을 입력하세요"
+            aiContext={postType === 'work' ? 'artwork' : 'general'}
           />
         </div>
       </div>
