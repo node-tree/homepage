@@ -1,0 +1,671 @@
+/* ═══════════════════════════════════════════════════════════════
+   「마을소식」 — 이소(異素)의 웹 신문 (꿈다락 /iso#news)
+   뉴스 전용 스타일 전부 여기(VillageNews.tsx 가 import → lazy 청크에 동봉).
+
+   디자인 원칙
+     · 매체 정체성(제호·날짜줄·콜로폰)은 고정, 본문은 호별 가변.
+     · 색은 전부 --kd-news-* (호 테마가 주입). 임의 hex 산재 금지.
+     · 박스가 아니라 괘선으로 위계: 굵은=섹션 / 얇은=기사 / 이중=공고.
+     · 데스크톱 6단 신문 그리드 → 900px 이하 1단 리플로우.
+     · 명조(Noto Serif KR)=제호·헤드라인·본문 / 고딕(Gothic A1)=키커·캡션·라벨.
+   ═══════════════════════════════════════════════════════════════ */
+
+.kd-news {
+  /* 호 테마가 못 주입됐을 때의 안전 기본값(창간호 톤) */
+  --kd-news-paper: #f6f2e7;
+  --kd-news-ink: #251b13;
+  --kd-news-spot: #f02e1f;
+  --kd-news-spot2: #0f7a38;
+  --kd-news-headline-font: 'Noto Serif KR', 'Nanum Myeongjo', serif;
+  --kd-news-body-font: 'Noto Serif KR', 'Nanum Myeongjo', serif;
+  --kd-news-label-font: 'Gothic A1', 'Noto Sans KR', system-ui, sans-serif;
+  --kd-news-rule: rgba(37, 27, 19, 0.92);
+  --kd-news-rule-thin: rgba(37, 27, 19, 0.45);
+
+  position: relative;
+  background: var(--kd-news-paper);
+  color: var(--kd-news-ink);
+  min-height: 60vh;
+  padding: 72px 0 96px;
+  overflow: hidden;
+}
+
+/* ── 종이결 노이즈 (인라인 SVG, 고정·비상호작용) ─────────────────
+   DOM 비용 최소화: 스크롤 컨테이너가 아닌 고정 오버레이에만 필터 적용. */
+.kdn-noise {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+  z-index: 0;
+}
+
+/* 지면 시트 — 신문 한 면의 폭(고정 캔버스 1240px, 가운데) */
+.kd-news-sheet {
+  position: relative;
+  z-index: 1;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 40px;
+}
+
+/* ───────────────────────────────────────────────────────────────
+   제호(마스트헤드) — 명조 초대형 로고타입 + 부엉이·반딧불이 컷
+   ─────────────────────────────────────────────────────────────── */
+.kdn-masthead {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: clamp(16px, 3vw, 40px);
+  padding-bottom: 14px;
+  border-bottom: 5px solid var(--kd-news-ink);
+}
+
+.kdn-masthead-cut {
+  display: inline-flex;
+  color: var(--kd-news-ink);
+}
+.kdn-cut-svg {
+  width: clamp(48px, 7vw, 84px);
+  height: auto;
+  display: block;
+}
+.kdn-masthead-cut--firefly { color: var(--kd-news-ink); }
+
+.kdn-masthead-center {
+  text-align: center;
+  min-width: 0;
+}
+.kdn-masthead-title {
+  font-family: var(--kd-news-headline-font);
+  font-weight: 900;
+  font-size: clamp(52px, 11vw, 132px);
+  line-height: 0.92;
+  letter-spacing: 0.04em;
+  margin: 0;
+  color: var(--kd-news-ink);
+  /* 잉크 오버프린트 느낌의 미세한 두께감 */
+  text-shadow: 0.5px 0 0 var(--kd-news-ink);
+}
+.kdn-masthead-motto {
+  font-family: var(--kd-news-label-font);
+  font-weight: 700;
+  font-size: clamp(11px, 1.5vw, 15px);
+  letter-spacing: 0.18em;
+  margin: 10px 0 0;
+  color: var(--kd-news-ink);
+  opacity: 0.82;
+}
+
+/* ───────────────────────────────────────────────────────────────
+   날짜줄(Folio) — 이중 괘선(double rule) 사이. 신문다움의 절반.
+   ─────────────────────────────────────────────────────────────── */
+.kdn-folio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px 20px;
+  margin-top: 5px;
+  padding: 7px 0;
+  /* 위는 제호의 굵은 선, 아래로 이중선을 더해 'Folio band' 완성 */
+  border-top: 2px solid var(--kd-news-ink);
+  border-bottom: 2px solid var(--kd-news-ink);
+  box-shadow: inset 0 4px 0 -2.5px var(--kd-news-paper), inset 0 -4px 0 -2.5px var(--kd-news-paper);
+}
+.kdn-folio-line {
+  font-family: var(--kd-news-label-font);
+  font-weight: 700;
+  font-size: clamp(11px, 1.4vw, 14px);
+  letter-spacing: 0.04em;
+  margin: 0;
+  color: var(--kd-news-ink);
+}
+.kdn-folio-archive {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.kdn-folio-archive-label {
+  font-family: var(--kd-news-label-font);
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--kd-news-ink);
+  opacity: 0.6;
+}
+.kdn-folio-only { opacity: 0.7; }
+.kdn-folio-issue {
+  font-family: var(--kd-news-label-font);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  padding: 2px 9px;
+  border: 1.5px solid var(--kd-news-ink);
+  background: transparent;
+  color: var(--kd-news-ink);
+  cursor: pointer;
+  border-radius: 999px;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+.kdn-folio-issue:hover { background: var(--kd-news-ink); color: var(--kd-news-paper); }
+.kdn-folio-issue.is-active { background: var(--kd-news-spot); border-color: var(--kd-news-spot); color: #fff; }
+
+/* ───────────────────────────────────────────────────────────────
+   6단 신문 그리드 — 블록 배열 순서 + span 이 곧 지면 조판
+   ─────────────────────────────────────────────────────────────── */
+.kdn-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  column-gap: 0;          /* 컬럼 사이는 column-rule(세로 괘선)이 가른다 */
+  row-gap: 0;
+  margin-top: 18px;
+}
+
+/* 블록 공통 — 괘선 위계는 상단 보더로, 세로 괘선은 좌측 보더로 */
+.kdn-block {
+  position: relative;
+  padding: 22px 26px 26px;
+  min-width: 0;
+}
+.kdn-span-full { grid-column: span 6; }
+.kdn-span-half { grid-column: span 3; }
+.kdn-span-third { grid-column: span 2; }
+
+/* 인접 블록 사이 세로 괘선(신문 단 구분) — half/third 가 나란히 설 때 */
+.kdn-span-half + .kdn-span-half,
+.kdn-span-third + .kdn-span-third,
+.kdn-span-half + .kdn-span-third,
+.kdn-span-third + .kdn-span-half {
+  border-left: 1px solid var(--kd-news-rule-thin);
+}
+
+/* 상단 괘선 위계 */
+.kdn-rule-bold { border-top: 3px solid var(--kd-news-rule); margin-top: 8px; }
+.kdn-rule-thin { border-top: 1px solid var(--kd-news-rule-thin); }
+.kdn-rule-double {
+  border-top: 3px double var(--kd-news-rule);
+  padding-top: 26px;
+  margin-top: 8px;
+}
+
+/* 먹면 반전 / 신호색 면 */
+.kdn-tone-ink {
+  background: var(--kd-news-ink);
+  color: var(--kd-news-paper);
+}
+.kdn-tone-ink .kdn-kicker,
+.kdn-tone-ink .kdn-byline { color: var(--kd-news-paper); opacity: 0.8; }
+.kdn-tone-spot { color: var(--kd-news-ink); }
+
+/* 스크랩 기울임 */
+.kdn-rotated { transform: rotate(var(--kdn-rotate, 0deg)); }
+
+/* ── 공통 타이포 ───────────────────────────────────────────────── */
+.kdn-kicker {
+  font-family: var(--kd-news-label-font);
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--kd-news-spot);     /* 키커 = 신호색 라벨 */
+  margin: 0 0 10px;
+}
+.kdn-deck {
+  font-family: var(--kd-news-headline-font);
+  font-weight: 400;
+  font-size: clamp(15px, 2vw, 21px);
+  line-height: 1.4;
+  color: var(--kd-news-ink);
+  opacity: 0.86;
+  margin: 0 0 14px;
+}
+.kdn-byline {
+  font-family: var(--kd-news-label-font);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--kd-news-ink);
+  opacity: 0.62;
+  margin: 12px 0 0;
+}
+.kdn-para {
+  font-family: var(--kd-news-body-font);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.78;
+  letter-spacing: -0.005em;
+  color: var(--kd-news-ink);
+  margin: 0 0 1em;
+  text-align: justify;
+  word-break: keep-all;        /* 한글 어절 보존 */
+}
+.kdn-para:last-child { margin-bottom: 0; }
+
+/* ── TopStory (1면 톱) ─────────────────────────────────────────── */
+.kdn-topstory { padding-top: 14px; }
+.kdn-cut {
+  font-family: var(--kd-news-headline-font);
+  font-weight: 900;
+  font-size: clamp(34px, 6.4vw, 78px);
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+  color: var(--kd-news-ink);
+}
+.kdn-topstory-body {
+  margin-top: 18px;
+  /* 톱 본문은 데스크톱에서 3단으로 흐른다 */
+  columns: 3;
+  column-gap: 32px;
+  column-rule: 1px solid var(--kd-news-rule-thin);
+}
+.kdn-topstory-body .kdn-para { break-inside: avoid-column; }
+.kdn-lead {
+  font-family: var(--kd-news-body-font);
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--kd-news-ink);
+  margin: 0 0 1em;
+  word-break: keep-all;
+}
+
+/* ── Article (멀티컬럼 + 드롭캡) ───────────────────────────────── */
+.kdn-article-head { margin-bottom: 16px; }
+.kdn-headline {
+  font-family: var(--kd-news-headline-font);
+  font-weight: 900;
+  font-size: clamp(26px, 4vw, 44px);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+  color: var(--kd-news-ink);
+}
+.kdn-article-body { position: relative; }
+.kdn-cols-2 .kdn-article-body {
+  columns: 2;
+  column-gap: 30px;
+  column-rule: 1px solid var(--kd-news-rule-thin);
+}
+.kdn-cols-3 .kdn-article-body {
+  columns: 3;
+  column-gap: 28px;
+  column-rule: 1px solid var(--kd-news-rule-thin);
+}
+.kdn-article-body .kdn-para { break-inside: avoid-column; }
+
+/* 드롭캡 — 첫 글자를 명조 3줄 높이로 */
+.kdn-dropcap > .kdn-para:first-of-type::first-letter {
+  font-family: var(--kd-news-headline-font);
+  font-weight: 900;
+  float: left;
+  font-size: 3.4em;
+  line-height: 0.78;
+  padding: 0.06em 0.1em 0 0;
+  margin-right: 0.04em;
+  color: var(--kd-news-spot);   /* 첫 글자 = 신호색(반딧불이의 발화) */
+}
+
+/* 발췌 인용 */
+.kdn-pullquote {
+  font-family: var(--kd-news-headline-font);
+  font-weight: 700;
+  font-size: clamp(20px, 2.6vw, 30px);
+  line-height: 1.32;
+  color: var(--kd-news-ink);
+  margin: 22px 0 4px;
+  padding: 16px 0;
+  border-top: 2px solid var(--kd-news-ink);
+  border-bottom: 2px solid var(--kd-news-ink);
+  word-break: keep-all;
+}
+
+/* ── Verse (세로쓰기) — 부엉이의 '기억' 정서 ───────────────────── */
+.kdn-verse {
+  display: flex;
+  flex-direction: column;
+}
+.kdn-verse-title {
+  font-family: var(--kd-news-headline-font);
+  font-weight: 700;
+  font-size: clamp(20px, 2.4vw, 28px);
+  margin: 0 0 16px;
+  color: var(--kd-news-ink);
+}
+.kdn-verse-body {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  height: clamp(280px, 34vw, 420px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 14px;
+  align-content: flex-start;
+  margin: 0 0 14px;
+  padding: 4px 2px;
+  border-right: 2px solid var(--kd-news-rule);
+  border-left: 1px solid var(--kd-news-rule-thin);
+}
+.kdn-verse-line {
+  font-family: var(--kd-news-headline-font);
+  font-weight: 400;
+  font-size: 17px;
+  line-height: 1.9;
+  letter-spacing: 0.06em;
+  color: var(--kd-news-ink);
+  margin: 0;
+}
+.kdn-verse-attr {
+  font-family: var(--kd-news-label-font);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--kd-news-ink);
+  opacity: 0.62;
+  margin: 0;
+}
+
+/* ── PhotoSpread ───────────────────────────────────────────────── */
+.kdn-photospread { margin: 0; }
+.kdn-photospread-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+.kdn-photo {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid var(--kd-news-rule-thin);
+  filter: grayscale(0.18) contrast(1.02);
+}
+
+/* ── Collage (스크랩 모드) — 이소 캐릭터·마스코트 ──────────────── */
+.kdn-collage { margin: 0; }
+.kdn-collage-title,
+.kdn-board-title {
+  font-family: var(--kd-news-label-font);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--kd-news-ink);
+  margin: 0 0 14px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--kd-news-rule-thin);
+}
+.kdn-collage-stage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(10px, 2vw, 24px);
+  padding: 14px 6px 18px;
+  min-height: 140px;
+}
+.kdn-scrap {
+  display: inline-flex;
+  padding: 6px;
+  background: #fff;
+  /* 스크랩 사진 느낌의 흰 여백 + 미세 그림자(배경 톤) — ink 변수 기반(값 중복 제거) */
+  box-shadow: 0 3px 10px -4px color-mix(in srgb, var(--kd-news-ink) 35%, transparent);
+  border: 1px solid color-mix(in srgb, var(--kd-news-ink) 12%, transparent);
+}
+.kdn-scrap img {
+  display: block;
+  width: clamp(76px, 12vw, 132px);
+  height: auto;
+  mix-blend-mode: multiply;     /* 잉크 오버프린트 */
+}
+
+/* ── ProgramBoard (공고란) ─────────────────────────────────────── */
+.kdn-board-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  /* 공고는 데스크톱에서 2단으로(신문 안내란 톤) */
+  columns: 2;
+  column-gap: 36px;
+}
+.kdn-board-item {
+  display: flex;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px dotted var(--kd-news-rule-thin);
+  break-inside: avoid;
+}
+.kdn-board-item:first-child { border-top: 0; }
+.kdn-board-no {
+  font-family: var(--kd-news-headline-font);
+  font-weight: 900;
+  font-size: 18px;
+  line-height: 1.2;
+  color: var(--kd-news-spot);
+  flex: 0 0 auto;
+}
+.kdn-board-text { min-width: 0; }
+.kdn-board-name {
+  font-family: var(--kd-news-headline-font);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--kd-news-ink);
+  margin: 0 0 2px;
+  word-break: keep-all;
+}
+.kdn-board-field {
+  font-family: var(--kd-news-label-font);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--kd-news-ink);
+  opacity: 0.55;
+  margin-left: 4px;
+}
+.kdn-board-meta {
+  font-family: var(--kd-news-label-font);
+  font-weight: 400;
+  font-size: 12.5px;
+  color: var(--kd-news-ink);
+  opacity: 0.8;
+  margin: 0;
+}
+.kdn-board-extra {
+  font-family: var(--kd-news-label-font);
+  font-size: 12px;
+  font-style: italic;
+  color: var(--kd-news-ink);
+  opacity: 0.66;
+  margin: 2px 0 0;
+  word-break: keep-all;
+}
+.kdn-board-footer {
+  font-family: var(--kd-news-label-font);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  color: var(--kd-news-ink);
+  margin: 16px 0 0;
+  padding-top: 12px;
+  border-top: 2px solid var(--kd-news-ink);
+  word-break: keep-all;
+}
+
+/* ── NoticeBox (사고) — 신호색 면 ──────────────────────────────── */
+.kdn-notice.kdn-tone-spot {
+  background: transparent;
+  border-top: 3px double var(--kd-news-spot);
+  border-bottom: 3px double var(--kd-news-spot);
+}
+.kdn-notice-label {
+  font-family: var(--kd-news-label-font);
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  color: var(--kd-news-spot);
+  margin: 0 0 6px;
+}
+.kdn-notice-body {
+  font-family: var(--kd-news-headline-font);
+  font-weight: 700;
+  font-size: clamp(15px, 2vw, 19px);
+  line-height: 1.5;
+  color: var(--kd-news-ink);
+  margin: 0;
+  word-break: keep-all;
+}
+
+/* ── 콜로폰(판권) ──────────────────────────────────────────────── */
+.kdn-colophon {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 22px;
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 4px solid var(--kd-news-ink);
+}
+.kdn-colophon-mark {
+  font-family: var(--kd-news-headline-font);
+  font-weight: 900;
+  font-size: 30px;
+  letter-spacing: 0.06em;
+  color: var(--kd-news-ink);
+}
+.kdn-colophon-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+}
+.kdn-colophon-lines li {
+  font-family: var(--kd-news-label-font);
+  font-weight: 400;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--kd-news-ink);
+  opacity: 0.78;
+  position: relative;
+}
+.kdn-colophon-lines li + li::before {
+  content: '·';
+  position: absolute;
+  left: -9px;
+  opacity: 0.5;
+}
+
+/* ── 빈 상태 ───────────────────────────────────────────────────── */
+.kdn-empty {
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 80px 24px;
+  font-family: var(--kd-news-headline-font);
+  color: var(--kd-news-ink);
+}
+
+/* ───────────────────────────────────────────────────────────────
+   진입 모션 — 신문은 정적인 게 멋. 페이드 + 괘선 그려지기 정도만.
+   ─────────────────────────────────────────────────────────────── */
+@keyframes kdn-rule-draw {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes kdn-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.kdn-masthead { transform-origin: center; }
+.kdn-masthead-center { animation: kdn-fade-up 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+.kdn-folio { animation: kdn-fade-up 0.5s 0.08s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+.kdn-masthead { border-bottom-color: var(--kd-news-ink); }
+/* 제호 굵은 괘선이 좌→우로 그려지는 인상(의사요소로 오버레이) */
+.kdn-masthead::after {
+  content: '';
+  position: absolute;
+  display: none;
+}
+
+/* reduced-motion: 모든 진입 모션 정지(즉시 표시) */
+.kd-news.kdn-reduced .kdn-masthead-center,
+.kd-news.kdn-reduced .kdn-folio {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kdn-masthead-center,
+  .kdn-folio { animation: none !important; }
+}
+
+/* ───────────────────────────────────────────────────────────────
+   반응형 — 1024px: 그리드 완화 / 900px 이하: 1단 리플로우
+   제호·날짜줄·괘선의 신문다움은 모바일에서도 유지.
+   ─────────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .kdn-topstory-body { columns: 2; }
+  .kdn-cols-3 .kdn-article-body { columns: 2; }
+}
+
+@media (max-width: 900px) {
+  .kd-news { padding: 44px 0 64px; }
+  .kd-news-sheet { padding: 0 18px; }
+
+  /* 제호 — 부엉이·반딧불이 컷을 제호 위로 올려 가로 폭 확보 */
+  .kdn-masthead {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 6px;
+    text-align: center;
+  }
+  .kdn-masthead-cut--owl { order: 0; }
+  .kdn-masthead-center { order: 1; }
+  .kdn-masthead-cut--firefly { order: 0; }
+  /* 두 컷을 한 줄로 나란히: center 를 사이에 두지 않도록 묶기 어려우니
+     컷을 작게 + 제호를 큼직하게 유지(세로 적층). */
+  .kdn-cut-svg { width: 46px; }
+  .kdn-masthead-title { font-size: clamp(46px, 17vw, 76px); letter-spacing: 0.02em; }
+  .kdn-masthead-motto { letter-spacing: 0.1em; }
+
+  .kdn-folio { flex-direction: column; align-items: flex-start; gap: 6px; }
+
+  /* 본문 전면 1단 리플로우 */
+  .kdn-grid { display: block; margin-top: 14px; }
+  .kdn-block { padding: 18px 2px 22px; border-left: 0 !important; }
+  .kdn-span-full,
+  .kdn-span-half,
+  .kdn-span-third { grid-column: auto; }
+
+  /* 인접 half/third 의 세로 괘선 제거 → 1단에서는 상단 얇은 괘선으로 분리 */
+  .kdn-span-half + .kdn-span-half,
+  .kdn-span-third + .kdn-span-third,
+  .kdn-span-half + .kdn-span-third,
+  .kdn-span-third + .kdn-span-half {
+    border-left: 0;
+    border-top: 1px solid var(--kd-news-rule-thin);
+  }
+
+  /* 다단 본문 전부 1단 */
+  .kdn-topstory-body,
+  .kdn-cols-2 .kdn-article-body,
+  .kdn-cols-3 .kdn-article-body {
+    columns: 1;
+    column-rule: 0;
+  }
+  .kdn-board-list { columns: 1; }
+
+  /* 세로쓰기는 모바일에서도 1곳 유지하되 높이만 축소 */
+  .kdn-verse-body { height: clamp(220px, 60vw, 320px); }
+
+  .kdn-cut { font-size: clamp(30px, 9vw, 52px); }
+  .kdn-headline { font-size: clamp(24px, 7vw, 36px); }
+}
+
+@media (max-width: 480px) {
+  .kdn-masthead-title { font-size: clamp(40px, 19vw, 64px); }
+  .kdn-para { font-size: 15.5px; text-align: left; }
+  .kdn-colophon { gap: 10px 14px; }
+}
