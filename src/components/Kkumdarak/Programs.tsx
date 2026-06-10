@@ -126,12 +126,23 @@ interface ProgramSetting {
 }
 type ProgramSettingsMap = Record<string, ProgramSetting>;
 
-// 모집 상태(인라인 토글). 'open' = 진행중, 'closed' = 모집마감.
-//   미설정(undefined) 시 레거시 setting.closed 로 폴백한다(아래 resolveClosed 참고).
-type ProgramStatus = 'open' | 'closed';
+// 모집 상태(인라인 선택, 3단계).
+//   'ongoing'   = 진행중   (프로그램 운영 중, 일반 진행 톤)
+//   'recruiting'= 모집중   (지원 모집 중, 강조/활성 톤)
+//   'closed'    = 모집마감 (비활성/회색 톤)
+//   미설정(undefined) 시 레거시 setting.closed 로 폴백한다(아래 resolveStatus 참고).
+type ProgramStatus = 'ongoing' | 'recruiting' | 'closed';
+
+// 상태별 표시 라벨 + 배지 modifier 클래스(데스크톱·모바일 공용).
+const STATUS_META: Record<ProgramStatus, { label: string; cls: string }> = {
+  recruiting: { label: '모집중', cls: 'is-recruiting' },
+  ongoing:    { label: '진행중', cls: 'is-ongoing' },
+  closed:     { label: '모집마감', cls: 'is-closed' },
+};
+const STATUS_ORDER: ProgramStatus[] = ['ongoing', 'recruiting', 'closed'];
 
 // 인라인 편집으로 덮어쓸 수 있는 텍스트 필드. 값이 없으면(빈 문자열·undefined) 하드코딩 기본값 사용.
-//   status 는 모집 상태(진행중/마감) — 표시 배지 + 신청 버튼 활성화의 1차 소스.
+//   status 는 모집 상태(진행중/모집중/마감) — 표시 배지 + 신청 버튼 활성화의 1차 소스.
 interface ProgramContent {
   name?: string;
   en?: string;
@@ -179,30 +190,33 @@ const resolveProgram = (program: Program, content?: ProgramContent): Program => 
 };
 
 // ── 모집 상태 통합 해석 ─────────────────────────────────────────────
-//   소스가 둘이다: (신규) programContent.status, (레거시) settings.programs[].closed.
-//   중복/충돌을 피하기 위해 '실효 마감' 을 단일 함수로 통합한다:
-//     · content.status 가 명시되면 그 값이 우선('open'→진행중, 'closed'→마감)
-//     · status 미설정이면 레거시 setting.closed(boolean)로 폴백
-//   이렇게 하면 기존에 저장된 closed 데이터도 그대로 동작하고, 새 status 가 1차 컨트롤이 된다.
-const resolveClosed = (content?: ProgramContent, setting?: ProgramSetting): boolean => {
-  if (content?.status === 'closed') return true;
-  if (content?.status === 'open') return false;
-  return !!setting?.closed;
+//   소스가 둘이다: (신규) programContent.status(3단계), (레거시) settings.programs[].closed(boolean).
+//   '실효 상태' 를 단일 함수로 통합한다:
+//     · content.status 가 명시되면 그 값이 우선(ongoing|recruiting|closed)
+//     · 레거시 'open' 값이 저장돼 있던 경우(이전 2단계 버전) → 'ongoing' 으로 매핑
+//     · status 미설정이면 레거시 setting.closed → closed | ongoing
+//   이렇게 하면 기존 데이터(closed/open)도 그대로 동작하고, 새 status 가 1차 컨트롤이 된다.
+const resolveStatus = (content?: ProgramContent, setting?: ProgramSetting): ProgramStatus => {
+  const raw = content?.status as string | undefined;
+  if (raw === 'closed' || raw === 'recruiting' || raw === 'ongoing') return raw;
+  if (raw === 'open') return 'ongoing';   // 이전 2단계 버전 호환
+  return setting?.closed ? 'closed' : 'ongoing';
 };
 
-// 공개 표시용 모집 상태 배지 (진행중 / 모집마감). 축제 카드는 신청 개념이 없어 렌더하지 않는다.
+// 공개 표시용 모집 상태 배지 (진행중 / 모집중 / 모집마감). 축제 카드는 신청 개념이 없어 렌더하지 않는다.
 const ProgramStatusBadge: React.FC<{
   program: Program;
-  closed: boolean;
+  status: ProgramStatus;
   className?: string;
-}> = ({ program, closed, className }) => {
+}> = ({ program, status, className }) => {
   if (program.festival) return null;
+  const meta = STATUS_META[status];
   return (
     <span
-      className={`program-status-badge ${closed ? 'is-closed' : 'is-open'}${className ? ' ' + className : ''}`}
+      className={`program-status-badge ${meta.cls}${className ? ' ' + className : ''}`}
       data-name="모집 상태"
     >
-      {closed ? '모집마감' : '진행중'}
+      {meta.label}
     </span>
   );
 };
@@ -215,7 +229,7 @@ const ProgramStatusBadge: React.FC<{
 const ApplyButton: React.FC<{
   program: Program;
   setting?: ProgramSetting;
-  closed: boolean;           // resolveClosed() 로 통합된 실효 마감 상태
+  closed: boolean;           // 실효 상태(resolveStatus)에서 파생한 마감 여부
   className: string;
 }> = ({ program, setting, closed, className }) => {
   // 축제 카드는 신청 개념이 없다 — 마감만 반영, 아니면 정보성 라벨 유지.
@@ -313,22 +327,19 @@ const ContentEditPanel: React.FC<{
   const [en, setEn] = useState<string>(content?.en ?? '');
   const [summary, setSummary] = useState<string>(content?.summary ?? '');
   const [desc, setDesc] = useState<string>(content?.desc ?? '');
-  // 모집 상태 — 미설정 시 레거시 setting.closed 를 기본 선택값으로 끌어와 토글 일관성 유지.
-  const [status, setStatus] = useState<ProgramStatus>(
-    content?.status ?? (setting?.closed ? 'closed' : 'open'),
-  );
+  // 모집 상태 — 저장된 실효 상태(resolveStatus)를 기본 선택값으로 끌어와 토글 일관성 유지.
+  const [status, setStatus] = useState<ProgramStatus>(resolveStatus(content, setting));
 
   useEffect(() => {
     setName(content?.name ?? '');
     setEn(content?.en ?? '');
     setSummary(content?.summary ?? '');
     setDesc(content?.desc ?? '');
-    setStatus(content?.status ?? (setting?.closed ? 'closed' : 'open'));
-  }, [content?.name, content?.en, content?.summary, content?.desc, content?.status, setting?.closed]);
+    setStatus(resolveStatus(content, setting));
+  }, [content, setting]);
 
   // dirty: status 는 '실효 상태' 기준으로 비교(미설정 content + 동일 폴백이면 변경 없음으로 본다).
-  const effectiveSavedStatus: ProgramStatus =
-    content?.status ?? (setting?.closed ? 'closed' : 'open');
+  const effectiveSavedStatus: ProgramStatus = resolveStatus(content, setting);
   const dirty =
     (content?.name ?? '') !== name ||
     (content?.en ?? '') !== en ||
@@ -387,26 +398,18 @@ const ContentEditPanel: React.FC<{
         <div className="program-edit-field program-status-field" role="group" aria-label="모집 상태">
           <span>모집 상태</span>
           <div className="program-status-options">
-            <label className="program-status-radio">
-              <input
-                type="radio"
-                name={`status-${baseProgram.name}`}
-                checked={status === 'open'}
-                onChange={() => setStatus('open')}
-                disabled={locked}
-              />
-              <span>진행중</span>
-            </label>
-            <label className="program-status-radio">
-              <input
-                type="radio"
-                name={`status-${baseProgram.name}`}
-                checked={status === 'closed'}
-                onChange={() => setStatus('closed')}
-                disabled={locked}
-              />
-              <span>모집마감</span>
-            </label>
+            {STATUS_ORDER.map((opt) => (
+              <label key={opt} className={`program-status-radio ${STATUS_META[opt].cls}`}>
+                <input
+                  type="radio"
+                  name={`status-${baseProgram.name}`}
+                  checked={status === opt}
+                  onChange={() => setStatus(opt)}
+                  disabled={locked}
+                />
+                <span>{STATUS_META[opt].label}</span>
+              </label>
+            ))}
           </div>
         </div>
       )}
@@ -447,7 +450,8 @@ const ProgramCard: React.FC<{
   onSaveContent: (name: string, next: ProgramContent) => void;
 }> = ({ baseProgram, program, walkPhase, setting, content, authed, saving, locked, onSaveSetting, onSaveContent }) => {
   const labelLines = program.label ?? [program.name];
-  const closed = resolveClosed(content, setting);
+  const status = resolveStatus(content, setting);
+  const closed = status === 'closed';
   return (
     <article className="program-card" style={{ '--accent': program.color } as React.CSSProperties}>
       <div className="program-card-art">
@@ -457,7 +461,7 @@ const ProgramCard: React.FC<{
       </div>
       <div className="program-title-row">
         <h3 className="program-name">{program.name}</h3>
-        <ProgramStatusBadge program={program} closed={closed} />
+        <ProgramStatusBadge program={program} status={status} />
       </div>
       <p className="program-en">{program.en}</p>
       <h2>{program.summary}</h2>
@@ -496,7 +500,8 @@ const MobileProgramCard: React.FC<{
   onSaveSetting: (name: string, next: ProgramSetting) => void;
   onSaveContent: (name: string, next: ProgramContent) => void;
 }> = ({ baseProgram, program, setting, content, authed, saving, locked, onSaveSetting, onSaveContent }) => {
-  const closed = resolveClosed(content, setting);
+  const status = resolveStatus(content, setting);
+  const closed = status === 'closed';
   return (
   <article className="mobile-program-card" style={{ '--accent': program.color, '--mark': program.mobileMark } as React.CSSProperties}>
     <div className="mobile-program-head">
@@ -506,7 +511,7 @@ const MobileProgramCard: React.FC<{
       <div className="mobile-program-titles">
         <div className="mobile-program-title-row">
           <h2>{program.name}</h2>
-          <ProgramStatusBadge program={program} closed={closed} className="is-mobile" />
+          <ProgramStatusBadge program={program} status={status} className="is-mobile" />
         </div>
         <p>{program.en}</p>
       </div>
