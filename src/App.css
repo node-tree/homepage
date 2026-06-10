@@ -5052,3 +5052,24 @@
     height: 100%;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   BlockEditor 갤러리 — 공개 뷰어(Work/Commons/About) 반응형
+   직렬화 HTML은 인라인 grid/column 스타일을 고정으로 가지므로,
+   모바일에서 컬럼 수를 줄이려면 class hook(.bk-grid3 등)에
+   미디어쿼리로 override 한다. 데스크톱 렌더는 변경 없음.
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .bk-grid3 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .bk-masonry {
+    column-count: 2 !important;
+  }
+  .bk-grid2 {
+    grid-template-columns: 1fr !important;
+  }
+  .bk-split {
+    flex-direction: column !important;
+  }
+}
