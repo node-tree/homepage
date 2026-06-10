@@ -112,6 +112,8 @@ const MediaAdmin: React.FC = () => {
   const [usageLoading, setUsageLoading] = useState(false);
 
   const [copied, setCopied] = useState<string | null>(null);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [creatingFolder, setCreatingFolder] = useState(false);
 
   // 문서 제목
   useEffect(() => {
@@ -205,6 +207,30 @@ const MediaAdmin: React.FC = () => {
     setBrowsePath(norm);
     setPathInput(norm);
   }, []);
+
+  // 현재 경로 아래 새 폴더 생성 → 성공 시 진입.
+  const handleCreateFolder = useCallback(async () => {
+    const name = newFolderName.trim();
+    if (!name || creatingFolder) return;
+    if (/[\\/]/.test(name) || name.includes('..')) {
+      alert('폴더 이름에 / \\ .. 는 사용할 수 없습니다.');
+      return;
+    }
+    setCreatingFolder(true);
+    try {
+      await imagekitAdminAPI.createFolder(name, browsePath || '/');
+      setNewFolderName('');
+      enterFolder(`${normalizePath(browsePath)}/${name}`);
+    } catch (e: any) {
+      if (e?.code === 'AUTH_EXPIRED') {
+        window.location.href = '/login';
+        return;
+      }
+      alert(e?.message || '폴더 생성에 실패했습니다.');
+    } finally {
+      setCreatingFolder(false);
+    }
+  }, [newFolderName, creatingFolder, browsePath, enterFolder]);
 
   const copyUrl = useCallback((url: string) => {
     const finalUrl = url;
@@ -513,6 +539,29 @@ const MediaAdmin: React.FC = () => {
                 ↑ 상위 폴더
               </button>
             )}
+            <span className="ma-newfolder">
+              <input
+                type="text"
+                placeholder="새 폴더 이름"
+                value={newFolderName}
+                disabled={creatingFolder}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleCreateFolder();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="ma-btn"
+                disabled={creatingFolder || !newFolderName.trim()}
+                onClick={handleCreateFolder}
+              >
+                {creatingFolder ? "생성 중…" : "+ 새 폴더"}
+              </button>
+            </span>
           </nav>
         )}
 

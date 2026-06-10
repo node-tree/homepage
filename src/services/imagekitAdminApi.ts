@@ -20,7 +20,10 @@ const API_BASE_URL = isNodeTreeSite
 const IK_UPLOAD_URL = 'https://upload.imagekit.io/api/v1/files/upload';
 
 function authHeaders(extra?: Record<string, string>): Record<string, string> {
-  const token = localStorage.getItem('auth_token');
+  // 사이트 admin 토큰 우선, 없으면 꿈다락 편집 토큰 폴백(aiApi.ts 와 동일 패턴).
+  // 백엔드(imagekit)는 읽기·업로드서명·폴더생성에 한해 두 토큰을 모두 허용한다.
+  const token =
+    localStorage.getItem('auth_token') || localStorage.getItem('kkumdarak_token');
   const headers: Record<string, string> = { ...(extra || {}) };
   if (token) headers['Authorization'] = `Bearer ${token}`;
   return headers;
@@ -190,5 +193,24 @@ export const imagekitAdminAPI = {
       throw new Error(msg);
     }
     return (await res.json()) as IkUploadResult;
+  },
+
+  // 현재 경로 아래에 새 폴더 생성 (백엔드 → ImageKit createFolder).
+  createFolder: async (
+    folderName: string,
+    parentFolderPath: string = '/',
+    signal?: AbortSignal
+  ): Promise<void> => {
+    const res = await fetch(`${API_BASE_URL}/imagekit/folder`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ folderName, parentFolderPath }),
+      signal,
+    });
+    await handleAuthErrors(res);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || `폴더 생성 실패 (${res.status})`);
+    }
   },
 };

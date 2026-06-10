@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import { filedAPI } from '../services/api';
 import WritePost from './WritePost';
@@ -34,7 +34,6 @@ interface CommonsProps {
 const Commons: React.FC<CommonsProps> = ({ onPostsLoaded }) => {
   const { isAuthenticated } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
   const [headerLoading, setHeaderLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(true);
@@ -706,11 +705,11 @@ const Commons: React.FC<CommonsProps> = ({ onPostsLoaded }) => {
           className="kkumdarak-entry"
           role="link"
           tabIndex={0}
-          onClick={() => navigate('/iso')}
+          onClick={() => window.open('/iso', '_blank', 'noopener,noreferrer')}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
-              navigate('/iso');
+              window.open('/iso', '_blank', 'noopener,noreferrer');
             }
           }}
           onMouseEnter={() => playHoverSound()}

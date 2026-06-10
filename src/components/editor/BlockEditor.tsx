@@ -42,12 +42,15 @@ import { ikUrl } from '../../utils/ikUrl';
 import ImageKitPicker from './ImageKitPicker';
 import InlineText, { InlineApi } from './InlineText';
 import FreeformCanvas from './FreeformCanvas';
+import aiAPI, { AiContext } from '../../services/aiApi';
 import './BlockEditor.css';
 
 interface BlockEditorProps {
   value: string; // HTML(contents)
   onChange: (html: string) => void;
   placeholder?: string;
+  // AI 작성 톤 컨텍스트. 마을일기=village-diary, 작품=artwork, 그 외 general.
+  aiContext?: AiContext;
 }
 
 const COLORS = [
@@ -93,7 +96,7 @@ const SortableBlock: React.FC<{ id: string; children: (handleProps: any) => Reac
   );
 };
 
-const BlockEditor: React.FC<BlockEditorProps> = ({ value, onChange, placeholder }) => {
+const BlockEditor: React.FC<BlockEditorProps> = ({ value, onChange, placeholder, aiContext = 'general' }) => {
   const [blocks, setBlocks] = useState<Block[]>(() => htmlToBlocks(value));
   const [addMenuAt, setAddMenuAt] = useState<number | null>(null);
   const [tplMenuAt, setTplMenuAt] = useState<number | null>(null);
@@ -104,6 +107,12 @@ const BlockEditor: React.FC<BlockEditorProps> = ({ value, onChange, placeholder 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerMultiple, setPickerMultiple] = useState(false);
   const pickerCb = useRef<((urls: string[]) => void) | null>(null);
+
+  // AI 작성 상태 (텍스트 블록별 모달)
+  const [aiModalFor, setAiModalFor] = useState<string | null>(null);
+  const [aiTopic, setAiTopic] = useState('');
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // undo/redo
   const history = useRef<Block[][]>([htmlToBlocks(value)]);
@@ -225,6 +234,76 @@ const BlockEditor: React.FC<BlockEditorProps> = ({ value, onChange, placeholder 
     const next = [...blocks];
     next.splice(idx + 1, 0, copy);
     commit(next);
+  };
+
+  // ───── AI 작성 ─────
+  // HTML 텍스트 블록 → 평문(다듬기 전송용). 태그 제거 + 줄바꿈 정리.
+  const htmlToPlain = (html: string): string => {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html || '';
+    return (tmp.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+  };
+  // 생성 평문 → 단락(<p>) HTML. 빈 줄 기준으로 단락 분리, 줄바꿈은 <br>.
+  const plainToParagraphs = (text: string): string => {
+    const esc = (t: string) =>
+      t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return (text || '')
+      .split(/\n{2,}/)
+      .map((p2) => p2.trim())
+      .filter(Boolean)
+      .map((p2) => `<p>${esc(p2).replace(/\n/g, '<br>')}</p>`)
+      .join('');
+  };
+
+  // 새로 쓰기: 모달 주제 → 생성 → 해당 텍스트 블록 html 교체(undo 스택에 잡힘).
+  const submitAiWrite = async (blockId: string) => {
+    if (aiBusy) return;
+    const topic = aiTopic.trim();
+    if (!topic) {
+      setAiError('주제 또는 키워드를 입력해주세요.');
+      return;
+    }
+    setAiBusy(true);
+    setAiError(null);
+    try {
+      const text = await aiAPI.write({ mode: 'write', topic, context: aiContext });
+      const html = plainToParagraphs(text);
+      const blk = blocks.find((b) => b.id === blockId);
+      const existing = blk && blk.type === 'text' ? (blk as any).html : '';
+      const merged = existing && htmlToPlain(existing) ? `${existing}${html}` : html;
+      updateBlock(blockId, { html: merged });
+      setAiModalFor(null);
+      setAiTopic('');
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : 'AI 생성에 실패했습니다.');
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  // 다듬기: 블록 원문 → 서정 재작성 → 교체(원문은 undo 로 복구 가능).
+  const runAiRefine = async (blockId: string) => {
+    if (aiBusy) return;
+    const blk = blocks.find((b) => b.id === blockId);
+    if (!blk || blk.type !== 'text') return;
+    const src = htmlToPlain((blk as any).html);
+    if (!src) {
+      setAiModalFor(blockId);
+      setAiError('다듬을 글이 없습니다. 먼저 내용을 입력하거나 “새로 쓰기”를 이용하세요.');
+      return;
+    }
+    setAiBusy(true);
+    setAiError(null);
+    setAiModalFor(blockId);
+    try {
+      const text = await aiAPI.write({ mode: 'refine', originalText: src, context: aiContext });
+      updateBlock(blockId, { html: plainToParagraphs(text) });
+      setAiModalFor(null);
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : 'AI 다듬기에 실패했습니다.');
+    } finally {
+      setAiBusy(false);
+    }
   };
 
   // ───── 이미지 피커 호출 ─────
@@ -382,7 +461,65 @@ const BlockEditor: React.FC<BlockEditorProps> = ({ value, onChange, placeholder 
                   </button>
                 ))}
               </div>
+              <div className="bk-ai-group">
+                <button
+                  type="button"
+                  className="bk-fmt bk-ai-btn"
+                  title="AI 서정 작성"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAiError(null);
+                    setAiTopic('');
+                    setAiModalFor(aiModalFor === block.id ? null : block.id);
+                  }}
+                >
+                  ✦ AI 작성
+                </button>
+                <button
+                  type="button"
+                  className="bk-fmt bk-ai-btn"
+                  title="현재 글을 서정적으로 다듬기"
+                  disabled={aiBusy}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    runAiRefine(block.id);
+                  }}
+                >
+                  ✦ 다듬기
+                </button>
+              </div>
             </div>
+            {aiModalFor === block.id && (
+              <div className="bk-ai-panel" onClick={stop}>
+                <div className="bk-ai-row">
+                  <input
+                    className="bk-ai-input"
+                    placeholder="주제·키워드 (예: 도서관 측량, 5월 마당)"
+                    value={aiTopic}
+                    autoFocus
+                    disabled={aiBusy}
+                    onChange={(e) => setAiTopic(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        submitAiWrite(block.id);
+                      }
+                    }}
+                  />
+                  <button type="button" className="bk-mini-btn" disabled={aiBusy} onClick={() => submitAiWrite(block.id)}>
+                    {aiBusy ? '생성 중…' : '서정적으로 쓰기'}
+                  </button>
+                  <button type="button" className="bk-mini-btn" disabled={aiBusy} onClick={() => { setAiModalFor(null); setAiError(null); }}>
+                    닫기
+                  </button>
+                </div>
+                {aiBusy && <div className="bk-ai-status">서정적으로 쓰는 중…</div>}
+                {aiError && <div className="bk-ai-error">{aiError}</div>}
+                {!aiAPI.hasAuth() && !aiError && (
+                  <div className="bk-ai-status">로그인 후 사용할 수 있습니다.</div>
+                )}
+              </div>
+            )}
             <InlineText
               html={block.html}
               tag={block.tag}

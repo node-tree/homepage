@@ -14,6 +14,9 @@ import {
 } from '../../services/imagekitAdminApi';
 import { prepareImageForUpload } from '../../utils/imageResize';
 import { ikUrl } from '../../utils/ikUrl';
+// 피커 스타일(.ikp-*)은 BlockEditor.css 에 정의됨. BlockEditor 가 렌더되지 않는
+// 화면(예: 꿈다락 마을일기)에서도 피커가 올바로 보이도록 직접 import 한다.
+import './BlockEditor.css';
 
 const PAGE_SIZE = 40;
 
@@ -71,6 +74,9 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
   const [dragOver, setDragOver] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [directUrl, setDirectUrl] = useState('');
+  const [newFolderOpen, setNewFolderOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [creatingFolder, setCreatingFolder] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadList = useCallback(
@@ -121,6 +127,8 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
       setSearch('');
       setSearchInput('');
       setDirectUrl('');
+      setNewFolderOpen(false);
+      setNewFolderName('');
     }
   }, [open]);
 
@@ -129,6 +137,35 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
     setSearchInput('');
     setBrowsePath(normalizePath(target));
   }, []);
+
+  // 현재 경로 아래 새 폴더 생성 → 성공 시 해당 폴더로 진입.
+  const submitNewFolder = useCallback(async () => {
+    const name = newFolderName.trim();
+    if (!name || creatingFolder) return;
+    if (/[\\/]/.test(name) || name.includes('..')) {
+      setListError('폴더 이름에 / \\ .. 는 사용할 수 없습니다.');
+      return;
+    }
+    setCreatingFolder(true);
+    setListError(null);
+    try {
+      await imagekitAdminAPI.createFolder(name, browsePath || '/');
+      setNewFolderOpen(false);
+      setNewFolderName('');
+      // 생성한 폴더로 진입(목록 자동 갱신은 browsePath 변경 effect 가 처리).
+      enterFolder(`${normalizePath(browsePath)}/${name}`);
+    } catch (e: any) {
+      if (e?.code === 'AUTH_EXPIRED') {
+        setListError('인증이 만료되었습니다. 다시 로그인해주세요.');
+      } else if (e?.code === 'FORBIDDEN') {
+        setListError('관리자 권한이 필요합니다.');
+      } else {
+        setListError(e?.message || '폴더 생성에 실패했습니다.');
+      }
+    } finally {
+      setCreatingFolder(false);
+    }
+  }, [newFolderName, creatingFolder, browsePath, enterFolder]);
 
   const processFiles = useCallback(
     async (fileList: FileList | File[]) => {
@@ -142,10 +179,12 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
           setUploads((prev) =>
             prev.map((r) => (r.id === rowId ? { ...r, status: 'uploading' } : r))
           );
+          // 현재 보고 있는 폴더로 업로드(검색 중이거나 루트면 /uploads).
+          const uploadFolder = !search && browsePath && browsePath !== '/' ? browsePath : '/uploads';
           const result: IkUploadResult = await imagekitAdminAPI.uploadFile(
             prepared.blob,
             prepared.fileName,
-            { folder: '/uploads', useUniqueFileName: true }
+            { folder: uploadFolder, useUniqueFileName: true }
           );
           setUploads((prev) =>
             prev.map((r) =>
@@ -168,7 +207,7 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
         }
       }
     },
-    [multiple, onSelect, onClose]
+    [multiple, onSelect, onClose, search, browsePath]
   );
 
   const onDrop = useCallback(
@@ -329,6 +368,46 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
             </button>
           )}
           {!search && <span className="ikp-path">{browsePath}</span>}
+          {!search &&
+            (newFolderOpen ? (
+              <span className="ikp-newfolder">
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="새 폴더 이름"
+                  value={newFolderName}
+                  disabled={creatingFolder}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      submitNewFolder();
+                    } else if (e.key === "Escape") {
+                      setNewFolderOpen(false);
+                      setNewFolderName("");
+                    }
+                  }}
+                />
+                <button className="ikp-btn" type="button" disabled={creatingFolder} onClick={submitNewFolder}>
+                  {creatingFolder ? "생성 중…" : "생성"}
+                </button>
+                <button
+                  className="ikp-btn ghost"
+                  type="button"
+                  disabled={creatingFolder}
+                  onClick={() => {
+                    setNewFolderOpen(false);
+                    setNewFolderName("");
+                  }}
+                >
+                  취소
+                </button>
+              </span>
+            ) : (
+              <button className="ikp-btn ghost" type="button" onClick={() => setNewFolderOpen(true)}>
+                + 새 폴더
+              </button>
+            ))}
         </div>
 
         {listError && <p className="ikp-error">{listError}</p>}

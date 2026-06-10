@@ -5260,3 +5260,63 @@
 @media (prefers-reduced-motion: reduce) {
   .kd-section-loading-dot { animation: none !important; opacity: 0.5; }
 }
+
+/* ─────────────── 마을일기 AI 서정 작성 (편집 모드) ─────────────── */
+.diary-ai-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 4px 0 6px;
+}
+.diary-ai-btn {
+  border: 2px solid #1a1a1a;
+  border-radius: 0;
+  background: #fff;
+  font-family: var(--kd-font-body);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  cursor: pointer;
+  color: #1a1a1a;
+}
+.diary-ai-btn:hover:not(:disabled) {
+  background: #1a1a1a;
+  color: #fff;
+}
+.diary-ai-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.diary-ai-undo {
+  border-color: #6a4ea8;
+  color: #6a4ea8;
+}
+.diary-ai-undo:hover:not(:disabled) {
+  background: #6a4ea8;
+  color: #fff;
+}
+.diary-ai-panel {
+  margin: 0 0 6px;
+}
+.diary-ai-input {
+  width: 100%;
+  margin-bottom: 4px;
+}
+.diary-ai-panel-actions {
+  display: flex;
+  gap: 6px;
+}
+.diary-ai-status {
+  font-family: var(--kd-font-body);
+  font-size: 11px;
+  font-weight: 700;
+  color: #6a4ea8;
+  margin-bottom: 4px;
+}
+.diary-ai-error {
+  font-family: var(--kd-font-body);
+  font-size: 11px;
+  font-weight: 700;
+  color: #c0392b;
+  margin-bottom: 4px;
+}

@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import IntroChar from './IntroChar';
 import { villageDiaryAPI } from '../../services/api';
 import { ikUrl } from '../../utils/ikUrl';
+import ImageKitPicker from '../editor/ImageKitPicker';
+import aiAPI from '../../services/aiApi';
 import { useKkumdarakAuth } from './KkumdarakAuthContext';
 
 type DiaryCardData = { side: 'left' | 'right'; title: string; date: string; dot: string; imageUrl?: string };
@@ -249,8 +251,64 @@ const DiaryCard: React.FC<{
   onUpdate?: (field: 'title' | 'date' | 'dot' | 'side' | 'imageUrl', value: string) => void;
   onDelete?: () => void;
   side?: 'left' | 'right';
-}> = ({ title, date, dot, accent, imageUrl, className = '', style, cardRef, isEditing, onUpdate, onDelete, side }) => (
-  <article
+}> = ({ title, date, dot, accent, imageUrl, className = '', style, cardRef, isEditing, onUpdate, onDelete, side }) => {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiTopic, setAiTopic] = useState('');
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiPrev, setAiPrev] = useState<string | null>(null); // 직전 title(되돌리기용)
+
+  const aiWrite = async () => {
+    const topic = aiTopic.trim();
+    if (!topic || aiBusy || !onUpdate) return;
+    setAiBusy(true);
+    setAiError(null);
+    try {
+      const text = await aiAPI.write({ mode: 'write', topic, context: 'village-diary', format: 'plain' });
+      setAiPrev(title);
+      onUpdate('title', text);
+      setAiOpen(false);
+      setAiTopic('');
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : 'AI 생성에 실패했습니다.');
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const aiRefine = async () => {
+    if (aiBusy || !onUpdate) return;
+    const src = (title || '').trim();
+    if (!src) {
+      setAiOpen(true);
+      setAiError('다듬을 내용이 없습니다. 먼저 제목을 입력하거나 “AI 작성”을 이용하세요.');
+      return;
+    }
+    setAiBusy(true);
+    setAiError(null);
+    try {
+      const text = await aiAPI.write({ mode: 'refine', originalText: src, context: 'village-diary', format: 'plain' });
+      setAiPrev(title);
+      onUpdate('title', text);
+    } catch (e) {
+      setAiOpen(true);
+      setAiError(e instanceof Error ? e.message : 'AI 다듬기에 실패했습니다.');
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const aiUndo = () => {
+    if (aiPrev !== null && onUpdate) {
+      onUpdate('title', aiPrev);
+      setAiPrev(null);
+    }
+  };
+
+  return (
+    <>
+    <article
     ref={cardRef as React.Ref<HTMLElement>}
     className={`diary-card ${className}${isEditing ? ' is-editing-card' : ''}`}
     style={{ ...style, position: 'absolute' }}
@@ -278,6 +336,56 @@ const DiaryCard: React.FC<{
             onChange={(e) => onUpdate('title', e.target.value)}
             style={{ fontSize: '22px', fontWeight: 800, marginBottom: 4 }}
           />
+          <div className="diary-ai-bar">
+            <button
+              type="button"
+              className="diary-ai-btn"
+              disabled={aiBusy}
+              onClick={() => { setAiError(null); setAiTopic(''); setAiOpen((v) => !v); }}
+            >
+              ✦ AI 작성
+            </button>
+            <button
+              type="button"
+              className="diary-ai-btn"
+              disabled={aiBusy}
+              onClick={aiRefine}
+              title="현재 내용을 서정적으로 다듬기"
+            >
+              ✦ 다듬기
+            </button>
+            {aiPrev !== null && (
+              <button type="button" className="diary-ai-btn diary-ai-undo" disabled={aiBusy} onClick={aiUndo} title="AI 적용 직전으로 되돌리기">
+                ↩ 되돌리기
+              </button>
+            )}
+          </div>
+          {aiOpen && (
+            <div className="diary-ai-panel">
+              <input
+                className="diary-edit-input diary-ai-input"
+                placeholder="주제·키워드 (예: 도서관 측량, 5월 마당)"
+                value={aiTopic}
+                autoFocus
+                disabled={aiBusy}
+                onChange={(e) => setAiTopic(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { e.preventDefault(); aiWrite(); }
+                  else if (e.key === 'Escape') { setAiOpen(false); }
+                }}
+              />
+              <div className="diary-ai-panel-actions">
+                <button type="button" className="diary-ai-btn" disabled={aiBusy} onClick={aiWrite}>
+                  {aiBusy ? '생성 중…' : '서정적으로 쓰기'}
+                </button>
+                <button type="button" className="diary-ai-btn diary-ai-close" disabled={aiBusy} onClick={() => { setAiOpen(false); setAiError(null); }}>
+                  닫기
+                </button>
+              </div>
+            </div>
+          )}
+          {aiBusy && <div className="diary-ai-status">서정적으로 쓰는 중…</div>}
+          {aiError && <div className="diary-ai-error">{aiError}</div>}
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
             <input
               className="diary-edit-input"
@@ -299,14 +407,24 @@ const DiaryCard: React.FC<{
             <button className={side === 'left' ? 'active' : ''} onClick={() => onUpdate('side', 'left')}>left</button>
             <button className={side === 'right' ? 'active' : ''} onClick={() => onUpdate('side', 'right')}>right</button>
           </div>
-          <input
-            type="url"
-            className="diary-edit-input diary-image-url-input"
-            value={imageUrl ?? ''}
-            onChange={(e) => onUpdate('imageUrl', e.target.value)}
-            placeholder="이미지 링크 붙여넣기 (https://...)"
-            style={{ fontSize: '12px', marginTop: 8 }}
-          />
+          <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
+            <input
+              type="url"
+              className="diary-edit-input diary-image-url-input"
+              value={imageUrl ?? ''}
+              onChange={(e) => onUpdate('imageUrl', e.target.value)}
+              placeholder="이미지 링크 붙여넣기 또는 이미지 선택"
+              style={{ fontSize: '12px', flex: 1, minWidth: 0 }}
+            />
+            <button
+              type="button"
+              className="diary-image-pick-btn"
+              onClick={() => setPickerOpen(true)}
+              style={{ fontSize: '12px', whiteSpace: 'nowrap', padding: '6px 10px', cursor: 'pointer' }}
+            >
+              이미지 선택
+            </button>
+          </div>
         </>
       ) : (
         <>
@@ -322,8 +440,18 @@ const DiaryCard: React.FC<{
         </>
       )}
     </div>
-  </article>
-);
+    </article>
+    {isEditing && onUpdate && (
+      <ImageKitPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSelect={(urls) => { if (urls[0]) onUpdate('imageUrl', urls[0]); }}
+        title="마을일기 이미지 선택"
+      />
+    )}
+    </>
+  );
+};
 
 const VillageDiary: React.FC = () => {
   // ── 꿈다락 편집 인증 — 최상위 공유 컨텍스트에서 소비 ──────────────

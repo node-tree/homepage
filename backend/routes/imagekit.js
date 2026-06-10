@@ -1,16 +1,15 @@
 // ═══════════════════════════════════════════════════════════════
 // ImageKit 관리자 라우트
-//   · 모든 엔드포인트는 auth + adminOnly 미들웨어 뒤 = admin 계정만 접근 가능.
-//     (공개 /api/auth/register 로 자가가입한 role:'user' 는 차단 — 403.)
+//   · 읽기/업로드서명/폴더생성은 사이트 admin 또는 꿈다락 scope 토큰 허용(결합 인증).
+//     파괴적 삭제(DELETE /file)는 사이트 admin 만. role:'user' 등 비권한 → 403.
 //   · private key 는 서버에서만 사용. publicKey/urlEndpoint 는 공개값이므로
 //     프론트 업로드(서명방식)에 필요해 /auth 응답에 함께 내려준다.
 //   · 자체 DB 저장 없음 — ImageKit 미디어 라이브러리가 단일 소스.
 // ═══════════════════════════════════════════════════════════════
 
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const ImageKit = require('imagekit');
-const auth = require('../middleware/auth');
-const { adminOnly } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -32,10 +31,48 @@ if (PUBLIC_KEY && PRIVATE_KEY && URL_ENDPOINT) {
   );
 }
 
-// 1) 로그인 필수(JWT 검증)
-router.use(auth);
-// 2) admin 권한 필수(role !== 'admin' → 403). 일반 user 의 업로드/조회/삭제 차단.
-router.use(adminOnly);
+// ── 결합 인증 ──────────────────────────────────────────────────
+//   읽기(/list,/usage)·업로드 서명(/auth)·폴더 생성(/folder)은
+//   "사이트 admin" 또는 "꿈다락 scope" 둘 중 하나면 허용한다(ai.js requireAnyAuth 와 동형).
+//   파괴적 작업(DELETE /file)은 아래 siteAdminOnly 로 사이트 admin 만 허용.
+//   토큰을 1회 검증해 req.user(사이트)/req.kkumdarak(꿈다락)에 실어 둔다.
+const requireImagekitAccess = (req, res, next) => {
+  const authHeader = req.header('Authorization');
+  if (!authHeader) {
+    return res.status(401).json({ success: false, message: '접근 권한이 없습니다. 토큰이 필요합니다.' });
+  }
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+  if (!token) {
+    return res.status(401).json({ success: false, message: '토큰이 제공되지 않았습니다.' });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded && decoded.role === 'admin') {
+      req.user = decoded; // 사이트 admin
+      return next();
+    }
+    if (decoded && decoded.scope === 'kkumdarak') {
+      req.kkumdarak = decoded; // 꿈다락 편집자
+      return next();
+    }
+    // 로그인은 했으나 권한 없음(예: role:'user') → 403.
+    return res.status(403).json({ success: false, message: '관리자 또는 꿈다락 편집 권한이 필요합니다.' });
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ success: false, message: '토큰이 만료되었습니다. 다시 로그인해주세요.' });
+    }
+    return res.status(401).json({ success: false, message: '유효하지 않은 토큰입니다.' });
+  }
+};
+
+// 파괴적 작업 전용 — 사이트 admin 만(꿈다락 scope 는 403). requireImagekitAccess 통과 후 검사.
+const siteAdminOnly = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') return next();
+  return res.status(403).json({ success: false, message: '관리자 권한이 필요합니다.' });
+};
+
+// 모든 라우트: 결합 인증(읽기·업로드·폴더). DELETE 는 핸들러에서 siteAdminOnly 추가.
+router.use(requireImagekitAccess);
 
 // SDK 미초기화(환경변수 누락) 가드
 router.use((req, res, next) => {
@@ -137,7 +174,7 @@ router.get('/usage', async (req, res) => {
 });
 
 // DELETE /api/imagekit/file/:fileId
-router.delete('/file/:fileId', async (req, res) => {
+router.delete('/file/:fileId', siteAdminOnly, async (req, res) => {
   try {
     const { fileId } = req.params;
     if (!fileId) {
@@ -148,6 +185,49 @@ router.delete('/file/:fileId', async (req, res) => {
   } catch (error) {
     console.error('ImageKit deleteFile 오류:', error.message);
     res.status(500).json({ success: false, message: '파일 삭제 실패' });
+  }
+});
+
+// POST /api/imagekit/folder
+//   현재 경로(parentFolderPath) 아래에 새 폴더 생성.
+//   · 폴더명 검증: 빈 값 거부, 슬래시(/)·역슬래시·'..' 등 경로조작 문자 거부.
+//   · 한글/특수문자 등은 ImageKit 규칙에 맡기되, 실패 시 메시지를 그대로 전달.
+//   · 결합 인증(requireImagekitAccess) + imagekit 가드를 적용받는다(꿈다락 편집자 허용).
+router.post('/folder', async (req, res) => {
+  try {
+    const rawName = typeof req.body?.folderName === 'string' ? req.body.folderName.trim() : '';
+    const parentFolderPath =
+      typeof req.body?.parentFolderPath === 'string' && req.body.parentFolderPath.trim()
+        ? req.body.parentFolderPath.trim()
+        : '/';
+
+    if (!rawName) {
+      return res.status(400).json({ success: false, message: '폴더 이름을 입력해주세요.' });
+    }
+    // 경로조작/구분자 차단: 슬래시·역슬래시·'..'·제어문자.
+    if (/[\\/]/.test(rawName) || rawName.includes('..') || /[\x00-\x1f]/.test(rawName)) {
+      return res.status(400).json({
+        success: false,
+        message: '폴더 이름에 / \\ .. 또는 제어문자는 사용할 수 없습니다.',
+      });
+    }
+    if (rawName.length > 255) {
+      return res.status(400).json({ success: false, message: '폴더 이름이 너무 깁니다.' });
+    }
+
+    await imagekit.createFolder({ folderName: rawName, parentFolderPath });
+    res.json({ success: true, message: '폴더가 생성되었습니다.', folderName: rawName, parentFolderPath });
+  } catch (error) {
+    const msg = error?.message || '';
+    console.error('ImageKit createFolder 오류:', msg);
+    // ImageKit 이름 규칙 위반 등은 400 으로, 그 외는 500.
+    const isNameRule = /name|invalid|character|allowed/i.test(msg);
+    res.status(isNameRule ? 400 : 500).json({
+      success: false,
+      message: isNameRule
+        ? `폴더 생성 실패: ${msg}`
+        : '폴더 생성에 실패했습니다. 이름 규칙(영문/숫자/-/_ 권장)을 확인해주세요.',
+    });
   }
 });
 

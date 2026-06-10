@@ -66,6 +66,7 @@ const villageDiaryRoutes = require('./routes/villageDiary');
 const kkumdarakBudgetRoutes = require('./routes/kkumdarakBudget');
 const kkumdarakSettingsRoutes = require('./routes/kkumdarakSettings');
 const imagekitRoutes = require('./routes/imagekit');
+const aiRoutes = require('./routes/ai');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/work', workRoutes);
@@ -84,6 +85,7 @@ app.use('/api/village-diary', villageDiaryRoutes);
 app.use('/api/kkumdarak', kkumdarakBudgetRoutes);
 app.use('/api/kkumdarak-settings', kkumdarakSettingsRoutes);
 app.use('/api/imagekit', imagekitRoutes);
+app.use('/api/ai', aiRoutes);
 
 // 기본 라우트
 app.get('/', (req, res) => {
