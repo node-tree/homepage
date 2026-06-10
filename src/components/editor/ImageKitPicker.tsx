@@ -333,43 +333,54 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
 
         {listError && <p className="ikp-error">{listError}</p>}
 
-        <div className="ikp-grid">
-          {!search &&
-            folders.map((f) => {
-              const target = f.folderPath || `${normalizePath(browsePath)}/${f.name}`;
-              return (
-                <button
-                  key={f.folderId || f.folderPath || `fol-${f.name}`}
-                  className="ikp-card ikp-folder"
-                  onClick={() => enterFolder(target)}
-                  title={`${f.name} 폴더 열기`}
-                >
-                  <span className="ikp-folder-ic">📁</span>
-                  <span className="ikp-name">{f.name}</span>
-                </button>
-              );
-            })}
-          {plainFiles.map((f) => {
-            const isImage = f.fileType === 'image' || f.fileType === 'IMAGE';
-            const thumb = isImage && f.url ? ikUrl(f.url, { w: 300 }) : null;
-            const isSel = selected.has(f.url);
-            return (
-              <button
-                key={f.fileId || f.filePath || f.name}
-                className={`ikp-card ${isSel ? 'sel' : ''}`}
-                onClick={() => toggleSelect(f.url)}
-                title={f.name}
-              >
-                {thumb ? (
-                  <img src={thumb} alt={f.name} loading="lazy" />
-                ) : (
-                  <span className="ikp-noimg">{f.fileType || 'file'}</span>
-                )}
-                <span className="ikp-name">{f.name}</span>
-                {isSel && <span className="ikp-check">✓</span>}
-              </button>
-            );
-          })}
+        <div className="ikp-body">
+          {/* 폴더 — 파일 그리드와 분리된 자체 섹션(줄바꿈·ellipsis로 겹침 방지) */}
+          {!search && folders.length > 0 && (
+            <div className="ikp-folders" role="list" aria-label="폴더">
+              {folders.map((f) => {
+                const target = f.folderPath || `${normalizePath(browsePath)}/${f.name}`;
+                return (
+                  <button
+                    key={f.folderId || f.folderPath || `fol-${f.name}`}
+                    className="ikp-folder"
+                    role="listitem"
+                    onClick={() => enterFolder(target)}
+                    title={`${f.name} 폴더 열기`}
+                  >
+                    <span className="ikp-folder-ic" aria-hidden="true">📁</span>
+                    <span className="ikp-folder-name">{f.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* 파일(이미지) 그리드 */}
+          {plainFiles.length > 0 && (
+            <div className="ikp-grid">
+              {plainFiles.map((f) => {
+                const isImage = f.fileType === 'image' || f.fileType === 'IMAGE';
+                const thumb = isImage && f.url ? ikUrl(f.url, { w: 300 }) : null;
+                const isSel = selected.has(f.url);
+                return (
+                  <button
+                    key={f.fileId || f.filePath || f.name}
+                    className={`ikp-card ${isSel ? 'sel' : ''}`}
+                    onClick={() => toggleSelect(f.url)}
+                    title={f.name}
+                  >
+                    {thumb ? (
+                      <img src={thumb} alt={f.name} loading="lazy" />
+                    ) : (
+                      <span className="ikp-noimg">{f.fileType || 'file'}</span>
+                    )}
+                    <span className="ikp-name">{f.name}</span>
+                    {isSel && <span className="ikp-check">✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {!listLoading && files.length === 0 && !listError && (
