@@ -31,6 +31,9 @@ export interface AiWriteParams {
   originalText?: string;
   context?: AiContext;
   format?: 'plain' | 'html';
+  // 마을일기: 프로그램 맥락 주입용(백엔드가 kkumdarakPrograms.js 에서 조회).
+  programId?: string;
+  programName?: string;
 }
 
 export const aiAPI = {
