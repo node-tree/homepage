@@ -1839,15 +1839,19 @@
   position: relative;
   min-height: 1620px;
   padding-top: 80px;
+  /* 마지막 카드(이미지 포함) 하단 여유 — 세로 잘림 방지 */
+  padding-bottom: 80px;
   background: var(--kd-figma-paper);
   color: var(--kd-figma-ink);
-  overflow: hidden;
+  /* 가로(1440 캔버스)는 클립하되 세로는 콘텐츠에 맞춰 늘어나게 한다(하단 잘림 버그 수정) */
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .kd-diary-desktop {
   position: relative;
   width: 1440px;
-  height: 1540px;
+  /* height 는 컴포넌트가 인라인으로 지정(보기: desktopHeight, 편집: auto). 고정값 제거. */
   margin: 0 auto;
 }
 

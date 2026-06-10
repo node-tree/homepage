@@ -561,10 +561,27 @@ const VillageDiary: React.FC = () => {
   const hasContent = cards.length > 0;
 
   // 동적 레이아웃 산출
-  const desktopHeight = useMemo(
-    () => (hasContent ? FIRST_CARD_Y + (cards.length - 1) * CARD_GAP + 260 : 760),
-    [hasContent, cards.length],
-  );
+  //   카드 top = FIRST_CARD_Y + i*CARD_GAP - 80. 마지막 카드 실제 높이는 사진 유무로 달라진다
+  //   (사진 카드 ≈ 430px, 사진 없는 카드 ≈ 290px). 마지막 카드 하단 + 여유 패딩을 모두 덮도록 계산.
+  const desktopHeight = useMemo(() => {
+    if (!hasContent) return 760;
+    const lastTop = FIRST_CARD_Y + (cards.length - 1) * CARD_GAP - 80;
+    const lastHasImage = !!cards[cards.length - 1]?.imageUrl;
+    const lastCardHeight = lastHasImage ? 460 : 320; // 사진 카드 여유 포함
+    const BOTTOM_PAD = 120; // 마지막 카드 아래 여백
+    return lastTop + lastCardHeight + BOTTOM_PAD;
+  }, [hasContent, cards]);
+
+  // 모바일 컨테이너 높이 — 카드 수가 많아 1620px 를 넘어도 마지막 카드가 잘리지 않게 동적 산출.
+  //   카드 top = MOBILE_FIRST_CARD_Y + i*MOBILE_CARD_GAP. 마지막 카드 + 사진 여유 + 하단 패딩.
+  const mobileHeight = useMemo(() => {
+    if (!hasContent) return 1620;
+    const lastTop = MOBILE_FIRST_CARD_Y + (cards.length - 1) * MOBILE_CARD_GAP;
+    const lastHasImage = !!cards[cards.length - 1]?.imageUrl;
+    const lastCardHeight = lastHasImage ? 320 : 200;
+    const BOTTOM_PAD = 100;
+    return Math.max(1620, lastTop + lastCardHeight + BOTTOM_PAD);
+  }, [hasContent, cards]);
   const pathHeight = useMemo(
     () => (hasContent ? FIRST_CARD_Y + (cards.length - 1) * CARD_GAP - PATH_TOP + PATH_TAIL : 360),
     [hasContent, cards.length],
@@ -989,6 +1006,7 @@ const VillageDiary: React.FC = () => {
       <div
         className={`kd-diary-mobile${mobileSide === 'left' ? ' is-mobile-left' : ''}`}
         data-name="마을일기 — Mobile"
+        style={{ height: mobileHeight }}
       >
         <div className="kd-section-rule kd-section-rule--s4" />
         <h1>마을일기</h1>
