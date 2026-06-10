@@ -701,16 +701,16 @@ const Commons: React.FC<CommonsProps> = ({ onPostsLoaded }) => {
       </div>
 
       <div className="filed-container">
-        {/* 꿈다락 진입 배너 — 문화예술교육 마이크로사이트(/kkumdarak)로 이동 */}
+        {/* 꿈다락 진입 배너 — 문화예술교육 마이크로사이트(/iso)로 이동 */}
         <div
           className="kkumdarak-entry"
           role="link"
           tabIndex={0}
-          onClick={() => navigate('/kkumdarak')}
+          onClick={() => navigate('/iso')}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
-              navigate('/kkumdarak');
+              navigate('/iso');
             }
           }}
           onMouseEnter={() => playHoverSound()}
