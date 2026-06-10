@@ -45,7 +45,7 @@ const BUYEO_STOPS: BuyeoStop[] = [
       '서두르지 않아도 됩니다. 주변을 천천히 둘러보며, 들려오는 소리에 귀를 기울여 보세요.',
       '아래 재생 버튼을 누르면 이 장소의 오디오 가이드가 시작됩니다.',
     ],
-    trackLabel: '장소 1 오디오 가이드 (준비 중)',
+    trackLabel: '장소 1 오디오 가이드',
     src: '/audio/buyeo-stop1.mp3',
   },
   {
@@ -57,7 +57,7 @@ const BUYEO_STOPS: BuyeoStop[] = [
       '첫 번째 장소에서 느낀 결을 떠올리며, 이곳의 풍경과 소리를 천천히 받아들여 보세요.',
       '아래 재생 버튼을 누르면 이 장소의 오디오 가이드가 시작됩니다.',
     ],
-    trackLabel: '장소 2 오디오 가이드 (준비 중)',
+    trackLabel: '장소 2 오디오 가이드',
     src: '/audio/buyeo-stop2.mp3',
   },
 ];
@@ -113,10 +113,6 @@ export default function Buyeo() {
           style={styles.section}
         >
           <h2 style={styles.sectionTitle}>오디오 가이드</h2>
-          <p style={styles.note}>
-            ※ 음원은 준비 중입니다. 라이선스 정리 후 정식 내레이션·음악으로 교체될
-            예정입니다.
-          </p>
           <span style={styles.trackLabel}>{data.trackLabel}</span>
           {/* 정적 플레이어 — 별도 cleanup 불필요. 소스는 BUYEO_STOPS에서 교체 */}
           <audio controls preload="none" src={data.src} style={styles.audio}>
