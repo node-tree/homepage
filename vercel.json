@@ -101,6 +101,13 @@
       }
     },
     {
+      "src": "/audio/(.*)",
+      "dest": "/audio/$1",
+      "headers": {
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
+      }
+    },
+    {
       "src": "/(.*)",
       "dest": "/index.html"
     }
