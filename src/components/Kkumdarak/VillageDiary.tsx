@@ -101,6 +101,38 @@ const DIARY_DESKTOP_CSS = `
   .kd-diary-desktop .diary-card-image {
     display: none;
   }
+
+  /* ── 편집 모드: 절대배치 타임라인 해제 → 일반 세로 플로우(겹침·하단잘림 방지) ──
+     보기 모드는 위 절대배치 그대로. is-editing-flow 일 때만 카드를 정적 흐름으로. */
+  .kd-diary-desktop.is-editing-flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .kd-diary-desktop.is-editing-flow .diary-card,
+  .kd-diary-desktop.is-editing-flow .diary-card.left,
+  .kd-diary-desktop.is-editing-flow .diary-card.right,
+  .kd-diary-desktop.is-editing-flow .diary-card.left:has(.diary-photo-img),
+  .kd-diary-desktop.is-editing-flow .diary-card.right:has(.diary-photo-img) {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    width: min(560px, 92%) !important;
+    margin: 0 auto 28px !important;
+  }
+  /* 사진 슬롯은 편집 중 적당한 높이로 고정(이미지 유무와 무관하게 안정) */
+  .kd-diary-desktop.is-editing-flow .diary-photo,
+  .kd-diary-desktop.is-editing-flow .diary-photo:has(.diary-photo-img) {
+    height: 200px !important;
+  }
+  /* + 기록 추가 버튼: 흐름 배치 */
+  .kd-diary-desktop.is-editing-flow .diary-add-card-btn {
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    transform: none !important;
+    margin: 8px auto 40px !important;
+  }
 }
 `;
 
@@ -251,7 +283,9 @@ const DiaryCard: React.FC<{
   onUpdate?: (field: 'title' | 'date' | 'dot' | 'side' | 'imageUrl', value: string) => void;
   onDelete?: () => void;
   side?: 'left' | 'right';
-}> = ({ title, date, dot, accent, imageUrl, className = '', style, cardRef, isEditing, onUpdate, onDelete, side }) => {
+  programId?: string;
+  programName?: string;
+}> = ({ title, date, dot, accent, imageUrl, className = '', style, cardRef, isEditing, onUpdate, onDelete, side, programId, programName }) => {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [aiTopic, setAiTopic] = useState('');
@@ -265,7 +299,7 @@ const DiaryCard: React.FC<{
     setAiBusy(true);
     setAiError(null);
     try {
-      const text = await aiAPI.write({ mode: 'write', topic, context: 'village-diary', format: 'plain' });
+      const text = await aiAPI.write({ mode: 'write', topic, context: 'village-diary', format: 'plain', programId, programName });
       setAiPrev(title);
       onUpdate('title', text);
       setAiOpen(false);
@@ -288,7 +322,7 @@ const DiaryCard: React.FC<{
     setAiBusy(true);
     setAiError(null);
     try {
-      const text = await aiAPI.write({ mode: 'refine', originalText: src, context: 'village-diary', format: 'plain' });
+      const text = await aiAPI.write({ mode: 'refine', originalText: src, context: 'village-diary', format: 'plain', programId, programName });
       setAiPrev(title);
       onUpdate('title', text);
     } catch (e) {
@@ -311,7 +345,7 @@ const DiaryCard: React.FC<{
     <article
     ref={cardRef as React.Ref<HTMLElement>}
     className={`diary-card ${className}${isEditing ? ' is-editing-card' : ''}`}
-    style={{ ...style, position: 'absolute' }}
+    style={{ ...style, position: isEditing ? 'static' : 'absolute' }}
   >
     {isEditing && onDelete && (
       <button className="diary-card-delete" onClick={onDelete} title="삭제">×</button>
@@ -849,9 +883,9 @@ const VillageDiary: React.FC = () => {
       {/* 데스크톱 마을일기 카드 모바일 스탬프형 정돈 — 모바일 무영향(min-width:901px) */}
       <style>{DIARY_DESKTOP_CSS}</style>
       <div
-        className="kd-diary-desktop"
+        className={`kd-diary-desktop${isEditing ? ' is-editing-flow' : ''}`}
         data-name="마을일기 — Desktop"
-        style={{ height: desktopHeight, '--accent': program.accent } as React.CSSProperties}
+        style={{ height: isEditing ? 'auto' : desktopHeight, '--accent': program.accent } as React.CSSProperties}
       >
         <h1>마을일기</h1>
         <p className="diary-sub">프로그램을 따라 마을의 기록을 걷습니다  ·  스크롤하면 캐릭터가 길을 내려갑니다</p>
@@ -868,7 +902,7 @@ const VillageDiary: React.FC = () => {
         {/* 꿈다락 전용 편집 제어 (로그인 진입은 nav 도형 버튼이 담당) */}
         {renderEditControls()}
 
-        {hasContent && (
+        {hasContent && !isEditing && (
           <>
             <div className="diary-path" style={{ height: pathHeight, borderLeftColor: program.accent }} />
             <div className="diary-avatar" ref={avatarRef} style={{ top: avatarStart }}>
@@ -885,16 +919,20 @@ const VillageDiary: React.FC = () => {
               const y = FIRST_CARD_Y + index * CARD_GAP;
               return (
                 <React.Fragment key={`${program.id}-${index}`}>
-                  <i
-                    ref={setDotRef(index)}
-                    className={`diary-dot ${card.side}`}
-                    style={{ top: y + 24, background: card.dot }}
-                  />
-                  <i
-                    ref={setConnectorRef(index)}
-                    className={`diary-connector ${card.side}`}
-                    style={{ top: y + 35 }}
-                  />
+                  {!isEditing && (
+                    <>
+                      <i
+                        ref={setDotRef(index)}
+                        className={`diary-dot ${card.side}`}
+                        style={{ top: y + 24, background: card.dot }}
+                      />
+                      <i
+                        ref={setConnectorRef(index)}
+                        className={`diary-connector ${card.side}`}
+                        style={{ top: y + 35 }}
+                      />
+                    </>
+                  )}
                   <DiaryCard
                     title={card.title}
                     date={card.date}
@@ -902,10 +940,12 @@ const VillageDiary: React.FC = () => {
                     accent={program.accent}
                     imageUrl={card.imageUrl}
                     className={card.side}
-                    style={{ top: y - 80 }}
+                    style={isEditing ? undefined : { top: y - 80 }}
                     cardRef={setCardRef(index)}
                     isEditing={isEditing}
                     side={card.side}
+                    programId={program.id}
+                    programName={program.name}
                     onUpdate={(field, value) => handleCardUpdate(index, field, value)}
                     onDelete={() => handleCardDelete(index)}
                   />
@@ -916,7 +956,6 @@ const VillageDiary: React.FC = () => {
             {isEditing && (
               <button
                 className="diary-add-card-btn"
-                style={{ top: FIRST_CARD_Y + cards.length * CARD_GAP - 40 }}
                 onClick={handleCardAdd}
               >
                 + 기록 추가
