@@ -3144,6 +3144,36 @@
 
 .program-edit-save:disabled { opacity: 0.45; cursor: not-allowed; }
 
+/* ── 텍스트 콘텐츠 인라인 편집 패널 (데스크탑·모바일 공용) ──────────
+   기존 .program-edit-* 의 외형(점선 박스·검정 보더 입력)을 그대로 재사용하고
+   콘텐츠 편집 전용 타이틀/힌트/멀티라인 입력만 보강한다. */
+.program-content-edit {
+  margin-top: 10px;
+  border-color: var(--accent, #1a1a1a);
+}
+
+.program-content-edit-title {
+  margin: 0;
+  font-family: var(--kd-font-body);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #1a1a1a;
+}
+
+.program-edit-textarea {
+  min-height: 64px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.program-content-edit-hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.3;
+  color: #6b6357;
+}
+
 .program-badge {
   position: relative;
   display: block;
@@ -3420,6 +3450,15 @@
     font-size: 12px;
     line-height: 1.2;
     white-space: nowrap;
+  }
+
+  .mobile-program-summary {
+    margin: 0;
+    color: #1a1a1a;
+    font-family: var(--kd-font-body);
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.3;
   }
 
   .mobile-program-meta {
@@ -5323,4 +5362,149 @@
   font-weight: 700;
   color: #c0392b;
   margin-bottom: 4px;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   꿈다락 프로그램 — 모집 상태 배지 + 인라인 편집 모드 레이아웃 (작업 1·2)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 모집 상태 배지 (공개 표시: 진행중 / 모집마감) ─────────────────────
+   진행중 = accent 톤 활성 느낌, 모집마감 = 회색 비활성 톤으로 시각 구분.
+   데스크톱·모바일 공용 클래스. */
+.program-status-badge {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: 3px 11px;
+  border: 2px solid #1a1a1a;
+  border-radius: 999px;
+  font-family: var(--kd-font-body);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.program-status-badge.is-open {
+  background: var(--accent, #259f3e);
+  color: #ffffff;
+  box-shadow: 2px 2px 0 #1a1a1a;
+}
+/* accent 가 흰색/밝은 카드(축제 등)일 때 대비 보정: 진행중은 항상 글자색 흑백 자동 X →
+   안전하게 진행중 배지는 초록 계열 고정으로 가독 확보. */
+.program-status-badge.is-open {
+  background: #259f3e;
+}
+.program-status-badge.is-closed {
+  background: #d8d2c4;
+  border-color: #8d8675;
+  color: #5b5547;
+  box-shadow: 2px 2px 0 #8d8675;
+}
+
+/* 데스크톱 카드: 제목 + 배지 한 줄 정렬 */
+.program-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.program-title-row .program-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ── 모집 상태 선택 (편집 패널 라디오) ──────────────────────────────── */
+.program-status-field {
+  gap: 6px;
+}
+.program-status-options {
+  display: flex;
+  gap: 14px;
+}
+.program-status-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--kd-font-body);
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a1a1a;
+  cursor: pointer;
+}
+.program-status-radio input { width: 15px; height: 15px; cursor: pointer; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   편집 모드(.is-editing) 레이아웃 — 펼쳐진 편집 패널까지 컨테이너가 따라가도록.
+   보기 모드(비로그인/일반)는 위 규칙을 일절 건드리지 않는다(스코프 .is-editing 한정).
+
+   원인: 데스크톱은 Figma 고정 캔버스(.kd-program-desktop height 고정 +
+   .program-grid position:absolute + .kd-figma-programs overflow:hidden)라,
+   편집 패널로 그리드가 길어져도 부모 높이가 늘지 않아 맨 아래 카드가 잘렸다.
+   → 편집 모드에서만 그리드를 in-flow(static)로 바꾸고 컨테이너 height/overflow 를 풀어준다.
+   ═══════════════════════════════════════════════════════════════════ */
+.kd-figma-programs.is-editing {
+  overflow: visible;
+  min-height: 0;
+  padding-bottom: 80px;
+}
+
+/* 데스크톱: 고정 캔버스 → 흐름 레이아웃 */
+.kd-program-desktop.is-editing {
+  height: auto;
+  min-height: 2010px;            /* 절대배치 헤더(h1·강조선)가 겹치지 않도록 헤더 영역 확보 */
+  padding-bottom: 40px;
+}
+.kd-program-desktop.is-editing .program-grid {
+  position: static;
+  margin: 200px 0 0 120px;       /* 기존 left:120/top:200 을 흐름 여백으로 환산 */
+  width: 1200px;
+  align-items: start;
+}
+/* 편집 패널이 카드 밖으로 잘리지 않도록 카드 overflow 해제(편집 모드만) */
+.kd-program-desktop.is-editing .program-card {
+  overflow: visible;
+  min-height: 420px;
+}
+
+/* 모바일: 동일 처리 (.mobile-program-list 가 position:absolute 라 부모가 안 늘어남) */
+.kd-program-mobile.is-editing {
+  height: auto;
+  min-height: 0;
+}
+.kd-program-mobile.is-editing .mobile-program-list {
+  position: static;
+  margin: 128px 0 0 16px;        /* 기존 left:16/top:128 환산 */
+  padding-bottom: 40px;
+}
+.kd-program-mobile.is-editing .mobile-program-card {
+  overflow: visible;
+}
+
+/* 모바일 카드 제목 + 배지 정렬 */
+.mobile-program-titles { min-width: 0; }
+.mobile-program-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.mobile-program-title-row h2 { min-width: 0; }
+.program-status-badge.is-mobile {
+  padding: 2px 9px;
+  font-size: 11px;
+}
+
+/* 태블릿 스케일 변형(960~1023, 901~959)에서도 편집 모드는 높이 고정을 풀어준다.
+   transform:scale 은 레이아웃 박스에 영향을 주지 않으므로 height:auto 로 두면
+   스케일된 실제 높이만큼 부모가 잡지 못한다 → min-height 도 auto 로 풀고 overflow 해제. */
+@media (min-width: 901px) and (max-width: 1023px) {
+  .kd-figma-programs.is-editing { overflow: visible; min-height: 0; }
+  .kd-program-desktop.is-editing { height: auto; }
+}
+
+/* 모바일(≤900) 편집 모드: 섹션 고정 min-height 해제 */
+@media (max-width: 900px) {
+  .kd-figma-programs.is-editing { min-height: 0; overflow: visible; }
+  .kd-program-mobile.is-editing { min-height: 0; height: auto; }
 }
