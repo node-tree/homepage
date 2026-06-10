@@ -5369,8 +5369,8 @@
    꿈다락 프로그램 — 모집 상태 배지 + 인라인 편집 모드 레이아웃 (작업 1·2)
    ═══════════════════════════════════════════════════════════════════ */
 
-/* ── 모집 상태 배지 (공개 표시: 진행중 / 모집마감) ─────────────────────
-   진행중 = accent 톤 활성 느낌, 모집마감 = 회색 비활성 톤으로 시각 구분.
+/* ── 모집 상태 배지 (공개 표시: 진행중 / 모집중 / 모집마감) ────────────
+   모집중 = 강조/활성(빨강), 진행중 = 진행 톤(초록), 모집마감 = 비활성 회색.
    데스크톱·모바일 공용 클래스. */
 .program-status-badge {
   display: inline-flex;
@@ -5385,16 +5385,19 @@
   line-height: 1.2;
   white-space: nowrap;
 }
-.program-status-badge.is-open {
-  background: var(--accent, #259f3e);
+/* 모집중 — 가장 강조(모집 진행 알림). 빨강 활성 톤. */
+.program-status-badge.is-recruiting {
+  background: var(--kd-figma-red, #f02e1f);
   color: #ffffff;
   box-shadow: 2px 2px 0 #1a1a1a;
 }
-/* accent 가 흰색/밝은 카드(축제 등)일 때 대비 보정: 진행중은 항상 글자색 흑백 자동 X →
-   안전하게 진행중 배지는 초록 계열 고정으로 가독 확보. */
-.program-status-badge.is-open {
+/* 진행중 — 프로그램 운영 중. 초록 진행 톤(밝은 카드에서도 대비 확보 위해 고정 초록). */
+.program-status-badge.is-ongoing {
   background: #259f3e;
+  color: #ffffff;
+  box-shadow: 2px 2px 0 #1a1a1a;
 }
+/* 모집마감 — 비활성/회색 톤. */
 .program-status-badge.is-closed {
   background: #d8d2c4;
   border-color: #8d8675;
