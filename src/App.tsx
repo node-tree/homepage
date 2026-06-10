@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import './App.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -29,6 +29,13 @@ const Team = lazy(() => import('./components/Team'));
 const Kkumdarak = lazy(() => import('./components/Kkumdarak/Kkumdarak'));
 const Buyeo = lazy(() => import('./components/Buyeo'));
 const MediaAdmin = lazy(() => import('./components/MediaAdmin'));
+
+// /kkumdarak 리다이렉트 별칭 — hash(#admin/#intro 등)과 query를 보존한 채 /iso로 리다이렉트.
+// Kkumdarak가 window.location.hash를 직접 읽으므로 hash 유지가 필수(기존 발행 URL nodetree.kr/kkumdarak#intro 보존).
+function KkumdarakRedirect() {
+  const { hash, search } = useLocation();
+  return <Navigate to={`/iso${search}${hash}`} replace />;
+}
 
 // 도메인 감지 (localhost에서는 ?saengsanso 쿼리로 테스트 가능)
 const isSaengsanso = typeof window !== 'undefined' && (
@@ -414,7 +421,9 @@ function App() {
               <Route path="/team-event" element={<TeamEvent />} />
               <Route path="/NODETREECorpus" element={<Team />} />
               <Route path="/ocean" element={<OceanData />} />
-              <Route path="/kkumdarak" element={<Kkumdarak />} />
+              <Route path="/iso" element={<Kkumdarak />} />
+              {/* /kkumdarak — 구 발행 URL 호환 별칭. hash 보존해 /iso로 리다이렉트 */}
+              <Route path="/kkumdarak" element={<KkumdarakRedirect />} />
               <Route path="/buyeo/:stop" element={<Buyeo />} />
               <Route path="/monitor" element={<ClaudeMonitor />} />
               <Route path="/admin/media" element={<MediaAdmin />} />
