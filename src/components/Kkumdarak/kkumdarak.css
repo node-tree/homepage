@@ -2562,12 +2562,14 @@
   margin-left: var(--rule-offset);
   border-top: 4px solid var(--kd-figma-red);
 }
-/* 내비 순서 5단계 빨강 토막 오프셋 (0~1020, 균등) */
+/* 내비 순서 6단계 빨강 토막 오프셋 (0~1020, 균등) — 마을소식 신설로 재배분.
+   소개·프로그램·일정·마을일기·마을소식·오시는길 = 6단계 길찾기 모티프. */
 .kd-section-rule--s1 { --rule-offset: 0px; }     /* 소개 */
-.kd-section-rule--s2 { --rule-offset: 255px; }   /* 프로그램 */
-.kd-section-rule--s3 { --rule-offset: 510px; }   /* 일정 */
-.kd-section-rule--s4 { --rule-offset: 765px; }   /* 마을일기 */
+.kd-section-rule--s2 { --rule-offset: 204px; }   /* 프로그램 */
+.kd-section-rule--s3 { --rule-offset: 408px; }   /* 일정 */
+.kd-section-rule--s4 { --rule-offset: 612px; }   /* 마을일기 */
 .kd-section-rule--s5 { --rule-offset: 1020px; }  /* 오시는 길 */
+.kd-section-rule--s6 { --rule-offset: 816px; }   /* 마을소식 */
 
 /* 소개 섹션 전용 위치 보정 (데스크톱: 기본 그리드와 동일, 모바일: 별도 처리) */
 .kd-intro-rule { top: 14px; }
@@ -3322,7 +3324,9 @@
     top: 58px;
   }
 
-  /* 모바일 공통 섹션 강조선: 폭 350(좌20), 빨강 토막 90px, 5단계 0~260 */
+  /* 모바일 공통 섹션 강조선: 폭 350(좌20), 빨강 토막 90px, 6단계 0~260 균등.
+     마을소식 신설로 데스크톱과 동일하게 6단계 재배분(진행 범위 350-90=260을 6등분).
+     nav 위치 매핑: s5(오시는길)=6번째=끝(260), s6(마을소식)=5번째=208. */
   .kd-section-rule {
     left: 20px;
     top: 22px;
@@ -3332,10 +3336,11 @@
     width: 90px;
   }
   .kd-section-rule--s1 { --rule-offset: 0px; }
-  .kd-section-rule--s2 { --rule-offset: 65px; }
-  .kd-section-rule--s3 { --rule-offset: 130px; }
-  .kd-section-rule--s4 { --rule-offset: 195px; }
+  .kd-section-rule--s2 { --rule-offset: 52px; }
+  .kd-section-rule--s3 { --rule-offset: 104px; }
+  .kd-section-rule--s4 { --rule-offset: 156px; }
   .kd-section-rule--s5 { --rule-offset: 260px; }
+  .kd-section-rule--s6 { --rule-offset: 208px; }
 
   .kd-program-mobile h1 {
     font-size: 40px;

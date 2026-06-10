@@ -14,6 +14,7 @@ const Intro = lazy(() => import('./Intro'));
 const Programs = lazy(() => import('./Programs'));
 const Schedule = lazy(() => import('./Schedule'));
 const VillageDiary = lazy(() => import('./VillageDiary'));
+const VillageNews = lazy(() => import('./news/VillageNews'));
 const Directions = lazy(() => import('./Directions'));
 const BusinessAdmin = lazy(() => import('./admin/BusinessAdmin'));
 
@@ -207,6 +208,7 @@ const Kkumdarak: React.FC = () => {
       case 'programs': return <Programs />;
       case 'schedule': return <Schedule />;
       case 'diary': return <VillageDiary />;
+      case 'news': return <VillageNews />;
       case 'directions': return <Directions />;
       // 사업관리 — 로그인 게이트는 BusinessAdmin 내부(authed)에서 처리.
       case ADMIN_SECTION: return <BusinessAdmin />;

@@ -51,6 +51,7 @@ export const SECTIONS: NavSection[] = [
   { id: 'programs', label: '프로그램' },
   { id: 'schedule', label: '일정' },
   { id: 'diary', label: '마을일기' },
+  { id: 'news', label: '마을소식' },
   { id: 'directions', label: '오시는 길' },
 ];
 
