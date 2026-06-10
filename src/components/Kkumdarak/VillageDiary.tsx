@@ -1,10 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import IntroChar from './IntroChar';
+import ProgramCharacterPng, { characterPngForName } from './programCharacters';
 import { villageDiaryAPI } from '../../services/api';
 import { ikUrl } from '../../utils/ikUrl';
 import ImageKitPicker from '../editor/ImageKitPicker';
 import aiAPI from '../../services/aiApi';
 import { useKkumdarakAuth } from './KkumdarakAuthContext';
+
+// 마을일기 캐릭터 — 프로그램명이 새 PNG 매핑에 있으면 PNG, 아니면 기존 SVG 리그(IntroChar) 폴백.
+//   프로그램 카드(Programs.tsx)와 동일한 PNG 를 같은 프로그램에 사용해 일관성 유지.
+const DiaryCharacter: React.FC<{ src: string; name: string }> = ({ src, name }) => (
+  characterPngForName(name)
+    ? <ProgramCharacterPng name={name} alt={name} className="intro-char-svg intro-char-rig" />
+    : <IntroChar src={src} alt={name} />
+);
 
 type DiaryCardData = { side: 'left' | 'right'; title: string; date: string; dot: string; imageUrl?: string };
 type ProgramDiary = {
@@ -924,7 +933,7 @@ const VillageDiary: React.FC = () => {
             <div className="diary-path" style={{ height: pathHeight, borderLeftColor: program.accent }} />
             <div className="diary-avatar" ref={avatarRef} style={{ top: avatarStart }}>
               <div className="diary-character-scale">
-                <IntroChar src={program.character} alt={program.name} />
+                <DiaryCharacter src={program.character} name={program.name} />
               </div>
             </div>
           </>
@@ -983,7 +992,7 @@ const VillageDiary: React.FC = () => {
           <>
             <div className="diary-empty" style={{ top: 360 }}>
               <div className="diary-empty-character">
-                <IntroChar src={program.character} alt={program.name} />
+                <DiaryCharacter src={program.character} name={program.name} />
               </div>
               <h2>{program.name}</h2>
               <p>일기를 준비하고 있어요.</p>
@@ -1025,7 +1034,7 @@ const VillageDiary: React.FC = () => {
               style={{ top: MOBILE_AVATAR_START }}
             >
               <div className="diary-character-scale">
-                <IntroChar src={program.character} alt={program.name} />
+                <DiaryCharacter src={program.character} name={program.name} />
               </div>
             </div>
             {cards.map((card, index) => {
@@ -1068,7 +1077,7 @@ const VillageDiary: React.FC = () => {
         ) : (
           <div className="diary-empty diary-empty-mobile">
             <div className="diary-empty-character">
-              <IntroChar src={program.character} alt={program.name} />
+              <DiaryCharacter src={program.character} name={program.name} />
             </div>
             <h2>{program.name}</h2>
             <p>일기를 준비하고 있어요.</p>

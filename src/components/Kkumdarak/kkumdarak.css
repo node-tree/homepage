@@ -5513,3 +5513,41 @@
   .kd-figma-programs.is-editing { min-height: 0; overflow: visible; }
   .kd-program-mobile.is-editing { min-height: 0; height: auto; }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   꿈다락 프로그램 캐릭터 PNG (SVG 리그 대체) — 투명 PNG, 카드 art 에 맞춤
+   · 데스크톱: .program-character-frame(170×150) 안에서 바닥 정렬·여백 확보
+   · 모바일: .mobile-program-character(58×62 frame) 안에서 contain
+   · 마을일기: .intro-char-rig 컨텍스트에서도 동일 PNG 사용
+   ═══════════════════════════════════════════════════════════════════ */
+.program-char-png {
+  display: block;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* 데스크톱 카드: 기존 .program-rig(150×143) 자리 차지, 바닥 정렬 */
+.program-rig.program-rig-png {
+  width: 132px;
+  height: 132px;
+  align-self: end;
+  margin-bottom: 6px;
+  animation: program-character-bob-mobile 2.4s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+/* 모바일 카드: 작은 프레임에 맞춰 축소(부모 overflow:hidden 안에서 안전) */
+.program-rig-mobile.program-rig-png {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+}
+
+/* 마을일기 캐릭터 영역(IntroChar 대체) */
+.intro-char-rig.program-char-png {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}

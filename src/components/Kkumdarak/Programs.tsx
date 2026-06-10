@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { KKUMDARAK_APPLY_URL } from './data';
 import MotionCharacter from './MotionCharacter';
+import ProgramCharacterPng, { characterPngForName } from './programCharacters';
 import { useKkumdarakAuth } from './KkumdarakAuthContext';
 import { kkumdarakSettingsAPI } from '../../services/api';
 
@@ -160,6 +161,10 @@ interface ProgramContent {
   en?: string;
   summary?: string;
   desc?: string;
+  // 카드 meta(회차/모집/기간) 인라인 편집. 비우면 하드코딩 PROGRAMS.meta 기본값으로 복귀.
+  rounds?: string;   // 회차 (예: '12회 · 36시수')
+  recruit?: string;  // 모집 (예: '전생애 15명')
+  period?: string;   // 기간 (예: '5.23 – 8.22')
   applyStatus?: ApplyStatus;
   phaseStatus?: PhaseStatus;
   status?: LegacyStatus;   // @deprecated — 폴백 전용(쓰기 안 함)
@@ -186,17 +191,46 @@ const pick = (override: string | undefined, fallback: string): string => {
   return v ? v : fallback;
 };
 
-// 하드코딩 프로그램 + 콘텐츠 오버라이드 → 화면에 실제로 그릴 '실효 프로그램'.
+// meta 배열에서 특정 key 의 기본값 조회(없으면 '').
 type Program = typeof PROGRAMS[number];
+const metaValue = (program: Program, key: string): string => {
+  const row = program.meta.find(([k]) => k === key);
+  return row ? row[1] : '';
+};
+
+// 카드 하단 'brief'(모바일 한 줄 요약) 기본값 = '모집 · 기간' 형태.
+//   회차/모집/기간 오버라이드가 있으면 모바일 brief 도 그 값으로 재구성해 일관 표시.
+const buildBrief = (recruit: string, period: string, fallback: string): string => {
+  const r = recruit.trim(), p = period.trim();
+  if (!r && !p) return fallback;
+  return [r, p].filter(Boolean).join(' · ');
+};
+
+// 하드코딩 프로그램 + 콘텐츠 오버라이드 → 화면에 실제로 그릴 '실효 프로그램'.
 const resolveProgram = (program: Program, content?: ProgramContent): Program => {
   if (!content) return program;
   const name = pick(content.name, program.name);
+
+  // meta(회차/모집/기간) 오버라이드 — 해당 key 행만 값 교체, 그 외 행(축제의 일시/대상/관람 등)은 보존.
+  const recruit = pick(content.recruit, metaValue(program, '모집'));
+  const period = pick(content.period, metaValue(program, '기간'));
+  const rounds = pick(content.rounds, metaValue(program, '회차'));
+  const meta = program.meta.map(([k, v]) => {
+    if (k === '회차') return [k, rounds];
+    if (k === '모집') return [k, recruit];
+    if (k === '기간') return [k, period];
+    return [k, v];
+  });
+
   return {
     ...program,
     name,
     en: pick(content.en, program.en),
     summary: pick(content.summary, program.summary),
     desc: pick(content.desc, program.desc),
+    meta,
+    // 모바일 brief: 회차/모집/기간 중 모집·기간 오버라이드가 있으면 재구성, 없으면 기본 brief.
+    brief: buildBrief(content.recruit ?? '', content.period ?? '', program.brief),
     // label 은 줄바꿈용 보조 표기 — name 을 편집하면 더 이상 유효하지 않으므로
     //   오버라이드가 name 을 바꾼 경우 label 을 떨어뜨려 새 name 한 줄로 렌더한다.
     label: name === program.name ? program.label : undefined,
@@ -353,6 +387,10 @@ const ContentEditPanel: React.FC<{
   const [en, setEn] = useState<string>(content?.en ?? '');
   const [summary, setSummary] = useState<string>(content?.summary ?? '');
   const [desc, setDesc] = useState<string>(content?.desc ?? '');
+  // meta 인라인 편집 — 비우면 하드코딩 meta 로 복귀(placeholder 로 기본값 안내).
+  const [rounds, setRounds] = useState<string>(content?.rounds ?? '');
+  const [recruit, setRecruit] = useState<string>(content?.recruit ?? '');
+  const [period, setPeriod] = useState<string>(content?.period ?? '');
   // 두 축 — 저장된 실효 상태(resolve*)를 기본 선택값으로 끌어와 토글 일관성 유지.
   const [applyStatus, setApplyStatus] = useState<ApplyStatus>(resolveApplyStatus(content, setting));
   const [phaseStatus, setPhaseStatus] = useState<PhaseStatus>(resolvePhaseStatus(content));
@@ -362,6 +400,9 @@ const ContentEditPanel: React.FC<{
     setEn(content?.en ?? '');
     setSummary(content?.summary ?? '');
     setDesc(content?.desc ?? '');
+    setRounds(content?.rounds ?? '');
+    setRecruit(content?.recruit ?? '');
+    setPeriod(content?.period ?? '');
     setApplyStatus(resolveApplyStatus(content, setting));
     setPhaseStatus(resolvePhaseStatus(content));
   }, [content, setting]);
@@ -374,6 +415,9 @@ const ContentEditPanel: React.FC<{
     (content?.en ?? '') !== en ||
     (content?.summary ?? '') !== summary ||
     (content?.desc ?? '') !== desc ||
+    (content?.rounds ?? '') !== rounds ||
+    (content?.recruit ?? '') !== recruit ||
+    (content?.period ?? '') !== period ||
     savedApply !== applyStatus ||
     savedPhase !== phaseStatus;
 
@@ -426,6 +470,39 @@ const ContentEditPanel: React.FC<{
       </label>
       {!baseProgram.festival && (
         <>
+          <label className="program-edit-field">
+            <span>회차</span>
+            <input
+              type="text"
+              className="program-edit-input"
+              value={rounds}
+              placeholder={metaValue(baseProgram, '회차')}
+              onChange={(e) => setRounds(e.target.value)}
+              disabled={locked}
+            />
+          </label>
+          <label className="program-edit-field">
+            <span>모집</span>
+            <input
+              type="text"
+              className="program-edit-input"
+              value={recruit}
+              placeholder={metaValue(baseProgram, '모집')}
+              onChange={(e) => setRecruit(e.target.value)}
+              disabled={locked}
+            />
+          </label>
+          <label className="program-edit-field">
+            <span>기간</span>
+            <input
+              type="text"
+              className="program-edit-input"
+              value={period}
+              placeholder={metaValue(baseProgram, '기간')}
+              onChange={(e) => setPeriod(e.target.value)}
+              disabled={locked}
+            />
+          </label>
           <div className="program-edit-field program-status-field" role="group" aria-label="상단 배지 상태">
             <span>상단 배지</span>
             <div className="program-status-options">
@@ -472,9 +549,15 @@ const ContentEditPanel: React.FC<{
             en: en.trim(),
             summary: summary.trim(),
             desc: desc.trim(),
-            // 축제 카드는 모집 개념이 없어 두 축을 저장하지 않는다.
+            // 축제 카드는 모집·회차·기간 개념이 없어 해당 필드를 저장하지 않는다.
             //   신규 두 축으로 저장하고, 더 이상 레거시 단일 status 는 쓰지 않는다(폴백 전용).
-            ...(baseProgram.festival ? {} : { applyStatus, phaseStatus }),
+            ...(baseProgram.festival ? {} : {
+              rounds: rounds.trim(),
+              recruit: recruit.trim(),
+              period: period.trim(),
+              applyStatus,
+              phaseStatus,
+            }),
           })
         }
       >
@@ -506,7 +589,9 @@ const ProgramCard: React.FC<{
     <article className="program-card" style={{ '--accent': program.color } as React.CSSProperties}>
       <div className="program-card-art">
         <div className={`program-character-frame ${walkPhase === 'right' ? 'is-step-right' : 'is-step-left'}`}>
-          <MotionCharacter src={program.character} alt={labelLines.join(' ')} className="program-rig" />
+          {characterPngForName(baseProgram.name)
+            ? <ProgramCharacterPng name={baseProgram.name} alt={labelLines.join(' ')} className="program-rig program-rig-png" />
+            : <MotionCharacter src={program.character} alt={labelLines.join(' ')} className="program-rig" />}
         </div>
       </div>
       <div className="program-title-row">
@@ -556,7 +641,9 @@ const MobileProgramCard: React.FC<{
   <article className="mobile-program-card" style={{ '--accent': program.color, '--mark': program.mobileMark } as React.CSSProperties}>
     <div className="mobile-program-head">
       <div className="mobile-program-character" aria-hidden="true">
-        <MotionCharacter src={program.character} alt="" className="program-rig-mobile" />
+        {characterPngForName(baseProgram.name)
+          ? <ProgramCharacterPng name={baseProgram.name} alt="" className="program-rig-mobile program-rig-png" />
+          : <MotionCharacter src={program.character} alt="" className="program-rig-mobile" />}
       </div>
       <div className="mobile-program-titles">
         <div className="mobile-program-title-row">
@@ -606,6 +693,10 @@ const Programs: React.FC = () => {
   const loadedRef = useRef<boolean>(false);
   // 직전 GET 이 '실패'로 끝났는지. 이 경우 dataRef 가 신뢰 불가라, 저장 전 GET 을 한 번 더 시도해 복구한다.
   const loadFailedRef = useRef<boolean>(false);
+  // GET 이 '한 번이라도 성공'했는지(=dataRef 가 실제 서버 맵을 담은 적 있는지).
+  //   콜드스타트/일시 네트워크 오류로 초기 GET 이 실패해도, 한 번 성공해 base 맵이 있으면
+  //   저장 전 재조회가 또 실패하더라도 저장을 막지 않는다(빈 맵 덮어쓰기 위험이 없으므로).
+  const everLoadedRef = useRef<boolean>(false);
   // 저장 in-flight 가드(방어적 직렬화). UI 의 locked 비활성화가 우회돼도 한 번에 한 PUT 만 보낸다.
   const savingRef = useRef<boolean>(false);
 
@@ -632,6 +723,7 @@ const Programs: React.FC = () => {
         applyData(data || {});
         loadedRef.current = true;
         loadFailedRef.current = false;
+        everLoadedRef.current = true;
       })
       .catch(() => {
         if (!alive) return;
@@ -663,16 +755,24 @@ const Programs: React.FC = () => {
       savingRef.current = true;
       setSavingName(name);
       try {
-        // 직전 GET 실패 시 base(dataRef)가 비어 있을 수 있어, 저장 전 GET 을 재시도해 복구한다
-        //   (빈 맵으로 통째 덮어쓰기 방지). 재시도도 실패하면 알리고 저장을 중단한다.
+        // 직전 GET 이 실패했다면 base(dataRef)가 최신이 아닐 수 있어, 저장 전 GET 을 한 번 더 시도해 복구한다.
+        //   ⚠️ 핵심 수정: 재시도가 또 실패해도 무조건 중단하지 않는다.
+        //     · 과거 한 번이라도 성공해 base 맵을 가진 적 있으면(everLoadedRef) → 그 base 로 진행(저장 강행).
+        //       (백엔드 콜드스타트/일시 오류로 재조회만 실패한 경우까지 저장을 막아 '저장이 안 된다'는
+        //        증상을 유발하던 회귀를 제거. 단일 항목만 머지하므로 다른 프로그램 값 유실 위험 없음.)
+        //     · 한 번도 성공한 적 없으면(=base 가 빈 맵일 위험) → 빈 맵 덮어쓰기 방지 위해 중단.
         if (loadFailedRef.current) {
           try {
             const data: KkumdarakSettingsData = await kkumdarakSettingsAPI.get();
             applyData(data || {});
             loadFailedRef.current = false;
+            everLoadedRef.current = true;
           } catch {
-            alert('설정을 다시 불러오지 못했습니다. 네트워크 확인 후 다시 시도해주세요.');
-            return;
+            if (!everLoadedRef.current) {
+              alert('설정을 불러오지 못해 저장할 수 없습니다. 네트워크 확인 후 다시 시도해주세요.');
+              return;
+            }
+            // base 맵은 이전 성공 로드값을 그대로 보유 → 저장 강행(중단하지 않음).
           }
         }
         const base = dataRef.current || {};
