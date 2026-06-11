@@ -2577,27 +2577,33 @@
   display: none;
 }
 
-/* ── 공통 섹션 상단 강조선 (검정 헤어라인 + 빨강 토막) ──────────────
-   전 섹션(소개·프로그램·일정·마을일기·오시는길) 통일 규격.
-   검정 헤어라인은 전 섹션 동일(좌120·폭1200·2px). 빨강 토막(4px·180px)만
-   --rule-offset 으로 내비 순서대로 좌→우 순차 이동(진행도/길찾기 모티프).
-   색값은 --kd-figma-red(#f02e1f) 로 일원화.                              */
+/* ── 공통 섹션 상단 강조선 (6칸 분할 진행 바) ──────────────────────
+   전 섹션(소개·프로그램·일정·마을일기·마을소식·오시는길 = 6개) 통일 규격.
+   바를 6개 검정 세그먼트로 나누고(마을소식 신설로 6칸), 현재 섹션 칸만 빨강으로
+   덮어 "6칸 중 N번째" 진행도를 표시한다(--rule-offset = 현재 칸 시작 x).
+   데스크톱: 세그먼트 180 / pitch 204 (gap 24) → 0·204·408·612·816·1020, 끝 1200.
+   빨강 색값은 --kd-figma-red(#f02e1f) 로 일원화.                          */
 .kd-section-rule {
   position: absolute;
   left: 120px;
   top: 14px;
   width: 1200px;
-  height: 10px;
-  border-top: 2px solid #1a1a1a;
+  height: 4px;
+  background: repeating-linear-gradient(
+    to right,
+    #1a1a1a 0 180px,
+    transparent 180px 204px
+  );
   --rule-offset: 0px;
 }
 .kd-section-rule::after {
   content: '';
-  display: block;
+  position: absolute;
+  top: 0;
+  left: var(--rule-offset);
   width: 180px;
-  margin-top: 4px;
-  margin-left: var(--rule-offset);
-  border-top: 4px solid var(--kd-figma-red);
+  height: 4px;
+  background: var(--kd-figma-red);
 }
 /* 내비 순서 6단계 빨강 토막 오프셋 (0~1020, 균등) — 마을소식 신설로 재배분.
    소개·프로그램·일정·마을일기·마을소식·오시는길 = 6단계 길찾기 모티프. */
@@ -3383,22 +3389,27 @@
   }
 
   /* 모바일 공통 섹션 강조선: 폭 350(좌20), 빨강 토막 90px, 6단계 0~260 균등.
-     마을소식 신설로 데스크톱과 동일하게 6단계 재배분(진행 범위 350-90=260을 6등분).
-     nav 위치 매핑: s5(오시는길)=6번째=끝(260), s6(마을소식)=5번째=208. */
+     마을소식 신설로 데스크톱과 동일하게 6칸 분할. 모바일: 세그먼트 50 / pitch 60(gap 10)
+     → 0·60·120·180·240·300, 끝 350. nav 매핑: s5(오시는길)=6번째=끝(300), s6(마을소식)=5번째=240. */
   .kd-section-rule {
     left: 20px;
     top: 22px;
     width: 350px;
+    background: repeating-linear-gradient(
+      to right,
+      #1a1a1a 0 50px,
+      transparent 50px 60px
+    );
   }
   .kd-section-rule::after {
-    width: 90px;
+    width: 50px;
   }
   .kd-section-rule--s1 { --rule-offset: 0px; }
-  .kd-section-rule--s2 { --rule-offset: 52px; }
-  .kd-section-rule--s3 { --rule-offset: 104px; }
-  .kd-section-rule--s4 { --rule-offset: 156px; }
-  .kd-section-rule--s5 { --rule-offset: 260px; }
-  .kd-section-rule--s6 { --rule-offset: 208px; }
+  .kd-section-rule--s2 { --rule-offset: 60px; }
+  .kd-section-rule--s3 { --rule-offset: 120px; }
+  .kd-section-rule--s4 { --rule-offset: 180px; }
+  .kd-section-rule--s5 { --rule-offset: 300px; }
+  .kd-section-rule--s6 { --rule-offset: 240px; }
 
   .kd-program-mobile h1 {
     font-size: 40px;
@@ -3792,14 +3803,16 @@
   }
 
   .kd-figma-map {
-    min-height: 950px;
+    /* 주민자치센터 카드에 문의·이메일 행 추가로 카드가 길어짐(절대배치 top:750, bottom~969)
+       → 950 고정높이에 잘리던 것 해소(여유 포함 1020). */
+    min-height: 1020px;
   }
 
   .kd-map-mobile {
     display: block;
     position: relative;
     width: 390px;
-    height: 950px;
+    height: 1020px;
     margin: 0 auto;
   }
 

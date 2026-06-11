@@ -77,7 +77,7 @@ const NewsprintNoise: React.FC = () => (
 );
 
 const PLACEHOLDER_THEME: NewsIssue['theme'] = {
-  paper: '#f6f2e7',
+  paper: '#ffffff',          // 배경 흰색(사용자 요청, 일단) — 가판대/플레이스홀더 프레임
   ink: '#251b13',
   spot: '#f02e1f',
   spot2: '#0f7a38',
@@ -267,7 +267,7 @@ const VillageNews: React.FC = () => {
       title: `제${nextNo}호`,
       dateline: `제${nextNo}호 · 충남 부여군 장암면  |  펴낸곳 꿈다락 문화예술학교 이소(異素)`,
       status: 'draft',
-      theme: { paper: '#f6f2e7', ink: '#251b13', spot: '#f02e1f', spot2: '#0f7a38', texture: 'newsprint' },
+      theme: { paper: '#ffffff', ink: '#251b13', spot: '#f02e1f', spot2: '#0f7a38', texture: 'newsprint' },
       blocks: [],
     });
     setEditIsNew(true);

@@ -11,8 +11,8 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .kd-news {
-  /* 호 테마가 못 주입됐을 때의 안전 기본값(창간호 톤) */
-  --kd-news-paper: #f6f2e7;
+  /* 호 테마가 못 주입됐을 때의 안전 기본값(창간호 톤) — 배경 흰색(사용자 요청, 일단) */
+  --kd-news-paper: #ffffff;
   --kd-news-ink: #251b13;
   --kd-news-spot: #f02e1f;
   --kd-news-spot2: #0f7a38;
@@ -94,15 +94,14 @@
   min-width: 0;
 }
 .kdn-masthead-title {
-  font-family: var(--kd-news-headline-font);
-  font-weight: 900;
+  /* 제호 폰트 Jua (사용자 요청) — 단일 weight 라 900 대신 400, 오버프린트 그림자 제거 */
+  font-family: 'Jua', 'Gothic A1', 'Noto Sans KR', sans-serif;
+  font-weight: 400;
   font-size: clamp(52px, 11vw, 132px);
   line-height: 0.92;
   letter-spacing: 0.04em;
   margin: 0;
   color: var(--kd-news-ink);
-  /* 잉크 오버프린트 느낌의 미세한 두께감 */
-  text-shadow: 0.5px 0 0 var(--kd-news-ink);
 }
 .kdn-masthead-motto {
   font-family: var(--kd-news-label-font);
