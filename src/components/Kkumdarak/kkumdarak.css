@@ -1068,13 +1068,16 @@
 }
 
 /* ── 소개 편집 진입 바(로그인 시에만 렌더) ───────────────────────── */
+/* 고정 헤더(.kd-header: position:fixed, 74px, z-index:55) 뒤로 깔리는 문제 수정.
+   .kd-announce 가 display:none 이라 섹션 최상단이 뷰포트 y=0(헤더 아래)에서 시작 →
+   절대배치(top:16px, z-index:6)는 섹션 padding-top:80px 을 무시하고 헤더 뒤에 숨었다.
+   본문 흐름 최상단(패딩 80px 아래)에 배치해 항상 헤더 밑에서 보이게 한다. */
 .intro-admin-bar {
-  position: absolute;
-  top: 16px;
-  right: 20px;
+  position: relative;
   z-index: 6;
   display: flex;
   justify-content: flex-end;
+  padding: 4px clamp(20px, 3.4vw, 48px) 0;
 }
 .intro-edit-btn {
   display: inline-flex;
@@ -1099,7 +1102,7 @@
 .intro-edit-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 rgba(33, 25, 20, 0.25); }
 
 @media (max-width: 900px) {
-  .intro-admin-bar { top: 10px; right: 12px; }
+  .intro-admin-bar { padding: 4px 16px 0; }
   .intro-edit-btn { font-size: 13px; padding: 7px 13px; }
 }
 
