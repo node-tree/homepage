@@ -192,7 +192,7 @@ const ISSUE_NO1: NewsIssue = {
     '창간호 · 2026년 6월 10일 · 충남 부여군 장암면  |  펴낸곳 꿈다락 문화예술학교 이소(異素)',
   status: 'published',     // 창간호는 발행 상태로 명시(정적·기본). 런타임 override 로만 준비중 전환.
   theme: {
-    paper: '#f6f2e7',         // 뉴스프린트 미색
+    paper: '#ffffff',         // 배경 흰색(사용자 요청, 일단)
     ink: '#251b13',           // 먹 (--kd-figma-ink 계열, 순흑 회피)
     spot: '#f02e1f',          // 신호 빨강 1도 (--kd-figma-red) = 반딧불이
     spot2: '#0f7a38',         // 보조(드물게)
