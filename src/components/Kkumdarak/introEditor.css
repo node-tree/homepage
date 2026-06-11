@@ -9,7 +9,10 @@
 .kdie {
   max-width: 1080px;
   margin: 0 auto;
-  padding: 0 40px 60px;
+  /* 상단 클리어런스: 편집 모드는 Intro 가 섹션(.kd-figma-intro, padding-top:80px)을
+     통째로 교체하므로 에디터가 직접 고정 헤더(.kd-header, 80px, z-index:55)를 피해야 한다.
+     없으면 상단 액션바(저장/돌아가기)가 헤더 뒤로 깔린다. 마을소식 .kd-news--editor(110px)와 동일 패턴. */
+  padding: 100px 40px 60px;
   font-family: var(--kd-font-body, 'Gothic A1', 'Noto Sans KR', system-ui, sans-serif);
   color: var(--kd-ink, #211914);
 }
@@ -108,7 +111,7 @@
 
 /* ── 모바일 ─────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .kdie { padding: 0 18px 48px; }
+  .kdie { padding: 88px 18px 48px; }
   .kdie-member {
     grid-template-columns: 1fr;
     gap: 14px;
