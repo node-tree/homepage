@@ -1,0 +1,117 @@
+/* ═══════════════════════════════════════════════════════════════
+   「소개」(Intro) 인라인 편집 — 편집자 전용 에디터 스타일
+   톤은 kkumdarak — 흰 배경 · Gothic · 둥근 두꺼운 테두리 카드 · pill 버튼.
+   바·카드·pill·피드백 등 공통 표시 클래스(.kdne-* / .kdn-*)는
+   newsEditor.css · villageNews.css 와 공유한다(IntroEditor 가 함께 import).
+   여기서는 소개 편집 고유(kdie-*) 스타일만 정의한다.
+   ═══════════════════════════════════════════════════════════════ */
+
+.kdie {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 40px 60px;
+  font-family: var(--kd-font-body, 'Gothic A1', 'Noto Sans KR', system-ui, sans-serif);
+  color: var(--kd-ink, #211914);
+}
+
+/* ── 폼 필드 ──────────────────────────────────────────────────── */
+.kdie-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+.kdie-field:last-child { margin-bottom: 0; }
+.kdie-field-label {
+  font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(33, 25, 20, 0.7);
+}
+.kdie-input,
+.kdie-textarea {
+  font-family: var(--kd-font-body, sans-serif);
+  font-size: 15px;
+  line-height: 1.6;
+  padding: 9px 12px;
+  border: 2px solid rgba(26, 26, 26, 0.45);
+  border-radius: 12px;
+  background: #fff;
+  color: #211914;
+  width: 100%;
+  box-sizing: border-box;
+}
+.kdie-textarea { resize: vertical; min-height: 64px; }
+.kdie-input:focus,
+.kdie-textarea:focus { outline: none; border-color: var(--kd-purple, #2F68D8); }
+
+/* ── 「이소」 글 블록 묶음 ───────────────────────────────────────── */
+.kdie-block {
+  padding: 16px 16px 18px;
+  border: 2px dashed rgba(26, 26, 26, 0.25);
+  border-radius: 14px;
+  margin-bottom: 16px;
+}
+.kdie-block:last-child { margin-bottom: 0; }
+.kdie-block-label {
+  margin: 0 0 12px;
+  font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--kd-purple, #2F68D8);
+}
+
+/* ── 멤버 편집 ─────────────────────────────────────────────────── */
+.kdie-members { display: flex; flex-direction: column; gap: 18px; }
+.kdie-member {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 18px;
+  padding: 16px;
+  border: 2px solid #1a1a1a;
+  border-radius: 16px;
+  background: #fffdf9;
+  border-left: 8px solid var(--accent, #1a1a1a);
+}
+.kdie-member-media { display: flex; flex-direction: column; gap: 10px; }
+.kdie-member-slot {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 2px dashed rgba(26, 26, 26, 0.35);
+  border-radius: 14px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.kdie-member-slot img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.kdie-member-slot-label {
+  font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(33, 25, 20, 0.4);
+}
+.kdie-member-media-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.kdie-img-del {
+  font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--kd-pink-deep, #F23B2E);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.kdie-img-del:hover { text-decoration: underline; }
+.kdie-member-fields { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+
+/* ── 모바일 ─────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .kdie { padding: 0 18px 48px; }
+  .kdie-member {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .kdie-member-slot { max-width: 200px; }
+}

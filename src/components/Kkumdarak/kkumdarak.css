@@ -1067,6 +1067,42 @@
   overflow: hidden;
 }
 
+/* ── 소개 편집 진입 바(로그인 시에만 렌더) ───────────────────────── */
+.intro-admin-bar {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  z-index: 6;
+  display: flex;
+  justify-content: flex-end;
+}
+.intro-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
+  font-size: 14px;
+  font-weight: 800;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 2px solid var(--kd-ink, #211914);
+  background: var(--kd-ink, #211914);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 rgba(33, 25, 20, 0.25);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.intro-edit-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 rgba(33, 25, 20, 0.3);
+}
+.intro-edit-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 rgba(33, 25, 20, 0.25); }
+
+@media (max-width: 900px) {
+  .intro-admin-bar { top: 10px; right: 12px; }
+  .intro-edit-btn { font-size: 13px; padding: 7px 13px; }
+}
+
 .kd-intro-desktop {
   position: relative;
   width: 1440px;
