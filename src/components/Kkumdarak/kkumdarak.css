@@ -1079,31 +1079,31 @@
   justify-content: flex-end;
   padding: 4px clamp(20px, 3.4vw, 48px) 0;
 }
+/* 다른 섹션 편집 버튼(.kd-diary-edit-btn / .kd-program-edit-btn)과 동일 톤 —
+   노랑 사각 + 검정 테두리·하드 섀도, 라벨 "편집"(집 표준). */
 .intro-edit-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
-  font-size: 14px;
+  border: 2px solid #1a1a1a;
+  border-radius: 0;
+  background: #F5C518;
+  color: #1a1a1a;
+  font-family: var(--kd-font-body);
+  font-size: 13px;
   font-weight: 800;
-  padding: 8px 16px;
-  border-radius: 999px;
-  border: 2px solid var(--kd-ink, #211914);
-  background: var(--kd-ink, #211914);
-  color: #fff;
+  padding: 4px 14px;
+  line-height: 1.4;
   cursor: pointer;
-  box-shadow: 3px 3px 0 rgba(33, 25, 20, 0.25);
+  box-shadow: 2px 2px 0 #1a1a1a;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 .intro-edit-btn:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 rgba(33, 25, 20, 0.3);
+  box-shadow: 3px 3px 0 #1a1a1a;
 }
-.intro-edit-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 rgba(33, 25, 20, 0.25); }
+.intro-edit-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 #1a1a1a; }
 
 @media (max-width: 900px) {
   .intro-admin-bar { padding: 4px 16px 0; }
-  .intro-edit-btn { font-size: 13px; padding: 7px 13px; }
+  .intro-edit-btn { font-size: 12px; padding: 4px 12px; }
 }
 
 .kd-intro-desktop {

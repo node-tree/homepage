@@ -94,10 +94,10 @@ const Intro: React.FC = () => {
         <div className="intro-admin-bar">
           <button
             type="button"
-            className="kdn-pill kdn-pill--solid intro-edit-btn"
+            className="intro-edit-btn"
             onClick={() => setEditing(true)}
           >
-            <span aria-hidden="true">✎</span> 소개 편집
+            편집
           </button>
         </div>
       )}
