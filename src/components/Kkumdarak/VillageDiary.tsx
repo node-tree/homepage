@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import IntroChar from './IntroChar';
 import ProgramCharacterPng, { characterPngForName } from './programCharacters';
-import { villageDiaryAPI } from '../../services/api';
+import { villageDiaryAPI, kkumdarakSettingsAPI } from '../../services/api';
 import { ikUrl } from '../../utils/ikUrl';
 import ImageKitPicker from '../editor/ImageKitPicker';
 import aiAPI from '../../services/aiApi';
@@ -23,6 +23,12 @@ type ProgramDiary = {
   character: string;
   cards: DiaryCardData[];
 };
+
+// ── 프로그램 공개/비공개 상태 (작업 3) ─────────────────────────────────
+//   kkumdarak-settings 싱글톤의 diaryStatus 버킷({ [programId]: 'published' | 'hidden' })에
+//   영속(news draft 토글과 동일 패턴). 비공개면 비로그인/비편집 뷰에서 내용이 있어도 빈 상태.
+type DiaryStatus = 'published' | 'hidden';
+type DiaryStatusMap = Record<string, DiaryStatus>;
 
 // ── 데스크톱 마을일기 카드: 모바일 "스탬프"형으로 정돈 (후속 작업, 데스크톱 전용) ──
 // 기존 데스크톱은 가로로 길쭉(440px)하고, 사진 없는 카드의 상단 빨강 밴드가
@@ -532,6 +538,13 @@ const VillageDiary: React.FC = () => {
   // GET 미완료/실패(레이스·오프라인) 구간에 {} 면 다른 프로그램 오버라이드가 PUT 으로 삭제되므로 방지.
   const serverOverrideRef = useRef<Record<string, DiaryCardData[]>>(loadSavedCards());
 
+  // ── diaryStatus(공개/비공개) — kkumdarak-settings 의 diaryStatus 버킷 ──
+  //   콜드스타트엔 비어 있음 → 전부 'published' 낙관 렌더. settings.get 1회로 로드.
+  const [diaryStatus, setDiaryStatus] = useState<DiaryStatusMap>({});
+  const [statusSaving, setStatusSaving] = useState(false);
+  // 현재 프로그램 공개 여부(미도착/미설정 = published 낙관).
+  const currentStatus: DiaryStatus = diaryStatus[selected] === 'hidden' ? 'hidden' : 'published';
+
   // 인증 해제(로그아웃/401 만료) 시 편집 모드 강제 종료 — 카드가 편집 비주얼로 남지 않게.
   useEffect(() => {
     if (!authed) setIsEditing(false);
@@ -563,6 +576,60 @@ const VillageDiary: React.FC = () => {
     };
   }, []);
 
+  // 마운트 시 diaryStatus 1회 로드(비차단) — 다른 버킷은 건드리지 않고 읽기만.
+  useEffect(() => {
+    let cancelled = false;
+    kkumdarakSettingsAPI
+      .get()
+      .then((data: any) => {
+        if (cancelled || !data || typeof data !== 'object') return;
+        const ds = data.diaryStatus;
+        if (ds && typeof ds === 'object') setDiaryStatus(ds as DiaryStatusMap);
+      })
+      .catch(() => {
+        // 콜드스타트/오프라인 — 전부 published 로 간주(낙관). 무시.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // 현재 프로그램 공개/비공개 토글 — read-merge-write 로 diaryStatus 버킷만 갱신,
+  //   다른 버킷(programs/programContent/newsStatus)은 보존(api.js PUT 은 data 통째 교체).
+  const handleStatusToggle = useCallback(
+    async (next: DiaryStatus) => {
+      if (statusSaving) return;
+      const pid = selected;
+      const prev = diaryStatus;
+      // 낙관적 반영
+      setDiaryStatus((m) => ({ ...m, [pid]: next }));
+      setStatusSaving(true);
+      try {
+        const base = (await kkumdarakSettingsAPI.get()) || {};
+        const merged = {
+          ...base,
+          diaryStatus: { ...(base as any).diaryStatus, [pid]: next },
+        };
+        await kkumdarakSettingsAPI.save(merged);
+      } catch (err: any) {
+        // 실패 → 롤백
+        setDiaryStatus(prev);
+        if (err && err.code === 'KKUM_AUTH_EXPIRED') {
+          logout();
+          if (typeof window !== 'undefined') {
+            window.alert('꿈다락 편집 인증이 만료되었습니다. 다시 로그인해주세요.');
+          }
+          requestLogin();
+        } else if (typeof window !== 'undefined') {
+          window.alert('공개 상태 저장에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        }
+      } finally {
+        setStatusSaving(false);
+      }
+    },
+    [selected, diaryStatus, statusSaving, logout, requestLogin],
+  );
+
   const program = useMemo(
     () => programs.find((p) => p.id === selected) ?? programs[0],
     [selected, programs],
@@ -578,7 +645,12 @@ const VillageDiary: React.FC = () => {
     return program.cards;
   }, [isEditing, draftCards, selected, program.cards]);
 
-  const hasContent = cards.length > 0;
+  // 표시 가능한 내용 여부.
+  //   · 편집 모드(authed+isEditing): 실제 내용 기준(비공개여도 편집 위해 내용·토글 노출).
+  //   · 그 외(비로그인/비편집): 비공개(hidden)면 내용이 있어도 빈 상태로 렌더.
+  const hasContent = isEditing
+    ? cards.length > 0
+    : currentStatus !== 'hidden' && cards.length > 0;
 
   // 동적 레이아웃 산출
   //   카드 top = FIRST_CARD_Y + i*CARD_GAP - 80. 마지막 카드 실제 높이는 사진 유무로 달라진다
@@ -906,12 +978,39 @@ const VillageDiary: React.FC = () => {
   const renderEditControls = () => {
     if (!authed) return null;
     return (
-      <button
-        className={`kd-diary-edit-btn${isEditing ? ' is-editing' : ''}`}
-        onClick={handleEditToggle}
-      >
-        {isEditing ? '완료' : '편집'}
-      </button>
+      <>
+        <button
+          className={`kd-diary-edit-btn${isEditing ? ' is-editing' : ''}`}
+          onClick={handleEditToggle}
+        >
+          {isEditing ? '완료' : '편집'}
+        </button>
+        {/* 편집 모드: 현재 프로그램 공개/비공개 토글 (작업 3) */}
+        {isEditing && (
+          <div className="kd-diary-visibility" role="group" aria-label="공개 상태">
+            <span className="kd-diary-visibility-label">{program.name}</span>
+            <div className="kd-diary-visibility-options">
+              <button
+                type="button"
+                className={`kd-diary-visibility-btn${currentStatus === 'published' ? ' is-active' : ''}`}
+                disabled={statusSaving}
+                onClick={() => handleStatusToggle('published')}
+              >
+                공개
+              </button>
+              <button
+                type="button"
+                className={`kd-diary-visibility-btn is-hidden-opt${currentStatus === 'hidden' ? ' is-active' : ''}`}
+                disabled={statusSaving}
+                onClick={() => handleStatusToggle('hidden')}
+              >
+                비공개
+              </button>
+            </div>
+            {statusSaving && <span className="kd-diary-visibility-status">저장 중…</span>}
+          </div>
+        )}
+      </>
     );
   };
 
@@ -1041,6 +1140,7 @@ const VillageDiary: React.FC = () => {
         <h1>마을일기</h1>
         <p className="diary-sub">프로그램을 따라 걷는 기록</p>
         {renderFilters(true)}
+        {renderEditControls()}
 
         {hasContent ? (
           <>

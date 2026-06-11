@@ -1,86 +1,85 @@
 import React from 'react';
 
-// ── 꿈다락 프로그램 캐릭터 PNG (고정 UI 자산, public 번들) ──────────────
+// ── 꿈다락 프로그램 캐릭터 PNG 플립북 (고정 UI 자산, public 번들) ──────────────
 //   기존 SVG 리그(MotionCharacter / chars-v2 프레임)를 사용자 제공 PNG 캐릭터로 교체.
 //   · 프로그램 식별은 PROGRAMS / VillageDiary 의 한글 name 기준(공백·구두점 정규화 폴백).
-//   · 투명 배경 RGBA PNG. ImageKit 이 아닌 public 정적 번들(고정 UI 라 단순·안정적).
+//   · 투명 배경 RGBA PNG. public 정적 번들(고정 UI 라 단순·안정적).
 //   · 매핑되지 않는 프로그램(예: 축제 '다시, 안녕')은 PNG 가 없어 null → 호출부가 폴백 렌더.
 //
-//   ── 모션루프(2026-06) ────────────────────────────────────────────
-//   정적 PNG 가 정지된 채로 보이던 문제를 해결하기 위해, PNG 를 감싸는 래퍼 <span> 에
-//   CSS 키프레임 루프(transform/opacity 만 → GPU)를 입힌다. 프로그램 성격별로 다른 모션을
-//   배정해 '전부 똑같이 둥실대는' 단조로움을 피한다. 애니메이션은 래퍼에만 걸어
-//   .program-rig-png(is-step 워크 트랜스폼)·.intro-char-rig(마을일기 크기) 컨텍스트와 분리한다.
-//   prefers-reduced-motion 은 kkumdarak.css 전역 규칙(.kkumdarak * animation 무력화)으로 정지.
+//   ── 6프레임 플립북(2026-06 복원) ────────────────────────────────────
+//   어제(c0dff11) 정적 PNG 1장 + CSS 흔들림(transform 루프)으로 바꾸며 6프레임 플립북이
+//   죽었다(1프레임만 표시). 사용자는 프레임 애니메이션을 원함 → MotionCharacter(chars-v2 SVG)
+//   와 동일한 .kd-loop-frame 6장 스택 + @keyframes kd-loop-6(steps(1,end) 1.5s, 음수 딜레이
+//   스태거) 메커니즘으로 복원한다. 각 캐릭터는 program-loops/character-NN/frame-0{1..6}.png 6장.
+//   모션은 플립북(프레임 교체)이 담당하므로 기존 CSS 흔들림(program-char-motion--*,
+//   program-char-png-motion)은 제거했다.
+//   prefers-reduced-motion 은 kkumdarak.css 전역 규칙 + .kd-loop-frame 규칙으로 첫 프레임만 정지.
 
-const BASE = '/kkumdarak/characters-png';
+const LOOP_BASE = '/kkumdarak/program-loops';
 
 // 정규화: 공백·쉼표·가운뎃점 등 제거 후 비교(표기 흔들림 흡수).
 const normalize = (s: string): string =>
   (s || '').replace(/[\s,·∙ㆍ]/g, '').toLowerCase();
 
-// 프로그램 캐릭터 정의: 정규화 name → { png, motion }.
-//   motion 은 캐릭터 성격에 맞춘 모션 키(아래 program-char-motion--{key} CSS 와 1:1).
-//     · breath  : 느린 숨쉬기(가만히 살아있음)        — 장암 책정(책 로봇, 묵직)
-//     · bounce  : 통통 튀기(활기찬 신호)              — 마을의 신호(말풍선 고양이)
-//     · sway    : 좌우 흔들(벼·바람결)                — 기억순환 정류장(벼 인사)
-//     · sprout  : 살짝 솟았다 가라앉는 새싹 호흡        — 손의 기억(새싹)
-//     · wave    : 팔 흔들 채집(손 들고 모으기)         — 소리일기(점박이, 팔 위로)
-//     · bloom   : 꽃이 피듯 가볍게 기울며 부풀기         — 풍경일기(흰 꽃)
-type CharMotion = 'breath' | 'bounce' | 'sway' | 'sprout' | 'wave' | 'bloom';
-
-interface CharDef {
-  png: string;
-  motion: CharMotion;
-}
-
-const CHAR_BY_NAME: Record<string, CharDef> = {
-  [normalize('장암 책정')]:     { png: `${BASE}/jangam-chaekjeong.png`, motion: 'breath' }, // 파란 책 로봇
-  [normalize('마을의 신호')]:   { png: `${BASE}/maeul-sinho.png`,       motion: 'bounce' }, // 주황 고양이+말풍선
-  [normalize('기억순환 정류장')]: { png: `${BASE}/gieok-sunhwan.png`,    motion: 'sway' },   // 노란 벼 인사
-  [normalize('손의 기억')]:     { png: `${BASE}/son-gieok.png`,         motion: 'sprout' }, // 초록 새싹
-  [normalize('소리일기')]:      { png: `${BASE}/sori-ilgi.png`,         motion: 'wave' },   // 검정 점박이
-  [normalize('풍경일기')]:      { png: `${BASE}/punggyeong-ilgi.png`,   motion: 'bloom' },  // 흰 꽃
+// 프로그램 캐릭터 정의: 정규화 name → character 폴더 id(program-loops/character-NN).
+//   매핑(확정, 마스코트=각 캐릭터의 frame-01 과 동일 그림):
+//     장암 책정      → character-16 (파란 책 로봇)
+//     마을의 신호    → character-15 (주황 고양이)
+//     기억순환 정류장 → character-12 (노란 벼)
+//     손의 기억      → character-18 (초록 새싹)
+//     소리일기       → character-09 (검정 점박이)
+//     풍경일기       → character-06 (흰 꽃)
+const CHAR_BY_NAME: Record<string, string> = {
+  [normalize('장암 책정')]:      'character-16',
+  [normalize('마을의 신호')]:    'character-15',
+  [normalize('기억순환 정류장')]: 'character-12',
+  [normalize('손의 기억')]:      'character-18',
+  [normalize('소리일기')]:       'character-09',
+  [normalize('풍경일기')]:       'character-06',
 };
 
-// 프로그램명으로 캐릭터 정의 조회(없으면 null).
-const charDefForName = (name?: string): CharDef | null =>
+// 프로그램명으로 캐릭터 폴더 id 조회(없으면 null).
+const charIdForName = (name?: string): string | null =>
   (name && CHAR_BY_NAME[normalize(name)]) || null;
 
-// 프로그램명으로 PNG 경로 조회(없으면 null). (호출부 폴백 분기 판단용 — 기존 시그니처 유지)
-export const characterPngForName = (name?: string): string | null =>
-  charDefForName(name)?.png || null;
+// 프로그램명으로 캐릭터 매핑 존재 여부(호출부 폴백 분기 판단용 — 기존 시그니처 유지).
+//   truthy(첫 프레임 경로) 면 ProgramCharacterPng 플립북을, falsy 면 MotionCharacter 폴백을 선택.
+export const characterPngForName = (name?: string): string | null => {
+  const id = charIdForName(name);
+  return id ? `${LOOP_BASE}/${id}/frame-01.png` : null;
+};
 
-// 프로그램명으로 모션 키 조회(없으면 null).
-export const characterMotionForName = (name?: string): CharMotion | null =>
-  charDefForName(name)?.motion || null;
-
-// PNG 캐릭터 렌더. PNG 가 없으면 null(호출부에서 기존 폴백 사용).
-//   래퍼 <span>(모션 루프) > <img>(아트). 모션은 래퍼에만 — img 는 크기만 담당.
+// PNG 6프레임 플립북 렌더. 매핑이 없으면 null(호출부에서 기존 폴백 사용).
+//   컨테이너(position:relative) > .kd-loop-frame 6장(absolute 스택). MotionCharacter 와 동일 구조.
+//   모션은 .kd-loop-frame 의 @keyframes kd-loop-6(steps) 가 담당 — 별도 흔들림 래퍼 없음.
 const ProgramCharacterPng: React.FC<{
   name?: string;
   alt?: string;
   className?: string;
 }> = ({ name, alt, className }) => {
-  const def = charDefForName(name);
-  if (!def) return null;
+  const id = charIdForName(name);
+  if (!id) return null;
   return (
-    <span
+    <div
       className={[
-        'program-char-png-motion',
-        `program-char-motion--${def.motion}`,
+        'program-char-loop',
+        `program-char-loop--${id}`,
         className,
       ].filter(Boolean).join(' ')}
-      data-motion={def.motion}
+      data-character={id}
+      style={{ position: 'relative' }}
     >
-      <img
-        src={def.png}
-        alt={alt || name || ''}
-        className="program-char-png"
-        loading="lazy"
-        draggable={false}
-      />
-    </span>
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <img
+          key={i}
+          src={`${LOOP_BASE}/${id}/frame-0${i}.png`}
+          alt={i === 1 ? (alt || name || '') : ''}
+          className="kd-loop-frame program-char-png"
+          loading="lazy"
+          draggable={false}
+        />
+      ))}
+    </div>
   );
 };
 

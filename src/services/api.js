@@ -1065,6 +1065,62 @@ export const kkumdarakNewsStatusAPI = {
   }
 };
 
+// VillageNews API — 「마을소식」 호(號) 편집 사본 영속화 (싱글톤 village_news 컬렉션)
+//   백엔드를 단일 진실 소스로. get 은 raw 객체 { issues: { [id]: SerializedNewsIssue } } 를 반환,
+//   save 는 동일한 raw 객체를 PUT body 로 보낸다. mergeIssues 가 정적 NEWS_ISSUES 와 병합한다.
+//   인증/캐시버스팅은 kkumdarakSettingsAPI 와 동일(kkumdarak_token, markCdnDirty/cdnBustUrl,
+//   401/403 → KKUM_AUTH_EXPIRED). 사이트 auth_token/getHeaders/handle401 는 절대 재사용하지 않는다.
+export const villageNewsAPI = {
+  // 편집 사본 조회 (공개) — mergeIssues 가 직접 소비하는 raw 객체 { issues } 반환(없으면 { issues: {} }).
+  //   ⚠️ Vercel Edge Cache 우회: GET 라우트가 s-maxage=60 을 보내므로 PUT 은 엣지 캐시를
+  //   무효화하지 못한다. 저장 시 markCdnDirty('village_news_updated') 로 표식, 이후 5분 창에서만
+  //   ?_t= 로 우회(저장 직후 재진입 구간) — 그 외 방문자는 엣지 캐시를 그대로 활용해 성능 유지.
+  get: async () => {
+    const response = await fetchWithRetry(
+      cdnBustUrl(`${API_BASE_URL}/village-news`, 'village_news_updated'),
+    );
+    if (!response.ok) {
+      throw new Error('Failed to fetch village news');
+    }
+    const data = await response.json();
+    const raw = data && data.success ? (data.data || {}) : {};
+    // issues 버킷만 반환(없으면 빈 객체). 항상 { issues } 형태로 정규화.
+    return { issues: raw.issues && typeof raw.issues === 'object' ? raw.issues : {} };
+  },
+
+  // 편집 사본 저장 (꿈다락 편집 인증 전용) — raw 객체 { issues } 를 통째로 PUT.
+  //   ⚠️ 호출측(NewsEditor)이 read-merge-write 로 다른 호를 보존한 전체 issues 를 넘긴다.
+  //   Authorization 은 kkumdarak_token 으로 직접 구성(getHeaders 재사용 금지).
+  //   401/403(만료·무효) → clearKkumdarakToken() 후 code 'KKUM_AUTH_EXPIRED' 로 throw.
+  save: async (payload) => {
+    const token = villageDiaryAPI.getKkumdarakToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const issues = payload && payload.issues && typeof payload.issues === 'object' ? payload.issues : {};
+    const response = await fetch(`${API_BASE_URL}/village-news`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ issues }),
+    });
+    if (response.status === 401 || response.status === 403) {
+      villageDiaryAPI.clearKkumdarakToken();
+      const err = new Error('꿈다락 인증이 만료되었습니다. 다시 로그인해주세요.');
+      err.code = 'KKUM_AUTH_EXPIRED';
+      throw err;
+    }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Failed to save village news (${response.status})`);
+    }
+    markCdnDirty('village_news_updated');
+    const data = await response.json();
+    const raw = data && data.success ? (data.data || {}) : {};
+    return { issues: raw.issues && typeof raw.issues === 'object' ? raw.issues : {} };
+  },
+};
+
 // Contact API
 export const contactAPI = {
   // Contact 설정 조회

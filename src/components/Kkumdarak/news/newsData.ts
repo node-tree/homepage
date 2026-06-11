@@ -338,3 +338,127 @@ const ISSUE_NO1: NewsIssue = {
 };
 
 export const NEWS_ISSUES: NewsIssue[] = [ISSUE_NO1];
+
+// ═══════════════════════════════════════════════════════════════
+// 직렬화 가능 블록 / 호 — 백엔드 편집 사본(village_news)의 형태
+//   Custom(render 함수) 블록은 JSON 직렬화 불가 → 백엔드/에디터에서 제외한다.
+//   에디터가 만들 수 있는 블록은 아래 7종(SerializableBlock)뿐.
+// ═══════════════════════════════════════════════════════════════
+export type SerializableBlock = Exclude<NewsBlock, CustomBlock>;
+
+// 에디터가 다루는 블록 종류(Custom 제외) — UI 의 "블록 추가" 메뉴 순서.
+export const EDITABLE_BLOCK_KINDS: SerializableBlock['kind'][] = [
+  'topStory',
+  'article',
+  'verse',
+  'photoSpread',
+  'collage',
+  'programBoard',
+  'noticeBox',
+];
+
+// 블록 종류 → 한글 라벨 + 한 줄 설명(에디터 "블록 추가" 메뉴용).
+export const BLOCK_KIND_META: Record<
+  SerializableBlock['kind'],
+  { label: string; hint: string }
+> = {
+  topStory: { label: '톱기사', hint: '1면 머리기사 — 초대형 헤드라인·리드·본문' },
+  article: { label: '기사', hint: '키커·헤드라인·다단 본문(드롭캡·인용 옵션)' },
+  verse: { label: '세로쓰기', hint: '시·구술 코너 — 세로로 흐르는 글' },
+  photoSpread: { label: '사진', hint: '사진/그림 + 캡션(여러 장 배치)' },
+  collage: { label: '콜라주', hint: '기울인 스크랩 모음 — 캐릭터·사진 겹치기' },
+  programBoard: { label: '공고란', hint: '프로그램 단신 게시판(번호·이름·기간 행)' },
+  noticeBox: { label: '사고(社告)', hint: '짧은 알림 박스 — 신호색 강조 가능' },
+};
+
+// 백엔드에 저장되는 호(號)의 형태. NewsIssue 와 같되 blocks 가 SerializableBlock[].
+export interface SerializedNewsIssue {
+  id: string;
+  no: number;
+  title: string;
+  dateline: string;
+  status?: NewsStatus;
+  theme: NewsTheme;
+  blocks: SerializableBlock[];
+}
+
+// 백엔드 편집 사본 페이로드(api.villageNewsAPI 가 주고받는 형태).
+export interface VillageNewsData {
+  issues: Record<string, SerializedNewsIssue>;
+}
+
+// ── 호 병합 ──────────────────────────────────────────────────────
+//   유효 호 목록 = 정적 NEWS_ISSUES + 백엔드 issues. 같은 id 면 백엔드가 우선
+//   (→ 창간호도 나중에 UI 에서 수정 가능). 정렬: no 내림차순(최신 위), 동률은 id.
+//   backend 가 undefined(콜드스타트 미도착)면 정적 목록만으로 낙관 렌더.
+export function mergeIssues(
+  backend?: Record<string, SerializedNewsIssue> | null,
+): NewsIssue[] {
+  const map = new Map<string, NewsIssue>();
+  // 1) 정적 기준선.
+  for (const it of NEWS_ISSUES) map.set(it.id, it);
+  // 2) 백엔드 사본으로 덮어쓰기/추가(같은 id 우선).
+  if (backend && typeof backend === 'object') {
+    for (const id of Object.keys(backend)) {
+      const b = backend[id];
+      if (b && typeof b === 'object' && typeof b.id === 'string') {
+        map.set(b.id, b as NewsIssue);
+      }
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => {
+    if (b.no !== a.no) return b.no - a.no;
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  });
+}
+
+// 정적(코드 내장) 호인지 — 에디터에서 "삭제"가 아니라 "정적본으로 되돌리기"가 되는 호.
+export function isStaticIssue(id: string): boolean {
+  return NEWS_ISSUES.some((it) => it.id === id);
+}
+
+// 다음 호수 제안값(현재 최대 no + 1). 빈 목록이면 1.
+export function suggestNextNo(issues: NewsIssue[]): number {
+  return issues.reduce((mx, it) => Math.max(mx, it.no), 0) + 1;
+}
+
+// ── 신문 테마 프리셋(에디터 팔레트) ──────────────────────────────
+//   임의 hex 산재 방지 + 신문에 어울리는 무드 6종. 자유 입력도 허용(에디터에서).
+export interface ThemePreset {
+  key: string;
+  label: string;
+  theme: NewsTheme;
+}
+export const THEME_PRESETS: ThemePreset[] = [
+  {
+    key: 'newsprint',
+    label: '뉴스프린트(창간호)',
+    theme: { paper: '#f6f2e7', ink: '#251b13', spot: '#f02e1f', spot2: '#0f7a38', texture: 'newsprint' },
+  },
+  {
+    key: 'dawn',
+    label: '새벽 미색·쪽빛',
+    theme: { paper: '#efeee4', ink: '#1b2430', spot: '#1f5f8f', spot2: '#c8632a', texture: 'newsprint' },
+  },
+  {
+    key: 'pine',
+    label: '한지·솔빛',
+    theme: { paper: '#f4f1e3', ink: '#20281f', spot: '#0f7a38', spot2: '#b5862f', texture: 'newsprint' },
+  },
+  {
+    key: 'persimmon',
+    label: '감빛·먹',
+    theme: { paper: '#f7efe0', ink: '#2a1d12', spot: '#d2691e', spot2: '#7a5c2e', texture: 'newsprint' },
+  },
+  {
+    key: 'plum',
+    label: '매화·자주',
+    theme: { paper: '#f5f0ea', ink: '#241a22', spot: '#9c2b54', spot2: '#5a7a4a', texture: 'newsprint' },
+  },
+  {
+    key: 'ink',
+    label: '먹·재(灰)',
+    theme: { paper: '#eceae3', ink: '#1c1c1a', spot: '#7a4a2e', spot2: '#4a4a48', texture: 'newsprint' },
+  },
+];
+
