@@ -1,1245 +1,420 @@
 /* ═══════════════════════════════════════════════════════════════
-   「마을소식」 — 이소(異素)의 웹 신문 (꿈다락 /iso#news)
-   뉴스 전용 스타일 전부 여기(VillageNews.tsx 가 import → lazy 청크에 동봉).
-
-   디자인 원칙
-     · 매체 정체성(제호·날짜줄·콜로폰)은 고정, 본문은 호별 가변.
-     · 색은 전부 --kd-news-* (호 테마가 주입). 임의 hex 산재 금지.
-     · 박스가 아니라 괘선으로 위계: 굵은=섹션 / 얇은=기사 / 이중=공고.
-     · 데스크톱 6단 신문 그리드 → 900px 이하 1단 리플로우.
-     · 명조(Noto Serif KR)=제호·헤드라인·본문 / 고딕(Gothic A1)=키커·캡션·라벨.
+   「마을소식」 — 이미지 기반 소식지 (꿈다락 /iso#news)
+   톤은 다른 꿈다락 섹션(소개·프로그램·일정·마을일기)과 통일한다:
+     · 흰 배경, kd 팔레트(--kd-pink/teal/yellow/purple/red).
+     · Gothic A1 / Jua h1 — 다른 섹션 h1 과 같은 폰트.
+     · 둥근 두꺼운 검정 테두리 카드(.program-card 동형: border 3-4px #1a1a1a,
+       border-radius 18-24, 흰 배경, 5px 오프셋 그림자).
+     · pill 버튼(둥근 알약), kicker(작은 컬러 라벨).
+   상단 6칸 진행바(.kd-section-rule--s6)는 현행 유지(top 94/88, left calc).
    ═══════════════════════════════════════════════════════════════ */
 
 .kd-news {
-  /* 호 테마가 못 주입됐을 때의 안전 기본값(창간호 톤) — 배경 흰색(사용자 요청, 일단) */
-  --kd-news-paper: #ffffff;
-  --kd-news-ink: #251b13;
-  --kd-news-spot: #f02e1f;
-  --kd-news-spot2: #0f7a38;
-  --kd-news-headline-font: 'Noto Serif KR', 'Nanum Myeongjo', serif;
-  --kd-news-body-font: 'Noto Serif KR', 'Nanum Myeongjo', serif;
-  --kd-news-label-font: 'Gothic A1', 'Noto Sans KR', system-ui, sans-serif;
-  --kd-news-rule: rgba(37, 27, 19, 0.92);
-  --kd-news-rule-thin: rgba(37, 27, 19, 0.45);
-
   position: relative;
-  background: var(--kd-news-paper);
-  color: var(--kd-news-ink);
+  background: #ffffff;
+  color: var(--kd-ink, #211914);
   min-height: 60vh;
-  /* 상단 클리어런스: 고정 헤더(.kd-header, 데스크톱 74px) 아래로 제호가 내려오도록.
-     다른 figma 섹션(padding-top:80px)과 같은 리듬 + 독립 헤어라인(섹션 룰) 자리 확보.
-     룰(.kd-section-rule, 아래에서 top 재정의)이 헤더와 제호 사이 헤어라인으로 노출된다. */
+  /* 상단 클리어런스: 고정 헤더 아래로 콘텐츠가 내려오도록(다른 섹션과 동일 리듬). */
   padding: 128px 0 96px;
   overflow: hidden;
+  --kdn-ink: #1a1a1a;
+  --kdn-accent: var(--kd-purple, #2F68D8);
+  font-family: var(--kd-font-body, 'Gothic A1', 'Noto Sans KR', system-ui, sans-serif);
 }
 
-/* ── 섹션 진행 괘선(s6) 위치 보정 — 뉴스 스코프 한정 ─────────────────
-   .kd-section-rule 베이스(공유, kkumdarak.css)는 position:absolute; top:14px 로,
-   컨테이닝 블록인 .kd-news 의 패딩 박스 상단(=섹션 top=0, 고정 헤더 뒤)에서 측정돼
-   빨강 토막이 헤더에 완전히 가려진다. 다른 5개 섹션은 룰이 padding 아래의
-   position:relative 자식(.kd-program-mobile 등) 안에 있어 자연히 헤더 아래
-   (데스크톱 ~94 / 모바일 ~88)로 내려간다. 뉴스는 룰이 .kd-news 직속이라 그 효과가
-   없으므로, 여기서 top 만 같은 렌더 위치로 재정의한다(공유 베이스는 불변 → 회귀 0). */
+/* ── 섹션 진행 괘선(s6) 위치 — 현행 유지(건드리지 말 것) ──────────── */
 .kd-news .kd-section-rule {
-  top: 94px;   /* 헤더(74) 아래 독립 헤어라인 — figma 데스크톱(80+14)과 동일 리듬 */
-  /* 뉴스 섹션은 전체폭(.kd-news)이라 base 의 left:120 이 뷰포트 좌측 고정 → 넓은 화면에서
-     중앙정렬된 콘텐츠(masthead/sheet) 대비 왼쪽으로 쏠린다. 다른 섹션의 1440 중앙 컨테이너와
-     동일하게 바도 뷰포트 중앙정렬로 고정(width 1200 → 좌우 50%-600px). 1440 에선 120 으로 동일. */
-  left: calc(50% - 600px);
+  top: 94px;                     /* 헤더(74) 아래 독립 헤어라인 */
+  left: calc(50% - 600px);       /* 1440 중앙 컨테이너와 동일(좌우 50%-600px) */
 }
 
-/* ── 종이결 노이즈 (인라인 SVG, 고정·비상호작용) ─────────────────
-   DOM 비용 최소화: 스크롤 컨테이너가 아닌 고정 오버레이에만 필터 적용. */
-.kdn-noise {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  opacity: 0.05;
-  mix-blend-mode: multiply;
-  z-index: 0;
-}
-
-/* 지면 시트 — 신문 한 면의 폭(고정 캔버스 1240px, 가운데) */
-.kd-news-sheet {
+/* 콘텐츠 캔버스(중앙 1200) */
+.kdn-wrap {
   position: relative;
   z-index: 1;
-  max-width: 1240px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 0 40px;
 }
 
 /* ───────────────────────────────────────────────────────────────
-   제호(마스트헤드) — 명조 초대형 로고타입 + 부엉이·반딧불이 컷
+   섹션 헤더 — kicker + 큰 Gothic/Jua h1 + 서브타이틀
    ─────────────────────────────────────────────────────────────── */
-.kdn-masthead {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: clamp(16px, 3vw, 40px);
-  padding-bottom: 14px;
-  border-bottom: 5px solid var(--kd-news-ink);
-}
-
-.kdn-masthead-cut {
-  display: inline-flex;
-  color: var(--kd-news-ink);
-}
-.kdn-cut-svg {
-  width: clamp(48px, 7vw, 84px);
-  height: auto;
-  display: block;
-}
-.kdn-masthead-cut--firefly { color: var(--kd-news-ink); }
-
-.kdn-masthead-center {
-  text-align: center;
-  min-width: 0;
-}
-.kdn-masthead-title {
-  /* 제호 폰트 Jua (사용자 요청) — 단일 weight 라 900 대신 400, 오버프린트 그림자 제거 */
-  font-family: 'Jua', 'Gothic A1', 'Noto Sans KR', sans-serif;
-  font-weight: 400;
-  font-size: clamp(52px, 11vw, 132px);
-  line-height: 0.92;
-  letter-spacing: 0.04em;
-  margin: 0;
-  color: var(--kd-news-ink);
-}
-.kdn-masthead-motto {
-  font-family: var(--kd-news-label-font);
-  font-weight: 700;
-  font-size: clamp(11px, 1.5vw, 15px);
-  letter-spacing: 0.18em;
-  margin: 10px 0 0;
-  color: var(--kd-news-ink);
-  opacity: 0.82;
-}
-
-/* ───────────────────────────────────────────────────────────────
-   날짜줄(Folio) — 이중 괘선(double rule) 사이. 신문다움의 절반.
-   ─────────────────────────────────────────────────────────────── */
-.kdn-folio {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px 20px;
-  margin-top: 5px;
-  padding: 7px 0;
-  /* 위는 제호의 굵은 선, 아래로 이중선을 더해 'Folio band' 완성 */
-  border-top: 2px solid var(--kd-news-ink);
-  border-bottom: 2px solid var(--kd-news-ink);
-  box-shadow: inset 0 4px 0 -2.5px var(--kd-news-paper), inset 0 -4px 0 -2.5px var(--kd-news-paper);
-}
-.kdn-folio-line {
-  font-family: var(--kd-news-label-font);
-  font-weight: 700;
-  font-size: clamp(11px, 1.4vw, 14px);
-  letter-spacing: 0.04em;
-  margin: 0;
-  color: var(--kd-news-ink);
-}
-.kdn-folio-archive {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.kdn-folio-archive-label {
-  font-family: var(--kd-news-label-font);
-  font-weight: 800;
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--kd-news-ink);
-  opacity: 0.6;
-}
-.kdn-folio-only { opacity: 0.7; }
-.kdn-folio-issue {
-  font-family: var(--kd-news-label-font);
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  padding: 2px 9px;
-  border: 1.5px solid var(--kd-news-ink);
-  background: transparent;
-  color: var(--kd-news-ink);
-  cursor: pointer;
-  border-radius: 999px;
-  transition: background 0.18s ease, color 0.18s ease;
-}
-.kdn-folio-issue:hover { background: var(--kd-news-ink); color: var(--kd-news-paper); }
-.kdn-folio-issue.is-active { background: var(--kd-news-spot); border-color: var(--kd-news-spot); color: #fff; }
-
-/* ───────────────────────────────────────────────────────────────
-   6단 신문 그리드 — 블록 배열 순서 + span 이 곧 지면 조판
-   ─────────────────────────────────────────────────────────────── */
-.kdn-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  column-gap: 0;          /* 컬럼 사이는 column-rule(세로 괘선)이 가른다 */
-  row-gap: 0;
-  margin-top: 18px;
-}
-
-/* 블록 공통 — 괘선 위계는 상단 보더로, 세로 괘선은 좌측 보더로 */
-.kdn-block {
-  position: relative;
-  padding: 22px 26px 26px;
-  min-width: 0;
-}
-.kdn-span-full { grid-column: span 6; }
-.kdn-span-half { grid-column: span 3; }
-.kdn-span-third { grid-column: span 2; }
-
-/* 인접 블록 사이 세로 괘선(신문 단 구분) — half/third 가 나란히 설 때 */
-.kdn-span-half + .kdn-span-half,
-.kdn-span-third + .kdn-span-third,
-.kdn-span-half + .kdn-span-third,
-.kdn-span-third + .kdn-span-half {
-  border-left: 1px solid var(--kd-news-rule-thin);
-}
-
-/* 상단 괘선 위계 */
-.kdn-rule-bold { border-top: 3px solid var(--kd-news-rule); margin-top: 8px; }
-.kdn-rule-thin { border-top: 1px solid var(--kd-news-rule-thin); }
-.kdn-rule-double {
-  border-top: 3px double var(--kd-news-rule);
-  padding-top: 26px;
-  margin-top: 8px;
-}
-
-/* 먹면 반전 / 신호색 면 */
-.kdn-tone-ink {
-  background: var(--kd-news-ink);
-  color: var(--kd-news-paper);
-}
-.kdn-tone-ink .kdn-kicker,
-.kdn-tone-ink .kdn-byline { color: var(--kd-news-paper); opacity: 0.8; }
-.kdn-tone-spot { color: var(--kd-news-ink); }
-
-/* 스크랩 기울임 — 회전해도 가로 overflow 를 만들지 않게 컨테이너가 클리핑 */
-.kdn-rotated { transform: rotate(var(--kdn-rotate, 0deg)); }
-
-/* ── 공통 타이포 ───────────────────────────────────────────────── */
+.kdn-head { margin-bottom: 28px; }
 .kdn-kicker {
-  font-family: var(--kd-news-label-font);
-  font-weight: 800;
-  font-size: 12px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--kd-news-spot);     /* 키커 = 신호색 라벨 */
-  margin: 0 0 10px;
+  margin: 0 0 6px;
+  font-family: var(--kd-font-head, 'Gothic A1', 'Noto Sans KR', sans-serif);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--kd-purple, #2F68D8);
 }
-.kdn-deck {
-  font-family: var(--kd-news-headline-font);
+.kdn-title {
+  margin: 0;
+  font-family: 'Jua', var(--kd-font-head, 'Gothic A1', 'Noto Sans KR', sans-serif);
+  font-size: 44px;
   font-weight: 400;
-  font-size: clamp(15px, 2vw, 21px);
-  line-height: 1.4;
-  color: var(--kd-news-ink);
-  opacity: 0.86;
-  margin: 0 0 14px;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  color: #251b13;
 }
-.kdn-byline {
-  font-family: var(--kd-news-label-font);
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  color: var(--kd-news-ink);
-  opacity: 0.62;
-  margin: 12px 0 0;
-}
-.kdn-para {
-  font-family: var(--kd-news-body-font);
-  font-weight: 400;
-  font-size: 16px;
-  line-height: 1.78;
-  letter-spacing: -0.005em;
-  color: var(--kd-news-ink);
-  margin: 0 0 1em;
-  text-align: justify;
-  word-break: keep-all;        /* 한글 어절 보존 */
-}
-.kdn-para:last-child { margin-bottom: 0; }
-
-/* ── TopStory (1면 톱) ─────────────────────────────────────────── */
-.kdn-topstory { padding-top: 14px; }
-.kdn-cut {
-  font-family: var(--kd-news-headline-font);
-  font-weight: 900;
-  font-size: clamp(34px, 6.4vw, 78px);
-  line-height: 1.02;
-  letter-spacing: -0.01em;
-  margin: 0 0 8px;
-  color: var(--kd-news-ink);
-  word-break: keep-all;        /* 거대 헤드라인이 글자 단위로 끊겨 넘치지 않게 */
-}
-.kdn-topstory-body {
-  margin-top: 18px;
-  /* 톱 본문은 데스크톱에서 3단으로 흐른다 */
-  columns: 3;
-  column-gap: 32px;
-  column-rule: 1px solid var(--kd-news-rule-thin);
-}
-.kdn-topstory-body .kdn-para { break-inside: avoid-column; }
-.kdn-lead {
-  font-family: var(--kd-news-body-font);
-  font-weight: 700;
-  font-size: 18px;
-  line-height: 1.7;
-  color: var(--kd-news-ink);
-  margin: 0 0 1em;
-  word-break: keep-all;
+.kdn-subtitle {
+  margin: 10px 0 0;
+  font-family: var(--kd-font-body, 'Gothic A1', sans-serif);
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(33, 25, 20, 0.6);
 }
 
-/* ── Article (멀티컬럼 + 드롭캡) ───────────────────────────────── */
-.kdn-article-head { margin-bottom: 16px; }
-.kdn-headline {
-  font-family: var(--kd-news-headline-font);
-  font-weight: 900;
-  font-size: clamp(26px, 4vw, 44px);
-  line-height: 1.08;
-  letter-spacing: -0.01em;
-  margin: 0 0 8px;
-  color: var(--kd-news-ink);
-  word-break: keep-all;
-}
-.kdn-article-body { position: relative; }
-.kdn-cols-2 .kdn-article-body {
-  columns: 2;
-  column-gap: 30px;
-  column-rule: 1px solid var(--kd-news-rule-thin);
-}
-.kdn-cols-3 .kdn-article-body {
-  columns: 3;
-  column-gap: 28px;
-  column-rule: 1px solid var(--kd-news-rule-thin);
-}
-.kdn-article-body .kdn-para { break-inside: avoid-column; }
-
-/* 드롭캡 — 첫 글자를 명조 3줄 높이로 */
-.kdn-dropcap > .kdn-para:first-of-type::first-letter {
-  font-family: var(--kd-news-headline-font);
-  font-weight: 900;
-  float: left;
-  font-size: 3.4em;
-  line-height: 0.78;
-  padding: 0.06em 0.1em 0 0;
-  margin-right: 0.04em;
-  color: var(--kd-news-spot);   /* 첫 글자 = 신호색(반딧불이의 발화) */
-}
-
-/* 발췌 인용 */
-.kdn-pullquote {
-  font-family: var(--kd-news-headline-font);
-  font-weight: 700;
-  font-size: clamp(20px, 2.6vw, 30px);
-  line-height: 1.32;
-  color: var(--kd-news-ink);
-  margin: 22px 0 4px;
-  padding: 16px 0;
-  border-top: 2px solid var(--kd-news-ink);
-  border-bottom: 2px solid var(--kd-news-ink);
-  word-break: keep-all;
-}
-
-/* ── Verse (세로쓰기) — 부엉이의 '기억' 정서 ───────────────────── */
-.kdn-verse {
+/* ── 편집자 툴바 ──────────────────────────────────────────────── */
+.kdn-toolbar {
   display: flex;
-  flex-direction: column;
-}
-.kdn-verse-title {
-  font-family: var(--kd-news-headline-font);
-  font-weight: 700;
-  font-size: clamp(20px, 2.4vw, 28px);
-  margin: 0 0 16px;
-  color: var(--kd-news-ink);
-}
-.kdn-verse-body {
-  writing-mode: vertical-rl;
-  text-orientation: upright;
-  height: clamp(280px, 34vw, 420px);
-  display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 0 14px;
-  align-content: flex-start;
-  margin: 0 0 14px;
-  padding: 4px 2px;
-  border-right: 2px solid var(--kd-news-rule);
-  border-left: 1px solid var(--kd-news-rule-thin);
+  gap: 12px 16px;
+  margin-bottom: 22px;
 }
-.kdn-verse-line {
-  font-family: var(--kd-news-headline-font);
-  font-weight: 400;
-  font-size: 17px;
-  line-height: 1.9;
-  letter-spacing: 0.06em;
-  color: var(--kd-news-ink);
+.kdn-editor-note {
   margin: 0;
-}
-.kdn-verse-attr {
-  font-family: var(--kd-news-label-font);
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  color: var(--kd-news-ink);
-  opacity: 0.62;
-  margin: 0;
-}
-
-/* ── PhotoSpread ───────────────────────────────────────────────── */
-.kdn-photospread { margin: 0; }
-.kdn-photospread-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
-}
-.kdn-photo {
-  width: 100%;
-  height: auto;
-  display: block;
-  border: 1px solid var(--kd-news-rule-thin);
-  filter: grayscale(0.18) contrast(1.02);
-}
-
-/* ── Collage (스크랩 모드) — 이소 캐릭터·마스코트 ──────────────── */
-.kdn-collage { margin: 0; }
-.kdn-collage-title,
-.kdn-board-title {
-  font-family: var(--kd-news-label-font);
-  font-weight: 800;
+  font-family: var(--kd-font-body, 'Gothic A1', sans-serif);
   font-size: 13px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--kd-news-ink);
-  margin: 0 0 14px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--kd-news-rule-thin);
+  font-weight: 600;
+  color: rgba(33, 25, 20, 0.6);
 }
-.kdn-collage-stage {
-  display: flex;
-  flex-wrap: wrap;
+
+/* ───────────────────────────────────────────────────────────────
+   pill 버튼(둥근 알약) — 다른 섹션 톤과 통일
+   ─────────────────────────────────────────────────────────────── */
+.kdn-pill {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(10px, 2vw, 24px);
-  padding: 14px 6px 18px;
-  min-height: 140px;
-}
-.kdn-scrap {
-  display: inline-flex;
-  padding: 6px;
-  background: #fff;
-  /* 스크랩 사진 느낌의 흰 여백 + 미세 그림자(배경 톤) — ink 변수 기반(값 중복 제거) */
-  box-shadow: 0 3px 10px -4px color-mix(in srgb, var(--kd-news-ink) 35%, transparent);
-  border: 1px solid color-mix(in srgb, var(--kd-news-ink) 12%, transparent);
-}
-.kdn-scrap img {
-  display: block;
-  width: clamp(76px, 12vw, 132px);
-  /* 1:1 근사 박스를 예약 → 큰 SVG(base64 PNG 내장) 디코드 전에도 스크랩이
-     슬리버로 붕괴하지 않아 '캐릭터 1개+빈 공백' 깜빡임이 사라진다. */
-  aspect-ratio: 1 / 1;
-  height: auto;
-  object-fit: contain;
-  mix-blend-mode: multiply;     /* 잉크 오버프린트 */
-}
-
-/* ── ProgramBoard (공고란) ─────────────────────────────────────── */
-.kdn-board-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  /* 공고는 데스크톱에서 2단으로(신문 안내란 톤) */
-  columns: 2;
-  column-gap: 36px;
-}
-.kdn-board-item {
-  display: flex;
-  gap: 12px;
-  padding: 11px 0;
-  border-top: 1px dotted var(--kd-news-rule-thin);
-  break-inside: avoid;
-}
-.kdn-board-item:first-child { border-top: 0; }
-.kdn-board-no {
-  font-family: var(--kd-news-headline-font);
-  font-weight: 900;
-  font-size: 18px;
-  line-height: 1.2;
-  color: var(--kd-news-spot);
-  flex: 0 0 auto;
-}
-.kdn-board-text { min-width: 0; }
-.kdn-board-name {
-  font-family: var(--kd-news-headline-font);
-  font-weight: 700;
-  font-size: 16px;
-  color: var(--kd-news-ink);
-  margin: 0 0 2px;
-  word-break: keep-all;
-}
-.kdn-board-field {
-  font-family: var(--kd-news-label-font);
-  font-weight: 700;
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  color: var(--kd-news-ink);
-  opacity: 0.55;
-  margin-left: 4px;
-}
-.kdn-board-meta {
-  font-family: var(--kd-news-label-font);
-  font-weight: 400;
-  font-size: 12.5px;
-  color: var(--kd-news-ink);
-  opacity: 0.8;
-  margin: 0;
-}
-.kdn-board-extra {
-  font-family: var(--kd-news-label-font);
-  font-size: 12px;
-  font-style: italic;
-  color: var(--kd-news-ink);
-  opacity: 0.66;
-  margin: 2px 0 0;
-  word-break: keep-all;
-}
-.kdn-board-footer {
-  font-family: var(--kd-news-label-font);
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.03em;
-  color: var(--kd-news-ink);
-  margin: 16px 0 0;
-  padding-top: 12px;
-  border-top: 2px solid var(--kd-news-ink);
-  word-break: keep-all;
-}
-
-/* ── NoticeBox (사고) — 신호색 면 ──────────────────────────────── */
-.kdn-notice.kdn-tone-spot {
-  background: transparent;
-  border-top: 3px double var(--kd-news-spot);
-  border-bottom: 3px double var(--kd-news-spot);
-}
-.kdn-notice-label {
-  font-family: var(--kd-news-label-font);
+  gap: 6px;
+  font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
+  font-size: 14px;
   font-weight: 800;
-  font-size: 12px;
-  letter-spacing: 0.18em;
-  color: var(--kd-news-spot);
-  margin: 0 0 6px;
-}
-.kdn-notice-body {
-  font-family: var(--kd-news-headline-font);
-  font-weight: 700;
-  font-size: clamp(15px, 2vw, 19px);
-  line-height: 1.5;
-  color: var(--kd-news-ink);
-  margin: 0;
-  word-break: keep-all;
-}
-
-/* ── 콜로폰(판권) ──────────────────────────────────────────────── */
-.kdn-colophon {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px 22px;
-  margin-top: 28px;
-  padding-top: 18px;
-  border-top: 4px solid var(--kd-news-ink);
-}
-.kdn-colophon-mark {
-  font-family: var(--kd-news-headline-font);
-  font-weight: 900;
-  font-size: 30px;
-  letter-spacing: 0.06em;
-  color: var(--kd-news-ink);
-}
-.kdn-colophon-lines {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 16px;
-}
-.kdn-colophon-lines li {
-  font-family: var(--kd-news-label-font);
-  font-weight: 400;
-  font-size: 12px;
-  letter-spacing: 0.02em;
-  color: var(--kd-news-ink);
-  opacity: 0.78;
-  position: relative;
-}
-.kdn-colophon-lines li + li::before {
-  content: '·';
-  position: absolute;
-  left: -9px;
-  opacity: 0.5;
-}
-
-/* ── 빈 상태 ───────────────────────────────────────────────────── */
-.kdn-empty {
-  max-width: 600px;
-  margin: 0 auto;
-  text-align: center;
-  padding: 80px 24px;
-  font-family: var(--kd-news-headline-font);
-  color: var(--kd-news-ink);
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   공개 상태 (스프린트 2) — 준비중(draft)/교정쇄 + 사고풍 플레이스홀더
-   빨강(spot)은 절제: 라벨·스탬프 테두리·도장에만. 면 전체를 빨강으로 칠하지 않는다.
-   ═══════════════════════════════════════════════════════════════ */
-
-/* ── 발행 호 0개 플레이스홀더 — 신문 프레임 유지한 사고(社告) ───── */
-.kd-news--placeholder {
-  /* 본문이 적어 화면이 빌 수 있으니 최소 높이를 넉넉히(밋밋한 빈화면 금지) */
-  min-height: 72vh;
-}
-.kdn-coming {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 10px;
-  /* 이중 괘선 박스 — 신문 사고란 톤 */
-  margin: 40px auto 12px;
-  padding: clamp(40px, 7vw, 76px) 24px;
-  max-width: 720px;
-  border-top: 3px double var(--kd-news-ink);
-  border-bottom: 3px double var(--kd-news-ink);
-}
-.kdn-coming-cuts {
-  display: inline-flex;
-  align-items: flex-end;
-  gap: clamp(14px, 3vw, 30px);
-  color: var(--kd-news-ink);
-  margin-bottom: 8px;
-}
-.kdn-coming-cut {
-  width: clamp(54px, 9vw, 88px);
-  height: auto;
-  display: block;
-}
-.kdn-coming-label {
-  font-family: var(--kd-news-label-font);
-  font-weight: 800;
-  font-size: 12px;
-  letter-spacing: 0.2em;
-  color: var(--kd-news-spot);   /* 신호색 라벨(반딧불이) — 절제된 1점 */
-  margin: 0;
-}
-.kdn-coming-headline {
-  font-family: var(--kd-news-headline-font);
-  font-weight: 900;
-  font-size: clamp(28px, 5vw, 46px);
-  line-height: 1.12;
-  letter-spacing: -0.01em;
-  color: var(--kd-news-ink);
-  margin: 2px 0 6px;
-  word-break: keep-all;
-}
-.kdn-coming-body {
-  font-family: var(--kd-news-body-font);
-  font-weight: 400;
-  font-size: clamp(14px, 1.8vw, 17px);
-  line-height: 1.7;
-  color: var(--kd-news-ink);
-  opacity: 0.84;
-  margin: 0;
-  max-width: 46ch;
-  word-break: keep-all;
-}
-
-/* ── 아카이브 「준비중」 태그 (편집자 전용 노출) ─────────────────── */
-.kdn-folio-draft-tag {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 1px 6px;
-  font-family: var(--kd-news-label-font);
-  font-weight: 800;
-  font-size: 9.5px;
-  letter-spacing: 0.1em;
-  line-height: 1.5;
-  color: var(--kd-news-spot);
-  border: 1px solid var(--kd-news-spot);
-  border-radius: 2px;
-  vertical-align: middle;
-  background: var(--kd-news-paper);
-}
-/* draft 호 아카이브 칩 — 점선 외곽으로 '미발행' 신호(활성 시 spot 채움은 유지) */
-.kdn-folio-issue.is-draft {
-  border-style: dashed;
-}
-.kdn-folio-issue.is-draft .kdn-folio-draft-tag {
-  /* 칩 안의 태그는 칩 색을 따르도록(활성/호버 대비 유지) */
-  color: inherit;
-  border-color: currentColor;
-  background: transparent;
-}
-.kdn-folio-issue.is-active .kdn-folio-draft-tag { color: #fff; border-color: rgba(255,255,255,0.8); }
-/* 단일 호일 때 folio-only 라벨 옆 태그는 spot 유지 */
-.kdn-folio-only .kdn-folio-draft-tag { vertical-align: middle; }
-
-/* ── 편집자 도구막대 — 교정쇄 상태 + 공개/준비중 토글 ───────────── */
-.kdn-editbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px 18px;
-  margin-top: 16px;
-  padding: 12px 16px;
-  border: 1.5px solid var(--kd-news-ink);
-  background: color-mix(in srgb, var(--kd-news-ink) 4%, transparent);
-}
-.kdn-editbar.is-draft {
-  /* 준비중일 때만 신호색 외곽(절제) — 면은 칠하지 않고 테두리·도장으로만 */
-  border-color: var(--kd-news-spot);
-  border-style: dashed;
-  background: color-mix(in srgb, var(--kd-news-spot) 5%, transparent);
-}
-.kdn-editbar-status {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-.kdn-stamp {
-  flex: 0 0 auto;
-  font-family: var(--kd-news-label-font);
-  font-weight: 800;
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  padding: 4px 10px;
-  border: 2px solid var(--kd-news-ink);
-  border-radius: 3px;
-  /* 신문 도장 느낌의 미세 기울임 */
-  transform: rotate(-1.5deg);
-}
-.kdn-stamp.is-published {
-  color: var(--kd-news-ink);
-  border-color: var(--kd-news-ink);
-}
-.kdn-stamp.is-draft {
-  color: var(--kd-news-spot);
-  border-color: var(--kd-news-spot);
-}
-.kdn-editbar-desc {
-  font-family: var(--kd-news-label-font);
-  font-weight: 600;
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--kd-news-ink);
-  opacity: 0.78;
-  word-break: keep-all;
-}
-.kdn-editbar-actions { flex: 0 0 auto; }
-.kdn-toggle-btn {
-  font-family: var(--kd-news-label-font);
-  font-weight: 800;
-  font-size: 13px;
-  letter-spacing: 0.04em;
-  padding: 7px 16px;
-  border: 2px solid var(--kd-news-ink);
-  background: var(--kd-news-ink);
-  color: var(--kd-news-paper);
-  cursor: pointer;
-  border-radius: 3px;
-  transition: opacity 0.16s ease, background 0.16s ease, color 0.16s ease;
-}
-.kdn-toggle-btn:hover { opacity: 0.86; }
-.kdn-toggle-btn:disabled { opacity: 0.55; cursor: progress; }
-/* '공개하기'(draft→published) 는 신호색 채움으로 행동 강조(절제된 1버튼) */
-.kdn-toggle-btn.to-publish {
-  background: var(--kd-news-spot);
-  border-color: var(--kd-news-spot);
-  color: #fff;
-}
-/* '준비중으로'(published→draft) 는 외곽선 버튼(되돌리는 행동은 덜 강조) */
-.kdn-toggle-btn.to-draft {
-  background: transparent;
-  color: var(--kd-news-ink);
-}
-.kdn-toggle-btn.to-draft:hover {
-  background: var(--kd-news-ink);
-  color: var(--kd-news-paper);
-  opacity: 1;
-}
-.kdn-editbar-error {
-  flex: 1 0 100%;
-  font-family: var(--kd-news-label-font);
-  font-weight: 700;
-  font-size: 12px;
-  color: var(--kd-news-spot);
-  margin: 4px 0 0;
-}
-
-/* ── 교정쇄 배너 — draft 호 본문 상단(편집자만 도달) ─────────────── */
-.kdn-proof-banner {
-  margin-top: 14px;
-  padding: 8px 0;
-  text-align: center;
-  /* 점선 이중 괘선 사이 빗금 — '교정쇄(PROOF)' 워터마크 톤 */
-  border-top: 2px dashed var(--kd-news-spot);
-  border-bottom: 2px dashed var(--kd-news-spot);
-  background: repeating-linear-gradient(
-    -45deg,
-    color-mix(in srgb, var(--kd-news-spot) 7%, transparent) 0,
-    color-mix(in srgb, var(--kd-news-spot) 7%, transparent) 10px,
-    transparent 10px,
-    transparent 22px
-  );
-}
-.kdn-proof-banner-text {
-  font-family: var(--kd-news-label-font);
-  font-weight: 800;
-  font-size: 12px;
-  letter-spacing: 0.24em;
-  color: var(--kd-news-spot);
-}
-
-/* 모바일 — 도구막대/플레이스홀더 적층 정돈 */
-@media (max-width: 900px) {
-  .kdn-editbar { flex-direction: column; align-items: stretch; gap: 10px; }
-  .kdn-editbar-actions { display: flex; }
-  .kdn-toggle-btn { width: 100%; }
-  .kdn-coming { padding: 44px 18px; margin-top: 28px; }
-}
-
-/* ───────────────────────────────────────────────────────────────
-   진입 모션 — 신문은 정적인 게 멋. 페이드 + 괘선 그려지기 정도만.
-   ─────────────────────────────────────────────────────────────── */
-@keyframes kdn-rule-draw {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
-}
-@keyframes kdn-fade-up {
-  from { opacity: 0; transform: translateY(14px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.kdn-masthead { transform-origin: center; }
-.kdn-masthead-center { animation: kdn-fade-up 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
-.kdn-folio { animation: kdn-fade-up 0.5s 0.08s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
-.kdn-masthead { border-bottom-color: var(--kd-news-ink); }
-/* 제호 굵은 괘선이 좌→우로 그려지는 인상(의사요소로 오버레이) */
-.kdn-masthead::after {
-  content: '';
-  position: absolute;
-  display: none;
-}
-
-/* reduced-motion: 모든 진입 모션 정지(즉시 표시) */
-.kd-news.kdn-reduced .kdn-masthead-center,
-.kd-news.kdn-reduced .kdn-folio {
-  animation: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  .kdn-masthead-center,
-  .kdn-folio { animation: none !important; }
-}
-
-/* ───────────────────────────────────────────────────────────────
-   반응형 — 1024px: 그리드 완화 / 900px 이하: 1단 리플로우
-   제호·날짜줄·괘선의 신문다움은 모바일에서도 유지.
-   ─────────────────────────────────────────────────────────────── */
-@media (max-width: 1024px) {
-  .kdn-topstory-body { columns: 2; }
-  .kdn-cols-3 .kdn-article-body { columns: 2; }
-}
-
-@media (max-width: 900px) {
-  .kd-news {
-    /* 모바일 헤더(.kd-header 66px) 아래로 제호 클리어런스 + 룰 헤어라인 자리.
-       데스크톱(128)보다 작게: 모바일 룰 top(88, 아래) + 제호까지의 간격. */
-    padding: 104px 0 64px;
-  }
-  /* 모바일 룰 위치 — figma 프로그램 모바일 실측(top=88)과 동일 리듬.
-     헤더(66) 아래 독립 헤어라인으로 또렷이 노출(빨강 토막 포함). */
-  .kd-news .kd-section-rule { top: 88px; left: 20px; }  /* 모바일은 base 와 동일 좌측(데스크톱 중앙정렬 left 무력화) */
-
-  .kd-news-sheet { padding: 0 18px; }
-
-  /* 제호 — 부엉이·반딧불이 컷을 제호 위로 올려 가로 폭 확보 */
-  .kdn-masthead {
-    grid-template-columns: 1fr;
-    justify-items: center;
-    gap: 6px;
-    text-align: center;
-  }
-  .kdn-masthead-cut--owl { order: 0; }
-  .kdn-masthead-center { order: 1; }
-  .kdn-masthead-cut--firefly { order: 0; }
-  /* 두 컷을 한 줄로 나란히: center 를 사이에 두지 않도록 묶기 어려우니
-     컷을 작게 + 제호를 큼직하게 유지(세로 적층). */
-  .kdn-cut-svg { width: 46px; }
-  .kdn-masthead-title { font-size: clamp(46px, 17vw, 76px); letter-spacing: 0.02em; }
-  .kdn-masthead-motto { letter-spacing: 0.1em; }
-
-  .kdn-folio { flex-direction: column; align-items: flex-start; gap: 6px; }
-
-  /* 본문 전면 1단 리플로우 */
-  .kdn-grid { display: block; margin-top: 14px; }
-  .kdn-block { padding: 18px 2px 22px; border-left: 0 !important; }
-  .kdn-span-full,
-  .kdn-span-half,
-  .kdn-span-third { grid-column: auto; }
-
-  /* 인접 half/third 의 세로 괘선 제거 → 1단에서는 상단 얇은 괘선으로 분리 */
-  .kdn-span-half + .kdn-span-half,
-  .kdn-span-third + .kdn-span-third,
-  .kdn-span-half + .kdn-span-third,
-  .kdn-span-third + .kdn-span-half {
-    border-left: 0;
-    border-top: 1px solid var(--kd-news-rule-thin);
-  }
-
-  /* 다단 본문 전부 1단 */
-  .kdn-topstory-body,
-  .kdn-cols-2 .kdn-article-body,
-  .kdn-cols-3 .kdn-article-body {
-    columns: 1;
-    column-rule: 0;
-  }
-  .kdn-board-list { columns: 1; }
-
-  /* ── 세로쓰기(verse) — 모바일에서 우측 가장자리에 빠듯하게 붙던 문제 해결.
-     vertical-rl 은 첫 행이 오른쪽에서 시작하므로, 컨테이너 우측에 여백을 줘
-     첫 컬럼이 시트 끝(우측)에 닿지 않게 한다. 높이도 약간 낮춰 1단에 안착. */
-  .kdn-verse-body {
-    height: clamp(220px, 60vw, 320px);
-    padding: 6px 10px 6px 4px;     /* 우측 10px 여백으로 첫 행 클리어런스 */
-    margin-right: 4px;
-    box-sizing: border-box;
-  }
-  .kdn-verse-attr { margin-top: 4px; }
-
-  /* ── 콜라주(스크랩) — 모바일 재배치.
-     flex-wrap 으로 들쭉날쭉하던 것을 자동 그리드(auto-fit)로 바꿔 전 아이템이
-     균등 칸에 안착(기울임·겹침감은 rotate/scale 로 유지). 작은 화면에서도
-     2~3열로 깔끔히 채워져 '캐릭터 1개+빈 공백' 이 사라진다. */
-  .kdn-collage-stage {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
-    justify-items: center;
-    align-items: center;
-    gap: 12px 10px;
-    padding: 12px 2px 14px;
-    min-height: 0;
-  }
-  .kdn-scrap {
-    /* 회전·확대가 인접 칸을 침범하지 않도록 칸 안에서 안전하게 축소 */
-    max-width: 100%;
-  }
-  .kdn-scrap img {
-    width: clamp(64px, 22vw, 96px);
-  }
-
-  .kdn-cut { font-size: clamp(30px, 9vw, 52px); }
-  .kdn-headline { font-size: clamp(24px, 7vw, 36px); }
-}
-
-@media (max-width: 480px) {
-  .kdn-masthead-title { font-size: clamp(40px, 19vw, 64px); }
-  .kdn-para { font-size: 15.5px; text-align: left; }
-  .kdn-colophon { gap: 10px 14px; }
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   소식지 가판대(리스트 뷰) + 열람 복귀 + read 뷰 편집 진입
-   신문 보관함 미학 — 호 카드를 '접힌 신문 1면'처럼. 괘선·명조·미색 유지.
-   색은 전부 --kd-news-* (리스트는 플레이스홀더 테마가 주입).
-   ═══════════════════════════════════════════════════════════════ */
-
-/* ── 가판대 상단 행: 폴리오의 「+ 새 소식지」 + 편집자 안내 ── */
-.kdn-new-issue {
-  font-family: var(--kd-news-label-font);
-  font-weight: 800;
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  padding: 5px 14px;
-  border: 1.5px solid var(--kd-news-spot);
-  background: var(--kd-news-spot);
-  color: #fff;
-  cursor: pointer;
+  letter-spacing: 0.01em;
+  padding: 9px 20px;
   border-radius: 999px;
-  transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+  border: 2.5px solid var(--kdn-ink);
+  cursor: pointer;
+  transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease, color 0.14s ease;
 }
-.kdn-new-issue:hover { transform: translateY(-1px); box-shadow: 0 3px 0 -1px var(--kd-news-ink); }
-.kdn-list-editor-note {
-  font-family: var(--kd-news-label-font);
-  font-size: 12.5px;
-  line-height: 1.6;
-  color: var(--kd-news-ink);
-  opacity: 0.72;
-  margin: 14px 0 0;
-  padding: 9px 14px;
-  border-left: 3px solid var(--kd-news-spot);
-  background: rgba(0, 0, 0, 0.025);
+.kdn-pill--sm { font-size: 13px; padding: 6px 15px; border-width: 2px; }
+.kdn-pill--solid {
+  background: var(--kd-pink-deep, #F23B2E);
+  border-color: var(--kdn-ink);
+  color: #ffffff;
+  box-shadow: 3px 3px 0 var(--kdn-ink);
 }
+.kdn-pill--solid:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--kdn-ink); }
+.kdn-pill--ghost {
+  background: #ffffff;
+  color: var(--kdn-ink);
+}
+.kdn-pill--ghost:hover:not(:disabled) { background: var(--kdn-ink); color: #ffffff; }
+.kdn-pill:disabled { opacity: 0.55; cursor: progress; }
 
-/* ── 가판대 그리드 ── */
+/* 뒤로가기 텍스트 버튼 */
+.kdn-back {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
+  font-size: 14px;
+  font-weight: 800;
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 2px solid var(--kdn-ink);
+  background: #ffffff;
+  color: var(--kdn-ink);
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+.kdn-back:hover { background: var(--kdn-ink); color: #ffffff; }
+
+/* ── 준비중 배지 ──────────────────────────────────────────────── */
+.kdn-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 2px solid var(--kd-pink-deep, #F23B2E);
+  color: var(--kd-pink-deep, #F23B2E);
+  background: #fff;
+}
+.kdn-badge--read { margin-left: 10px; vertical-align: middle; }
+
+/* ═══════════════════════════════════════════════════════════════
+   리스트(가판대) — 둥근 두꺼운 테두리 카드 그리드
+   ═══════════════════════════════════════════════════════════════ */
 .kdn-rack {
   list-style: none;
-  margin: 26px 0 0;
+  margin: 0;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 22px;
+  gap: 24px;
 }
-.kdn-rack-card {
+.kdn-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  border: 1.5px solid var(--kd-news-ink);
-  background: var(--kd-news-paper);
-  /* 접힌 신문의 그림자 — 가판대에 겹쳐 놓인 느낌 */
-  box-shadow: 3px 4px 0 -1px rgba(37, 27, 19, 0.16);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  border: 4px solid var(--kdn-ink);
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 5px 5px 0 var(--kdn-ink);
+  overflow: hidden;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
 }
-.kdn-rack-card:hover { transform: translateY(-3px); box-shadow: 5px 8px 0 -1px rgba(37, 27, 19, 0.22); }
-.kdn-rack-card.is-draft { border-style: dashed; opacity: 0.94; }
+.kdn-card:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 var(--kdn-ink); }
+.kdn-card.is-draft { border-style: dashed; }
 
-.kdn-rack-open {
-  display: block;
+.kdn-card-open {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   text-align: left;
   background: transparent;
   border: 0;
-  padding: 0 0 16px;
+  padding: 0;
   cursor: pointer;
-  color: var(--kd-news-ink);
-  font-family: var(--kd-news-body-font);
+  color: inherit;
+  font-family: inherit;
 }
 
-/* 카드 머리 — 미니 제호(접힌 1면 윗부분) */
-.kdn-rack-fold {
+.kdn-card-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #f0f8ff;
+  border-bottom: 3px solid var(--kdn-ink);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.kdn-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.kdn-card-noimg {
+  font-family: 'Jua', var(--kd-font-head, sans-serif);
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: rgba(33, 25, 20, 0.32);
+}
+
+.kdn-card-body { padding: 16px 18px 18px; }
+.kdn-card-meta {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 5px;
-  padding: 14px 16px 10px;
-  border-bottom: 1px solid var(--kd-news-rule-thin);
-}
-.kdn-rack-mini-masthead {
-  font-family: var(--kd-news-headline-font);
-  font-weight: 900;
-  font-size: 19px;
-  letter-spacing: 0.08em;
-  color: var(--kd-news-ink);
-}
-.kdn-rack-mini-rule {
-  width: 70%;
-  height: 0;
-  border-top: 2px solid var(--kd-news-ink);
-  box-shadow: 0 3px 0 -1.5px var(--kd-news-paper), 0 4px 0 -2px var(--kd-news-ink);
-}
-
-.kdn-rack-meta {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
   gap: 8px;
-  padding: 12px 16px 0;
+  margin-bottom: 6px;
 }
-.kdn-rack-no {
-  font-family: var(--kd-news-label-font);
+.kdn-card-no {
+  font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
+  font-size: 13px;
   font-weight: 800;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  color: var(--kd-news-spot);
-}
-.kdn-rack-title {
-  font-family: var(--kd-news-label-font);
-  font-size: 12px;
   letter-spacing: 0.04em;
-  color: var(--kd-news-ink);
-  opacity: 0.6;
+  color: var(--kd-pink-deep, #F23B2E);
 }
-.kdn-rack-badge {
-  font-family: var(--kd-news-label-font);
+.kdn-card-title {
+  margin: 0;
+  font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
+  font-size: 20px;
   font-weight: 800;
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  padding: 1px 7px;
-  border: 1px solid var(--kd-news-ink);
-  border-radius: 999px;
-  color: var(--kd-news-ink);
-  background: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 5px);
+  line-height: 1.3;
+  color: #251b13;
+  word-break: keep-all;
 }
-.kdn-rack-headline {
-  font-family: var(--kd-news-headline-font);
-  font-weight: 900;
-  font-size: clamp(19px, 2.1vw, 23px);
-  line-height: 1.22;
-  letter-spacing: -0.01em;
-  margin: 8px 16px 0;
-  color: var(--kd-news-ink);
-  /* 2줄 클램프 */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.kdn-card-date {
+  margin: 8px 0 0;
+  font-family: var(--kd-font-body, 'Gothic A1', sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(33, 25, 20, 0.6);
 }
-.kdn-rack-lead {
-  font-family: var(--kd-news-body-font);
-  font-size: 14px;
-  line-height: 1.62;
-  margin: 8px 16px 0;
-  color: var(--kd-news-ink);
-  opacity: 0.82;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.kdn-rack-dateline {
-  font-family: var(--kd-news-label-font);
-  font-size: 11px;
-  letter-spacing: 0.03em;
-  margin: 11px 16px 0;
-  padding-top: 9px;
-  border-top: 1px solid var(--kd-news-rule-thin);
-  color: var(--kd-news-ink);
-  opacity: 0.62;
-}
-
-/* 카드 하단 편집자 도구(편집자만) */
-.kdn-rack-tools {
+.kdn-card-tools {
   display: flex;
   justify-content: flex-end;
-  padding: 0 14px 12px;
+  padding: 0 16px 16px;
   margin-top: auto;
 }
-.kdn-rack-edit {
-  font-family: var(--kd-news-label-font);
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  padding: 4px 14px;
-  border: 1.5px solid var(--kd-news-ink);
-  background: transparent;
-  color: var(--kd-news-ink);
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background 0.16s ease, color 0.16s ease;
-}
-.kdn-rack-edit:hover { background: var(--kd-news-ink); color: var(--kd-news-paper); }
 
-/* 다음 호 예고 사고(社告) 카드 */
-.kdn-rack-card--sago {
-  border-style: dashed;
-  box-shadow: none;
-  background: transparent;
+/* ── placeholder(발행 0개·비로그인) ───────────────────────────── */
+.kdn-coming {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0 40px;
 }
-.kdn-rack-card--sago:hover { transform: none; box-shadow: none; }
-.kdn-rack-sago {
+.kdn-coming-card {
+  max-width: 560px;
+  width: 100%;
+  text-align: center;
+  padding: clamp(40px, 7vw, 64px) 28px;
+  border: 4px solid var(--kdn-ink);
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 5px 5px 0 var(--kdn-ink);
+}
+.kdn-coming-kicker {
+  margin: 0 0 8px;
+  font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--kd-purple, #2F68D8);
+}
+.kdn-coming-headline {
+  margin: 0 0 10px;
+  font-family: 'Jua', var(--kd-font-head, sans-serif);
+  font-size: clamp(24px, 4vw, 34px);
+  font-weight: 400;
+  line-height: 1.2;
+  color: #251b13;
+}
+.kdn-coming-body {
+  margin: 0;
+  font-family: var(--kd-font-body, 'Gothic A1', sans-serif);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.7;
+  color: rgba(33, 25, 20, 0.7);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   읽기(read) — 한 호 이미지 스택(전체폭)
+   ═══════════════════════════════════════════════════════════════ */
+.kdn-read-top { margin-bottom: 14px; }
+.kdn-read-head { margin-bottom: 20px; }
+.kdn-read-no {
+  display: inline-block;
+  font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--kd-pink-deep, #F23B2E);
+  margin-bottom: 4px;
+}
+.kdn-read-title {
+  margin: 0;
+  font-family: 'Jua', var(--kd-font-head, sans-serif);
+  font-size: 40px;
+  font-weight: 400;
+  line-height: 1.2;
+  color: #251b13;
+  word-break: keep-all;
+}
+.kdn-read-date {
+  margin: 10px 0 0;
+  font-family: var(--kd-font-body, 'Gothic A1', sans-serif);
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(33, 25, 20, 0.62);
+}
+
+.kdn-read-stack {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 22px 18px;
-  height: 100%;
-  justify-content: center;
+  gap: 18px;
+  margin-top: 24px;
+}
+.kdn-read-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 3px solid var(--kdn-ink);
+  border-radius: 18px;
+  background: #f0f8ff;
+}
+.kdn-read-empty {
+  margin: 24px 0;
+  padding: 40px 24px;
   text-align: center;
+  font-family: var(--kd-font-body, 'Gothic A1', sans-serif);
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(33, 25, 20, 0.6);
+  border: 3px dashed rgba(26, 26, 26, 0.4);
+  border-radius: 18px;
 }
-.kdn-rack-sago-label {
-  align-self: center;
-  font-family: var(--kd-news-label-font);
-  font-weight: 800;
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  color: var(--kd-news-spot);
+.kdn-read-foot { margin-top: 28px; }
+
+/* ── 편집자 도구막대(read) ────────────────────────────────────── */
+.kdn-editbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin: 0 0 20px;
+  padding: 14px 18px;
+  border: 3px solid var(--kdn-ink);
+  border-radius: 18px;
+  background: #fff;
 }
-.kdn-rack-sago-head {
-  font-family: var(--kd-news-headline-font);
-  font-weight: 700;
-  font-size: 18px;
-  margin: 0;
-  color: var(--kd-news-ink);
-}
-.kdn-rack-sago-body {
-  font-family: var(--kd-news-body-font);
+.kdn-editbar.is-draft { border-style: dashed; border-color: var(--kd-pink-deep, #F23B2E); }
+.kdn-stamp {
+  font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
   font-size: 13px;
-  line-height: 1.6;
-  margin: 0;
-  color: var(--kd-news-ink);
-  opacity: 0.74;
-}
-.kdn-rack-sago-new {
-  align-self: center;
-  margin-top: 6px;
-  font-family: var(--kd-news-label-font);
   font-weight: 800;
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  padding: 6px 16px;
-  border: 1.5px solid var(--kd-news-spot);
-  background: var(--kd-news-spot);
-  color: #fff;
+  letter-spacing: 0.06em;
+  padding: 4px 12px;
   border-radius: 999px;
-  cursor: pointer;
+  border: 2px solid var(--kdn-ink);
+}
+.kdn-stamp.is-published { color: var(--kd-teal-deep, #178B4B); border-color: var(--kd-teal-deep, #178B4B); }
+.kdn-stamp.is-draft { color: var(--kd-pink-deep, #F23B2E); border-color: var(--kd-pink-deep, #F23B2E); }
+.kdn-editbar-actions { display: flex; gap: 10px; margin-left: auto; }
+.kdn-editbar-error {
+  flex: 1 0 100%;
+  margin: 4px 0 0;
+  font-family: var(--kd-font-body, sans-serif);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--kd-pink-deep, #F23B2E);
 }
 
-/* ── 열람(read) 복귀 + 편집 진입 ── */
-.kdn-read-top { margin-bottom: 6px; }
-.kdn-back-to-list,
-.kdn-rack-card .kdn-back-to-list {
-  font-family: var(--kd-news-label-font);
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 0.03em;
-  padding: 5px 12px;
-  border: 1.5px solid var(--kd-news-ink);
-  background: transparent;
-  color: var(--kd-news-ink);
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background 0.16s ease, color 0.16s ease;
-}
-.kdn-back-to-list:hover { background: var(--kd-news-ink); color: var(--kd-news-paper); }
-.kdn-edit-enter {
-  font-family: var(--kd-news-label-font);
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.03em;
-  padding: 5px 14px;
-  border: 1.5px solid var(--kd-news-ink);
-  background: var(--kd-news-paper);
-  color: var(--kd-news-ink);
-  border-radius: 999px;
-  cursor: pointer;
-  margin-right: 8px;
-  transition: background 0.16s ease, color 0.16s ease;
-}
-.kdn-edit-enter:hover { background: var(--kd-news-ink); color: var(--kd-news-paper); }
-
-/* 에디터 lazy 로딩 폴백 */
+/* ── 에디터 lazy 로딩 폴백 ────────────────────────────────────── */
 .kdne-loading {
-  max-width: 1240px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 80px 40px;
   text-align: center;
-  font-family: var(--kd-news-label-font);
+  font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
   font-size: 15px;
-  color: var(--kd-news-ink);
-  opacity: 0.7;
+  font-weight: 700;
+  color: rgba(33, 25, 20, 0.6);
 }
 .kd-news--editor { padding-top: 110px; }
 
-/* ── 가판대 반응형 ── */
+/* ═══════════════════════════════════════════════════════════════
+   반응형
+   ═══════════════════════════════════════════════════════════════ */
 @media (max-width: 1024px) {
-  .kdn-rack { grid-template-columns: repeat(2, 1fr); gap: 18px; }
+  .kdn-rack { grid-template-columns: repeat(2, 1fr); gap: 20px; }
 }
+
+@media (max-width: 900px) {
+  .kd-news { padding: 104px 0 64px; }
+  /* 모바일 룰 위치 — 현행 유지(left 20) */
+  .kd-news .kd-section-rule { top: 88px; left: 20px; }
+  .kdn-wrap { padding: 0 18px; }
+  .kdn-title { font-size: clamp(34px, 9vw, 44px); }
+  .kdn-read-title { font-size: clamp(30px, 8vw, 40px); }
+}
+
 @media (max-width: 640px) {
-  .kdn-rack { grid-template-columns: 1fr; gap: 16px; margin-top: 20px; }
-  .kdn-rack-headline { font-size: 21px; }
-  .kdn-new-issue { font-size: 11px; padding: 5px 12px; }
-  .kdn-list-editor-note { font-size: 12px; }
+  .kdn-rack { grid-template-columns: 1fr; gap: 18px; }
+  .kdn-toolbar { gap: 10px; }
+  .kdn-editbar-actions { margin-left: 0; width: 100%; }
+  .kdn-editbar-actions .kdn-pill { flex: 1; }
 }
+
+/* reduced-motion: 호버 변형 외 별도 진입 모션 없음 — 안전. */
+.kd-news.kdn-reduced .kdn-card,
+.kd-news.kdn-reduced .kdn-pill { transition: none; }
