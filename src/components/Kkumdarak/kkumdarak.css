@@ -5895,3 +5895,43 @@
     transform: none !important;
   }
 }
+
+/* ── 프로그램 카드 스켈레톤 (첫 방문 + 데이터 미도착 게이트) ──────────────────
+   캐시가 없는 첫 방문에서 GET 도착 전까지 오버라이드 영역을 중립 회색 placeholder 로
+   가려, 하드코딩 옛 값이 떴다 바뀌는 플래시를 없앤다. 색은 잉크(#211914) 알파만 사용.
+   카드 골격·캐릭터·레이아웃은 유지(레이아웃 점프 최소화). */
+.kd-prog-skel {
+  display: inline-block;
+  vertical-align: middle;
+  border-radius: 6px;
+  background-color: rgba(33, 25, 20, 0.09);
+  background-image: linear-gradient(
+    90deg,
+    rgba(33, 25, 20, 0) 0%,
+    rgba(33, 25, 20, 0.07) 50%,
+    rgba(33, 25, 20, 0) 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: kd-prog-skel-shimmer 1.3s ease-in-out infinite;
+}
+.kd-prog-skel-line { display: block; margin-bottom: 6px; }
+.kd-prog-skel-line:last-child { margin-bottom: 0; }
+
+/* 신청 버튼 자리 — 실제 .program-action 형태(테두리·둥근)만 유지, 안에 막대 1개 */
+.program-action.is-skeleton,
+.mobile-program-action.is-skeleton {
+  background: #efece4;
+  border-color: #d8d2c4;
+  box-shadow: 3px 3px 0 #d8d2c4;
+  cursor: default;
+}
+
+@keyframes kd-prog-skel-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kd-prog-skel { animation: none; }
+}
