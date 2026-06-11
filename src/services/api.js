@@ -1065,6 +1065,42 @@ export const kkumdarakNewsStatusAPI = {
   }
 };
 
+// KkumdarakIntro API — 「소개」(Intro) 편집 콘텐츠 영속화
+//   ⚠️ 새 컬렉션/스키마 없음. kkumdarak-settings 싱글톤의 Mixed `data` 에
+//   intro 버킷({ motto?, place?, isoMeaning?, isoOwlFirefly?, isoGenerations?, members? })을
+//   추가로 얹는다(newsStatus 선례와 동일). 멤버 character 는 ImageKit URL.
+//   백엔드 PUT 은 data 통째 교체이므로, 다른 버킷(programs/programContent/newsStatus)을
+//   보존하려면 반드시 '최신 GET 베이스에 intro 만 머지'하는 read-merge-write 를 지켜야 한다
+//   (kkumdarakNewsStatusAPI 와 동일 불변식 — 머지 누락 시 타 버킷 소실).
+//   인증/캐시버스팅은 kkumdarakSettingsAPI 와 동일(kkumdarak_token, markCdnDirty/cdnBustUrl).
+export const kkumdarakIntroAPI = {
+  // intro override 버킷 조회 (공개) — 객체 반환(없으면 {}).
+  //   mergeIntroContent(override) 가 직접 소비. 콜드스타트엔 정적 기본값으로 낙관 렌더.
+  get: async () => {
+    const settings = await kkumdarakSettingsAPI.get();
+    const intro = settings && settings.intro;
+    return intro && typeof intro === 'object' ? intro : {};
+  },
+
+  // intro override 저장 (꿈다락 편집 인증 전용) — read-merge-write.
+  //   intro 버킷만 통째 교체하고, 그 외 모든 버킷은 최신 GET 베이스 그대로 보존한다.
+  //   override 는 toIntroOverride() 결과(정적과 다른 필드만 담긴 부분 객체).
+  //   반환: 저장 후의 intro override 객체.
+  save: async (override) => {
+    // ① 최신 베이스 GET — 다른 버킷 보존을 위한 머지 기준.
+    const base = await kkumdarakSettingsAPI.get(); // { programs?, programContent?, newsStatus?, intro? }
+    const nextIntro = override && typeof override === 'object' ? override : {};
+
+    // ② 전체 settings 객체를 통째로 PUT(타 버킷 보존). kkumdarakSettingsAPI.save 가
+    //   401/403 → KKUM_AUTH_EXPIRED throw + markCdnDirty 까지 처리한다.
+    const saved = await kkumdarakSettingsAPI.save({ ...base, intro: nextIntro });
+    const savedIntro = saved && saved.intro && typeof saved.intro === 'object'
+      ? saved.intro
+      : nextIntro;
+    return savedIntro;
+  }
+};
+
 // VillageNews API — 「마을소식」 호(號) 편집 사본 영속화 (싱글톤 village_news 컬렉션)
 //   백엔드를 단일 진실 소스로. get 은 raw 객체 { issues: { [id]: SerializedNewsIssue } } 를 반환,
 //   save 는 동일한 raw 객체를 PUT body 로 보낸다. mergeIssues 가 정적 NEWS_ISSUES 와 병합한다.
