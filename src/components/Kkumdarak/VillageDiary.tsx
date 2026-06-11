@@ -3,6 +3,7 @@ import IntroChar from './IntroChar';
 import ProgramCharacterPng, { characterPngForName } from './programCharacters';
 import { villageDiaryAPI, kkumdarakSettingsAPI } from '../../services/api';
 import { ikUrl } from '../../utils/ikUrl';
+import { lsGet, lsSet } from '../../utils/lsCache';
 import ImageKitPicker from '../editor/ImageKitPicker';
 import aiAPI from '../../services/aiApi';
 import { useKkumdarakAuth } from './KkumdarakAuthContext';
@@ -235,6 +236,8 @@ const MOBILE_SIDE_MAP: Record<string, MobileSide> = {
 };
 
 const LS_KEY = 'villageDiary_v1';
+// 마을일기 공개/비공개 상태 캐시 — diaryStatus 버킷만(콘텐츠 노출 전 상태 확정용).
+const DIARY_STATUS_LS_KEY = 'kkumdarakDiaryStatus_v1';
 
 // localStorage 오프라인 캐시에서 카드 오버라이드 불러오기(빠른 초기 렌더용)
 function loadSavedCards(): Record<string, DiaryCardData[]> {
@@ -540,9 +543,13 @@ const VillageDiary: React.FC = () => {
 
   // ── diaryStatus(공개/비공개) — kkumdarak-settings 의 diaryStatus 버킷 ──
   //   콜드스타트엔 비어 있음 → 전부 'published' 낙관 렌더. settings.get 1회로 로드.
-  const [diaryStatus, setDiaryStatus] = useState<DiaryStatusMap>({});
+  //   캐시 우선 시드(이전 내용 플래시 제거) — 비공개 프로그램 콘텐츠가 잠깐 보였다 사라지는 일 방지.
+  const cachedDiaryStatus = lsGet<DiaryStatusMap>(DIARY_STATUS_LS_KEY);
+  const [diaryStatus, setDiaryStatus] = useState<DiaryStatusMap>(() => cachedDiaryStatus ?? {});
   const [statusSaving, setStatusSaving] = useState(false);
-  // 현재 프로그램 공개 여부(미도착/미설정 = published 낙관).
+  // diaryStatus 가 확정됐는지: 캐시 있었음 || settings GET 완료. false 면 콘텐츠 노출 보류(상태 확정 전).
+  const [statusHydrated, setStatusHydrated] = useState<boolean>(!!cachedDiaryStatus);
+  // 현재 프로그램 공개 여부(미설정 = published 낙관).
   const currentStatus: DiaryStatus = diaryStatus[selected] === 'hidden' ? 'hidden' : 'published';
 
   // 인증 해제(로그아웃/401 만료) 시 편집 모드 강제 종료 — 카드가 편집 비주얼로 남지 않게.
@@ -582,12 +589,17 @@ const VillageDiary: React.FC = () => {
     kkumdarakSettingsAPI
       .get()
       .then((data: any) => {
-        if (cancelled || !data || typeof data !== 'object') return;
-        const ds = data.diaryStatus;
-        if (ds && typeof ds === 'object') setDiaryStatus(ds as DiaryStatusMap);
+        if (cancelled) return;
+        const ds = data && typeof data === 'object' ? data.diaryStatus : undefined;
+        const safe = ds && typeof ds === 'object' ? (ds as DiaryStatusMap) : {};
+        setDiaryStatus(safe);
+        lsSet(DIARY_STATUS_LS_KEY, safe);   // 캐시 갱신
+        setStatusHydrated(true);            // 상태 확정
       })
       .catch(() => {
-        // 콜드스타트/오프라인 — 전부 published 로 간주(낙관). 무시.
+        if (cancelled) return;
+        // 콜드스타트/오프라인 — GET 완료로 보고 게이트 해제(캐시 없으면 published 낙관 폴백).
+        setStatusHydrated(true);
       });
     return () => {
       cancelled = true;
@@ -606,11 +618,13 @@ const VillageDiary: React.FC = () => {
       setStatusSaving(true);
       try {
         const base = (await kkumdarakSettingsAPI.get()) || {};
+        const mergedStatus = { ...(base as any).diaryStatus, [pid]: next };
         const merged = {
           ...base,
-          diaryStatus: { ...(base as any).diaryStatus, [pid]: next },
+          diaryStatus: mergedStatus,
         };
         await kkumdarakSettingsAPI.save(merged);
+        lsSet(DIARY_STATUS_LS_KEY, mergedStatus);   // 저장 성공 → 상태 캐시 갱신
       } catch (err: any) {
         // 실패 → 롤백
         setDiaryStatus(prev);
@@ -648,9 +662,11 @@ const VillageDiary: React.FC = () => {
   // 표시 가능한 내용 여부.
   //   · 편집 모드(authed+isEditing): 실제 내용 기준(비공개여도 편집 위해 내용·토글 노출).
   //   · 그 외(비로그인/비편집): 비공개(hidden)면 내용이 있어도 빈 상태로 렌더.
+  //   비편집(비로그인/공개 화면)에서 diaryStatus 미확정(statusHydrated=false)이면 콘텐츠를 보류한다 —
+  //   비공개 프로그램이 published 로 낙관돼 잠깐 노출되는 '이전 내용 플래시'를 막는다(상태 확정 후 표시).
   const hasContent = isEditing
     ? cards.length > 0
-    : currentStatus !== 'hidden' && cards.length > 0;
+    : statusHydrated && currentStatus !== 'hidden' && cards.length > 0;
 
   // 동적 레이아웃 산출
   //   카드 top = FIRST_CARD_Y + i*CARD_GAP - 80. 마지막 카드 실제 높이는 사진 유무로 달라진다

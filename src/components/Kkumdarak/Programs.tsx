@@ -4,6 +4,13 @@ import MotionCharacter from './MotionCharacter';
 import ProgramCharacterPng, { characterPngForName } from './programCharacters';
 import { useKkumdarakAuth } from './KkumdarakAuthContext';
 import { kkumdarakSettingsAPI } from '../../services/api';
+import { lsGet, lsSet } from '../../utils/lsCache';
+
+// ── 캐시 우선 시드(이전 내용 플래시 제거) ─────────────────────────────
+//   재방문 시 마지막으로 본 '현재' 내용(programs/programContent)을 첫 페인트부터 즉시 렌더해
+//   백엔드(Render) 콜드스타트 동안 하드코딩 옛 값이 떴다 바뀌는 플래시를 없앤다.
+//   캐시 키는 버전 접미사. 민감정보 없음(프로그램 텍스트·상태만).
+const PROGRAMS_CACHE_KEY = 'kkumdarakSettings_v1';
 
 const PROGRAMS: Array<{
   name: string;
@@ -573,6 +580,66 @@ const ContentEditPanel: React.FC<{
   );
 };
 
+// ── 스켈레톤(첫 방문 + 데이터 미도착 전용) ─────────────────────────────
+//   캐시가 없는 첫 방문에서 GET 도착 전까지, 하드코딩 옛 값을 그대로 노출하는 대신
+//   오버라이드 대상 영역(제목/영문/한줄소개/기간/모집/회차/배지/신청버튼)을 중립 회색
+//   placeholder 로 가린다 → 옛 값이 떴다 바뀌는 플래시 0. 카드 골격·캐릭터·레이아웃은 유지.
+//   hydrated=true(캐시 있었음 또는 GET 완료)면 스켈레톤은 렌더되지 않는다.
+const SkelBar: React.FC<{ w?: string; h?: number; className?: string }> = ({ w = '100%', h = 14, className }) => (
+  <span className={`kd-prog-skel${className ? ' ' + className : ''}`} style={{ width: w, height: h }} aria-hidden="true" />
+);
+
+// 데스크톱 카드 스켈레톤 — 실제 영역과 비슷한 크기로 레이아웃 점프 최소화.
+const ProgramCardSkeleton: React.FC<{ program: Program; walkPhase: 'left' | 'right' }> = ({ program, walkPhase }) => {
+  const labelLines = program.label ?? [program.name];
+  return (
+    <article className="program-card is-skeleton" style={{ '--accent': program.color } as React.CSSProperties} aria-busy="true">
+      <div className="program-card-art">
+        <div className={`program-character-frame ${walkPhase === 'right' ? 'is-step-right' : 'is-step-left'}`}>
+          {characterPngForName(program.name)
+            ? <ProgramCharacterPng name={program.name} alt={labelLines.join(' ')} className="program-rig program-rig-png" />
+            : <MotionCharacter src={program.character} alt={labelLines.join(' ')} className="program-rig" />}
+        </div>
+      </div>
+      <div className="program-title-row">
+        <SkelBar w="56%" h={22} />
+      </div>
+      <p className="program-en"><SkelBar w="40%" h={13} /></p>
+      <h2><SkelBar w="80%" h={20} /></h2>
+      <p className="program-desc"><SkelBar w="100%" h={14} className="kd-prog-skel-line" /><SkelBar w="92%" h={14} className="kd-prog-skel-line" /></p>
+      <div className="program-meta">
+        <p><SkelBar w="44px" h={13} /><SkelBar w="62%" h={13} /></p>
+        <p><SkelBar w="44px" h={13} /><SkelBar w="50%" h={13} /></p>
+        <p><SkelBar w="44px" h={13} /><SkelBar w="56%" h={13} /></p>
+      </div>
+      <span className="program-action is-skeleton" aria-hidden="true"><SkelBar w="40%" h={18} /></span>
+    </article>
+  );
+};
+
+// 모바일 카드 스켈레톤.
+const MobileProgramCardSkeleton: React.FC<{ program: Program }> = ({ program }) => (
+  <article className="mobile-program-card is-skeleton" style={{ '--accent': program.color, '--mark': program.mobileMark } as React.CSSProperties} aria-busy="true">
+    <div className="mobile-program-head">
+      <div className="mobile-program-character" aria-hidden="true">
+        {characterPngForName(program.name)
+          ? <ProgramCharacterPng name={program.name} alt="" className="program-rig-mobile program-rig-png" />
+          : <MotionCharacter src={program.character} alt="" className="program-rig-mobile" />}
+      </div>
+      <div className="mobile-program-titles">
+        <div className="mobile-program-title-row"><SkelBar w="58%" h={16} /></div>
+        <p><SkelBar w="40%" h={12} /></p>
+      </div>
+    </div>
+    <p className="mobile-program-summary"><SkelBar w="86%" h={14} /></p>
+    <div className="mobile-program-meta">
+      <SkelBar w="30%" h={12} />
+      <SkelBar w="48%" h={12} />
+    </div>
+    <span className="mobile-program-action is-skeleton" aria-hidden="true"><SkelBar w="44%" h={15} /></span>
+  </article>
+);
+
 const ProgramCard: React.FC<{
   baseProgram: Program;        // 하드코딩 원본(편집 placeholder·저장 키)
   program: Program;            // 오버라이드 반영된 실효 표시값
@@ -696,15 +763,26 @@ const Programs: React.FC = () => {
   // 실제 편집 노출 여부 = 로그인 AND 편집모드.
   const editing = authed && editMode;
 
+  // ── 캐시 우선 시드 ─────────────────────────────────────────────────
+  //   localStorage 캐시(있으면)로 settings/contentMap/dataRef 를 lazy initializer 로 시드해
+  //   첫 페인트부터 마지막으로 본 현재 값을 그린다(옛 하드코딩 플래시 0). VillageDiary 패턴 이식.
+  const cachedData: KkumdarakSettingsData | null = lsGet<KkumdarakSettingsData>(PROGRAMS_CACHE_KEY);
+  const hadCache = !!cachedData;
+
   // 신청 링크/마감 오버라이드 + 텍스트 콘텐츠 오버라이드 (백엔드 단일 진실 소스, name 으로 key)
-  const [settings, setSettings] = useState<ProgramSettingsMap>({});
-  const [contentMap, setContentMap] = useState<ProgramContentMap>({});
+  const [settings, setSettings] = useState<ProgramSettingsMap>(() => cachedData?.programs ?? {});
+  const [contentMap, setContentMap] = useState<ProgramContentMap>(() => cachedData?.programContent ?? {});
   const [savingName, setSavingName] = useState<string | null>(null);
+
+  // ── 로드 게이트 ────────────────────────────────────────────────────
+  //   hydrated = (캐시 있었음) || (GET 완료). false(첫 방문 + GET 미완)면 오버라이드 영역을
+  //   하드코딩 옛 값 대신 스켈레톤으로 가린다. 캐시가 있으면 처음부터 true → 스켈레톤 미표시.
+  const [hydrated, setHydrated] = useState<boolean>(hadCache);
 
   // 저장 시 머지 기준이 되는 '최신' 전체 data 스냅샷({ programs, programContent }).
   //   stale-closure 방지 + 초기 GET 미완료 상태에서 저장 시 다른 값이 누락되는 사고를 막기 위해
   //   ref 로 항상 최신 맵을 들고 있는다(handleSave* 가 이 ref 를 머지한다).
-  const dataRef = useRef<KkumdarakSettingsData>({});
+  const dataRef = useRef<KkumdarakSettingsData>(cachedData ?? {});
   // GET(로드)이 한 번이라도 완료됐는지. 로드 전에는 저장을 막아 빈 맵으로 덮어쓰는 사고를 차단.
   const loadedRef = useRef<boolean>(false);
   // 직전 GET 이 '실패'로 끝났는지. 이 경우 dataRef 가 신뢰 불가라, 저장 전 GET 을 한 번 더 시도해 복구한다.
@@ -722,10 +800,13 @@ const Programs: React.FC = () => {
   }, []);
 
   // 전체 data 를 ref·상태에 반영하는 헬퍼.
-  const applyData = useCallback((data: KkumdarakSettingsData) => {
-    dataRef.current = data || {};
-    setSettings((data && data.programs) || {});
-    setContentMap((data && data.programContent) || {});
+  const applyData = useCallback((data: KkumdarakSettingsData, cache = false) => {
+    const next = data || {};
+    dataRef.current = next;
+    setSettings(next.programs || {});
+    setContentMap(next.programContent || {});
+    // GET 성공/저장 성공 시에만 캐시 write(실패 시 기존 캐시 유지) — '표시 가속'용.
+    if (cache) lsSet(PROGRAMS_CACHE_KEY, next);
   }, []);
 
   // 설정 로드 (공개 GET) — 언마운트 후 setState 방지.
@@ -736,16 +817,19 @@ const Programs: React.FC = () => {
     kkumdarakSettingsAPI.get()
       .then((data: KkumdarakSettingsData) => {
         if (!alive) return;
-        applyData(data || {});
+        applyData(data || {}, true);   // 성공 → 캐시 갱신
         loadedRef.current = true;
         loadFailedRef.current = false;
         everLoadedRef.current = true;
+        setHydrated(true);             // GET 완료 → 게이트 해제
       })
       .catch(() => {
         if (!alive) return;
         // 폴백: 오버라이드 없음(기본 동작 유지). 로드는 '완료'로 보되 '실패'로 표시한다.
+        //   GET 은 '완료'됐으므로 게이트는 해제(첫 방문은 하드코딩 기본값으로 폴백 — DB 가 없으니 옛 값 아님).
         loadedRef.current = true;
         loadFailedRef.current = true;
+        setHydrated(true);
       });
     return () => { alive = false; };
   }, [applyData]);
@@ -780,7 +864,7 @@ const Programs: React.FC = () => {
         if (loadFailedRef.current) {
           try {
             const data: KkumdarakSettingsData = await kkumdarakSettingsAPI.get();
-            applyData(data || {});
+            applyData(data || {}, true);
             loadFailedRef.current = false;
             everLoadedRef.current = true;
           } catch {
@@ -798,7 +882,7 @@ const Programs: React.FC = () => {
           [bucket]: { ...currentBucket, [name]: next },
         };
         await kkumdarakSettingsAPI.save(optimistic);
-        applyData(optimistic);
+        applyData(optimistic, true);   // 저장 성공 → 캐시 갱신
       } catch (err: any) {
         if (err?.code === 'KKUM_AUTH_EXPIRED') {
           alert('꿈다락 인증이 만료되었습니다. 다시 로그인해주세요.');
@@ -843,21 +927,25 @@ const Programs: React.FC = () => {
         {renderEditToggle()}
         <div className="program-soft-field" />
         <div className="program-grid">
-          {PROGRAMS.map((base) => (
-            <ProgramCard
-              key={base.name}
-              baseProgram={base}
-              program={resolveProgram(base, contentMap[base.name])}
-              walkPhase={walkPhase}
-              setting={settings[base.name]}
-              content={contentMap[base.name]}
-              authed={editing}
-              saving={savingName === base.name}
-              locked={savingName !== null}
-              onSaveSetting={handleSaveSetting}
-              onSaveContent={handleSaveContent}
-            />
-          ))}
+          {PROGRAMS.map((base) =>
+            hydrated ? (
+              <ProgramCard
+                key={base.name}
+                baseProgram={base}
+                program={resolveProgram(base, contentMap[base.name])}
+                walkPhase={walkPhase}
+                setting={settings[base.name]}
+                content={contentMap[base.name]}
+                authed={editing}
+                saving={savingName === base.name}
+                locked={savingName !== null}
+                onSaveSetting={handleSaveSetting}
+                onSaveContent={handleSaveContent}
+              />
+            ) : (
+              <ProgramCardSkeleton key={base.name} program={base} walkPhase={walkPhase} />
+            ),
+          )}
         </div>
       </div>
 
@@ -866,20 +954,24 @@ const Programs: React.FC = () => {
         <h1>프로그램</h1>
         {renderEditToggle()}
         <div className="mobile-program-list">
-          {PROGRAMS.map((base) => (
-            <MobileProgramCard
-              key={base.name}
-              baseProgram={base}
-              program={resolveProgram(base, contentMap[base.name])}
-              setting={settings[base.name]}
-              content={contentMap[base.name]}
-              authed={editing}
-              saving={savingName === base.name}
-              locked={savingName !== null}
-              onSaveSetting={handleSaveSetting}
-              onSaveContent={handleSaveContent}
-            />
-          ))}
+          {PROGRAMS.map((base) =>
+            hydrated ? (
+              <MobileProgramCard
+                key={base.name}
+                baseProgram={base}
+                program={resolveProgram(base, contentMap[base.name])}
+                setting={settings[base.name]}
+                content={contentMap[base.name]}
+                authed={editing}
+                saving={savingName === base.name}
+                locked={savingName !== null}
+                onSaveSetting={handleSaveSetting}
+                onSaveContent={handleSaveContent}
+              />
+            ) : (
+              <MobileProgramCardSkeleton key={base.name} program={base} />
+            ),
+          )}
         </div>
       </div>
     </section>

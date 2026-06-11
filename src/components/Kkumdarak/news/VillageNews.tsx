@@ -14,6 +14,7 @@ import {
   type NewsStatusMap,
 } from './newsData';
 import { ikUrl } from '../../../utils/ikUrl';
+import { lsGet, lsSet } from '../../../utils/lsCache';
 import { useKkumdarakAuth } from '../KkumdarakAuthContext';
 import {
   kkumdarakNewsStatusAPI,
@@ -22,6 +23,12 @@ import {
 
 // 편집국(에디터)은 공개 방문자 번들에서 분리 — authed 가 진입할 때만 청크 로드.
 const NewsEditor = lazy(() => import('./NewsEditor'));
+
+// ── 캐시 우선 시드(이전 내용 플래시 제거) ─────────────────────────────
+//   재방문 시 호 공개상태(newsStatus)·편집 사본(issues)을 첫 페인트부터 즉시 반영해
+//   draft 호/숨김이 잠깐 보였다 사라지는 일을 막는다. 민감정보 없음(상태·텍스트만).
+const NEWS_STATUS_LS_KEY = 'kkumdarakNewsStatus_v1';
+const NEWS_ISSUES_LS_KEY = 'kkumdarakNewsIssues_v1';
 
 // ═══════════════════════════════════════════════════════════════
 // 「마을소식」 — 이미지 기반 소식지 (꿈다락 /iso#news)
@@ -46,14 +53,16 @@ const VillageNews: React.FC = () => {
   const reduced = useReducedMotion();
   const { authed, logout, requestLogin } = useKkumdarakAuth();
 
-  // ── 호 상태 override (서버 newsStatus 버킷) — 콜드스타트 동안 undefined ──
-  const [override, setOverride] = useState<NewsStatusMap | undefined>(undefined);
-  const overrideRef = useRef<NewsStatusMap>({});
+  // ── 호 상태 override (서버 newsStatus 버킷) — 캐시 우선 시드(없으면 undefined) ──
+  const cachedNewsStatus = lsGet<NewsStatusMap>(NEWS_STATUS_LS_KEY) ?? undefined;
+  const cachedNewsIssues = lsGet<Record<string, NewsIssue>>(NEWS_ISSUES_LS_KEY) ?? undefined;
+  const [override, setOverride] = useState<NewsStatusMap | undefined>(cachedNewsStatus);
+  const overrideRef = useRef<NewsStatusMap>(cachedNewsStatus ?? {});
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toggleError, setToggleError] = useState<string | null>(null);
 
-  // ── 백엔드 편집 사본(issues) — 콜드스타트 동안 undefined, 도착 시 {} 또는 맵 ──
-  const [backendIssues, setBackendIssues] = useState<Record<string, NewsIssue> | undefined>(undefined);
+  // ── 백엔드 편집 사본(issues) — 캐시 우선 시드(없으면 undefined) ──
+  const [backendIssues, setBackendIssues] = useState<Record<string, NewsIssue> | undefined>(cachedNewsIssues);
 
   // ── 뷰 상태 머신 ──
   const [view, setView] = useState<View>('list');
@@ -71,6 +80,7 @@ const VillageNews: React.FC = () => {
         const safe = map && typeof map === 'object' ? map : {};
         overrideRef.current = safe;
         setOverride(safe);
+        lsSet(NEWS_STATUS_LS_KEY, safe);   // 캐시 갱신
       })
       .catch(() => {
         if (!alive) return;
@@ -82,7 +92,9 @@ const VillageNews: React.FC = () => {
       .get()
       .then((data) => {
         if (!alive) return;
-        setBackendIssues(data && data.issues ? (data.issues as Record<string, NewsIssue>) : {});
+        const issues = data && data.issues ? (data.issues as Record<string, NewsIssue>) : {};
+        setBackendIssues(issues);
+        lsSet(NEWS_ISSUES_LS_KEY, issues);   // 캐시 갱신
       })
       .catch(() => {
         if (!alive) return;
