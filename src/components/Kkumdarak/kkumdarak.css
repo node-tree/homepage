@@ -5640,12 +5640,42 @@
 /* 데스크톱: 고정 캔버스 → 흐름 레이아웃 */
 .kd-program-desktop.is-editing {
   height: auto;
-  min-height: 2010px;            /* 절대배치 헤더(h1·강조선)가 겹치지 않도록 헤더 영역 확보 */
-  padding-bottom: 40px;
+  min-height: 0;                 /* 헤더를 흐름으로 전환하므로 더 이상 헤더 영역 확보용 고정 높이 불필요 */
+  padding: 120px 0 40px;         /* 상단 패딩으로 toggle(absolute, top:106) 공간 확보 */
+}
+/* ── 편집 모드 헤더 흐름 전환 (버그2 근본 수정, 데스크톱) ─────────────────
+   비편집은 kicker·h1·강조선이 position:absolute 라, grid 를 흐름으로 풀면 헤더가 카드 위에 찍혔다.
+   편집 모드에선 헤더도 흐름으로 풀어 카드 위에 자연스럽게 쌓는다(.is-editing+.kd-program-desktop 한정). */
+.kd-program-desktop.is-editing .program-kicker {
+  position: static;
+  top: auto;
+  left: auto;
+  display: block;
+  margin: 0 0 4px 142px;
+}
+.kd-program-desktop.is-editing h1 {
+  position: static;
+  top: auto;
+  left: auto;
+  display: inline-block;
+  width: -moz-fit-content;
+  width: fit-content;
+  margin: 0 0 8px 140px;
+}
+.kd-program-desktop.is-editing .kd-section-rule {
+  display: none;
+}
+/* soft-field(장식 그라데이션)는 absolute 장식이라 흐름에서 빼둔다 */
+.kd-program-desktop.is-editing .program-soft-field {
+  display: none;
+}
+/* 편집 토글: 흐름 헤더 위 상단 패딩 영역(우측)에 고정 — 헤더와 분리 */
+.kd-program-desktop.is-editing .kd-program-edit-btn {
+  top: 40px;
 }
 .kd-program-desktop.is-editing .program-grid {
   position: static;
-  margin: 200px 0 0 120px;       /* 기존 left:120/top:200 을 흐름 여백으로 환산 */
+  margin: 24px 0 0 120px;        /* 흐름 헤더 아래로 간격만 */
   width: 1200px;
   align-items: start;
 }
@@ -5660,11 +5690,35 @@
   height: auto;
   min-height: 0;
 }
+/* ── 편집 모드 헤더 흐름 전환 (버그2 근본 수정) ──────────────────────────
+   비편집은 헤더(h1·강조선)가 position:absolute 라 흐름 카드 위에 찍혔다(margin 해킹 무효).
+   편집 모드에선 헤더를 흐름(static)으로 풀어 카드 리스트 위에 자연스럽게 쌓이게 한다.
+   ⚠️ .is-editing + .kd-program-mobile 스코프 한정 — 비편집/다른 섹션(schedule·diary·map)
+      이 공유하는 h1 absolute 규칙엔 영향 0. */
+.kd-program-mobile.is-editing h1 {
+  position: static;
+  top: auto;
+  left: auto;
+  /* block h1 은 폭이 컨테이너 전체라 우측 토글과 박스가 겹친다 → 텍스트 폭만 차지하게 */
+  display: inline-block;
+  width: -moz-fit-content;
+  width: fit-content;
+  max-width: calc(100% - 90px);   /* 우측 토글(폭~70) 공간 확보 */
+  margin: 4px 0 4px 20px;
+}
+/* 강조선(진행 모티프)은 편집 중엔 생략 — 흐름에서 빈 박스로 끼어 어수선해지는 것 방지 */
+.kd-program-mobile.is-editing .kd-section-rule {
+  display: none;
+}
+/* 편집 토글: 흐름 헤더(h1) 우측 같은 줄에 맞춤. 토글은 .kd-program-mobile(섹션 padding-top~66
+   직후 시작) 기준 절대배치라, top:4 면 흐름 h1(섹션 상단 ~70)과 같은 줄·가로 분리(h1 좌·토글 우). */
+.kd-program-mobile.is-editing .kd-program-edit-btn {
+  top: 4px;
+}
 .kd-program-mobile.is-editing .mobile-program-list {
   position: static;
-  /* 절대배치 헤더(섹션 룰 top~22, h1 top~58, 편집 토글 top~64)와 첫 카드가 겹치지 않도록
-     상단 여백을 헤더 영역보다 충분히 크게(160) 잡는다(버그2 — 편집 토글/제목 분리 보강). */
-  margin: 160px 0 0 16px;
+  /* 헤더가 흐름으로 위에 쌓이므로 margin 해킹 제거, 흐름 간격만 둔다 */
+  margin: 20px 0 0 16px;
   padding-bottom: 40px;
 }
 .kd-program-mobile.is-editing .mobile-program-card {
