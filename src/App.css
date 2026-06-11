@@ -1785,6 +1785,114 @@
   box-sizing: border-box;
 }
 
+/* 첨부 자료 — 인라인 열람(다운로드 아님) */
+.post-attachments {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+.post-attachment-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 페이지 내 인라인 PDF 미리보기 */
+.post-attachment-embed {
+  width: 100%;
+  height: 640px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: #fafafa;
+  box-sizing: border-box;
+}
+
+.post-attachment-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 24px;
+  text-align: center;
+  font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+/* 새 탭 전체 화면 열람 링크 */
+.post-attachment-link {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: transparent;
+  text-decoration: none;
+  color: #1a1a1a;
+  font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+}
+
+.post-attachment-link:hover {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+  transform: translateY(-1px);
+}
+
+.post-attachment-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.post-attachment-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.post-attachment-label {
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.post-attachment-meta {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: #888;
+}
+
+.post-attachment-link:hover .post-attachment-meta {
+  color: #bbb;
+}
+
+@media (max-width: 768px) {
+  .post-attachments {
+    padding: 0 1rem;
+  }
+  /* 모바일은 인라인 embed 신뢰도가 낮아 미리보기를 낮추고 새 탭 열람을 주 경로로 */
+  .post-attachment-embed {
+    height: 420px;
+  }
+  .post-attachment-link {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+  .post-attachment-label {
+    font-size: 0.9rem;
+  }
+}
+
 .post-text {
   width: 100%;
   max-width: 720px;

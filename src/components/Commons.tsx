@@ -31,6 +31,26 @@ interface CommonsProps {
   onPostsLoaded?: (count: number) => void;
 }
 
+// 글 첨부 자료(인라인 열람) — 글 id 기준 매핑.
+// 제목은 편집 시 바뀔 수 있어 불변 식별자인 글 id(MongoDB _id 문자열)를 키로 쓴다.
+// public/ 정적 서빙 관례(/pdf/ 경로, Content-Disposition: inline)를 따라 배치된 파일을 가리킨다.
+interface PostAttachment {
+  label: string;       // 버튼 라벨 (한글)
+  href: string;        // 정적 경로 (public 기준) — 새 탭에서 인라인 열람
+  metaLabel?: string;  // 표시용 메타 (선택)
+}
+
+// 키: FILED 글 id. '사운드 오케스트라' 워크북 = 운영 /api/filed 조회로 확인한 id.
+const POST_ATTACHMENTS: Record<string, PostAttachment[]> = {
+  '6858a45ca793089c746ee8cb': [
+    {
+      label: '워크북 보기',
+      href: '/pdf/sound-orchestra-workbook.pdf',
+      metaLabel: 'PDF · 54p',
+    },
+  ],
+};
+
 const Commons: React.FC<CommonsProps> = ({ onPostsLoaded }) => {
   const { isAuthenticated } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -498,6 +518,45 @@ const Commons: React.FC<CommonsProps> = ({ onPostsLoaded }) => {
                 {formatContent(selectedPost.content)}
               </div>
               <LightboxPortal />
+
+              {/* 첨부 자료 — 인라인 열람(다운로드 아님) */}
+              {(POST_ATTACHMENTS[selectedPost.id] || []).length > 0 && (
+                <div className="post-attachments">
+                  {(POST_ATTACHMENTS[selectedPost.id] || []).map((file) => (
+                    <div key={file.href} className="post-attachment-viewer">
+                      {/* 페이지 내 인라인 미리보기 (데스크톱에서 바로 읽힘) */}
+                      <object
+                        className="post-attachment-embed"
+                        data={file.href}
+                        type="application/pdf"
+                        aria-label={file.label}
+                      >
+                        {/* PDF 인라인 미지원 환경(일부 모바일) 폴백 */}
+                        <div className="post-attachment-fallback">
+                          <span>브라우저에서 미리보기를 지원하지 않습니다.</span>
+                        </div>
+                      </object>
+                      {/* 새 탭에서 전체 화면 인라인 열람 (모바일 안전) */}
+                      <a
+                        className="post-attachment-link"
+                        href={file.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onMouseEnter={() => playHoverSound()}
+                        onClick={() => playClickSound()}
+                      >
+                        <span className="post-attachment-icon" aria-hidden="true">⤢</span>
+                        <span className="post-attachment-text">
+                          <span className="post-attachment-label">{file.label}</span>
+                          {file.metaLabel && (
+                            <span className="post-attachment-meta">{file.metaLabel}</span>
+                          )}
+                        </span>
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* 이미지 갤러리 */}
               {selectedPost.images && selectedPost.images.length > 0 && (
