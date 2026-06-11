@@ -683,6 +683,19 @@ const Programs: React.FC = () => {
   const [walkPhase, setWalkPhase] = useState<'left' | 'right'>('left');
   const { authed } = useKkumdarakAuth();
 
+  // ── 편집 모드 토글 (작업 2) ───────────────────────────────────────
+  //   로그인(authed) 만으로 편집 패널이 상시 노출되던 것을, VillageDiary 패턴처럼
+  //   「편집」 버튼을 눌러야(editMode) 편집 UI 가 뜨도록 한 겹 게이트한다.
+  //   authed && !editMode = 공개 화면(편집 패널 0), authed && editMode = 편집 화면.
+  //   비로그인은 토글 자체가 안 보인다(editing 항상 false).
+  const [editMode, setEditMode] = useState(false);
+  // 로그아웃/인증 만료 시 편집 모드 강제 종료(카드가 편집 비주얼로 남지 않게).
+  useEffect(() => {
+    if (!authed) setEditMode(false);
+  }, [authed]);
+  // 실제 편집 노출 여부 = 로그인 AND 편집모드.
+  const editing = authed && editMode;
+
   // 신청 링크/마감 오버라이드 + 텍스트 콘텐츠 오버라이드 (백엔드 단일 진실 소스, name 으로 key)
   const [settings, setSettings] = useState<ProgramSettingsMap>({});
   const [contentMap, setContentMap] = useState<ProgramContentMap>({});
@@ -809,12 +822,25 @@ const Programs: React.FC = () => {
     [saveCore],
   );
 
+  // 편집 토글 버튼 — 로그인 시에만 노출(VillageDiary .kd-diary-edit-btn 톤과 일관).
+  const renderEditToggle = () =>
+    authed ? (
+      <button
+        type="button"
+        className={`kd-program-edit-btn${editMode ? ' is-editing' : ''}`}
+        onClick={() => setEditMode((v) => !v)}
+      >
+        {editMode ? '완료' : '편집'}
+      </button>
+    ) : null;
+
   return (
-    <section className={`kd-figma-programs${authed ? ' is-editing' : ''}`}>
-      <div className={`kd-program-desktop${authed ? ' is-editing' : ''}`} data-name="프로그램 — Desktop">
+    <section className={`kd-figma-programs${editing ? ' is-editing' : ''}`}>
+      <div className={`kd-program-desktop${editing ? ' is-editing' : ''}`} data-name="프로그램 — Desktop">
         <div className="kd-section-rule kd-section-rule--s2" />
         <p className="program-kicker">7개의 프로그램은 한 줄로 흐른다</p>
         <h1>프로그램</h1>
+        {renderEditToggle()}
         <div className="program-soft-field" />
         <div className="program-grid">
           {PROGRAMS.map((base) => (
@@ -825,7 +851,7 @@ const Programs: React.FC = () => {
               walkPhase={walkPhase}
               setting={settings[base.name]}
               content={contentMap[base.name]}
-              authed={authed}
+              authed={editing}
               saving={savingName === base.name}
               locked={savingName !== null}
               onSaveSetting={handleSaveSetting}
@@ -835,9 +861,10 @@ const Programs: React.FC = () => {
         </div>
       </div>
 
-      <div className={`kd-program-mobile${authed ? ' is-editing' : ''}`} data-name="프로그램 — Mobile">
+      <div className={`kd-program-mobile${editing ? ' is-editing' : ''}`} data-name="프로그램 — Mobile">
         <div className="kd-section-rule kd-section-rule--s2" />
         <h1>프로그램</h1>
+        {renderEditToggle()}
         <div className="mobile-program-list">
           {PROGRAMS.map((base) => (
             <MobileProgramCard
@@ -846,7 +873,7 @@ const Programs: React.FC = () => {
               program={resolveProgram(base, contentMap[base.name])}
               setting={settings[base.name]}
               content={contentMap[base.name]}
-              authed={authed}
+              authed={editing}
               saving={savingName === base.name}
               locked={savingName !== null}
               onSaveSetting={handleSaveSetting}

@@ -4734,6 +4734,124 @@
   color: #F5C518;
 }
 
+/* ── 프로그램 편집 토글 버튼 (작업 2) ─────────────────────────────────
+   로그인(authed) 만으로 편집 패널이 상시 노출되던 것을, 「편집」 버튼을 눌러야
+   편집 UI 가 뜨도록 게이트. VillageDiary .kd-diary-edit-btn 톤과 일관(꿈다락 노랑/검정).
+   데스크톱: 1440 캔버스 우상단 절대배치. 모바일: 헤더 우측에 정적 배치. */
+.kd-program-edit-btn {
+  position: absolute;
+  right: 120px;
+  top: 74px;
+  z-index: 12;
+  border: 2px solid #1a1a1a;
+  border-radius: 0;
+  background: #F5C518;
+  color: #1a1a1a;
+  font-family: var(--kd-font-body);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 4px 14px;
+  cursor: pointer;
+  line-height: 1.4;
+  box-shadow: 2px 2px 0 #1a1a1a;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.kd-program-edit-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #1a1a1a;
+}
+.kd-program-edit-btn.is-editing {
+  background: #1a1a1a;
+  color: #F5C518;
+}
+
+/* 모바일: 프로그램 헤더(h1) 우측에 정적 배치. .kd-program-mobile 은 display:flex 계열이
+   아닐 수 있어 절대배치로 우상단 고정(헤더 라인과 정렬). */
+@media (max-width: 900px) {
+  .kd-program-mobile .kd-program-edit-btn {
+    position: absolute;
+    right: 20px;
+    top: 28px;
+    font-size: 12px;
+    padding: 3px 11px;
+  }
+  .kd-program-mobile { position: relative; }
+}
+
+/* ── 마을일기 공개/비공개 토글 (작업 3) ───────────────────────────────
+   편집 모드에서 현재 프로그램의 공개/비공개를 전환. 편집 버튼 바로 아래에 배치.
+   데스크톱: 1440 캔버스 우상단(편집 버튼 top:130 아래). 모바일: 헤더 아래 정적. */
+.kd-diary-visibility {
+  position: absolute;
+  right: 120px;
+  top: 170px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fffdf5;
+  border: 2px solid #1a1a1a;
+  box-shadow: 2px 2px 0 #1a1a1a;
+  padding: 6px 10px;
+}
+.kd-diary-visibility-label {
+  font-family: var(--kd-font-body);
+  font-size: 12px;
+  font-weight: 800;
+  color: #1a1a1a;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kd-diary-visibility-options {
+  display: inline-flex;
+  border: 2px solid #1a1a1a;
+}
+.kd-diary-visibility-btn {
+  border: 0;
+  background: #fff;
+  color: #1a1a1a;
+  font-family: var(--kd-font-body);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 4px 12px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.kd-diary-visibility-btn + .kd-diary-visibility-btn {
+  border-left: 2px solid #1a1a1a;
+}
+.kd-diary-visibility-btn.is-active {
+  background: #259f3e;
+  color: #fff;
+}
+.kd-diary-visibility-btn.is-hidden-opt.is-active {
+  background: #1a1a1a;
+  color: #F5C518;
+}
+.kd-diary-visibility-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.kd-diary-visibility-status {
+  font-family: var(--kd-font-body);
+  font-size: 11px;
+  font-weight: 700;
+  color: #666;
+}
+
+/* 모바일: 헤더 아래에 정적 배치(절대배치 해제) */
+@media (max-width: 900px) {
+  .kd-diary-mobile .kd-diary-visibility {
+    position: relative;
+    right: auto;
+    top: auto;
+    margin: 10px 20px 0;
+    flex-wrap: wrap;
+  }
+}
+
 /* 편집 중 카드 강조 */
 .diary-card.is-editing-card {
   outline: 2px solid #1a1a1a;
@@ -5551,19 +5669,30 @@
    · 모바일: .mobile-program-character(58×62 frame) 안에서 contain
    · 마을일기: .intro-char-rig 컨텍스트에서도 동일 PNG 사용
    ═══════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════
+   꿈다락 프로그램 PNG 캐릭터 — 6프레임 플립북 (복원 2026-06)
+   ───────────────────────────────────────────────────────────────────
+   어제(c0dff11) 정적 PNG 1장 + CSS 흔들림으로 바꾸며 6프레임 플립북이 죽었다.
+   사용자가 프레임 애니메이션을 원함 → 히어로/MotionCharacter(chars-v2)와 동일한
+   .kd-loop-frame 6장 스택 + @keyframes kd-loop-6(steps(1,end) 1.5s, 음수 딜레이
+   스태거)로 복원. 각 캐릭터 = program-loops/character-NN/frame-0{1..6}.png 6장.
+   컨테이너(.program-char-loop, position:relative)가 슬롯 크기를 소유하고,
+   .kd-loop-frame(absolute inset:0)이 그 안을 스택으로 채운다.
+   모션은 프레임 교체가 담당하므로 옛 흔들림(program-char-png-motion, pngc-*)은 제거.
+   prefers-reduced-motion 은 전역 규칙 + 상단 .kd-loop-frame 규칙으로 첫 프레임만 정지.
+   ─────────────────────────────────────────────────────────────────── */
 .program-char-png {
-  display: block;
-  object-fit: contain;
   pointer-events: none;
+  user-select: none;
 }
 
-/* 데스크톱 카드: 기존 .program-rig(150×143) 자리 차지, 바닥 정렬 */
+/* 데스크톱 카드: 기존 .program-rig(150×143) 자리 차지, 바닥 정렬.
+   컨테이너 div 가 크기를 소유(프레임은 absolute inset:0 으로 채움). */
 .program-rig.program-rig-png {
   width: 132px;
   height: 132px;
   align-self: end;
   margin-bottom: 6px;
-  animation: program-character-bob-mobile 2.4s ease-in-out infinite;
   transform-origin: center bottom;
 }
 
@@ -5571,138 +5700,18 @@
 .program-rig-mobile.program-rig-png {
   width: 54px;
   height: 54px;
-  object-fit: contain;
 }
 
-/* 마을일기 캐릭터 영역(IntroChar 대체) */
-.intro-char-rig.program-char-png {
+/* 마을일기 캐릭터 영역(IntroChar 대체) — 슬롯을 가득 채움.
+   컨테이너가 크기를 상속받고 프레임은 absolute 로 스택. */
+.intro-char-rig.program-char-loop,
+.program-char-loop.intro-char-rig {
   width: 100%;
   height: 100%;
   max-height: 100%;
-  object-fit: contain;
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   꿈다락 프로그램 PNG 캐릭터 — 모션루프 (추가 2026-06)
-   ───────────────────────────────────────────────────────────────────
-   어제 SVG 6프레임 리그 → 정적 PNG 교체 후 캐릭터가 전부 '정지'했던 문제 복원.
-   PNG 아트는 유지하고, PNG 를 감싼 래퍼(.program-char-png-motion)에 CSS 키프레임
-   루프를 입혀 다시 살아있게 한다. 모션은 래퍼에만(transform/opacity → GPU) —
-   .program-rig-png(is-step 워크 트랜스폼)·.intro-char-rig(마을일기 크기)와 분리.
 
-   설계 원칙:
-   · transform/opacity 만 사용(레이아웃 리플로우 0, 컴포지터 처리).
-   · 프로그램 성격별로 다른 모션(전부 둥실대는 단조로움 회피). 속도 2.5~5s 대.
-   · 무한 루프, transform-origin: center bottom(발이 땅에 붙은 느낌).
-   · prefers-reduced-motion 정지 → 파일 상단 전역 규칙
-       @media (prefers-reduced-motion: reduce) { .kkumdarak * { animation: …0.001ms/1회 } }
-     이 .program-char-motion--* 도 함께 무력화(0%/100% 중립 포즈로 정지).
-   ─────────────────────────────────────────────────────────────────── */
-
-/* 래퍼: 부모(.program-rig-png 132×132 / 54×54, .intro-char-rig 100%)를 가득 채워
-   img 와 동일 박스를 차지. 모션 트랜스폼의 기준점은 발(아래 중앙). */
-.program-char-png-motion {
-  display: block;
-  width: 100%;
-  height: 100%;
-  transform-origin: center bottom;
-  will-change: transform;
-  backface-visibility: hidden;
-}
-
-/* img: 래퍼 안에서 contain(아트 그대로). 모션은 래퍼가 담당하므로 img 는 정적. */
-.program-char-png-motion > .program-char-png {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  pointer-events: none;
-  user-select: none;
-}
-
-/* ⚠️ 기존 .program-rig.program-rig-png(데스크톱)에 걸려 있던 단일 bob 애니메이션을
-   해제 — 이제 래퍼가 프로그램별 모션을 소유한다(중복/충돌 방지).
-   동등 특이도(0,2,0)지만 소스 순서상 이 블록이 뒤라 우선한다. */
-.program-rig.program-rig-png {
-  animation: none;
-}
-
-/* ── 프로그램별 모션 클래스 (래퍼) ───────────────────────────────────
-   각 클래스 특이도 0,2,0 = 위 .program-rig.program-rig-png(0,2,0)와 동일,
-   소스 순서상 뒤라 우선 적용. 마을일기(.intro-char-rig) 래퍼에도 동일 적용. */
-
-/* 장암 책정(책 로봇) — 느린 숨쉬기. 묵직하게 살아있는 정자 같은 안정감. */
-.program-char-png-motion.program-char-motion--breath {
-  animation: pngc-breath 4.2s ease-in-out infinite;
-}
-/* 마을의 신호(말풍선 고양이) — 통통 튀기. 신호처럼 활기차게. */
-.program-char-png-motion.program-char-motion--bounce {
-  animation: pngc-bounce 2.6s cubic-bezier(0.5, 0, 0.5, 1) infinite;
-}
-/* 기억순환 정류장(벼 인사) — 좌우 흔들. 바람결의 벼처럼. */
-.program-char-png-motion.program-char-motion--sway {
-  animation: pngc-sway 3.6s ease-in-out infinite;
-}
-/* 손의 기억(새싹) — 솟았다 가라앉는 새싹 호흡. 자라는 듯. */
-.program-char-png-motion.program-char-motion--sprout {
-  animation: pngc-sprout 3.2s ease-in-out infinite;
-}
-/* 소리일기(점박이, 팔 위로) — 팔 흔들며 채집하듯 좌우 기울임 + 살짝 들썩. */
-.program-char-png-motion.program-char-motion--wave {
-  animation: pngc-wave 2.9s ease-in-out infinite;
-}
-/* 풍경일기(흰 꽃) — 꽃이 피듯 가볍게 기울며 부풀기. 느릿한 풍경. */
-.program-char-png-motion.program-char-motion--bloom {
-  animation: pngc-bloom 5s ease-in-out infinite;
-}
-
-/* ── 키프레임 (transform/opacity 만) ───────────────────────────────── */
-@keyframes pngc-breath {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50%      { transform: translateY(-2px) scale(1.022, 1.028); }
-}
-@keyframes pngc-bounce {
-  0%, 100% { transform: translateY(0) scale(1, 1); }
-  18%      { transform: translateY(1px) scale(1.05, 0.95); }
-  45%      { transform: translateY(-12px) scale(0.96, 1.05); }
-  70%      { transform: translateY(0) scale(1.02, 0.98); }
-}
-@keyframes pngc-sway {
-  0%, 100% { transform: translateY(0) rotate(-3.4deg); }
-  50%      { transform: translateY(-1px) rotate(3.4deg); }
-}
-@keyframes pngc-sprout {
-  0%, 100% { transform: translateY(2px) scaleY(0.985) scaleX(1.012); }
-  50%      { transform: translateY(-5px) scaleY(1.05) scaleX(0.978); }
-}
-@keyframes pngc-wave {
-  0%, 100% { transform: translateY(0) rotate(-4.5deg); }
-  25%      { transform: translateY(-3px) rotate(2deg); }
-  50%      { transform: translateY(-3px) rotate(4.5deg); }
-  75%      { transform: translateY(-1px) rotate(-2deg); }
-}
-@keyframes pngc-bloom {
-  0%, 100% { transform: translateY(0) rotate(-2deg) scale(1); }
-  35%      { transform: translateY(-3px) rotate(1.4deg) scale(1.03); }
-  65%      { transform: translateY(-2px) rotate(2deg) scale(1.02); }
-}
-
-/* ── 마을일기(VillageDiary) 컨텍스트 보정 ───────────────────────────
-   래퍼가 .intro-char-svg.intro-char-rig 클래스를 함께 받으므로(공통 컴포넌트),
-   기존 .intro-char-rig.program-char-png(=img 기준) 대신 래퍼/이미지 양쪽 크기를
-   명시한다. 마을일기 캐릭터 슬롯(.diary-character-scale / .diary-empty-character /
-   .intro-char-svg)을 가득 채우되, 모션 트랜스폼이 슬롯을 넘쳐 잘리지 않도록
-   기준점만 발(아래 중앙)로 유지. */
-.program-char-png-motion.intro-char-rig {
-  width: 100%;
-  height: 100%;
-}
-.intro-char-rig.program-char-png-motion > .program-char-png {
-  width: 100%;
-  height: 100%;
-  max-height: 100%;
-  object-fit: contain;
-}
 
 /* ── 오시는길 문의 링크(이메일 mailto / 전화 tel) — 추가 2026-06 ──────
    InfoCard 값(<b>) 안의 링크. 기존 잉크 타이포를 그대로 잇고, 점선 밑줄로
