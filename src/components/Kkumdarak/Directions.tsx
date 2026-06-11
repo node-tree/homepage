@@ -37,6 +37,16 @@ const MAP_MOBILE_SHADOW_CSS = `
 }
 `;
 
+// ── 오시는길 「문의 · 노드트리 사무국」 표기 (추가 2026-06) ──────────
+//   사용자 요청: 오시는길에 노드트리 사무국 문의처(이메일)를 표기.
+//   이메일은 mailto 링크(탭/복사 쉬운 형태). 전화번호는 표기하지 않는다(사용자 지시, 2026-06-11).
+//   기존 오시는길 정보 블록(InfoCard 의 라벨/괘선/타이포)에 맞춰 자연스럽게 행으로 더한다.
+const OFFICE_EMAIL = 'nodetree.pmaker@gmail.com';
+
+// 오시는길 정보 행 타입: [라벨, 값, href?].
+//   href 가 있으면 값(value)을 링크(<a>)로 렌더 — 이메일(mailto)·전화(tel) 등.
+type InfoRow = [label: string, value: string, href?: string];
+
 const CharacterPin: React.FC<{ className: string; src: string; label: string }> = ({ className, src, label }) => (
   <div className={`map-character-pin ${className}`}>
     <div className="map-character-scale">
@@ -49,7 +59,7 @@ const CharacterPin: React.FC<{ className: string; src: string; label: string }> 
 const InfoCard: React.FC<{
   color: string;
   title: string;
-  rows: Array<[string, string]>;
+  rows: InfoRow[];
   charSrc?: string;
 }> = ({ color, title, rows, charSrc }) => (
   <article className="map-info-card">
@@ -65,22 +75,31 @@ const InfoCard: React.FC<{
       )}
       <h2>{title}</h2>
     </header>
-    {rows.map(([k, v]) => (
-      <p key={k}><span>{k}</span><b>{v}</b></p>
+    {rows.map(([k, v, href]) => (
+      <p key={k}>
+        <span>{k}</span>
+        {href ? (
+          <b><a className="map-info-link" href={href}>{v}</a></b>
+        ) : (
+          <b>{v}</b>
+        )}
+      </p>
     ))}
   </article>
 );
 
 const Directions: React.FC = () => {
-  const firstRows: Array<[string, string]> = [
+  const firstRows: InfoRow[] = [
     ['주소', '충청남도 부여군 장암면 석동로29번길 3'],
     ['대중교통', '부여터미널 → 장암면 버스'],
     ['주차', '생산소 앞 주차 가능'],
   ];
-  const secondRows: Array<[string, string]> = [
+  // 주민자치센터 카드에 「문의 · 노드트리 사무국」 — 이메일(mailto) 표기.
+  const secondRows: InfoRow[] = [
     ['주소', '충청남도 부여군 장암면 석동로 16, 2층'],
     ['도보', '생산소에서 석동로 따라 도보 약 3분'],
     ['문의', '노드트리 사무국'],
+    ['이메일', OFFICE_EMAIL, `mailto:${OFFICE_EMAIL}`],
   ];
 
   return (
@@ -147,6 +166,7 @@ const Directions: React.FC = () => {
             ['주소', '부여군 장암면 석동로 16, 2층'],
             ['도보', '생산소에서 도보 약 3분'],
             ['문의', '노드트리 사무국'],
+            ['이메일', OFFICE_EMAIL, `mailto:${OFFICE_EMAIL}`],
           ]}
         />
       </div>

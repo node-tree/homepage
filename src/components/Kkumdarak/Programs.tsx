@@ -111,7 +111,10 @@ const PROGRAMS: Array<{
     mobileMark: '#1b55e2',
     action: '무료 개방',
     festival: true,
-    character: '12-character-12-rice-bow.svg',
+    // 축제 〈다시, 안녕〉 — 다섯 세대가 다시 만나는 마을 통합 축제.
+    //   PNG 가 없어 chars-v2 6프레임 리그로 폴백. character-19(crossing-knot):
+    //   세 색이 서로 엮인 매듭 = '만남·연결'을 상징(축제 빨강 #e4352b 포함, PNG 세트와 톤 일치).
+    character: '19-character-19-crossing-knot.svg',
   },
 ];
 

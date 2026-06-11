@@ -1025,6 +1025,46 @@ export const kkumdarakSettingsAPI = {
   }
 };
 
+// KkumdarakNewsStatus API — 「마을소식」 호(號)별 공개/준비중(draft) 상태 영속화
+//   ⚠️ 새 컬렉션/스키마 없음. kkumdarak-settings 싱글톤의 Mixed `data` 에
+//   newsStatus 버킷({ [issueId]: 'published' | 'draft' })을 추가로 얹는다(programContent 선례).
+//   백엔드 PUT 은 data 통째 교체이므로, 다른 버킷(programs/programContent)을 보존하려면
+//   반드시 '최신 GET 베이스에 newsStatus 만 머지'하는 read-merge-write 를 지켜야 한다
+//   (Programs.tsx saveCore 의 dataRef read-merge-write 와 동일 불변식 — 머지 누락 시 타 버킷 소실).
+//   인증/캐시버스팅은 kkumdarakSettingsAPI 와 동일(kkumdarak_token, markCdnDirty/cdnBustUrl).
+export const kkumdarakNewsStatusAPI = {
+  // 호별 상태 맵 조회 (공개) — { [issueId]: 'published' | 'draft' } 반환(없으면 {}).
+  //   kkumdarakSettingsAPI.get() 이 내부적으로 cdnBustUrl 로 엣지 캐시를 우회한다
+  //   (저장 직후 5분 창 한정 — 편집자 화면 즉시 신선값 보장).
+  get: async () => {
+    const settings = await kkumdarakSettingsAPI.get();
+    const ns = settings && settings.newsStatus;
+    return ns && typeof ns === 'object' ? ns : {};
+  },
+
+  // 호 상태 토글 저장 (꿈다락 편집 인증 전용) — read-merge-write.
+  //   issueId 의 상태만 newsStatus 에 머지하고, 그 외 모든 버킷은 최신 GET 베이스 그대로 보존한다.
+  //   newsStatus 안의 다른 호 상태도 보존(이번에 토글한 issueId 키만 교체).
+  //   반환: 저장 후의 newsStatus 맵({ [issueId]: ... }).
+  setIssueStatus: async (issueId, status) => {
+    // ① 최신 베이스 GET — 다른 버킷/다른 호 상태를 보존하기 위한 머지 기준.
+    const base = await kkumdarakSettingsAPI.get(); // { programs?, programContent?, newsStatus? }
+    const baseNewsStatus =
+      base && base.newsStatus && typeof base.newsStatus === 'object' ? base.newsStatus : {};
+
+    // ② newsStatus 버킷에 이 호의 상태만 머지(다른 호 상태 유지).
+    const nextNewsStatus = { ...baseNewsStatus, [issueId]: status };
+
+    // ③ 전체 settings 객체를 통째로 PUT(타 버킷 보존). kkumdarakSettingsAPI.save 가
+    //   401/403 → KKUM_AUTH_EXPIRED throw + markCdnDirty 까지 처리한다.
+    const saved = await kkumdarakSettingsAPI.save({ ...base, newsStatus: nextNewsStatus });
+    const savedNs = saved && saved.newsStatus && typeof saved.newsStatus === 'object'
+      ? saved.newsStatus
+      : nextNewsStatus;
+    return savedNs;
+  }
+};
+
 // Contact API
 export const contactAPI = {
   // Contact 설정 조회
