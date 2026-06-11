@@ -129,14 +129,34 @@ export interface NewsTheme {
   texture?: 'newsprint' | 'none';
 }
 
+// ── 호(號) 공개 상태 ──────────────────────────────────────────────
+//   published = 발행(비로그인 포함 누구나 열람) / draft = 공개 전 준비중(교정쇄, 편집자만).
+//   런타임 토글은 kkumdarak-settings 의 newsStatus 버킷에 영속되며(아래 NewsStatusMap),
+//   정적 status 보다 우선한다. 유효 상태 = override[id] ?? issue.status ?? 'published'.
+export type NewsStatus = 'published' | 'draft';
+
+// 호 id → 상태 오버라이드 맵(kkumdarak-settings.data.newsStatus 와 동일 형태).
+export type NewsStatusMap = Record<string, NewsStatus>;
+
 // ── 호(號) ───────────────────────────────────────────────────────
 export interface NewsIssue {
   id: string;
   no: number;             // 호수
   title: string;          // 호 제목(아카이브 표기용)
   dateline: string;       // 날짜줄 본문 ("창간호 · 2026년 6월 …")
+  status?: NewsStatus;    // 정적 기본 상태(미지정 = published). 런타임 override 가 이 값을 덮는다.
   theme: NewsTheme;
   blocks: NewsBlock[];
+}
+
+// ── 유효 상태 해석 ────────────────────────────────────────────────
+//   런타임 override(서버 newsStatus) → 정적 issue.status → 'published' 순으로 폴백.
+//   settings 미도착(콜드스타트) 구간에는 override 가 undefined 라 정적 status 로 낙관 렌더한다.
+export function resolveIssueStatus(
+  issue: Pick<NewsIssue, 'id' | 'status'>,
+  override?: NewsStatusMap,
+): NewsStatus {
+  return (override && override[issue.id]) ?? issue.status ?? 'published';
 }
 
 // 매체 정체성(고정 프레임에서 공통으로 쓰는 상수)
@@ -152,7 +172,7 @@ export const COLOPHON_LINES = [
   '운영 노드트리 × 장암면 주민자치회',
   '주최 문화체육관광부 · 주관 한국문화예술교육진흥원',
   '충남 부여군 장암면 석동로29번길 3',
-  '문의 010-2399-3982 · nodetree.pmaker@gmail.com',
+  '문의 nodetree.pmaker@gmail.com',
 ];
 
 // public 자산 경로(스크랩 콜라주용)
@@ -170,6 +190,7 @@ const ISSUE_NO1: NewsIssue = {
   title: '창간호',
   dateline:
     '창간호 · 2026년 6월 10일 · 충남 부여군 장암면  |  펴낸곳 꿈다락 문화예술학교 이소(異素)',
+  status: 'published',     // 창간호는 발행 상태로 명시(정적·기본). 런타임 override 로만 준비중 전환.
   theme: {
     paper: '#f6f2e7',         // 뉴스프린트 미색
     ink: '#251b13',           // 먹 (--kd-figma-ink 계열, 순흑 회피)
@@ -283,7 +304,7 @@ const ISSUE_NO1: NewsIssue = {
         { no: '⑥', name: '〈소리일기〉', field: '필드레코딩', target: '전생애 12명', period: '6.23–7.28 화 19:00–21:00' },
         { no: '⑦', name: '〈풍경일기〉', field: '야외 드로잉', target: '아동·청소년 12명', period: '7–10월', extra: '백마강·임천·부여읍' },
       ],
-      footer: '공통 — 장암면 거주자 우선 · 무료 · 문의 010-2399-3982 · nodetree.pmaker@gmail.com',
+      footer: '공통 — 장암면 거주자 우선 · 무료 · 문의 nodetree.pmaker@gmail.com',
     },
 
     // ── 프로그램 마스코트 스크랩 ────────────────────────────────

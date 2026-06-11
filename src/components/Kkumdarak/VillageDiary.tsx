@@ -142,6 +142,17 @@ const DIARY_DESKTOP_CSS = `
     transform: none !important;
     margin: 8px auto 40px !important;
   }
+
+  /* ── 편집 모드 + 빈 프로그램: placeholder 를 정적 흐름으로 풀어
+       '+ 기록 추가' 버튼과 겹치지 않게(가리지 않게) 한다. 보기 모드는 무영향(절대배치 유지). */
+  .kd-diary-desktop.is-editing-flow .diary-empty.is-editing-empty {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    width: min(560px, 92%) !important;
+    margin: 8px auto 16px !important;
+  }
 }
 `;
 
@@ -990,19 +1001,28 @@ const VillageDiary: React.FC = () => {
           </>
         ) : (
           <>
-            <div className="diary-empty" style={{ top: 360 }}>
+            {/* 준비중 플레이스홀더 — 이소 톤(kd). 편집 흐름(is-editing-flow)에서는
+                CSS 가 정적 배치로 풀어 '+ 기록 추가' 버튼과 겹치지 않게 한다.
+                authed 면 placeholder 안에서 '첫 일기 쓰기'로 곧장 카드 추가 유도. */}
+            <div className={`diary-empty${isEditing ? ' is-editing-empty' : ''}`} style={isEditing ? undefined : { top: 360 }}>
               <div className="diary-empty-character">
                 <DiaryCharacter src={program.character} name={program.name} />
               </div>
               <h2>{program.name}</h2>
               <p>일기를 준비하고 있어요.</p>
               <span>곧 마을의 기록으로 채워집니다.</span>
+              {/* 편집자 전용: placeholder 에서 바로 첫 일기 작성 진입 */}
+              {authed && !isEditing && (
+                <button type="button" className="diary-empty-cta" onClick={handleEditToggle}>
+                  ✎ 첫 일기 쓰기
+                </button>
+              )}
             </div>
-            {/* 준비중 프로그램에도 카드 추가 가능 (편집 중) */}
+            {/* 준비중 프로그램에도 카드 추가 가능 (편집 중) — 편집 흐름에서는 정적 배치 */}
             {isEditing && (
               <button
                 className="diary-add-card-btn"
-                style={{ top: 560 }}
+                style={isEditing ? undefined : { top: 560 }}
                 onClick={handleCardAdd}
               >
                 + 기록 추가
@@ -1015,7 +1035,7 @@ const VillageDiary: React.FC = () => {
       <div
         className={`kd-diary-mobile${mobileSide === 'left' ? ' is-mobile-left' : ''}`}
         data-name="마을일기 — Mobile"
-        style={{ height: mobileHeight }}
+        style={{ height: mobileHeight, '--accent': program.accent } as React.CSSProperties}
       >
         <div className="kd-section-rule kd-section-rule--s4" />
         <h1>마을일기</h1>
@@ -1081,6 +1101,12 @@ const VillageDiary: React.FC = () => {
             </div>
             <h2>{program.name}</h2>
             <p>일기를 준비하고 있어요.</p>
+            <span>곧 마을의 기록으로 채워집니다.</span>
+            {authed && !isEditing && (
+              <button type="button" className="diary-empty-cta" onClick={handleEditToggle}>
+                ✎ 첫 일기 쓰기
+              </button>
+            )}
           </div>
         )}
       </div>
