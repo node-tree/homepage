@@ -1608,7 +1608,7 @@
 
 /* ── 단체컷 크로스페이드(2장 교대) — 데스크톱·모바일 공유 ──────────────
    첫 이미지(base)가 흐름 배치로 카드 높이를 잡고, 두 번째(overlay)는 absolute 로
-   겹쳐 letterbox(contain)로 fade. 비율이 달라도 레이아웃 점프 없음(크롭 금지). */
+   겹쳐 cover 로 꽉 채워 fade. 비율이 달라도 레이아웃 점프 없음. */
 .kd-group-shot-stack {
   position: relative;
   width: 100%;
@@ -1625,7 +1625,7 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;   /* 비율 달라도 크롭 없이 letterbox */
+  object-fit: cover;   /* 카드에 꽉 채움 — 비율 다르면 가장자리 크롭 */
   display: block;
   z-index: 2;
 }

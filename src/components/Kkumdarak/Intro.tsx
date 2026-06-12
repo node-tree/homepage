@@ -45,13 +45,13 @@ const GroupShot: React.FC<{
   const both = Boolean(shot1) && Boolean(shot2);
   const [showSecond, setShowSecond] = useState(false);
 
-  // 두 장 모두 있을 때만 2초 교대 타이머 가동(언마운트/조건변화 시 정리).
+  // 두 장 모두 있을 때만 4초 교대 타이머 가동(언마운트/조건변화 시 정리).
   useEffect(() => {
     if (!both) {
       setShowSecond(false);
       return;
     }
-    const id = window.setInterval(() => setShowSecond((s) => !s), 2000);
+    const id = window.setInterval(() => setShowSecond((s) => !s), 4000);
     return () => window.clearInterval(id);
   }, [both]);
 
