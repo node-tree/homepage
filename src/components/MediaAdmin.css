@@ -97,6 +97,24 @@
   align-items: center;
   margin-bottom: 14px;
 }
+.ma-upload-dest {
+  font-size: 13px;
+  color: #444;
+}
+.ma-upload-dest strong {
+  color: #2f7d6b;
+  font-weight: 700;
+}
+.ma-upload-dest-hint {
+  color: #999;
+  font-size: 12px;
+}
+.ma-scope-hint {
+  margin: 6px 0 10px;
+  font-size: 12.5px;
+  color: #2f7d6b;
+}
+.ma-scope-hint strong { font-weight: 700; }
 .ma-upload-options label {
   display: flex;
   flex-direction: column;
