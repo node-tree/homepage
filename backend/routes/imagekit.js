@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
 // ImageKit 관리자 라우트
-//   · 읽기/업로드서명/폴더생성은 사이트 admin 또는 꿈다락 scope 토큰 허용(결합 인증).
-//     파괴적 삭제(DELETE /file)는 사이트 admin 만. role:'user' 등 비권한 → 403.
+//   · 읽기/업로드서명/폴더생성·삭제(DELETE /file, /folder) 모두 결합 인증 —
+//     사이트 admin 또는 꿈다락 scope 토큰 허용. role:'user' 등 비권한 → 403.
 //   · private key 는 서버에서만 사용. publicKey/urlEndpoint 는 공개값이므로
 //     프론트 업로드(서명방식)에 필요해 /auth 응답에 함께 내려준다.
 //   · 자체 DB 저장 없음 — ImageKit 미디어 라이브러리가 단일 소스.
@@ -34,7 +34,8 @@ if (PUBLIC_KEY && PRIVATE_KEY && URL_ENDPOINT) {
 // ── 결합 인증 ──────────────────────────────────────────────────
 //   읽기(/list,/usage)·업로드 서명(/auth)·폴더 생성(/folder)은
 //   "사이트 admin" 또는 "꿈다락 scope" 둘 중 하나면 허용한다(ai.js requireAnyAuth 와 동형).
-//   파괴적 작업(DELETE /file)은 아래 siteAdminOnly 로 사이트 admin 만 허용.
+//   파괴적 삭제(DELETE /file, /folder)도 동일한 결합 인증 뒤에서만 — admin 또는 꿈다락 편집자.
+//   (편집툴/피커가 꿈다락 토큰으로 동작하므로 admin 전용으로 막지 않는다. 공개는 401 차단.)
 //   토큰을 1회 검증해 req.user(사이트)/req.kkumdarak(꿈다락)에 실어 둔다.
 const requireImagekitAccess = (req, res, next) => {
   const authHeader = req.header('Authorization');
@@ -65,13 +66,7 @@ const requireImagekitAccess = (req, res, next) => {
   }
 };
 
-// 파괴적 작업 전용 — 사이트 admin 만(꿈다락 scope 는 403). requireImagekitAccess 통과 후 검사.
-const siteAdminOnly = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') return next();
-  return res.status(403).json({ success: false, message: '관리자 권한이 필요합니다.' });
-};
-
-// 모든 라우트: 결합 인증(읽기·업로드·폴더). DELETE 는 핸들러에서 siteAdminOnly 추가.
+// 모든 라우트: 결합 인증(읽기·업로드·폴더생성·삭제 모두 admin 또는 꿈다락 편집자).
 router.use(requireImagekitAccess);
 
 // SDK 미초기화(환경변수 누락) 가드
@@ -174,7 +169,7 @@ router.get('/usage', async (req, res) => {
 });
 
 // DELETE /api/imagekit/file/:fileId
-router.delete('/file/:fileId', siteAdminOnly, async (req, res) => {
+router.delete('/file/:fileId', async (req, res) => {
   try {
     const { fileId } = req.params;
     if (!fileId) {
@@ -185,6 +180,39 @@ router.delete('/file/:fileId', siteAdminOnly, async (req, res) => {
   } catch (error) {
     console.error('ImageKit deleteFile 오류:', error.message);
     res.status(500).json({ success: false, message: '파일 삭제 실패' });
+  }
+});
+
+// DELETE /api/imagekit/folder — 폴더 삭제(안의 파일/하위폴더까지 모두 재귀 삭제).
+//   · folderPath 는 body 로 받는다(경로에 슬래시가 있어 URL 파라미터로 받기 부적합).
+//   · 결합 인증(requireImagekitAccess) 뒤 — 사이트 admin 또는 꿈다락 편집자. 공개는 401 로 차단.
+//   · 루트('/') 삭제는 거부(라이브러리 전체 삭제 방지). 빈/경로조작 값도 거부.
+//   · ImageKit deleteFolder 는 비어있지 않은 폴더도 내용물째 삭제한다(프론트에서 경고 필수).
+router.delete('/folder', async (req, res) => {
+  try {
+    const raw = typeof req.body?.folderPath === 'string' ? req.body.folderPath.trim() : '';
+    if (!raw) {
+      return res.status(400).json({ success: false, message: 'folderPath 가 필요합니다.' });
+    }
+    if (raw.includes('..') || /[\x00-\x1f]/.test(raw)) {
+      return res.status(400).json({ success: false, message: '폴더 경로에 .. 또는 제어문자는 사용할 수 없습니다.' });
+    }
+    let norm = raw.startsWith('/') ? raw : `/${raw}`;
+    norm = norm.replace(/\/+/g, '/');
+    if (norm.length > 1) norm = norm.replace(/\/+$/, '');
+    if (norm === '/' || norm === '') {
+      return res.status(400).json({ success: false, message: '루트 폴더는 삭제할 수 없습니다.' });
+    }
+    await imagekit.deleteFolder(norm);
+    res.json({ success: true, message: '폴더가 삭제되었습니다.', folderPath: norm });
+  } catch (error) {
+    const msg = error?.message || '';
+    console.error('ImageKit deleteFolder 오류:', msg);
+    const notFound = /not\s*found|no\s*such|does\s*not\s*exist/i.test(msg);
+    res.status(notFound ? 404 : 500).json({
+      success: false,
+      message: notFound ? '폴더를 찾을 수 없습니다(이미 삭제되었을 수 있습니다).' : '폴더 삭제에 실패했습니다.',
+    });
   }
 });
 

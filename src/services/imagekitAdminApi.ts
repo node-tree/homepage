@@ -162,6 +162,21 @@ export const imagekitAdminAPI = {
     if (!data.success) throw new Error('삭제 응답이 올바르지 않습니다.');
   },
 
+  // 폴더 삭제 (안의 파일/하위폴더까지 모두 재귀 삭제). folderPath 는 body 로 전달.
+  deleteFolder: async (folderPath: string, signal?: AbortSignal): Promise<void> => {
+    const res = await fetch(`${API_BASE_URL}/imagekit/folder`, {
+      method: 'DELETE',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ folderPath }),
+      signal,
+    });
+    await handleAuthErrors(res);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || `폴더 삭제 실패 (${res.status})`);
+    }
+  },
+
   // ImageKit 업로드 엔드포인트로 직접 multipart POST.
   //   서명 파라미터는 매 업로드마다 새로 받아 만료를 피한다.
   uploadFile: async (

@@ -95,6 +95,11 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [creatingFolder, setCreatingFolder] = useState(false);
+  // 삭제 2단계 확인 — 휴지통 클릭으로 무장(pendingDelete) 후 확인 클릭으로 실행.
+  const [pendingDelete, setPendingDelete] = useState<
+    { kind: 'file'; id: string; name: string } | { kind: 'folder'; path: string; name: string } | null
+  >(null);
+  const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadList = useCallback(
@@ -158,6 +163,7 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
   useEffect(() => {
     if (!open) return;
     setSkip(0);
+    setPendingDelete(null);
     loadList(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, browsePath, search]);
@@ -173,6 +179,7 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
       setDirectUrl('');
       setNewFolderOpen(false);
       setNewFolderName('');
+      setPendingDelete(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -212,6 +219,62 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
       setCreatingFolder(false);
     }
   }, [newFolderName, creatingFolder, browsePath, enterFolder]);
+
+  // 휴지통 클릭 = 삭제 무장(아직 안 지움). 같은 항목 다시 클릭하면 해제(토글).
+  const armDeleteFile = useCallback((f: IkFile) => {
+    setPendingDelete((p) =>
+      p && p.kind === 'file' && p.id === f.fileId ? null : { kind: 'file', id: f.fileId, name: f.name }
+    );
+  }, []);
+  const armDeleteFolder = useCallback((path: string, name: string) => {
+    const norm = normalizePath(path);
+    setPendingDelete((p) =>
+      p && p.kind === 'folder' && p.path === norm ? null : { kind: 'folder', path: norm, name }
+    );
+  }, []);
+  const cancelDelete = useCallback(() => setPendingDelete(null), []);
+
+  // 확인 클릭 = 실제 삭제. 파일은 목록에서 제거, 폴더는 (현재 폴더 삭제 시) 상위로 이동.
+  const confirmDelete = useCallback(async () => {
+    if (!pendingDelete || deleting) return;
+    setDeleting(true);
+    setListError(null);
+    try {
+      if (pendingDelete.kind === 'file') {
+        await imagekitAdminAPI.deleteFile(pendingDelete.id);
+        setFiles((prev) => prev.filter((f) => f.fileId !== pendingDelete.id));
+        setSelected((prev) => {
+          // 삭제된 파일이 선택돼 있었다면 선택 해제(url 기준).
+          const target = files.find((f) => f.fileId === pendingDelete.id);
+          if (!target) return prev;
+          const next = new Set(prev);
+          next.delete(target.url);
+          return next;
+        });
+      } else {
+        await imagekitAdminAPI.deleteFolder(pendingDelete.path);
+        const cur = normalizePath(browsePath);
+        if (cur === pendingDelete.path || cur.startsWith(pendingDelete.path + '/')) {
+          // 현재 보고 있는(또는 그 하위) 폴더를 지웠으면 상위로 이동.
+          const up = parentPath(pendingDelete.path) || '/';
+          enterFolder(up);
+        } else {
+          loadList(true); // 목록에서만 제거 — 재조회로 갱신.
+        }
+      }
+      setPendingDelete(null);
+    } catch (e: any) {
+      if (e?.code === 'AUTH_EXPIRED') {
+        setListError('인증이 만료되었습니다. 다시 로그인해주세요.');
+      } else if (e?.code === 'FORBIDDEN') {
+        setListError('삭제 권한이 없습니다.');
+      } else {
+        setListError(e?.message || '삭제에 실패했습니다.');
+      }
+    } finally {
+      setDeleting(false);
+    }
+  }, [pendingDelete, deleting, files, browsePath, enterFolder, loadList]);
 
   const processFiles = useCallback(
     async (fileList: FileList | File[]) => {
@@ -469,17 +532,68 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
             <div className="ikp-folders" role="list" aria-label="폴더">
               {folders.map((f) => {
                 const target = f.folderPath || `${normalizePath(browsePath)}/${f.name}`;
+                const norm = normalizePath(target);
+                const armed = pendingDelete?.kind === 'folder' && pendingDelete.path === norm;
                 return (
-                  <button
+                  <div
                     key={f.folderId || f.folderPath || `fol-${f.name}`}
-                    className="ikp-folder"
+                    className={`ikp-folder-wrap ${armed ? 'armed' : ''}`}
                     role="listitem"
-                    onClick={() => enterFolder(target)}
-                    title={`${f.name} 폴더 열기`}
                   >
-                    <span className="ikp-folder-ic" aria-hidden="true">📁</span>
-                    <span className="ikp-folder-name">{f.name}</span>
-                  </button>
+                    <button
+                      type="button"
+                      className="ikp-folder"
+                      onClick={() => enterFolder(target)}
+                      title={`${f.name} 폴더 열기`}
+                    >
+                      <span className="ikp-folder-ic" aria-hidden="true">📁</span>
+                      <span className="ikp-folder-name">{f.name}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="ikp-trash"
+                      title={`${f.name} 폴더 삭제`}
+                      aria-label={`${f.name} 폴더 삭제`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        armDeleteFolder(target, f.name);
+                      }}
+                    >
+                      🗑
+                    </button>
+                    {armed && (
+                      <div className="ikp-confirm" role="alertdialog" aria-label="폴더 삭제 확인">
+                        <p className="ikp-confirm-msg">
+                          <strong>{f.name}</strong> 폴더를 삭제할까요?
+                          <span className="ikp-confirm-warn">폴더 안의 파일·하위 폴더까지 모두 삭제됩니다.</span>
+                        </p>
+                        <div className="ikp-confirm-actions">
+                          <button
+                            type="button"
+                            className="ikp-btn danger"
+                            disabled={deleting}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              confirmDelete();
+                            }}
+                          >
+                            {deleting ? '삭제 중…' : '삭제'}
+                          </button>
+                          <button
+                            type="button"
+                            className="ikp-btn ghost"
+                            disabled={deleting}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              cancelDelete();
+                            }}
+                          >
+                            취소
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -492,21 +606,72 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
                 const isImage = f.fileType === 'image' || f.fileType === 'IMAGE';
                 const thumb = isImage && f.url ? ikUrl(f.url, { w: 300 }) : null;
                 const isSel = selected.has(f.url);
+                const armed = pendingDelete?.kind === 'file' && pendingDelete.id === f.fileId;
                 return (
-                  <button
+                  <div
                     key={f.fileId || f.filePath || f.name}
-                    className={`ikp-card ${isSel ? 'sel' : ''}`}
-                    onClick={() => toggleSelect(f.url)}
-                    title={f.name}
+                    className={`ikp-card-wrap ${armed ? 'armed' : ''}`}
                   >
-                    {thumb ? (
-                      <img src={thumb} alt={f.name} loading="lazy" />
-                    ) : (
-                      <span className="ikp-noimg">{f.fileType || 'file'}</span>
+                    <button
+                      type="button"
+                      className={`ikp-card ${isSel ? 'sel' : ''}`}
+                      onClick={() => toggleSelect(f.url)}
+                      title={f.name}
+                    >
+                      {thumb ? (
+                        <img src={thumb} alt={f.name} loading="lazy" />
+                      ) : (
+                        <span className="ikp-noimg">{f.fileType || 'file'}</span>
+                      )}
+                      <span className="ikp-name">{f.name}</span>
+                      {isSel && <span className="ikp-check">✓</span>}
+                    </button>
+                    {f.fileId && (
+                      <button
+                        type="button"
+                        className="ikp-trash"
+                        title={`${f.name} 삭제`}
+                        aria-label={`${f.name} 삭제`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          armDeleteFile(f);
+                        }}
+                      >
+                        🗑
+                      </button>
                     )}
-                    <span className="ikp-name">{f.name}</span>
-                    {isSel && <span className="ikp-check">✓</span>}
-                  </button>
+                    {armed && (
+                      <div className="ikp-confirm" role="alertdialog" aria-label="파일 삭제 확인">
+                        <p className="ikp-confirm-msg">
+                          <strong>{f.name}</strong> 을(를) 삭제할까요?
+                        </p>
+                        <div className="ikp-confirm-actions">
+                          <button
+                            type="button"
+                            className="ikp-btn danger"
+                            disabled={deleting}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              confirmDelete();
+                            }}
+                          >
+                            {deleting ? '삭제 중…' : '삭제'}
+                          </button>
+                          <button
+                            type="button"
+                            className="ikp-btn ghost"
+                            disabled={deleting}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              cancelDelete();
+                            }}
+                          >
+                            취소
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
