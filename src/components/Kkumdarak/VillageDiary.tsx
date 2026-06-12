@@ -160,6 +160,139 @@ const DIARY_DESKTOP_CSS = `
     width: min(560px, 92%) !important;
     margin: 8px auto 16px !important;
   }
+
+  /* ── 편집 모드 헤더 정돈: 절대배치 헤더 크롬을 흐름으로 풀어
+       정적 카드 흐름(컨테이너 top:0 시작)과 겹치지 않게 한다. 보기 모드는 무영향. ──
+     원인: 보기 모드는 h1/부제/필터/편집버튼/공개토글/강조선이 모두 position:absolute 라
+     컨테이너 좌표에 떠 있었고, is-editing-flow 가 카드만 static 으로 풀어 카드가 top:0 부터
+     흐르면서 절대배치 헤더 밑으로 파고들어 겹쳤다. 편집 모드에선 헤더도 같은 흐름에 합류시켜
+     '헤더 → 컨트롤 → 카드' 순서로 세로로 쌓는다(겹침 0). */
+  .kd-diary-desktop.is-editing-flow {
+    padding: 24px 0 40px;
+    box-sizing: border-box;
+  }
+  .kd-diary-desktop.is-editing-flow > h1,
+  .kd-diary-desktop.is-editing-flow > .diary-sub,
+  .kd-diary-desktop.is-editing-flow > .diary-filters,
+  .kd-diary-desktop.is-editing-flow > .kd-section-rule,
+  .kd-diary-desktop.is-editing-flow > .kd-diary-edit-btn,
+  .kd-diary-desktop.is-editing-flow > .kd-diary-visibility {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    transform: none !important;
+  }
+  .kd-diary-desktop.is-editing-flow > h1 {
+    width: min(560px, 92%);
+    margin: 0 auto 6px !important;
+  }
+  .kd-diary-desktop.is-editing-flow > .diary-sub {
+    width: min(560px, 92%);
+    margin: 0 auto 14px !important;
+  }
+  .kd-diary-desktop.is-editing-flow > .kd-section-rule {
+    width: min(560px, 92%);
+    margin: 0 auto 14px !important;
+  }
+  .kd-diary-desktop.is-editing-flow > .diary-filters {
+    position: static !important;
+    width: min(560px, 92%);
+    margin: 0 auto 14px !important;
+  }
+  .kd-diary-desktop.is-editing-flow > .kd-diary-edit-btn {
+    align-self: flex-end;
+    margin: 0 max(4%, calc((100% - 560px) / 2)) 12px 0 !important;
+  }
+  .kd-diary-desktop.is-editing-flow > .kd-diary-visibility {
+    width: min(560px, 92%);
+    margin: 0 auto 20px !important;
+    justify-content: flex-start;
+  }
+  /* 편집 모드에선 장식 요소(스크롤 큐·길·아바타) 숨김 — 편집 흐름과 무관하고 겹침만 유발 */
+  .kd-diary-desktop.is-editing-flow > .diary-scroll-cue,
+  .kd-diary-desktop.is-editing-flow > .diary-path,
+  .kd-diary-desktop.is-editing-flow > .diary-avatar {
+    display: none !important;
+  }
+}
+
+/* ── 모바일 편집 모드: 데스크톱과 동일하게 절대배치 해제 → 세로 흐름 ──
+   모바일도 보기 모드는 헤더/카드가 모두 position:absolute(390px 고정 캔버스).
+   편집 시 is-editing-flow 로 전체를 흐름 컬럼으로 풀어 헤더·컨트롤·카드가
+   세로로 쌓이게 한다. 보기 모드(비편집)는 이 블록 밖이라 무영향. */
+@media (max-width: 900px) {
+  .kd-diary-mobile.is-editing-flow {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    max-width: 420px;
+    height: auto !important;
+    padding: 20px 16px 36px;
+    box-sizing: border-box;
+  }
+  .kd-diary-mobile.is-editing-flow > .kd-section-rule,
+  .kd-diary-mobile.is-editing-flow > h1,
+  .kd-diary-mobile.is-editing-flow > .diary-sub,
+  .kd-diary-mobile.is-editing-flow > .diary-filters,
+  .kd-diary-mobile.is-editing-flow > .kd-diary-edit-btn,
+  .kd-diary-mobile.is-editing-flow > .kd-diary-visibility,
+  .kd-diary-mobile.is-editing-flow .diary-card,
+  .kd-diary-mobile.is-editing-flow .diary-empty,
+  .kd-diary-mobile.is-editing-flow .diary-add-card-btn {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    transform: none !important;
+  }
+  .kd-diary-mobile.is-editing-flow > .kd-section-rule {
+    width: 100%;
+    margin: 0 0 12px !important;
+  }
+  .kd-diary-mobile.is-editing-flow > h1 {
+    margin: 0 0 6px !important;
+  }
+  .kd-diary-mobile.is-editing-flow > .diary-sub {
+    width: 100%;
+    margin: 0 0 12px !important;
+  }
+  .kd-diary-mobile.is-editing-flow > .diary-filters {
+    width: 100%;
+    margin: 0 0 12px !important;
+  }
+  .kd-diary-mobile.is-editing-flow > .kd-diary-edit-btn {
+    align-self: flex-end;
+    margin: 0 0 12px !important;
+  }
+  .kd-diary-mobile.is-editing-flow > .kd-diary-visibility {
+    width: 100%;
+    margin: 0 0 16px !important;
+    flex-wrap: wrap;
+  }
+  /* 편집 카드: 풀폭 흐름 + 충분한 카드 간격(겹침·잘림 방지) */
+  .kd-diary-mobile.is-editing-flow .diary-card {
+    width: 100% !important;
+    margin: 0 0 22px !important;
+  }
+  .kd-diary-mobile.is-editing-flow .diary-photo {
+    height: 150px !important;
+  }
+  .kd-diary-mobile.is-editing-flow .diary-empty {
+    width: 100% !important;
+    margin: 0 0 12px !important;
+    padding: 0 !important;
+  }
+  .kd-diary-mobile.is-editing-flow .diary-add-card-btn {
+    align-self: center;
+    margin: 6px auto 8px !important;
+  }
+  /* 장식 숨김 */
+  .kd-diary-mobile.is-editing-flow .diary-path,
+  .kd-diary-mobile.is-editing-flow .diary-avatar {
+    display: none !important;
+  }
 }
 `;
 
@@ -1148,9 +1281,9 @@ const VillageDiary: React.FC = () => {
       </div>
 
       <div
-        className={`kd-diary-mobile${mobileSide === 'left' ? ' is-mobile-left' : ''}`}
+        className={`kd-diary-mobile${mobileSide === 'left' ? ' is-mobile-left' : ''}${isEditing ? ' is-editing-flow' : ''}`}
         data-name="마을일기 — Mobile"
-        style={{ height: mobileHeight, '--accent': program.accent } as React.CSSProperties}
+        style={{ height: isEditing ? 'auto' : mobileHeight, '--accent': program.accent } as React.CSSProperties}
       >
         <div className="kd-section-rule kd-section-rule--s4" />
         <h1>마을일기</h1>
@@ -1160,70 +1293,99 @@ const VillageDiary: React.FC = () => {
 
         {hasContent ? (
           <>
-            <div
-              className="diary-path"
-              style={{ borderLeftColor: program.accent, borderRightColor: program.accent }}
-            />
-            <div
-              className="diary-avatar"
-              ref={mobileAvatarRef}
-              style={{ top: MOBILE_AVATAR_START }}
-            >
-              <div className="diary-character-scale">
-                <DiaryCharacter src={program.character} name={program.name} />
-              </div>
-            </div>
+            {/* 보기 모드에서만 길/캐릭터/도트/커넥터(장식) 노출 — 편집 모드는 정적 흐름이라 숨김 */}
+            {!isEditing && (
+              <>
+                <div
+                  className="diary-path"
+                  style={{ borderLeftColor: program.accent, borderRightColor: program.accent }}
+                />
+                <div
+                  className="diary-avatar"
+                  ref={mobileAvatarRef}
+                  style={{ top: MOBILE_AVATAR_START }}
+                >
+                  <div className="diary-character-scale">
+                    <DiaryCharacter src={program.character} name={program.name} />
+                  </div>
+                </div>
+              </>
+            )}
             {cards.map((card, index) => {
               const y = MOBILE_FIRST_CARD_Y + index * MOBILE_CARD_GAP;
               // dot/connector를 path 시각 중심선(x=48)에 정렬 — side 무관
               const lx = MOBILE_PATH_CENTER_X;
               return (
                 <React.Fragment key={`m-${program.id}-${index}`}>
-                  <i
-                    ref={setMobileDotRef(index)}
-                    className="diary-dot"
-                    style={
-                      mobileSide === 'left'
-                        ? { top: y + MOBILE_DOT_Y_OFFSET, right: lx - 11, background: card.dot }
-                        : { top: y + MOBILE_DOT_Y_OFFSET, left: lx - 11, background: card.dot }
-                    }
-                  />
-                  <i
-                    ref={setMobileConnectorRef(index)}
-                    className="diary-connector"
-                    style={
-                      mobileSide === 'left'
-                        ? { top: y + MOBILE_CONNECTOR_Y_OFFSET, right: lx }
-                        : { top: y + MOBILE_CONNECTOR_Y_OFFSET, left: lx }
-                    }
-                  />
+                  {!isEditing && (
+                    <>
+                      <i
+                        ref={setMobileDotRef(index)}
+                        className="diary-dot"
+                        style={
+                          mobileSide === 'left'
+                            ? { top: y + MOBILE_DOT_Y_OFFSET, right: lx - 11, background: card.dot }
+                            : { top: y + MOBILE_DOT_Y_OFFSET, left: lx - 11, background: card.dot }
+                        }
+                      />
+                      <i
+                        ref={setMobileConnectorRef(index)}
+                        className="diary-connector"
+                        style={
+                          mobileSide === 'left'
+                            ? { top: y + MOBILE_CONNECTOR_Y_OFFSET, right: lx }
+                            : { top: y + MOBILE_CONNECTOR_Y_OFFSET, left: lx }
+                        }
+                      />
+                    </>
+                  )}
                   <DiaryCard
                     title={card.title}
                     date={card.date}
                     dot={card.dot}
                     accent={program.accent}
                     imageUrl={card.imageUrl}
-                    style={{ top: y }}
+                    style={isEditing ? undefined : { top: y }}
                     cardRef={setMobileCardRef(index)}
+                    isEditing={isEditing}
+                    side={card.side}
+                    programId={program.id}
+                    programName={program.name}
+                    onUpdate={isEditing ? (field, value) => handleCardUpdate(index, field, value) : undefined}
+                    onDelete={isEditing ? () => handleCardDelete(index) : undefined}
                   />
                 </React.Fragment>
               );
             })}
-          </>
-        ) : (
-          <div className="diary-empty diary-empty-mobile">
-            <div className="diary-empty-character">
-              <DiaryCharacter src={program.character} name={program.name} />
-            </div>
-            <h2>{program.name}</h2>
-            <p>일기를 준비하고 있어요.</p>
-            <span>곧 마을의 기록으로 채워집니다.</span>
-            {authed && !isEditing && (
-              <button type="button" className="diary-empty-cta" onClick={handleEditToggle}>
-                ✎ 첫 일기 쓰기
+            {/* + 기록 추가 버튼 (모바일 편집 중) — 정적 흐름 */}
+            {isEditing && (
+              <button className="diary-add-card-btn" onClick={handleCardAdd}>
+                + 기록 추가
               </button>
             )}
-          </div>
+          </>
+        ) : (
+          <>
+            <div className={`diary-empty diary-empty-mobile${isEditing ? ' is-editing-empty' : ''}`}>
+              <div className="diary-empty-character">
+                <DiaryCharacter src={program.character} name={program.name} />
+              </div>
+              <h2>{program.name}</h2>
+              <p>일기를 준비하고 있어요.</p>
+              <span>곧 마을의 기록으로 채워집니다.</span>
+              {authed && !isEditing && (
+                <button type="button" className="diary-empty-cta" onClick={handleEditToggle}>
+                  ✎ 첫 일기 쓰기
+                </button>
+              )}
+            </div>
+            {/* 준비중 프로그램도 모바일 편집 중 카드 추가 가능 — 정적 흐름 */}
+            {isEditing && (
+              <button className="diary-add-card-btn" onClick={handleCardAdd}>
+                + 기록 추가
+              </button>
+            )}
+          </>
         )}
       </div>
     </section>
