@@ -17,7 +17,7 @@ const PERIODS: Array<{ name: string; period: Period; color: string; mobileColor:
   { name: '손의 기억',      period: { sm: 7, sd: 1,  em: 10, ed: 31 }, color: '#f2a0c0', mobileColor: '#f2a0c0' },
   { name: '소리일기',       period: { sm: 6, sd: 23, em: 7, ed: 28 },  color: '#f5c518', mobileColor: '#f5c518' },
   { name: '풍경일기',       period: { sm: 5, sd: 23, em: 7, ed: 18 },  color: '#2d5be3', mobileColor: '#2d5be3' },
-  { name: '마을의 신호',    period: { sm: 7, sd: 1,  em: 7, ed: 31 },  color: '#1b55e2', mobileColor: '#1b55e2' },
+  { name: '마을의 신호',    period: { sm: 7, sd: 1,  em: 9, ed: 2 },   color: '#1b55e2', mobileColor: '#1b55e2' },
 ];
 
 // 〈다시, 안녕〉(축제)은 11.7 하루짜리라 막대 대신 짧은 점 마커로 표시.
