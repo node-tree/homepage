@@ -368,6 +368,127 @@ button.ma-crumb:hover {
   text-align: center;
 }
 
+/* ── 폴더 카드(진입 버튼 + 휴지통) / 삭제 확인 2단계 ──────────────────── */
+.ma-card.ma-folder-wrap {
+  position: relative;
+  padding: 0;
+}
+.ma-folder-open {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  transition: background 0.12s;
+}
+.ma-card.ma-folder-wrap:hover {
+  border-color: #c8d4ff;
+}
+.ma-card.ma-folder-wrap:hover .ma-folder-open {
+  background: #fafbff;
+}
+/* 휴지통 버튼 — 카드 우상단, 위험 동작이라 붉은 톤. */
+.ma-trash {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: rgba(192, 57, 43, 0.85);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s;
+}
+.ma-card:hover .ma-trash,
+.ma-card.armed .ma-trash {
+  opacity: 1;
+}
+.ma-trash:hover {
+  background: #c0392b;
+}
+.ma-card.armed {
+  outline: 2px solid #c0392b;
+  outline-offset: 1px;
+}
+/* 폴더 삭제 확인 — 카드 전체를 덮는 다이얼로그 */
+.ma-confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.98);
+  border: 2px solid #c0392b;
+  border-radius: 12px;
+  text-align: center;
+}
+.ma-confirm-msg {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #333;
+  word-break: keep-all;
+}
+.ma-confirm-msg strong {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ma-confirm-warn {
+  display: block;
+  margin-top: 4px;
+  color: #c0392b;
+  font-size: 11px;
+}
+.ma-confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+/* 파일 삭제 확인 — 액션 영역 자리에 인라인 표시 */
+.ma-confirm-inline {
+  flex-wrap: wrap;
+  align-items: center;
+  border-top: 1px solid #f3dada;
+  background: #fdf3f2;
+}
+.ma-confirm-msg-inline {
+  flex: 1 1 100%;
+  font-size: 11px;
+  color: #c0392b;
+  line-height: 1.35;
+  word-break: keep-all;
+}
+.ma-confirm-msg-inline strong {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+  color: #333;
+}
+
 .ma-error {
   color: #c0392b;
   font-size: 13px;
@@ -408,6 +529,17 @@ button.ma-crumb:hover {
   }
   .ma-up-btn {
     margin-left: 0;
+  }
+  /* 모바일/터치 — hover 없으니 휴지통 상시 노출. */
+  .ma-trash {
+    opacity: 1;
+  }
+}
+
+/* 터치(hover 불가) 기기 — 폭과 무관하게 휴지통 상시 노출. */
+@media (hover: none) {
+  .ma-trash {
+    opacity: 1;
   }
 }
 

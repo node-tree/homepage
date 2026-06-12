@@ -115,6 +115,14 @@ const MediaAdmin: React.FC = () => {
   const [newFolderName, setNewFolderName] = useState('');
   const [creatingFolder, setCreatingFolder] = useState(false);
 
+  // 삭제 2단계 확인 — 휴지통/삭제 클릭으로 무장(pendingDelete) 후 확인 클릭으로 실행.
+  const [pendingDelete, setPendingDelete] = useState<
+    | { kind: 'file'; id: string; name: string }
+    | { kind: 'folder'; path: string; name: string }
+    | null
+  >(null);
+  const [deleting, setDeleting] = useState(false);
+
   // 문서 제목
   useEffect(() => {
     const prev = document.title;
@@ -189,6 +197,7 @@ const MediaAdmin: React.FC = () => {
   useEffect(() => {
     if (!isAuthenticated || !isAdmin) return;
     setSkip(0);
+    setPendingDelete(null);
     loadList(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isAdmin, browsePath, search]);
@@ -249,27 +258,56 @@ const MediaAdmin: React.FC = () => {
     }
   }, []);
 
-  const handleDelete = useCallback(
-    async (file: IkFile) => {
-      if (!window.confirm(`"${file.name}" 을(를) 영구 삭제합니다. 계속하시겠습니까?`)) return;
-      try {
-        await imagekitAdminAPI.deleteFile(file.fileId);
-        setFiles((prev) => prev.filter((f) => f.fileId !== file.fileId));
+  // 휴지통/삭제 클릭 = 삭제 무장(아직 안 지움). 같은 항목 다시 클릭하면 해제(토글).
+  const armDeleteFile = useCallback((file: IkFile) => {
+    setPendingDelete((p) =>
+      p && p.kind === 'file' && p.id === file.fileId
+        ? null
+        : { kind: 'file', id: file.fileId, name: file.name }
+    );
+  }, []);
+  const armDeleteFolder = useCallback((path: string, name: string) => {
+    const norm = normalizePath(path);
+    setPendingDelete((p) =>
+      p && p.kind === 'folder' && p.path === norm ? null : { kind: 'folder', path: norm, name }
+    );
+  }, []);
+  const cancelDelete = useCallback(() => setPendingDelete(null), []);
+
+  // 확인 클릭 = 실제 삭제. 파일은 목록에서 제거, 폴더는 현재(또는 하위) 폴더 삭제 시 상위로 이동.
+  const confirmDelete = useCallback(async () => {
+    if (!pendingDelete || deleting) return;
+    setDeleting(true);
+    try {
+      if (pendingDelete.kind === 'file') {
+        await imagekitAdminAPI.deleteFile(pendingDelete.id);
+        setFiles((prev) => prev.filter((f) => f.fileId !== pendingDelete.id));
         loadUsage(); // 삭제 후 용량 갱신
-      } catch (e: any) {
-        if (e?.code === 'FORBIDDEN') {
-          alert('관리자 권한이 필요합니다.');
-          return;
+      } else {
+        await imagekitAdminAPI.deleteFolder(pendingDelete.path);
+        const cur = normalizePath(browsePath);
+        if (cur === pendingDelete.path || cur.startsWith(pendingDelete.path + '/')) {
+          const up = parentPath(pendingDelete.path) || '/';
+          enterFolder(up); // 현재(또는 하위) 폴더를 지웠으면 상위로
+        } else {
+          loadList(true); // 목록 갱신
         }
-        if (e?.code === 'AUTH_EXPIRED') {
-          window.location.href = '/login';
-          return;
-        }
+        loadUsage();
+      }
+      setPendingDelete(null);
+    } catch (e: any) {
+      if (e?.code === 'FORBIDDEN') {
+        alert('삭제 권한이 없습니다.');
+      } else if (e?.code === 'AUTH_EXPIRED') {
+        window.location.href = '/login';
+        return;
+      } else {
         alert(e?.message || '삭제에 실패했습니다.');
       }
-    },
-    [loadUsage]
-  );
+    } finally {
+      setDeleting(false);
+    }
+  }, [pendingDelete, deleting, browsePath, loadUsage, loadList, enterFolder]);
 
   const processFiles = useCallback(
     async (fileList: FileList | File[]) => {
@@ -617,39 +655,93 @@ const MediaAdmin: React.FC = () => {
         {listError && <p className="ma-error">{listError}</p>}
 
         <div className="ma-grid">
-          {/* 폴더 — 상단 먼저, 클릭 시 진입 */}
+          {/* 폴더 — 상단 먼저, 클릭 시 진입. 우상단 휴지통 → 확인 2단계 삭제. */}
           {!search &&
             folders.map((f) => {
               const target = f.folderPath || `${normalizePath(browsePath)}/${f.name}`;
+              const norm = normalizePath(target);
+              const armed = pendingDelete?.kind === 'folder' && pendingDelete.path === norm;
               return (
-                <button
-                  type="button"
-                  className="ma-card ma-folder"
+                <div
+                  className={`ma-card ma-folder-wrap ${armed ? 'armed' : ''}`}
                   key={f.folderId || f.folderPath || `folder-${f.name}`}
-                  onClick={() => enterFolder(target)}
-                  title={`${f.name} 폴더 열기`}
                 >
-                  <div className="ma-thumb ma-folder-thumb">
-                    <span className="ma-folder-icon" aria-hidden="true">
-                      📁
-                    </span>
-                  </div>
-                  <div className="ma-card-meta">
-                    <div className="ma-card-name" title={f.name}>
-                      {f.name}
+                  <button
+                    type="button"
+                    className="ma-folder-open"
+                    onClick={() => enterFolder(target)}
+                    title={`${f.name} 폴더 열기`}
+                  >
+                    <div className="ma-thumb ma-folder-thumb">
+                      <span className="ma-folder-icon" aria-hidden="true">
+                        📁
+                      </span>
                     </div>
-                    <div className="ma-card-info">폴더</div>
-                  </div>
-                </button>
+                    <div className="ma-card-meta">
+                      <div className="ma-card-name" title={f.name}>
+                        {f.name}
+                      </div>
+                      <div className="ma-card-info">폴더</div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    className="ma-trash"
+                    title={`${f.name} 폴더 삭제`}
+                    aria-label={`${f.name} 폴더 삭제`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      armDeleteFolder(target, f.name);
+                    }}
+                  >
+                    🗑
+                  </button>
+                  {armed && (
+                    <div className="ma-confirm" role="alertdialog" aria-label="폴더 삭제 확인">
+                      <p className="ma-confirm-msg">
+                        <strong>{f.name}</strong> 폴더를 삭제할까요?
+                        <span className="ma-confirm-warn">폴더 안의 파일·하위 폴더까지 모두 삭제됩니다.</span>
+                      </p>
+                      <div className="ma-confirm-actions">
+                        <button
+                          type="button"
+                          className="ma-btn danger"
+                          disabled={deleting}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            confirmDelete();
+                          }}
+                        >
+                          {deleting ? '삭제 중…' : '삭제'}
+                        </button>
+                        <button
+                          type="button"
+                          className="ma-btn ghost"
+                          disabled={deleting}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            cancelDelete();
+                          }}
+                        >
+                          취소
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               );
             })}
 
-          {/* 파일 — 썸네일 + URL복사/삭제 */}
+          {/* 파일 — 썸네일 + URL복사 / 삭제(확인 2단계) */}
           {plainFiles.map((f) => {
             const isImage = f.fileType === 'image' || f.fileType === 'IMAGE';
             const thumb = isImage && f.url ? ikUrl(f.url, { w: 300 }) : null;
+            const armed = pendingDelete?.kind === 'file' && pendingDelete.id === f.fileId;
             return (
-              <div className="ma-card" key={f.fileId || f.filePath || f.name}>
+              <div
+                className={`ma-card ${armed ? 'armed' : ''}`}
+                key={f.fileId || f.filePath || f.name}
+              >
                 <div className="ma-thumb">
                   {thumb ? (
                     <img src={thumb} alt={f.name} loading="lazy" />
@@ -666,18 +758,44 @@ const MediaAdmin: React.FC = () => {
                     {f.width && f.height ? ` · ${f.width}×${f.height}` : ''}
                   </div>
                 </div>
-                <div className="ma-card-actions">
-                  <button
-                    className="ma-btn"
-                    onClick={() => copyUrl(f.url)}
-                    disabled={!f.url}
-                  >
-                    {copied === f.url ? '복사됨' : 'URL 복사'}
-                  </button>
-                  <button className="ma-btn danger" onClick={() => handleDelete(f)}>
-                    삭제
-                  </button>
-                </div>
+                {armed ? (
+                  <div className="ma-card-actions ma-confirm-inline" role="alertdialog" aria-label="파일 삭제 확인">
+                    <span className="ma-confirm-msg-inline">
+                      <strong title={f.name}>{f.name}</strong> 삭제할까요?
+                    </span>
+                    <button
+                      className="ma-btn danger"
+                      disabled={deleting}
+                      onClick={() => confirmDelete()}
+                    >
+                      {deleting ? '삭제 중…' : '삭제'}
+                    </button>
+                    <button
+                      className="ma-btn ghost"
+                      disabled={deleting}
+                      onClick={() => cancelDelete()}
+                    >
+                      취소
+                    </button>
+                  </div>
+                ) : (
+                  <div className="ma-card-actions">
+                    <button
+                      className="ma-btn"
+                      onClick={() => copyUrl(f.url)}
+                      disabled={!f.url}
+                    >
+                      {copied === f.url ? '복사됨' : 'URL 복사'}
+                    </button>
+                    <button
+                      className="ma-btn danger"
+                      onClick={() => armDeleteFile(f)}
+                      disabled={!f.fileId}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
