@@ -1606,6 +1606,42 @@
   color: color-mix(in srgb, var(--kd-figma-ink) 55%, #fff);
 }
 
+/* ── 단체컷 크로스페이드(2장 교대) — 데스크톱·모바일 공유 ──────────────
+   첫 이미지(base)가 흐름 배치로 카드 높이를 잡고, 두 번째(overlay)는 absolute 로
+   겹쳐 letterbox(contain)로 fade. 비율이 달라도 레이아웃 점프 없음(크롭 금지). */
+.kd-group-shot-stack {
+  position: relative;
+  width: 100%;
+  display: block;
+}
+
+.kd-group-shot-stack .kd-group-shot-base {
+  position: relative;
+  z-index: 1;
+}
+
+.kd-group-shot-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;   /* 비율 달라도 크롭 없이 letterbox */
+  display: block;
+  z-index: 2;
+}
+
+/* 교차 전환: active 인 쪽이 보이고 반대쪽은 투명. base 는 항상 깔려 있되
+   showSecond 일 때 overlay 가 위로 덮는다. */
+.kd-group-shot-base { opacity: 1; transition: opacity 0.9s ease-in-out; }
+.kd-group-shot-base[data-active='false'] { opacity: 0; }
+.kd-group-shot-overlay { opacity: 0; transition: opacity 0.9s ease-in-out; }
+.kd-group-shot-overlay[data-active='true'] { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kd-group-shot-base,
+  .kd-group-shot-overlay { transition: none; }
+}
+
 /* 개별 멤버 — 3열 그리드(5명: 3 + 2, 마지막 행 가운데 정렬). */
 .intro-members-grid {
   display: grid;
@@ -4465,9 +4501,9 @@
   }
 
   .mobile-group-shot-img {
+    /* 원본 비율 유지 — 크롭 없이 카드가 이미지 높이를 따라간다(데스크톱과 동일) */
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    height: auto;
     display: block;
   }
 
