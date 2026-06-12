@@ -84,6 +84,8 @@
   overflow: hidden;
 }
 .kdie-member-slot img { width: 100%; height: 100%; object-fit: contain; display: block; }
+/* 단체컷 미리보기 — 와이드 비율 */
+.kdie-group-slot { aspect-ratio: 16 / 7; max-width: 520px; }
 .kdie-member-slot-label {
   font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
   font-size: 13px;

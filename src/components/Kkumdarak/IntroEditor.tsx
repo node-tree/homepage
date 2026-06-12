@@ -26,6 +26,9 @@ function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
 }
 
+// 단체컷 업로드 시 ImageKit 피커 대상 식별용 센티넬(멤버 id 와 충돌 없는 토큰).
+const GROUP_SHOT_TARGET = '__groupShot__';
+
 interface IntroEditorProps {
   initialContent: IntroContent;
   // 저장 성공 시 새 override 를 부모(Intro)로 전달 → 목록 화면 즉시 갱신 + 캐시 동기화.
@@ -190,6 +193,41 @@ const IntroEditor: React.FC<IntroEditorProps> = ({ initialContent, onSaved, onCl
           ))}
         </section>
 
+        {/* ── 단체컷 ── */}
+        <section className="kdne-card">
+          <h3 className="kdne-card-title">멤버 단체컷</h3>
+          <p className="kdie-block-label">
+            멤버 소개 상단에 와이드로 노출되는 단체컷입니다. 비우면 소개 화면에 ‘단체컷 자리’ placeholder 가 보입니다.
+          </p>
+          <div className="kdie-member-media">
+            <div className="kdie-member-slot kdie-group-slot">
+              {content.groupShot ? (
+                <img src={ikUrl(content.groupShot, { w: 600 })} alt="" />
+              ) : (
+                <span className="kdie-member-slot-label">단체컷 자리</span>
+              )}
+            </div>
+            <div className="kdie-member-media-tools">
+              <button
+                type="button"
+                className="kdn-pill kdn-pill--solid kdn-pill--sm"
+                onClick={() => setPickerForMember(GROUP_SHOT_TARGET)}
+              >
+                {content.groupShot ? '단체컷 변경' : '단체컷 업로드'}
+              </button>
+              {content.groupShot && (
+                <button
+                  type="button"
+                  className="kdie-img-del"
+                  onClick={() => patch({ groupShot: '' })}
+                >
+                  제거
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+
         {/* ── 멤버 ── */}
         <section className="kdne-card">
           <h3 className="kdne-card-title">멤버 소개 ({content.members.length})</h3>
@@ -266,12 +304,16 @@ const IntroEditor: React.FC<IntroEditorProps> = ({ initialContent, onSaved, onCl
       {/* 멤버 캐릭터 이미지 선택(ImageKit) — 단일 선택. 마을소식과 동일 컴포넌트 재사용. */}
       <ImageKitPicker
         open={pickerForMember !== null}
-        title="멤버 캐릭터 이미지 선택"
+        title={pickerForMember === GROUP_SHOT_TARGET ? '단체컷 이미지 선택' : '멤버 캐릭터 이미지 선택'}
         onClose={() => setPickerForMember(null)}
         onSelect={(urls) => {
           const url = urls[0];
           if (url && pickerForMember) {
-            patchMember(pickerForMember, 'character', url);
+            if (pickerForMember === GROUP_SHOT_TARGET) {
+              patch({ groupShot: url });
+            } else {
+              patchMember(pickerForMember, 'character', url);
+            }
           }
           setPickerForMember(null);
         }}

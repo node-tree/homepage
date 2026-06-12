@@ -10,6 +10,7 @@
 
 import {
   MEMBERS,
+  MEMBERS_GROUP_SHOT_DEFAULT,
   ISO_MEANING,
   ISO_OWL_FIREFLY,
   ISO_GENERATIONS,
@@ -49,6 +50,7 @@ export interface IntroContent {
   isoOwlFirefly: IntroTextBlock;
   isoGenerations: IntroTextBlock;
   members: IntroMember[];
+  groupShot: string;     // 단체컷 ImageKit URL(없으면 placeholder 카드)
 }
 
 // 백엔드 override 버킷(부분 형태 — 일부 필드만 저장돼 있을 수 있음).
@@ -60,6 +62,7 @@ export interface IntroOverride {
   isoGenerations?: Partial<IntroTextBlock>;
   // 멤버는 id 키 맵으로 저장(추가/삭제 없이 정적 5인의 필드만 덮어씀).
   members?: Record<string, Partial<Pick<IntroMember, 'name' | 'role' | 'desc' | 'character'>>>;
+  groupShot?: string;
 }
 
 // ── 정적 기본 콘텐츠 ──────────────────────────────────────────────
@@ -78,6 +81,7 @@ export function defaultIntroContent(): IntroContent {
       desc: m.desc,
       character: m.character ?? '',
     })),
+    groupShot: MEMBERS_GROUP_SHOT_DEFAULT,
   };
 }
 
@@ -118,6 +122,7 @@ export function mergeIntroContent(override?: IntroOverride | null): IntroContent
         character: pickStr(m.character, ov.character),
       };
     }),
+    groupShot: pickStr(base.groupShot, override.groupShot),
   };
 }
 
@@ -160,6 +165,8 @@ export function toIntroOverride(content: IntroContent): IntroOverride {
     if (Object.keys(d).length) membersOut[m.id] = d;
   }
   if (Object.keys(membersOut).length) out.members = membersOut;
+
+  if (content.groupShot !== base.groupShot) out.groupShot = content.groupShot;
 
   return out;
 }

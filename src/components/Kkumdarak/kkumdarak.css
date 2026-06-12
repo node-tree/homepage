@@ -1565,37 +1565,87 @@
   color: #1a1a1a;
 }
 
-.intro-members-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 20px;
+/* 단체컷 — 와이드 히어로 카드(멤버 소개 상단). 흐름 배치이므로 fixed 헤더와 무관. */
+.intro-group-shot {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--kd-figma-ink) 5%, #fff);
+  border: 2.2px solid var(--kd-figma-ink);
+  border-radius: 14px;
+  box-shadow: 4px 4px 0 #1a1a1a;
+  overflow: hidden;
 }
 
+.intro-group-shot[aria-hidden='true'] {
+  /* 이미지 미입력 시 placeholder 톤(점선) */
+  border-style: dashed;
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--kd-figma-ink) 4%, #fff),
+    color-mix(in srgb, var(--kd-figma-ink) 4%, #fff) 14px,
+    color-mix(in srgb, var(--kd-figma-ink) 8%, #fff) 14px,
+    color-mix(in srgb, var(--kd-figma-ink) 8%, #fff) 28px
+  );
+}
+
+.intro-group-shot-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.intro-group-shot-label {
+  font-family: 'Jua', sans-serif;
+  font-size: 16px;
+  color: color-mix(in srgb, var(--kd-figma-ink) 55%, #fff);
+}
+
+/* 개별 멤버 — 3열 그리드(5명: 3 + 2, 마지막 행 가운데 정렬). */
+.intro-members-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 22px;
+}
+
+/* 각 카드는 2칸 폭(6칸/3열). 4·5번째(마지막 행 2명)는 한 칸씩 밀어 가운데 정렬. */
 .intro-member {
+  grid-column: span 2;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 18px 14px 20px;
+  padding: 0 0 22px;
   background: var(--kd-figma-paper);
   border: 2.2px solid var(--kd-figma-ink);
-  border-radius: 12px;
+  border-radius: 14px;
   box-shadow: 4px 4px 0 #1a1a1a;
+  overflow: hidden;
 }
 
-/* 캐릭터 일러스트가 들어갈 placeholder 슬롯 (추후 character 경로 입력 시 이미지로 대체) */
+.intro-member:nth-child(4) {
+  grid-column: 2 / span 2;
+}
+.intro-member:nth-child(5) {
+  grid-column: 4 / span 2;
+}
+
+/* 캐릭터 이미지가 카드의 주인공 — 넓은 정사각 영역. 미입력 시 placeholder. */
 .intro-member-slot {
   position: relative;
-  width: 72px;
-  height: 72px;
+  width: 100%;
+  aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
-  /* 토큰 색 흐린 색면 + 점선 보더로 '캐릭터 자리'임을 드러냄 */
-  background: color-mix(in srgb, var(--accent) 18%, #fff);
-  border: 2.2px dashed var(--accent);
-  border-radius: 50%;
+  margin-bottom: 16px;
+  background: color-mix(in srgb, var(--accent) 14%, #fff);
+  border-bottom: 2.2px solid var(--kd-figma-ink);
   overflow: hidden;
 }
 
@@ -1607,7 +1657,7 @@
 
 .intro-member-slot-label {
   font-family: 'Jua', sans-serif;
-  font-size: 11px;
+  font-size: 15px;
   line-height: 1.2;
   text-align: center;
   color: var(--accent);
@@ -1617,6 +1667,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 0 16px;
 }
 
 .intro-member-name {
@@ -4386,34 +4437,76 @@
     color: #1a1a1a;
   }
 
+  /* 단체컷 — 모바일 상단 와이드 카드(흐름 배치, 헤더와 무관). */
+  .mobile-group-shot {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--kd-figma-ink) 5%, #fff);
+    border: 2.2px solid var(--kd-figma-ink);
+    border-radius: 12px;
+    box-shadow: 3px 3px 0 #1a1a1a;
+    overflow: hidden;
+  }
+
+  .mobile-group-shot[aria-hidden='true'] {
+    border-style: dashed;
+    background: repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--kd-figma-ink) 4%, #fff),
+      color-mix(in srgb, var(--kd-figma-ink) 4%, #fff) 12px,
+      color-mix(in srgb, var(--kd-figma-ink) 8%, #fff) 12px,
+      color-mix(in srgb, var(--kd-figma-ink) 8%, #fff) 24px
+    );
+  }
+
+  .mobile-group-shot-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .mobile-group-shot-label {
+    font-family: 'Jua', sans-serif;
+    font-size: 14px;
+    color: color-mix(in srgb, var(--kd-figma-ink) 55%, #fff);
+  }
+
+  /* 개별 멤버 — 2열 그리드, 카드는 세로형(이미지 크게 + 텍스트 보조). */
+  .mobile-members-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
   .mobile-member {
     display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    padding: 14px;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 0 0 14px;
     background: var(--kd-figma-paper);
     border: 2.2px solid var(--kd-figma-ink);
     border-radius: 12px;
     box-shadow: 3px 3px 0 #1a1a1a;
-    margin-bottom: 12px;
   }
 
-  .mobile-member:last-child {
-    margin-bottom: 0;
-  }
-
-  /* 캐릭터 일러스트가 들어갈 placeholder 슬롯 (추후 character 경로 입력 시 이미지로 대체) */
+  /* 캐릭터 이미지가 카드의 주인공 — 정사각 영역으로 크게. 미입력 시 placeholder. */
   .mobile-member-slot {
     position: relative;
-    flex: 0 0 auto;
-    width: 56px;
-    height: 56px;
+    width: 100%;
+    aspect-ratio: 1 / 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: color-mix(in srgb, var(--accent) 18%, #fff);
-    border: 2.2px dashed var(--accent);
-    border-radius: 50%;
+    margin-bottom: 10px;
+    background: color-mix(in srgb, var(--accent) 14%, #fff);
+    border-bottom: 2.2px solid var(--kd-figma-ink);
     overflow: hidden;
   }
 
@@ -4425,7 +4518,7 @@
 
   .mobile-member-slot-label {
     font-family: 'Jua', sans-serif;
-    font-size: 9px;
+    font-size: 12px;
     line-height: 1.15;
     text-align: center;
     color: var(--accent);
@@ -4434,7 +4527,9 @@
   .mobile-member-body {
     display: flex;
     flex-direction: column;
+    align-items: center;
     min-width: 0;
+    padding: 0 10px;
   }
 
   .mobile-member-name {

@@ -84,7 +84,7 @@ const Intro: React.FC = () => {
     );
   }
 
-  const { motto, place, isoMeaning, isoOwlFirefly, isoGenerations, members } = content;
+  const { motto, place, isoMeaning, isoOwlFirefly, isoGenerations, members, groupShot } = content;
 
   return (
     <section className="kd-figma-intro" data-name="소개">
@@ -183,6 +183,21 @@ const Intro: React.FC = () => {
         {/* ④ 멤버 소개 */}
         <div className="intro-members">
           <h3>멤버 소개</h3>
+
+          {/* 단체컷 — 와이드 히어로 카드. groupShot URL 이 채워지면 노출, 없으면 placeholder. */}
+          <div className="intro-group-shot" aria-hidden={!groupShot}>
+            {groupShot ? (
+              <img
+                className="intro-group-shot-img"
+                src={ikUrl(groupShot, { w: 1600 })}
+                alt="멤버 단체컷"
+              />
+            ) : (
+              <span className="intro-group-shot-label">단체컷 자리</span>
+            )}
+          </div>
+
+          {/* 개별 멤버 — 캐릭터 이미지를 크게. 데스크톱 3열(마지막 행 2명 가운데 정렬). */}
           <div className="intro-members-grid">
             {members.map((m) => (
               <div
@@ -190,9 +205,9 @@ const Intro: React.FC = () => {
                 key={m.id}
                 style={{ '--accent': COLORS[m.color] } as React.CSSProperties}
               >
-                <div className="intro-member-slot" aria-hidden="true">
+                <div className="intro-member-slot">
                   {m.character ? (
-                    <img className="intro-member-img" src={ikUrl(m.character, { w: 400 })} alt="" />
+                    <img className="intro-member-img" src={ikUrl(m.character, { w: 600 })} alt={m.name} />
                   ) : (
                     <span className="intro-member-slot-label">캐릭터 자리</span>
                   )}
@@ -275,26 +290,43 @@ const Intro: React.FC = () => {
 
         <div className="mobile-members">
           <h3>멤버 소개</h3>
-          {members.map((m) => (
-            <div
-              className="mobile-member"
-              key={m.id}
-              style={{ '--accent': COLORS[m.color] } as React.CSSProperties}
-            >
-              <div className="mobile-member-slot" aria-hidden="true">
-                {m.character ? (
-                  <img className="mobile-member-img" src={ikUrl(m.character, { w: 400 })} alt="" />
-                ) : (
-                  <span className="mobile-member-slot-label">캐릭터 자리</span>
-                )}
+
+          {/* 단체컷 — 모바일에서도 상단 와이드 카드. */}
+          <div className="mobile-group-shot" aria-hidden={!groupShot}>
+            {groupShot ? (
+              <img
+                className="mobile-group-shot-img"
+                src={ikUrl(groupShot, { w: 800 })}
+                alt="멤버 단체컷"
+              />
+            ) : (
+              <span className="mobile-group-shot-label">단체컷 자리</span>
+            )}
+          </div>
+
+          {/* 개별 멤버 — 캐릭터 이미지를 크게. 모바일 2열 그리드. */}
+          <div className="mobile-members-grid">
+            {members.map((m) => (
+              <div
+                className="mobile-member"
+                key={m.id}
+                style={{ '--accent': COLORS[m.color] } as React.CSSProperties}
+              >
+                <div className="mobile-member-slot">
+                  {m.character ? (
+                    <img className="mobile-member-img" src={ikUrl(m.character, { w: 500 })} alt={m.name} />
+                  ) : (
+                    <span className="mobile-member-slot-label">캐릭터 자리</span>
+                  )}
+                </div>
+                <div className="mobile-member-body">
+                  <strong className="mobile-member-name">{m.name}</strong>
+                  <span className="mobile-member-role">{m.role}</span>
+                  <p className="mobile-member-desc">{m.desc}</p>
+                </div>
               </div>
-              <div className="mobile-member-body">
-                <strong className="mobile-member-name">{m.name}</strong>
-                <span className="mobile-member-role">{m.role}</span>
-                <p className="mobile-member-desc">{m.desc}</p>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </section>
