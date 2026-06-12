@@ -1569,7 +1569,6 @@
 .intro-group-shot {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 7;
   margin-bottom: 24px;
   display: flex;
   align-items: center;
@@ -1582,7 +1581,8 @@
 }
 
 .intro-group-shot[aria-hidden='true'] {
-  /* 이미지 미입력 시 placeholder 톤(점선) */
+  /* 이미지 미입력 시 placeholder 톤(점선) — 빈 상태에서만 비율 고정 */
+  aspect-ratio: 16 / 7;
   border-style: dashed;
   background: repeating-linear-gradient(
     -45deg,
@@ -1594,9 +1594,9 @@
 }
 
 .intro-group-shot-img {
+  /* 원본 비율 유지 — 크롭 없이 카드가 이미지 높이를 따라간다 */
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
   display: block;
 }
 
@@ -4441,7 +4441,6 @@
   .mobile-group-shot {
     position: relative;
     width: 100%;
-    aspect-ratio: 16 / 9;
     margin-bottom: 16px;
     display: flex;
     align-items: center;
@@ -4454,6 +4453,7 @@
   }
 
   .mobile-group-shot[aria-hidden='true'] {
+    aspect-ratio: 16 / 9;
     border-style: dashed;
     background: repeating-linear-gradient(
       -45deg,
