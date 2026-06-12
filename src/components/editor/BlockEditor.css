@@ -674,6 +674,11 @@
   font-size: 0.75rem;
   color: #999;
 }
+.ikp-path-scope {
+  font-style: normal;
+  color: #2f7d6b;
+  font-weight: 600;
+}
 .ikp-btn {
   padding: 7px 14px;
   border: 1px solid #ddd;

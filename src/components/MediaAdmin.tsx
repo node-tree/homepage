@@ -90,8 +90,8 @@ const MediaAdmin: React.FC = () => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
-  // 업로드 설정 (업로드 기본 폴더는 /uploads 유지)
-  const [folder, setFolder] = useState('/uploads');
+  // 업로드 설정. 업로드 대상 폴더는 별도 입력 없이 아래 「라이브러리」에서 현재 보고 있는
+  // 폴더(browsePath)를 그대로 따라간다(루트면 기본 /uploads).
   const [useUnique, setUseUnique] = useState(true);
   const [uploads, setUploads] = useState<UploadRow[]>([]);
   const [dragOver, setDragOver] = useState(false);
@@ -138,8 +138,10 @@ const MediaAdmin: React.FC = () => {
       setListError(null);
       const nextSkip = reset ? 0 : skip;
       try {
+        // 검색·목록 모두 현재 폴더(browsePath) 기준으로 스코프 — 폴더 한 곳에서만 다룬다.
+        const scopePath = normalizePath(browsePath || '/');
         const result = await imagekitAdminAPI.listFiles({
-          path: search ? undefined : browsePath || undefined,
+          path: scopePath !== '/' ? scopePath : undefined,
           searchQuery: search
             ? `name LIKE "%${search.replace(/["%\\]/g, '\\$&')}%"`
             : undefined,
@@ -198,12 +200,10 @@ const MediaAdmin: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isAdmin]);
 
-  // 폴더로 진입 — 검색 상태를 해제하고 경로 갱신.
+  // 폴더 진입 = 검색 스코프 변경. 활성 검색어는 유지해(Picker 와 동일) 새 폴더 기준으로
+  // 검색이 재실행된다(목록 effect 가 browsePath 변경을 받아 같은 search 로 재조회).
   const enterFolder = useCallback((target: string) => {
     const norm = normalizePath(target);
-    setSearch('');
-    const el = document.getElementById('ma-search') as HTMLInputElement | null;
-    if (el) el.value = '';
     setBrowsePath(norm);
     setPathInput(norm);
   }, []);
@@ -292,10 +292,13 @@ const MediaAdmin: React.FC = () => {
                 : r
             )
           );
+          // 업로드 대상 = 라이브러리에서 현재 보고 있는 폴더(루트면 /uploads).
+          const uploadFolder =
+            normalizePath(browsePath || '/') !== '/' ? normalizePath(browsePath) : '/uploads';
           const result: IkUploadResult = await imagekitAdminAPI.uploadFile(
             prepared.blob,
             prepared.fileName,
-            { folder: folder || '/uploads', useUniqueFileName: useUnique }
+            { folder: uploadFolder, useUniqueFileName: useUnique }
           );
           anyDone = true;
           setUploads((prev) =>
@@ -329,13 +332,11 @@ const MediaAdmin: React.FC = () => {
           );
         }
       }
-      // 업로드 후 현재 폴더(업로드 대상)를 보고 있으면 목록 갱신.
-      if (!search && normalizePath(folder || '/uploads') === normalizePath(browsePath)) {
-        loadList(true);
-      }
+      // 업로드 대상 = 현재 보고 있는 폴더 → 업로드 후 목록 갱신(검색 중이면 스코프 동일).
+      loadList(true);
       if (anyDone) loadUsage(); // 업로드 성공 시 용량 갱신
     },
-    [folder, useUnique, search, browsePath, loadList, loadUsage]
+    [useUnique, browsePath, loadList, loadUsage]
   );
 
   const onDrop = useCallback(
@@ -360,6 +361,11 @@ const MediaAdmin: React.FC = () => {
 
   const crumbs = useMemo(() => breadcrumbSegments(browsePath), [browsePath]);
   const parent = useMemo(() => parentPath(browsePath), [browsePath]);
+  // 업로드 대상 표시 — 라이브러리에서 보고 있는 폴더(루트면 기본 /uploads).
+  const uploadDest = useMemo(
+    () => (normalizePath(browsePath || '/') !== '/' ? normalizePath(browsePath) : '/uploads'),
+    [browsePath]
+  );
 
   if (isLoading) {
     return <div className="media-admin-loading">불러오는 중…</div>;
@@ -433,15 +439,11 @@ const MediaAdmin: React.FC = () => {
       <section className="ma-section">
         <h2>업로드</h2>
         <div className="ma-upload-options">
-          <label>
-            폴더
-            <input
-              type="text"
-              value={folder}
-              onChange={(e) => setFolder(e.target.value)}
-              placeholder="/uploads"
-            />
-          </label>
+          <span className="ma-upload-dest">
+            업로드 위치{' '}
+            <strong>{uploadDest}</strong>
+            <span className="ma-upload-dest-hint"> · 아래 「라이브러리」에서 보고 있는 폴더로 업로드됩니다</span>
+          </span>
           <label className="ma-checkbox">
             <input
               type="checkbox"
@@ -466,7 +468,7 @@ const MediaAdmin: React.FC = () => {
         >
           <p>이미지를 드래그하거나 클릭하여 선택</p>
           <p className="ma-hint">
-            업로드 전 자동 리사이즈(긴 변 2400px, JPEG). GIF는 원본 그대로.
+            <strong>{uploadDest}</strong> 폴더로 업로드 · 업로드 전 자동 리사이즈(긴 변 2400px, JPEG). GIF는 원본 그대로.
           </p>
           <input
             ref={fileInputRef}
@@ -508,9 +510,8 @@ const MediaAdmin: React.FC = () => {
       <section className="ma-section">
         <h2>라이브러리</h2>
 
-        {/* 브레드크럼 + 상위 폴더 (검색 중에는 폴더 탐색 맥락이 없어 숨김) */}
-        {!search && (
-          <nav className="ma-breadcrumb" aria-label="현재 경로">
+        {/* 브레드크럼 + 상위 폴더. 검색도 이 폴더 기준으로 스코프되므로 검색 중에도 표시한다. */}
+        <nav className="ma-breadcrumb" aria-label="현재 경로">
             {crumbs.map((c, i) => (
               <React.Fragment key={c.path}>
                 {i > 0 && <span className="ma-crumb-sep">/</span>}
@@ -562,7 +563,12 @@ const MediaAdmin: React.FC = () => {
                 {creatingFolder ? "생성 중…" : "+ 새 폴더"}
               </button>
             </span>
-          </nav>
+        </nav>
+
+        {search && (
+          <p className="ma-scope-hint">
+            <strong>{browsePath}</strong> 폴더에서 “{search}” 검색 결과
+          </p>
         )}
 
         <div className="ma-browse-controls">
@@ -607,10 +613,6 @@ const MediaAdmin: React.FC = () => {
             )}
           </form>
         </div>
-
-        {search && (
-          <p className="ma-sub">전체 라이브러리에서 “{search}” 파일명 검색 결과</p>
-        )}
 
         {listError && <p className="ma-error">{listError}</p>}
 
@@ -683,7 +685,9 @@ const MediaAdmin: React.FC = () => {
 
         {!listLoading && files.length === 0 && !listError && (
           <p className="ma-empty">
-            {search ? '검색 결과가 없습니다.' : '이 폴더에 표시할 항목이 없습니다.'}
+            {search
+              ? `‘${browsePath}’ 폴더에서 검색 결과가 없습니다.`
+              : '이 폴더에 표시할 항목이 없습니다.'}
           </p>
         )}
 

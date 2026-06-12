@@ -103,8 +103,12 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
       setListError(null);
       const nextSkip = reset ? 0 : skip;
       try {
+        // 폴더 설정과 검색을 연동: 현재 폴더(browsePath)를 항상 path 로 보내 검색·목록을
+        // 같은 폴더로 스코프한다. 폴더를 바꾸면 검색 결과도 그 폴더 기준으로 갱신된다.
+        const scopePath = normalizePath(browsePath || '/');
         const result = await imagekitAdminAPI.listFiles({
-          path: search ? undefined : browsePath || undefined,
+          // 루트('/')는 path 미지정과 동치 → 전체. 하위 폴더면 그 폴더로 스코프.
+          path: scopePath !== '/' ? scopePath : undefined,
           searchQuery: search
             ? `name LIKE "%${search.replace(/["%\\]/g, '\\$&')}%"`
             : undefined,
@@ -123,10 +127,11 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
           setListError('관리자 권한이 필요합니다.');
           return;
         }
-        // 복원한 폴더가 삭제됐거나 목록 실패 → 루트로 graceful 폴백(검색 중이 아닐 때, 비루트일 때).
-        if (!search && browsePath && browsePath !== '/') {
+        // 복원/설정한 폴더가 삭제됐거나 목록 실패 → 루트로 graceful 폴백(비루트일 때).
+        // 검색도 폴더 스코프이므로 검색 중에도 동일하게 폴백한다.
+        if (browsePath && browsePath !== '/') {
           writeLastPath('/');
-          setBrowsePath('/'); // browsePath 변경 → 위 effect 가 루트로 재로드
+          setBrowsePath('/'); // browsePath 변경 → effect 가 루트로 재로드(검색어는 유지)
           setListError(null);
           return;
         }
@@ -172,9 +177,8 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // 폴더 진입 = 검색 스코프 변경. 활성 검색어는 유지해 새 폴더 기준으로 검색이 재실행된다.
   const enterFolder = useCallback((target: string) => {
-    setSearch('');
-    setSearchInput('');
     const norm = normalizePath(target);
     setBrowsePath(norm);
     writeLastPath(norm);
@@ -221,8 +225,10 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
           setUploads((prev) =>
             prev.map((r) => (r.id === rowId ? { ...r, status: 'uploading' } : r))
           );
-          // 현재 보고 있는 폴더로 업로드(검색 중이거나 루트면 /uploads).
-          const uploadFolder = !search && browsePath && browsePath !== '/' ? browsePath : '/uploads';
+          // 업로드 폴더 = 현재 설정한 폴더(browsePath). 검색 중에도 같은 폴더로 스코프되므로
+          // 업로드도 그 폴더에 들어간다. 루트(폴더 미설정)일 때만 기본 /uploads.
+          const scopeFolder = normalizePath(browsePath || '/');
+          const uploadFolder = scopeFolder !== '/' ? scopeFolder : '/uploads';
           const result: IkUploadResult = await imagekitAdminAPI.uploadFile(
             prepared.blob,
             prepared.fileName,
@@ -404,12 +410,15 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
               </button>
             )}
           </form>
-          {!search && parent !== null && (
+          {parent !== null && (
             <button className="ikp-btn ghost" onClick={() => enterFolder(parent)}>
               ↑ 상위 폴더
             </button>
           )}
-          {!search && <span className="ikp-path">{browsePath}</span>}
+          <span className="ikp-path" title={search ? '검색은 이 폴더 기준으로 조회됩니다' : undefined}>
+            {browsePath}
+            {search && <em className="ikp-path-scope"> · 이 폴더에서 검색</em>}
+          </span>
           {!search &&
             (newFolderOpen ? (
               <span className="ikp-newfolder">
@@ -505,7 +514,11 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
         </div>
 
         {!listLoading && files.length === 0 && !listError && (
-          <p className="ikp-empty">{search ? '검색 결과가 없습니다.' : '항목이 없습니다.'}</p>
+          <p className="ikp-empty">
+            {search
+              ? `‘${browsePath}’ 폴더에서 검색 결과가 없습니다.`
+              : '항목이 없습니다.'}
+          </p>
         )}
 
         <div className="ikp-foot">
