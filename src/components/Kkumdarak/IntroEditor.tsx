@@ -28,6 +28,7 @@ function clone<T>(v: T): T {
 
 // 단체컷 업로드 시 ImageKit 피커 대상 식별용 센티넬(멤버 id 와 충돌 없는 토큰).
 const GROUP_SHOT_TARGET = '__groupShot__';
+const GROUP_SHOT2_TARGET = '__groupShot2__';
 
 interface IntroEditorProps {
   initialContent: IntroContent;
@@ -197,14 +198,17 @@ const IntroEditor: React.FC<IntroEditorProps> = ({ initialContent, onSaved, onCl
         <section className="kdne-card">
           <h3 className="kdne-card-title">멤버 단체컷</h3>
           <p className="kdie-block-label">
-            멤버 소개 상단에 와이드로 노출되는 단체컷입니다. 비우면 소개 화면에 ‘단체컷 자리’ placeholder 가 보입니다.
+            멤버 소개 상단에 와이드로 노출되는 단체컷입니다. 두 장을 모두 올리면 소개 화면에서 2초마다
+            번갈아(crossfade) 표시됩니다. 한 장만 올리면 고정 표시, 비우면 ‘단체컷 자리’ placeholder 가 보입니다.
           </p>
+
+          {/* 단체컷 1 */}
           <div className="kdie-member-media">
             <div className="kdie-member-slot kdie-group-slot">
               {content.groupShot ? (
                 <img src={ikUrl(content.groupShot, { w: 600 })} alt="" />
               ) : (
-                <span className="kdie-member-slot-label">단체컷 자리</span>
+                <span className="kdie-member-slot-label">단체컷 1 자리</span>
               )}
             </div>
             <div className="kdie-member-media-tools">
@@ -213,13 +217,42 @@ const IntroEditor: React.FC<IntroEditorProps> = ({ initialContent, onSaved, onCl
                 className="kdn-pill kdn-pill--solid kdn-pill--sm"
                 onClick={() => setPickerForMember(GROUP_SHOT_TARGET)}
               >
-                {content.groupShot ? '단체컷 변경' : '단체컷 업로드'}
+                {content.groupShot ? '단체컷 1 변경' : '단체컷 1 업로드'}
               </button>
               {content.groupShot && (
                 <button
                   type="button"
                   className="kdie-img-del"
                   onClick={() => patch({ groupShot: '' })}
+                >
+                  제거
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 단체컷 2 (선택 — 두 장이 모두 있어야 교대 표시) */}
+          <div className="kdie-member-media">
+            <div className="kdie-member-slot kdie-group-slot">
+              {content.groupShot2 ? (
+                <img src={ikUrl(content.groupShot2, { w: 600 })} alt="" />
+              ) : (
+                <span className="kdie-member-slot-label">단체컷 2 자리</span>
+              )}
+            </div>
+            <div className="kdie-member-media-tools">
+              <button
+                type="button"
+                className="kdn-pill kdn-pill--solid kdn-pill--sm"
+                onClick={() => setPickerForMember(GROUP_SHOT2_TARGET)}
+              >
+                {content.groupShot2 ? '단체컷 2 변경' : '단체컷 2 업로드'}
+              </button>
+              {content.groupShot2 && (
+                <button
+                  type="button"
+                  className="kdie-img-del"
+                  onClick={() => patch({ groupShot2: '' })}
                 >
                   제거
                 </button>
@@ -304,13 +337,19 @@ const IntroEditor: React.FC<IntroEditorProps> = ({ initialContent, onSaved, onCl
       {/* 멤버 캐릭터 이미지 선택(ImageKit) — 단일 선택. 마을소식과 동일 컴포넌트 재사용. */}
       <ImageKitPicker
         open={pickerForMember !== null}
-        title={pickerForMember === GROUP_SHOT_TARGET ? '단체컷 이미지 선택' : '멤버 캐릭터 이미지 선택'}
+        title={
+          pickerForMember === GROUP_SHOT_TARGET || pickerForMember === GROUP_SHOT2_TARGET
+            ? '단체컷 이미지 선택'
+            : '멤버 캐릭터 이미지 선택'
+        }
         onClose={() => setPickerForMember(null)}
         onSelect={(urls) => {
           const url = urls[0];
           if (url && pickerForMember) {
             if (pickerForMember === GROUP_SHOT_TARGET) {
               patch({ groupShot: url });
+            } else if (pickerForMember === GROUP_SHOT2_TARGET) {
+              patch({ groupShot2: url });
             } else {
               patchMember(pickerForMember, 'character', url);
             }

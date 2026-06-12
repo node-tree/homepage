@@ -30,6 +30,69 @@ const STEPS: Array<{
   { key: 'keep',  word: '지속하기', label: '마을이 스스로 잇기',  charD: 'char-15.svg', charM: 'char-18.svg' },
 ];
 
+// ── 단체컷 카드(크로스페이드) ────────────────────────────────────────
+//   · 2장 모두 있으면 2초마다 교대(crossfade). 1장이면 고정, 0장이면 placeholder.
+//   · 레이아웃 점프 방지: 첫 이미지가 카드 높이를 잡고(흐름), 두 번째는 absolute 로
+//     겹쳐 letterbox(object-fit:contain)로 fade. 크롭하지 않는다.
+//   · prefers-reduced-motion: 교대는 유지하되 전환 애니메이션(opacity transition)은 끈다.
+//   · variant 로 데스크톱/모바일 클래스 프리픽스를 공유(동일 동작 보장).
+const GroupShot: React.FC<{
+  shot1: string;
+  shot2: string;
+  width: number;
+  prefix: 'intro' | 'mobile';
+}> = ({ shot1, shot2, width, prefix }) => {
+  const both = Boolean(shot1) && Boolean(shot2);
+  const [showSecond, setShowSecond] = useState(false);
+
+  // 두 장 모두 있을 때만 2초 교대 타이머 가동(언마운트/조건변화 시 정리).
+  useEffect(() => {
+    if (!both) {
+      setShowSecond(false);
+      return;
+    }
+    const id = window.setInterval(() => setShowSecond((s) => !s), 2000);
+    return () => window.clearInterval(id);
+  }, [both]);
+
+  const has = Boolean(shot1) || Boolean(shot2);
+  const primary = shot1 || shot2; // 1장만 있을 때 어느 쪽이든 첫 슬롯에
+
+  return (
+    <div className={`${prefix}-group-shot`} aria-hidden={!has}>
+      {has ? (
+        both ? (
+          <div className="kd-group-shot-stack">
+            {/* 첫 이미지: 흐름 배치로 카드 높이를 결정(크롭 없음) */}
+            <img
+              className={`${prefix}-group-shot-img kd-group-shot-base`}
+              src={ikUrl(shot1, { w: width })}
+              alt="멤버 단체컷"
+              data-active={!showSecond}
+            />
+            {/* 두 번째 이미지: absolute 로 겹쳐 letterbox fade(비율 달라도 점프 없음) */}
+            <img
+              className="kd-group-shot-overlay"
+              src={ikUrl(shot2, { w: width })}
+              alt="멤버 단체컷 2"
+              aria-hidden="true"
+              data-active={showSecond}
+            />
+          </div>
+        ) : (
+          <img
+            className={`${prefix}-group-shot-img`}
+            src={ikUrl(primary, { w: width })}
+            alt="멤버 단체컷"
+          />
+        )
+      ) : (
+        <span className={`${prefix}-group-shot-label`}>단체컷 자리</span>
+      )}
+    </div>
+  );
+};
+
 const Intro: React.FC = () => {
   const { authed } = useKkumdarakAuth();
 
@@ -84,7 +147,7 @@ const Intro: React.FC = () => {
     );
   }
 
-  const { motto, place, isoMeaning, isoOwlFirefly, isoGenerations, members, groupShot } = content;
+  const { motto, place, isoMeaning, isoOwlFirefly, isoGenerations, members, groupShot, groupShot2 } = content;
 
   return (
     <section className="kd-figma-intro" data-name="소개">
@@ -184,18 +247,8 @@ const Intro: React.FC = () => {
         <div className="intro-members">
           <h3>멤버 소개</h3>
 
-          {/* 단체컷 — 와이드 히어로 카드. groupShot URL 이 채워지면 노출, 없으면 placeholder. */}
-          <div className="intro-group-shot" aria-hidden={!groupShot}>
-            {groupShot ? (
-              <img
-                className="intro-group-shot-img"
-                src={ikUrl(groupShot, { w: 1600 })}
-                alt="멤버 단체컷"
-              />
-            ) : (
-              <span className="intro-group-shot-label">단체컷 자리</span>
-            )}
-          </div>
+          {/* 단체컷 — 와이드 히어로 카드. 2장이면 2초 교대(crossfade), 1장 고정, 0장 placeholder. */}
+          <GroupShot shot1={groupShot} shot2={groupShot2} width={1600} prefix="intro" />
 
           {/* 개별 멤버 — 캐릭터 이미지를 크게. 데스크톱 3열(마지막 행 2명 가운데 정렬). */}
           <div className="intro-members-grid">
@@ -291,18 +344,8 @@ const Intro: React.FC = () => {
         <div className="mobile-members">
           <h3>멤버 소개</h3>
 
-          {/* 단체컷 — 모바일에서도 상단 와이드 카드. */}
-          <div className="mobile-group-shot" aria-hidden={!groupShot}>
-            {groupShot ? (
-              <img
-                className="mobile-group-shot-img"
-                src={ikUrl(groupShot, { w: 800 })}
-                alt="멤버 단체컷"
-              />
-            ) : (
-              <span className="mobile-group-shot-label">단체컷 자리</span>
-            )}
-          </div>
+          {/* 단체컷 — 모바일 상단 와이드 카드(데스크톱과 동일 동작). */}
+          <GroupShot shot1={groupShot} shot2={groupShot2} width={800} prefix="mobile" />
 
           {/* 개별 멤버 — 캐릭터 이미지를 크게. 모바일 2열 그리드. */}
           <div className="mobile-members-grid">
