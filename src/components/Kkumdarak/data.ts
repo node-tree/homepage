@@ -131,6 +131,11 @@ export const MEMBERS: Member[] = [
   { id: 'parang',  name: '파랑',   color: 'tealDeep', role: MEMBER_ROLE_PLACEHOLDER, desc: MEMBER_DESC_PLACEHOLDER },
 ];
 
+// 멤버 단체컷(전체 멤버가 함께 있는 와이드 이미지). ImageKit URL.
+// 비어 있으면 멤버 소개 상단의 단체컷 카드가 placeholder('단체컷 자리')로 렌더된다.
+// 추후: 이 문자열에 ImageKit URL 한 줄을 채우거나, /iso 로그인 → 소개 편집에서 업로드하면 노출된다.
+export const MEMBERS_GROUP_SHOT_DEFAULT = '';
+
 // ── 7개 프로그램 ─────────────────────────────────────────────────
 export interface Program {
   id: string;
