@@ -20,7 +20,7 @@ const ISO = {
     '서로 다른 빛이 모여 마을을 밝히는 문화예술학교 이소(異素). ' +
     '작은 변화와 이야기를 기록하고 사람과 사람을 잇습니다.',
   url: 'https://isoartlab.com/',
-  image: 'https://isoartlab.com/iso-og.png',
+  image: 'https://isoartlab.com/iso-og-v2.png',
 };
 
 // build/index.html 후보 경로(@vercel/node 번들 / 로컬 dev 양쪽 대응).
