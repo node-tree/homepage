@@ -129,6 +129,18 @@
       }
     },
     {
+      "src": "/(iso|kkumdarak)/?",
+      "has": [{ "type": "host", "value": "isoartlab.com" }],
+      "status": 308,
+      "headers": { "Location": "https://isoartlab.com/" }
+    },
+    {
+      "src": "/(iso|kkumdarak)/?",
+      "has": [{ "type": "host", "value": "www.isoartlab.com" }],
+      "status": 308,
+      "headers": { "Location": "https://isoartlab.com/" }
+    },
+    {
       "src": "/",
       "has": [{ "type": "host", "value": "isoartlab.com" }],
       "dest": "/api/iso-index.js"
