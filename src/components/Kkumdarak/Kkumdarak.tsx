@@ -64,6 +64,127 @@ function useKkumdarakFonts() {
   }, []);
 }
 
+// isoartlab.com 브랜딩 — iso(꿈다락) 페이지의 탭 제목·파비콘을 마스코트/이소로 교체.
+//   · 이 페이지는 isoartlab.com 루트에서만 렌더되고 nodetree.kr/iso 는 isoartlab.com 으로
+//     리다이렉트되므로 기본적으로 iso 컨텍스트 = isoartlab. 그래도 안전을 위해 호스트로 한 번 더
+//     가드한다(로컬 ?isoartlab 테스트도 허용). nodetree.kr 메인의 title/favicon 은 절대 안 건드림.
+//   · 언마운트 시 원래 title/favicon href 로 복원(스코프 격리 — saengsanso favicon 스왑과 동일 패턴).
+const ISO_TAB_TITLE = '문화예술학교 이소異素';
+const ISO_FAVICON_HREF = '/iso-favicon.png';
+const ISO_OG_DESC =
+  '서로 다른 빛이 모여 마을을 밝히는 문화예술학교 이소(異素). ' +
+  '작은 변화와 이야기를 기록하고 사람과 사람을 잇습니다.';
+const ISO_OG_IMAGE = 'https://isoartlab.com/iso-og.png';
+const ISO_OG_URL = 'https://isoartlab.com/';
+const ISO_SITE_NAME = '문화예술학교 이소異素';
+
+// head 의 meta 를 (selector 로 찾아) upsert. 없으면 만들어 붙이고, 원복용 정보를 반환한다.
+//   · created=true → 클린업에서 제거. created=false → prevContent 로 복원.
+type MetaRestore = { el: HTMLMetaElement; created: boolean; prevContent: string | null };
+function upsertMeta(
+  attr: 'name' | 'property',
+  key: string,
+  content: string,
+  head: HTMLHeadElement,
+): MetaRestore {
+  let el = head.querySelector(`meta[${attr}="${key}"]`) as HTMLMetaElement | null;
+  if (el) {
+    const prevContent = el.getAttribute('content');
+    el.setAttribute('content', content);
+    return { el, created: false, prevContent };
+  }
+  el = document.createElement('meta');
+  el.setAttribute(attr, key);
+  el.setAttribute('content', content);
+  head.appendChild(el);
+  return { el, created: true, prevContent: null };
+}
+
+function useIsoArtLabBranding() {
+  useEffect(() => {
+    const host = typeof window !== 'undefined' ? window.location.hostname : '';
+    const isIsoArtLabHost =
+      host === 'isoartlab.com' ||
+      host === 'www.isoartlab.com' ||
+      (typeof window !== 'undefined' &&
+        new URLSearchParams(window.location.search).has('isoartlab'));
+    // isoartlab 컨텍스트가 아니면(예: 가설적 직접 진입) 손대지 않는다 → nodetree.kr 무영향.
+    if (!isIsoArtLabHost) return;
+
+    const prevTitle = document.title;
+    document.title = ISO_TAB_TITLE;
+
+    // 기존 icon link 들의 href 를 마스코트로 교체하고, 원복용으로 이전 값을 기억.
+    const iconLinks = Array.from(
+      document.querySelectorAll("link[rel='icon'], link[rel='shortcut icon']"),
+    ) as HTMLLinkElement[];
+    const restore: Array<{ link: HTMLLinkElement; href: string; type: string }> = [];
+    iconLinks.forEach((link) => {
+      restore.push({ link, href: link.href, type: link.type });
+      link.type = 'image/png';
+      link.href = ISO_FAVICON_HREF;
+    });
+    // icon link 가 하나도 없으면(이론상) 새로 만들어 붙인다.
+    let created: HTMLLinkElement | null = null;
+    if (iconLinks.length === 0) {
+      created = document.createElement('link');
+      created.rel = 'icon';
+      created.type = 'image/png';
+      created.href = ISO_FAVICON_HREF;
+      document.head.appendChild(created);
+    }
+    // apple-touch-icon 도 함께(홈 화면 추가 시).
+    const appleLinks = Array.from(
+      document.querySelectorAll("link[rel='apple-touch-icon']"),
+    ) as HTMLLinkElement[];
+    const appleRestore: Array<{ link: HTMLLinkElement; href: string }> = [];
+    appleLinks.forEach((link) => {
+      appleRestore.push({ link, href: link.href });
+      link.href = ISO_FAVICON_HREF;
+    });
+
+    // ── OG / 메타 태그 (isoartlab 전용 동적 주입) ───────────────────────
+    //   기존 nodetree.kr SeoHead 가 심은 og:* 가 있으면 그 content 만 덮어쓰고(원복 기억),
+    //   없으면 새로 만들어 붙인다(클린업에서 제거). nodetree.kr 메인엔 위 호스트 가드로 미적용.
+    const head = document.head;
+    const metaRestores: MetaRestore[] = [
+      upsertMeta('name', 'description', ISO_OG_DESC, head),
+      upsertMeta('property', 'og:title', ISO_TAB_TITLE, head),
+      upsertMeta('property', 'og:description', ISO_OG_DESC, head),
+      upsertMeta('property', 'og:image', ISO_OG_IMAGE, head),
+      upsertMeta('property', 'og:image:width', '1200', head),
+      upsertMeta('property', 'og:image:height', '630', head),
+      upsertMeta('property', 'og:url', ISO_OG_URL, head),
+      upsertMeta('property', 'og:type', 'website', head),
+      upsertMeta('property', 'og:site_name', ISO_SITE_NAME, head),
+      upsertMeta('name', 'twitter:card', 'summary_large_image', head),
+      upsertMeta('name', 'twitter:title', ISO_TAB_TITLE, head),
+      upsertMeta('name', 'twitter:description', ISO_OG_DESC, head),
+      upsertMeta('name', 'twitter:image', ISO_OG_IMAGE, head),
+    ];
+
+    return () => {
+      document.title = prevTitle;
+      restore.forEach(({ link, href, type }) => {
+        link.href = href;
+        link.type = type;
+      });
+      appleRestore.forEach(({ link, href }) => {
+        link.href = href;
+      });
+      if (created && created.parentNode) created.parentNode.removeChild(created);
+      // 메타 원복: 새로 만든 것은 제거, 기존 것은 이전 content 로 복원.
+      metaRestores.forEach(({ el, created: wasCreated, prevContent }) => {
+        if (wasCreated) {
+          if (el.parentNode) el.parentNode.removeChild(el);
+        } else if (prevContent !== null) {
+          el.setAttribute('content', prevContent);
+        }
+      });
+    };
+  }, []);
+}
+
 // ── 네비 워킹 캐릭터 ─────────────────────────────────────────
 // 모바일(≤900px)에서도 헤더 로고~햄버거 사이 여백에서 로밍하도록 활성화.
 // kkumdarak.css 의 `@media(max-width:900px){.kd-nav-walker{display:none}}` 를
@@ -164,6 +285,7 @@ const NavAdminLink: React.FC<{
 
 const Kkumdarak: React.FC = () => {
   useKkumdarakFonts();
+  useIsoArtLabBranding();
   const reduced = useReducedMotion();
   const [section, setSection] = useState<string>(getInitialKkumdarakSection);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -232,7 +354,8 @@ const Kkumdarak: React.FC = () => {
 
         <header className="kd-header">
           <div className="kd-logo" onClick={() => go('main')} role="button" tabIndex={0}>
-            이소異素
+            <img className="kd-logo-mark" src="/iso-favicon.png" alt="" aria-hidden="true" />
+            <span className="kd-logo-word">이소異素</span>
           </div>
 
           <NavWalker />
