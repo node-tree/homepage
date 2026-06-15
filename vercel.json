@@ -21,6 +21,13 @@
       "config": {
         "includeFiles": ["build/index.html"]
       }
+    },
+    {
+      "src": "api/og-index.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["build/index.html"]
+      }
     }
   ],
   "routes": [
@@ -77,6 +84,20 @@
     {
       "src": "/iso-og.png",
       "dest": "/iso-og.png",
+      "headers": {
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
+      }
+    },
+    {
+      "src": "/nodetree-og.png",
+      "dest": "/nodetree-og.png",
+      "headers": {
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
+      }
+    },
+    {
+      "src": "/saengsanso-og.png",
+      "dest": "/saengsanso-og.png",
       "headers": {
         "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
       }
@@ -149,6 +170,26 @@
       "src": "/",
       "has": [{ "type": "host", "value": "www.isoartlab.com" }],
       "dest": "/api/iso-index.js"
+    },
+    {
+      "src": "/",
+      "has": [{ "type": "host", "value": "nodetree.kr" }],
+      "dest": "/api/og-index.js"
+    },
+    {
+      "src": "/",
+      "has": [{ "type": "host", "value": "www.nodetree.kr" }],
+      "dest": "/api/og-index.js"
+    },
+    {
+      "src": "/",
+      "has": [{ "type": "host", "value": "saengsanso.com" }],
+      "dest": "/api/og-index.js"
+    },
+    {
+      "src": "/",
+      "has": [{ "type": "host", "value": "www.saengsanso.com" }],
+      "dest": "/api/og-index.js"
     },
     {
       "src": "/(.*)",
