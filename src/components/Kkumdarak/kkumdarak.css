@@ -116,6 +116,23 @@
   user-select: none;
   flex-shrink: 0;
   transform: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+/* 좌상단 로고 마스코트(이소). 헤더 높이에 맞춘 정사각 마크. */
+.kd-logo-mark {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+  border-radius: 9px;
+}
+.kd-logo-word {
+  font: inherit;
+  color: inherit;
+  line-height: 1;
 }
 /* pill 버튼 공통 */
 .kd-pill {
@@ -644,7 +661,8 @@
   .kd-hero-svg-mobile { display: block; }
   .kd-header { min-height: 66px; padding: 0 20px; }
   .kd-hero { padding-top: 66px; }
-  .kd-logo { font-size: 32px; }
+  .kd-logo-word { font-size: 32px; }
+  .kd-logo-mark { width: 34px; height: 34px; }
   .kd-hero-copy {
     left: 18px;
     top: 24px;
