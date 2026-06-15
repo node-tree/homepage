@@ -283,6 +283,35 @@ const NavAdminLink: React.FC<{
   );
 };
 
+// ── nav 인스타그램 바로가기 (헤더/모바일 메뉴 공용) ────────────────────
+//   이소異素 공식 인스타그램(@iso.art.lab)으로 새 탭 이동. 페이지 진입 즉시
+//   보이는 상단 헤더(데스크톱) / 풀스크린 메뉴(모바일)에 노출한다.
+//   디자인 토큰(알약·외곽선·accent)·새 탭(rel)·접근성(aria-label)을 유지.
+const NavInstagram: React.FC<{ variant?: 'desktop' | 'mobile' }> = ({ variant = 'desktop' }) => (
+  <a
+    className={`kd-nav-ig kd-nav-ig--${variant}`}
+    href="https://www.instagram.com/iso.art.lab"
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="이소異素 인스타그램 (새 탭)"
+    title="이소異素 인스타그램 @iso.art.lab"
+  >
+    <svg
+      className="kd-nav-ig-icon"
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect x="2.5" y="2.5" width="19" height="19" rx="5.4" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="12" cy="12" r="4.4" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="17.4" cy="6.6" r="1.25" fill="currentColor" />
+    </svg>
+    <span className="kd-nav-ig-label">@iso.art.lab</span>
+  </a>
+);
+
 const Kkumdarak: React.FC = () => {
   useKkumdarakFonts();
   useIsoArtLabBranding();
@@ -378,6 +407,8 @@ const Kkumdarak: React.FC = () => {
             />
             {/* "오시는 길" 옆 — 꿈다락 편집 로그인 도형 버튼 */}
             <NavAuthButton variant="desktop" />
+            {/* 이소異素 인스타그램 바로가기 (데스크톱 헤더) */}
+            <NavInstagram variant="desktop" />
           </nav>
 
           {/* 모바일 햄버거 */}
@@ -429,6 +460,14 @@ const Kkumdarak: React.FC = () => {
               >
                 <NavAuthButton variant="mobile" onAfterAction={() => setMenuOpen(false)} />
               </motion.div>
+              {/* 이소異素 인스타그램 바로가기 (모바일 메뉴) */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: (SECTIONS.length + 2) * 0.05, duration: MOTION.durBase, ease: MOTION.ease }}
+              >
+                <NavInstagram variant="mobile" />
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -454,29 +493,6 @@ const Kkumdarak: React.FC = () => {
                 주최 문화체육관광부 · 주관 한국문화예술교육진흥원
                 <span className="kd-footer-sep"> · </span>
                 <span className="kd-footer-line-operator">운영 노드트리 × 장암면 주민자치회</span>
-              </div>
-              <div className="kd-footer-social">
-                <a
-                  className="kd-footer-ig"
-                  href="https://www.instagram.com/iso.art.lab"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="이소異素 인스타그램 (새 탭)"
-                >
-                  <svg
-                    className="kd-footer-ig-icon"
-                    viewBox="0 0 24 24"
-                    width="18"
-                    height="18"
-                    aria-hidden="true"
-                    focusable="false"
-                  >
-                    <rect x="2.5" y="2.5" width="19" height="19" rx="5.4" fill="none" stroke="currentColor" strokeWidth="1.8" />
-                    <circle cx="12" cy="12" r="4.4" fill="none" stroke="currentColor" strokeWidth="1.8" />
-                    <circle cx="17.4" cy="6.6" r="1.25" fill="currentColor" />
-                  </svg>
-                  <span className="kd-footer-ig-label">@iso.art.lab</span>
-                </a>
               </div>
             </footer>
           </motion.main>
