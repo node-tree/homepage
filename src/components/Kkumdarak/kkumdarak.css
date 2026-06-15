@@ -647,6 +647,50 @@
 }
 .kd-footer-logo { font-family: var(--kd-font-head); font-weight: 400; font-size: 32px; color: var(--kd-ink); margin-bottom: 12px; }
 
+/* ── 푸터 소셜 (인스타그램 바로가기) ──────────────────────────────
+   데스크톱·모바일 공용. .kd-footer 가 반응형(미디어쿼리)으로 함께 조정되므로
+   별도 모바일 규칙 없이 양쪽에 동일 적용된다. */
+.kd-footer-social {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+}
+.kd-footer-ig {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: var(--kd-outline-bold);
+  border-radius: var(--kd-radius-pill);
+  background: var(--kd-surface);
+  color: var(--kd-ink);
+  font-family: var(--kd-font-body);
+  font-weight: 700;
+  font-size: 13.5px;
+  line-height: 1;
+  text-decoration: none;
+  transition: color 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+.kd-footer-ig:hover,
+.kd-footer-ig:focus-visible {
+  color: var(--kd-pink-deep);
+  border-color: var(--kd-pink-deep);
+  transform: translateY(-1px);
+  box-shadow: var(--kd-shadow);
+}
+.kd-footer-ig:focus-visible {
+  outline: 2px solid var(--kd-pink-deep);
+  outline-offset: 2px;
+}
+.kd-footer-ig-icon {
+  display: block;
+  flex: none;
+}
+.kd-footer-ig-label {
+  font-family: var(--kd-font-latin);
+  letter-spacing: 0.01em;
+}
+
 /* ── 반응형 ──────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .kd-nav-desktop { display: none; }

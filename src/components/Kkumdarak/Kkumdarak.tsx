@@ -455,6 +455,29 @@ const Kkumdarak: React.FC = () => {
                 <span className="kd-footer-sep"> · </span>
                 <span className="kd-footer-line-operator">운영 노드트리 × 장암면 주민자치회</span>
               </div>
+              <div className="kd-footer-social">
+                <a
+                  className="kd-footer-ig"
+                  href="https://www.instagram.com/iso.art.lab"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="이소異素 인스타그램 (새 탭)"
+                >
+                  <svg
+                    className="kd-footer-ig-icon"
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <rect x="2.5" y="2.5" width="19" height="19" rx="5.4" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                    <circle cx="12" cy="12" r="4.4" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                    <circle cx="17.4" cy="6.6" r="1.25" fill="currentColor" />
+                  </svg>
+                  <span className="kd-footer-ig-label">@iso.art.lab</span>
+                </a>
+              </div>
             </footer>
           </motion.main>
         </AnimatePresence>
