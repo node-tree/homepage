@@ -14,6 +14,13 @@
       "config": {
         "includeFiles": ["backend/templates/forms/**", "templates/forms/**"]
       }
+    },
+    {
+      "src": "api/iso-index.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["build/index.html"]
+      }
     }
   ],
   "routes": [
@@ -120,6 +127,16 @@
       "headers": {
         "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
       }
+    },
+    {
+      "src": "/",
+      "has": [{ "type": "host", "value": "isoartlab.com" }],
+      "dest": "/api/iso-index.js"
+    },
+    {
+      "src": "/",
+      "has": [{ "type": "host", "value": "www.isoartlab.com" }],
+      "dest": "/api/iso-index.js"
     },
     {
       "src": "/(.*)",
