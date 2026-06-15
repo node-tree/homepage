@@ -89,6 +89,13 @@
       }
     },
     {
+      "src": "/iso-og-v2.png",
+      "dest": "/iso-og-v2.png",
+      "headers": {
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
+      }
+    },
+    {
       "src": "/nodetree-og.png",
       "dest": "/nodetree-og.png",
       "headers": {
