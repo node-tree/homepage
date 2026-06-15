@@ -44,6 +44,52 @@ const isSaengsanso = typeof window !== 'undefined' && (
   new URLSearchParams(window.location.search).has('saengsanso')
 );
 
+// isoartlab.com 도메인이면 루트(/)에서 곧장 /iso(꿈다락·異素) 화면을 띄운다.
+//   · 리다이렉트가 아니라 같은 SPA에서 Kkumdarak을 루트에 렌더 → 주소창에 isoartlab.com 유지.
+//   · Kkumdarak은 pathname을 쓰지 않고 window.location.hash로만 섹션을 전환하므로
+//     isoartlab.com/#intro · #admin 등 해시 섹션 이동이 그대로 동작한다.
+//   · localhost에서는 ?isoartlab 쿼리로 테스트 가능.
+const isIsoArtLab = typeof window !== 'undefined' && (
+  window.location.hostname === 'isoartlab.com' ||
+  window.location.hostname === 'www.isoartlab.com' ||
+  new URLSearchParams(window.location.search).has('isoartlab')
+);
+
+// nodetree.kr 통합 — 기존 발행 URL nodetree.kr/iso · /kkumdarak 방문자를 isoartlab.com 루트로 모은다.
+//   · 호스트가 nodetree.kr / www.nodetree.kr 일 때만 발동 → isoartlab.com 에서는 절대 안 터짐(루프 차단).
+//   · 경로 /iso · /kkumdarak (+선택적 슬래시)만 대상. 메인 홈(/) · /ocean 등 타 경로엔 영향 없음.
+//   · 해시(#intro 등) · 쿼리(?x=1) 보존: isoartlab.com/<search><hash> 로 그대로 이전.
+//   · 렌더(BrowserRouter) 전, 모듈 평가 시점에 location.replace → /iso 중간 경유·이중 점프·깜빡임 없음.
+//   · 로컬 테스트: ?nodetreeIso 쿼리를 붙이면 산출 대상 URL 을 콘솔에 로그만 남긴다(실제 점프 X).
+//     실제 location.replace 는 안전을 위해 nodetree.kr / www.nodetree.kr 호스트에서만 수행한다.
+const ISO_REDIRECT_PATHS = /^\/(iso|kkumdarak)\/?$/i;
+
+function maybeRedirectNodeTreeIsoToIsoArtLab(): boolean {
+  if (typeof window === 'undefined') return false;
+  const { hostname, pathname, search, hash } = window.location;
+  const isNodeTreeHost = hostname === 'nodetree.kr' || hostname === 'www.nodetree.kr';
+  // 로컬 시뮬레이션 플래그(실제 점프 없이 흐름만 확인하고 싶을 때 콘솔에서 산출값 검증용).
+  const simulate = new URLSearchParams(search).has('nodetreeIso');
+  if (!isNodeTreeHost && !simulate) return false;
+  if (!ISO_REDIRECT_PATHS.test(pathname)) return false;
+  // 쿼리에서 테스트 플래그는 제거하고 나머지는 보존.
+  const params = new URLSearchParams(search);
+  params.delete('nodetreeIso');
+  const cleanSearch = params.toString() ? `?${params.toString()}` : '';
+  const target = `https://isoartlab.com/${cleanSearch}${hash}`;
+  // 시뮬레이션 모드에서는 실제 점프 대신 로그만(루프·환경오염 방지).
+  if (!isNodeTreeHost && simulate) {
+    // eslint-disable-next-line no-console
+    console.log('[nodetreeIso simulate] would redirect to:', target);
+    return false;
+  }
+  window.location.replace(target);
+  return true;
+}
+
+// 모듈 평가 시점(최대한 이른 시점)에 1회 실행 — App() 렌더 전에 점프시켜 깜빡임 최소화.
+const didRedirectToIsoArtLab = maybeRedirectNodeTreeIsoToIsoArtLab();
+
 // 네비게이션 항목 타입
 interface NavItem {
   id: number;
@@ -395,6 +441,12 @@ function AppContent() {
 
 // App 컴포넌트
 function App() {
+  // nodetree.kr/iso · /kkumdarak → isoartlab.com 리다이렉트가 모듈 평가 시점에 발동했다면,
+  // 브라우저가 이미 isoartlab.com 으로 이동 중이므로 아무것도 렌더하지 않는다(깜빡임 방지).
+  if (didRedirectToIsoArtLab) {
+    return null;
+  }
+
   // saengsanso.com 도메인이면 생산소 독립 페이지 렌더링
   if (isSaengsanso) {
     return (
@@ -402,6 +454,19 @@ function App() {
         <AuthProvider>
           <Suspense fallback={<PageLoader />}>
             <SaengsansoApp />
+          </Suspense>
+        </AuthProvider>
+      </HelmetProvider>
+    );
+  }
+
+  // isoartlab.com 도메인이면 루트에서 곧장 꿈다락(異素) 페이지를 렌더(주소창 isoartlab.com 유지).
+  if (isIsoArtLab) {
+    return (
+      <HelmetProvider>
+        <AuthProvider>
+          <Suspense fallback={<PageLoader />}>
+            <Kkumdarak />
           </Suspense>
         </AuthProvider>
       </HelmetProvider>

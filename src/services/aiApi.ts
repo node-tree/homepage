@@ -7,7 +7,7 @@
 
 const isNodeTreeSite =
   typeof window !== 'undefined' &&
-  (window.location.hostname === 'nodetree.kr' || window.location.hostname === 'www.nodetree.kr');
+  (window.location.hostname === 'nodetree.kr' || window.location.hostname === 'www.nodetree.kr' || window.location.hostname === 'isoartlab.com' || window.location.hostname === 'www.isoartlab.com');
 
 const API_BASE_URL = isNodeTreeSite
   ? '/api'

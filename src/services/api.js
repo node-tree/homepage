@@ -1,6 +1,6 @@
 // nodetree.kr 배포 환경 감지
 const isNodeTreeSite = typeof window !== 'undefined' &&
-  (window.location.hostname === 'nodetree.kr' || window.location.hostname === 'www.nodetree.kr');
+  (window.location.hostname === 'nodetree.kr' || window.location.hostname === 'www.nodetree.kr' || window.location.hostname === 'isoartlab.com' || window.location.hostname === 'www.isoartlab.com');
 
 // nodetree.kr에서는 환경변수 무시하고 자체 API 사용
 const API_BASE_URL = isNodeTreeSite
