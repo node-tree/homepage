@@ -61,6 +61,20 @@
       }
     },
     {
+      "src": "/iso-favicon.png",
+      "dest": "/iso-favicon.png",
+      "headers": {
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
+      }
+    },
+    {
+      "src": "/iso-og.png",
+      "dest": "/iso-og.png",
+      "headers": {
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
+      }
+    },
+    {
       "src": "/robots.txt",
       "dest": "/robots.txt"
     },
