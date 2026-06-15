@@ -44,7 +44,8 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
     try {
       // 백엔드 API로 로그인 (api.js와 동일한 로직: nodetree.kr에서는 Vercel 백엔드 사용)
       const isNodeTreeSite = typeof window !== 'undefined' &&
-        (window.location.hostname === 'nodetree.kr' || window.location.hostname === 'www.nodetree.kr');
+        (window.location.hostname === 'nodetree.kr' || window.location.hostname === 'www.nodetree.kr' ||
+         window.location.hostname === 'isoartlab.com' || window.location.hostname === 'www.isoartlab.com');
       const apiUrl = isNodeTreeSite
         ? '/api'
         : (process.env.REACT_APP_API_URL || '/api');
