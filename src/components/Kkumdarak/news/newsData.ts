@@ -12,6 +12,10 @@
 //     · 유효 호 = 정적 NEWS_ISSUES(현재 빈 배열) + 백엔드 issues 병합(같은 id 백엔드 우선).
 //     · 공개 상태(published/draft)는 settings.newsStatus 버킷 + issue.status 폴백.
 //     · 콜드스타트: 백엔드 미도착 동안 정적 목록만으로 낙관 렌더.
+//
+//   보도 기사(외부 링크 카드):
+//     · 소식지 호와 같은 가판대에 카드로 보이되, 클릭 시 원문 사이트로 새 탭 이동만 한다.
+//     · 별도 articles 배열로 저장 — issues(호) 직렬화/정규화와 충돌하지 않게 둔다.
 // ═══════════════════════════════════════════════════════════════
 
 // ── 호(號) 공개 상태 ──────────────────────────────────────────────
@@ -40,6 +44,19 @@ export interface NewsIssue {
   images: NewsImage[];    // 업로드한 소식지 이미지(여러 장, 순서 = 표시 순서)
 }
 
+// ── 보도 기사(외부 링크 카드) ─────────────────────────────────────
+//   호(이미지 스택을 내부 read 뷰로 여는 것)와 달리, 기사는 가판대에서 카드로
+//   보이되 클릭하면 원문 사이트로 새 탭 이동만 한다(내부 뷰 없음).
+//   thumb 는 NewsImage(ImageKit URL) 재사용.
+export interface NewsArticle {
+  id: string;
+  title: string;          // 기사 제목
+  outlet: string;         // 언론사
+  date: string;           // 게재일 표기 문자열(예: '2026.6.1')
+  url: string;            // 원문 URL(새 탭으로 연다)
+  thumb?: NewsImage;      // 대표 이미지(선택)
+}
+
 // ── 매체 정체성(헤더/푸터 텍스트) ─────────────────────────────────
 export const NEWS_KICKER = '소식지';
 export const NEWS_TITLE = '마을소식';
@@ -61,8 +78,10 @@ export const NEWS_ISSUES: NewsIssue[] = [];
 
 // 백엔드 편집 사본 페이로드(villageNewsAPI 가 주고받는 형태).
 //   issues 는 Mixed(스키마 무관) — id → NewsIssue 맵.
+//   articles 는 보도 기사(외부 링크 카드) 배열 — 표시 순서 = 배열 순서.
 export interface VillageNewsData {
   issues: Record<string, NewsIssue>;
+  articles?: NewsArticle[];
 }
 
 // ── 호 병합 ──────────────────────────────────────────────────────
@@ -104,6 +123,43 @@ function normalizeIssue(b: any): NewsIssue {
     status: b.status === 'draft' ? 'draft' : b.status === 'published' ? 'published' : undefined,
     images,
   };
+}
+
+// ── 기사 정규화/검증 ──────────────────────────────────────────────
+// URL 최소 형식 검증 — http(s) 절대 URL 만 통과.
+export function isValidArticleUrl(url: string): boolean {
+  const v = (url || '').trim();
+  if (!v) return false;
+  try {
+    const u = new URL(v);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+// 백엔드(Mixed)에서 온 기사 배열을 안전한 NewsArticle[] 로 정규화.
+//   id/title/outlet/date/url 문자열 보장, thumb 는 src 가 있을 때만 유지.
+//   url 이 비었거나 비문자열인 항목은 떨어뜨린다(깨진 카드 방지).
+export function normalizeArticles(raw: any): NewsArticle[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((a: any) => a && typeof a === 'object' && typeof a.url === 'string' && a.url.trim())
+    .map((a: any, i: number): NewsArticle => {
+      const thumbSrc = a.thumb && typeof a.thumb === 'object' && typeof a.thumb.src === 'string'
+        ? a.thumb.src
+        : '';
+      return {
+        id: typeof a.id === 'string' && a.id ? a.id : `article-${i}-${Date.now().toString(36)}`,
+        title: typeof a.title === 'string' ? a.title : '',
+        outlet: typeof a.outlet === 'string' ? a.outlet : '',
+        date: typeof a.date === 'string' ? a.date : '',
+        url: String(a.url).trim(),
+        thumb: thumbSrc
+          ? { src: thumbSrc, alt: typeof a.thumb.alt === 'string' ? a.thumb.alt : '' }
+          : undefined,
+      };
+    });
 }
 
 // 정적(코드 내장) 호인지 — 에디터에서 "삭제" 대신 "정적본으로 되돌리기"가 되는 호.

@@ -1120,8 +1120,11 @@ export const villageNewsAPI = {
     }
     const data = await response.json();
     const raw = data && data.success ? (data.data || {}) : {};
-    // issues 버킷만 반환(없으면 빈 객체). 항상 { issues } 형태로 정규화.
-    return { issues: raw.issues && typeof raw.issues === 'object' ? raw.issues : {} };
+    // issues 버킷 + articles 배열 반환(없으면 빈 값). 항상 { issues, articles } 형태로 정규화.
+    return {
+      issues: raw.issues && typeof raw.issues === 'object' ? raw.issues : {},
+      articles: Array.isArray(raw.articles) ? raw.articles : [],
+    };
   },
 
   // 편집 사본 저장 (꿈다락 편집 인증 전용) — raw 객체 { issues } 를 통째로 PUT.
@@ -1135,10 +1138,11 @@ export const villageNewsAPI = {
       headers['Authorization'] = `Bearer ${token}`;
     }
     const issues = payload && payload.issues && typeof payload.issues === 'object' ? payload.issues : {};
+    const articles = payload && Array.isArray(payload.articles) ? payload.articles : [];
     const response = await fetch(`${API_BASE_URL}/village-news`, {
       method: 'PUT',
       headers,
-      body: JSON.stringify({ issues }),
+      body: JSON.stringify({ issues, articles }),
     });
     if (response.status === 401 || response.status === 403) {
       villageDiaryAPI.clearKkumdarakToken();
@@ -1153,7 +1157,10 @@ export const villageNewsAPI = {
     markCdnDirty('village_news_updated');
     const data = await response.json();
     const raw = data && data.success ? (data.data || {}) : {};
-    return { issues: raw.issues && typeof raw.issues === 'object' ? raw.issues : {} };
+    return {
+      issues: raw.issues && typeof raw.issues === 'object' ? raw.issues : {},
+      articles: Array.isArray(raw.articles) ? raw.articles : [],
+    };
   },
 };
 
