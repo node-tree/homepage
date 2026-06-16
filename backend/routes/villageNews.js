@@ -79,9 +79,10 @@ router.put('/', requireKkumdarakAuth, async (req, res) => {
     await ensureDBConnection();
 
     const body = req.body || {};
-    // issues 객체만 화이트리스트로 추출(잡 키 유입 차단). 누락 시 빈 객체.
+    // issues 객체 + articles 배열만 화이트리스트로 추출(잡 키 유입 차단). 누락 시 빈 값.
     const issues = body.issues && typeof body.issues === 'object' ? body.issues : {};
-    const nextData = { issues };
+    const articles = Array.isArray(body.articles) ? body.articles : [];
+    const nextData = { issues, articles };
 
     const doc = await VillageNews.findOneAndUpdate(
       {},
@@ -89,7 +90,7 @@ router.put('/', requireKkumdarakAuth, async (req, res) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    console.log('VillageNews 저장 완료:', doc._id, '호 수:', Object.keys(issues).length);
+    console.log('VillageNews 저장 완료:', doc._id, '호 수:', Object.keys(issues).length, '기사 수:', articles.length);
 
     res.json({
       success: true,
