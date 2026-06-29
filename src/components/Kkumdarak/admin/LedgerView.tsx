@@ -14,8 +14,23 @@ import { kkumdarakAdminAPI } from '../../../services/kkumdarakAdminApi';
 // ═══════════════════════════════════════════════════════════════
 
 const GENERAL_SUPPLY_KEY = '210-01';
+const MATERIAL_SUBITEM = '교육재료비'; // 프로그램 태깅 입력경로(교육재료비에만 적용)
 const BUSINESS_PROMO_KEY = '240-01'; // 업무추진비/사업추진비
 const BUSINESS_PROMO_SUBITEMS = ['다과비', '회의식비']; // 회의식비 누계 ≤100만 검증 입력경로
+
+// 교육재료비 프로그램 옵션 (value=programKey, ''=미분류/공통).
+//   편성(programKey 별)은 참고치 — 초과해도 막지 않으며 한도는 교육재료비 총액만 적용.
+const MATERIAL_PROGRAMS: { key: string; label: string }[] = [
+  { key: 'jangam-chaekjeong', label: '장암책정' },
+  { key: 'gieok-sunhwan', label: '기억순환' },
+  { key: 'son-gieok', label: '손의기억' },
+  { key: 'sori-ilgi', label: '소리일기' },
+  { key: 'punggyeong-ilgi', label: '풍경일기' },
+  { key: 'dasi-annyeong', label: '다시,안녕' },
+];
+const MATERIAL_PROGRAM_LABEL: Record<string, string> = MATERIAL_PROGRAMS.reduce(
+  (m, p) => { m[p.key] = p.label; return m; }, {} as Record<string, string>,
+);
 
 // 백엔드 enum 과 1:1 (Korean 라벨은 표시용, value 는 enum 그대로 전송)
 const PAYMENT_METHODS: { value: 'transfer' | 'card'; label: string }[] = [
@@ -44,12 +59,23 @@ interface BudgetLineRow {
   balance: number;
   progress: number;
 }
+interface ProgramBreakdownRow {
+  program: string;
+  programKey: string | null;
+  amount: number;
+  detail: string;
+  executed: number;
+  balance: number;
+  count: number;
+}
 interface SubItemRow {
   key: string;
   label: string;
   budget: number;
   executed: number;
   balance: number;
+  breakdown?: ProgramBreakdownRow[] | null;
+  unclassified?: { executed: number; count: number } | null;
 }
 interface BudgetSummary {
   totalBudget: number;
@@ -69,6 +95,7 @@ interface Transaction {
   majorCode: string;
   subCode: string;
   subItem: string | null;
+  program: string | null;
   description: string;
   grossAmount: number;
   withholdingAmount: number;
@@ -83,6 +110,7 @@ interface FormState {
   date: string;
   lineKey: string; // majorCode-subCode 선택 (UI용)
   subItem: string;
+  program: string; // 교육재료비 프로그램 key ('' = 미분류/공통)
   description: string;
   paymentMethod: 'transfer' | 'card';
   payeeName: string;
@@ -95,6 +123,7 @@ const emptyForm = (): FormState => ({
   date: '',
   lineKey: '',
   subItem: '',
+  program: '',
   description: '',
   paymentMethod: 'transfer',
   payeeName: '',
@@ -234,6 +263,7 @@ const LedgerView: React.FC = () => {
   // ── 폼 파생값 ──
   const grossNum = Number(form.grossAmount) || 0;
   const isGeneralSupply = form.lineKey === GENERAL_SUPPLY_KEY;
+  const isMaterial = isGeneralSupply && form.subItem === MATERIAL_SUBITEM; // 프로그램 태깅 대상
   const isBusinessPromo = form.lineKey === BUSINESS_PROMO_KEY;
   const autoWh = autoWithholding(form.incomeType, grossNum);
   const isAutoWh = autoWh !== null; // 3.3/8.8 → 자동·잠금
@@ -253,6 +283,12 @@ const LedgerView: React.FC = () => {
         : null,
     [isGeneralSupply, form.subItem, summary],
   );
+  // 선택한 프로그램의 편성(참고)·집행·차이 — 교육재료비 breakdown 에서 조회.
+  //   편성은 참고일 뿐 상한 아님(한도는 교육재료비 총액). 초과해도 막지 않는다.
+  const selectedProgramRef = useMemo(() => {
+    if (!isMaterial || !form.program || !selectedSubItem || !selectedSubItem.breakdown) return null;
+    return selectedSubItem.breakdown.find((b) => b.programKey === form.program) || null;
+  }, [isMaterial, form.program, selectedSubItem]);
 
   // 소득유형/총액 변경 시 자동 원천세를 폼에 반영(자동 모드에서만)
   useEffect(() => {
@@ -288,6 +324,7 @@ const LedgerView: React.FC = () => {
       date: (tx.date || '').slice(0, 10),
       lineKey: `${tx.majorCode}-${tx.subCode}`,
       subItem: tx.subItem || '',
+      program: tx.program || '',
       description: tx.description || '',
       paymentMethod: tx.paymentMethod,
       payeeName: tx.payeeName || '',
@@ -306,6 +343,7 @@ const LedgerView: React.FC = () => {
       majorCode,
       subCode,
       subItem: (isGeneralSupply || isBusinessPromo) && form.subItem ? form.subItem : null,
+      program: isMaterial && form.program ? form.program : null, // 교육재료비만; null=미분류
       description: form.description.trim(),
       grossAmount: grossNum,
       withholdingAmount: effectiveWh,
@@ -437,12 +475,33 @@ const LedgerView: React.FC = () => {
               <select
                 className="kd-field-input"
                 value={form.subItem}
-                onChange={(e) => setField('subItem', e.target.value)}
+                onChange={(e) => {
+                  setField('subItem', e.target.value);
+                  if (e.target.value !== MATERIAL_SUBITEM) setField('program', ''); // 교육재료비 외엔 프로그램 비움
+                }}
               >
                 <option value="">선택…</option>
                 {subItemOpts.map((s) => (
                   <option key={s.key} value={s.key}>
                     {s.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {isMaterial && (
+            <label className="kd-field">
+              <span className="kd-field-label">프로그램 (교육재료비)</span>
+              <select
+                className="kd-field-input"
+                value={form.program}
+                onChange={(e) => setField('program', e.target.value)}
+              >
+                <option value="">미분류 / 공통</option>
+                {MATERIAL_PROGRAMS.map((p) => (
+                  <option key={p.key} value={p.key}>
+                    {p.label}
                   </option>
                 ))}
               </select>
@@ -584,6 +643,13 @@ const LedgerView: React.FC = () => {
                 └ {selectedSubItem.label} 잔액 {won(selectedSubItem.balance)} (편성 {won(selectedSubItem.budget)})
               </span>
             )}
+            {isMaterial && selectedProgramRef && (
+              <span className="kd-ledger-lineinfo-sub">
+                └ {MATERIAL_PROGRAM_LABEL[selectedProgramRef.programKey || ''] || selectedProgramRef.program} ·
+                {' '}편성(참고) {won(selectedProgramRef.amount)} · 집행 {won(selectedProgramRef.executed)} · 차이 {won(selectedProgramRef.balance)}
+                {' '}<em className="kd-ledger-ref-note">※ 편성은 참고치 · 한도는 교육재료비 총액</em>
+              </span>
+            )}
           </div>
         )}
 
@@ -709,6 +775,11 @@ const LedgerView: React.FC = () => {
                   <td className="kd-admin-td-name">
                     {tx.description}
                     {tx.subItem && <span className="kd-admin-sub-tag">{tx.subItem}</span>}
+                    {tx.program && (
+                      <span className="kd-admin-sub-tag">
+                        {MATERIAL_PROGRAM_LABEL[tx.program] || tx.program}
+                      </span>
+                    )}
                   </td>
                   <td className="kd-admin-td-num">{won(tx.grossAmount)}</td>
                   <td className="kd-admin-td-num">{won(tx.netAmount)}</td>

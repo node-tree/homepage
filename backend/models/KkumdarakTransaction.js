@@ -47,6 +47,11 @@ const kkumdarakTransactionSchema = new mongoose.Schema(
     subCode: { type: String, required: true }, // 03/01/02/07/14 ...
     subItem: { type: String, default: null }, // 세세목 (일반수용비 등). optional
 
+    // 프로그램 태깅 (교육재료비 프로그램별 집행 집계용). kkumdarakPrograms.key 저장.
+    //   null = 미분류/공통. 현재는 교육재료비(subItem==='교육재료비')에서만 입력경로 제공.
+    //   ⚠️ 편성(programKey 별)은 참고치일 뿐 상한 아님 — 진짜 한도는 교육재료비 총액(12,858,150).
+    program: { type: String, default: null },
+
     description: { type: String, required: true }, // 집행내용
 
     // 금액 — 항상 총액 기준 저장
