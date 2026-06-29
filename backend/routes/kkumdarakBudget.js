@@ -165,10 +165,36 @@ router.get('/budget/summary', async (req, res) => {
       return m;
     }, {});
 
+    // 2-b) 교육재료비 프로그램별 집행 — subItem='교육재료비' AND program=<key> 합산.
+    //   편성(breakdown programKey)은 참고치일 뿐 상한 아님(한도는 교육재료비 총액). 집행만 산출.
+    //   유효 programKey 에 매칭 안 되거나 program=null 인 건은 '미분류' 버킷으로 합산한다.
+    const materialItem = budget.GENERAL_SUPPLY_SUBITEMS.find((si) => si.key === '교육재료비');
+    const materialKeySet = new Set(
+      (materialItem && Array.isArray(materialItem.breakdown) ? materialItem.breakdown : [])
+        .map((b) => b.programKey)
+        .filter(Boolean),
+    );
+    const materialProgAgg = await KkumdarakTransaction.aggregate([
+      { $match: { majorCode: '210', subCode: '01', subItem: '교육재료비' } },
+      { $group: { _id: '$program', executed: { $sum: '$grossAmount' }, count: { $sum: 1 } } },
+    ]);
+    const materialProgMap = {}; // programKey -> { executed, count }
+    let materialUnclassified = { executed: 0, count: 0 };
+    for (const r of materialProgAgg) {
+      const key = r._id;
+      if (key && materialKeySet.has(key)) {
+        materialProgMap[key] = { executed: r.executed, count: r.count };
+      } else {
+        materialUnclassified.executed += r.executed;
+        materialUnclassified.count += r.count;
+      }
+    }
+
     // 일반수용비 세세목(집행/잔액/진척 포함) — 210-01 전용. formula(산출근거) 동봉.
     const generalSupplySubItems = budget.GENERAL_SUPPLY_SUBITEMS.map((si) => {
       const ex = subExecMap[si.key] || { executed: 0, count: 0 };
       const balance = si.amount - ex.executed;
+      const isMaterial = si.key === '교육재료비';
       return {
         key: si.key,
         label: si.label,
@@ -179,10 +205,24 @@ router.get('/budget/summary', async (req, res) => {
         count: ex.count,
         isPersonnelActivity: si.isPersonnelActivity,
         formula: si.formula || '',
-        // 프로그램별 재료비 등 한 단계 더 드릴다운 (편성 기준; 항목별 집행 추정 없음)
+        // 프로그램별 드릴다운. 교육재료비는 program 태깅으로 프로그램별 집행(executed)을 산출한다.
+        //   편성(amount)은 참고치 — 초과해도 막지 않으며 한도는 교육재료비 총액(si.budget)만 적용.
         breakdown: Array.isArray(si.breakdown)
-          ? si.breakdown.map((b) => ({ program: b.program, amount: b.amount, detail: b.detail || '' }))
+          ? si.breakdown.map((b) => {
+              const pex = (b.programKey && materialProgMap[b.programKey]) || { executed: 0, count: 0 };
+              return {
+                program: b.program,
+                programKey: b.programKey || null,
+                amount: b.amount,
+                detail: b.detail || '',
+                executed: pex.executed,
+                balance: b.amount - pex.executed, // 참고용 차이(음수 허용)
+                count: pex.count,
+              };
+            })
           : null,
+        // 교육재료비 미분류(program null/매칭안됨) 집행 버킷 — 참고 표시(편성 없음)
+        unclassified: isMaterial ? { executed: materialUnclassified.executed, count: materialUnclassified.count } : null,
       };
     });
 
@@ -306,7 +346,7 @@ router.post('/transactions', async (req, res) => {
     await ensureDBConnection();
 
     const {
-      date, majorCode, subCode, subItem, description,
+      date, majorCode, subCode, subItem, program, description,
       grossAmount, withholdingAmount, payeeName, paymentMethod,
       incomeType, status, arteApproval, evidenceMeta, note,
     } = req.body || {};
@@ -325,6 +365,7 @@ router.post('/transactions', async (req, res) => {
       majorCode,
       subCode,
       subItem: subItem || null,
+      program: program || null,
       description,
       grossAmount: Number(grossAmount) || 0,
       withholdingAmount: Number(withholdingAmount) || 0,
@@ -366,7 +407,7 @@ router.put('/transactions/:id', async (req, res) => {
     const b = req.body || {};
     const $set = {};
     const fields = [
-      'date', 'majorCode', 'subCode', 'subItem', 'description',
+      'date', 'majorCode', 'subCode', 'subItem', 'program', 'description',
       'payeeName', 'paymentMethod', 'incomeType', 'status', 'arteApproval', 'note', 'evidenceMeta',
     ];
     for (const f of fields) {

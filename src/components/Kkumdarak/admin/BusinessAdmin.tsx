@@ -48,7 +48,18 @@ interface LineSubItem {
   progress?: number;
   count?: number;
   // 일부 세세목(예: 교육재료비)은 프로그램별로 한 단계 더 드릴다운
-  breakdown?: { program: string; amount: number; detail: string }[] | null;
+  //   교육재료비: program 태깅으로 프로그램별 집행(executed)·차이(balance) 산출.
+  //   편성(amount)은 참고치 — 한도는 교육재료비 총액(si.budget)만 적용.
+  breakdown?: {
+    program: string;
+    programKey?: string | null;
+    amount: number;
+    detail: string;
+    executed?: number;
+    balance?: number;
+    count?: number;
+  }[] | null;
+  unclassified?: { executed: number; count: number } | null;
 }
 
 interface BudgetLineRow {
@@ -363,32 +374,58 @@ const BudgetView: React.FC = () => {
                                   <>
                                     <tr className="kd-admin-subhead kd-admin-subhead--deep">
                                       <td colSpan={5}>
-                                        프로그램별 편성 내역
+                                        프로그램별 [편성(참고) · 집행 · 차이]
                                         <span className="kd-admin-subhead-note">
-                                          항목별 집행은 세세목 합계로 관리됩니다
+                                          편성은 참고치이며 한도는 교육재료비 총액({won(si.budget)})입니다
                                         </span>
                                       </td>
                                     </tr>
-                                    {si.breakdown!.map((b) => (
-                                      <tr
-                                        key={b.program}
-                                        className="kd-admin-subrow kd-admin-subrow--deep"
-                                      >
+                                    {si.breakdown!.map((b) => {
+                                      const bExec = b.executed ?? 0;
+                                      const bBal = b.balance ?? (b.amount - bExec);
+                                      return (
+                                        <tr
+                                          key={b.program}
+                                          className="kd-admin-subrow kd-admin-subrow--deep"
+                                        >
+                                          <td className="kd-admin-td-name kd-admin-td-sub kd-admin-td-sub2">
+                                            <span className="kd-admin-sub-main">
+                                              <span
+                                                className="kd-admin-sub-dot kd-admin-sub-dot2"
+                                                aria-hidden="true"
+                                              />
+                                              {b.program}
+                                            </span>
+                                            {b.detail && (
+                                              <span className="kd-admin-sub-formula">{b.detail}</span>
+                                            )}
+                                          </td>
+                                          <td className="kd-admin-td-num kd-admin-td-ref">{won(b.amount)}</td>
+                                          <td className="kd-admin-td-num">{won(bExec)}</td>
+                                          <td className={`kd-admin-td-num${bBal < 0 ? ' is-over' : ''}`}>
+                                            {won(bBal)}
+                                          </td>
+                                          <td className="kd-admin-td-num" aria-hidden="true" />
+                                        </tr>
+                                      );
+                                    })}
+                                    {si.unclassified && si.unclassified.executed > 0 && (
+                                      <tr className="kd-admin-subrow kd-admin-subrow--deep">
                                         <td className="kd-admin-td-name kd-admin-td-sub kd-admin-td-sub2">
                                           <span className="kd-admin-sub-main">
                                             <span
                                               className="kd-admin-sub-dot kd-admin-sub-dot2"
                                               aria-hidden="true"
                                             />
-                                            {b.program}
+                                            미분류 / 공통
                                           </span>
                                         </td>
-                                        <td className="kd-admin-td-num">{won(b.amount)}</td>
-                                        <td className="kd-admin-td-formula" colSpan={3}>
-                                          {b.detail}
-                                        </td>
+                                        <td className="kd-admin-td-num kd-admin-td-ref">—</td>
+                                        <td className="kd-admin-td-num">{won(si.unclassified.executed)}</td>
+                                        <td className="kd-admin-td-num">—</td>
+                                        <td className="kd-admin-td-num" aria-hidden="true" />
                                       </tr>
-                                    ))}
+                                    )}
                                   </>
                                 )}
                               </React.Fragment>
