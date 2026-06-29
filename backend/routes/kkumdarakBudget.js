@@ -155,28 +155,7 @@ router.get('/budget/summary', async (req, res) => {
       return m;
     }, {});
 
-    // 2) 라인별 요약
-    const lines = budget.BUDGET_LINES.map((line) => {
-      const ex = executedMap[line.lineKey] || { executed: 0, count: 0 };
-      const balance = line.amount - ex.executed;
-      const progress = line.amount > 0 ? ex.executed / line.amount : 0;
-      const out = {
-        lineKey: line.lineKey,
-        majorCode: line.majorCode,
-        majorName: line.majorName,
-        subCode: line.subCode,
-        subName: line.subName,
-        paymentHint: line.paymentHint,
-        budget: line.amount,
-        executed: ex.executed,
-        balance,
-        progress: Math.round(progress * 10000) / 100, // % (소수 2자리)
-        count: ex.count,
-      };
-      return out;
-    });
-
-    // 3) 일반수용비(210-01) 세세목별 집행액
+    // 2) 일반수용비(210-01) 세세목별 집행액 — 트랜잭션 subItem 태깅으로 산출
     const subAgg = await KkumdarakTransaction.aggregate([
       { $match: { majorCode: '210', subCode: '01', subItem: { $ne: null } } },
       { $group: { _id: '$subItem', executed: { $sum: '$grossAmount' }, count: { $sum: 1 } } },
@@ -185,6 +164,8 @@ router.get('/budget/summary', async (req, res) => {
       m[r._id] = { executed: r.executed, count: r.count };
       return m;
     }, {});
+
+    // 일반수용비 세세목(집행/잔액/진척 포함) — 210-01 전용. formula(산출근거) 동봉.
     const generalSupplySubItems = budget.GENERAL_SUPPLY_SUBITEMS.map((si) => {
       const ex = subExecMap[si.key] || { executed: 0, count: 0 };
       const balance = si.amount - ex.executed;
@@ -197,6 +178,46 @@ router.get('/budget/summary', async (req, res) => {
         progress: si.amount > 0 ? Math.round((ex.executed / si.amount) * 10000) / 100 : 0,
         count: ex.count,
         isPersonnelActivity: si.isPersonnelActivity,
+        formula: si.formula || '',
+        // 프로그램별 재료비 등 한 단계 더 드릴다운 (편성 기준; 항목별 집행 추정 없음)
+        breakdown: Array.isArray(si.breakdown)
+          ? si.breakdown.map((b) => ({ program: b.program, amount: b.amount, detail: b.detail || '' }))
+          : null,
+      };
+    });
+
+    // 3) 라인별 요약 (+ 편성 산출근거 subItems)
+    //   - 210-01(subItemsExecutable): subItems 에 세세목별 집행/잔액/진척 포함.
+    //   - 그 외 비목: subItems 는 편성 내역(label·amount·formula)만 — 항목별 집행
+    //     추정/날조 금지. 집행/잔액/진척은 라인 합계 레벨로만 관리.
+    const lines = budget.BUDGET_LINES.map((line) => {
+      const ex = executedMap[line.lineKey] || { executed: 0, count: 0 };
+      const balance = line.amount - ex.executed;
+      const progress = line.amount > 0 ? ex.executed / line.amount : 0;
+      const executable = !!line.subItemsExecutable;
+      const subItems = executable
+        ? generalSupplySubItems.map((si) => ({ ...si, executable: true }))
+        : (line.subItems || []).map((si) => ({
+            label: si.label,
+            budget: si.amount,
+            formula: si.formula || '',
+            isPersonnelActivity: !!si.isPersonnelActivity,
+            executable: false,
+          }));
+      return {
+        lineKey: line.lineKey,
+        majorCode: line.majorCode,
+        majorName: line.majorName,
+        subCode: line.subCode,
+        subName: line.subName,
+        paymentHint: line.paymentHint,
+        budget: line.amount,
+        executed: ex.executed,
+        balance,
+        progress: Math.round(progress * 10000) / 100, // % (소수 2자리)
+        count: ex.count,
+        subItemsExecutable: executable,
+        subItems,
       };
     });
 
