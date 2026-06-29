@@ -193,21 +193,75 @@
 .kd-admin-expand-btn:hover { color: var(--kd-pink-deep); }
 .kd-admin-expand-caret { color: var(--kd-teal); font-size: 12px; }
 
-/* 세세목 행 */
+/* 안내 문구(펼침 사용법) */
+.kd-admin-hint {
+  font-family: var(--kd-font-body);
+  font-size: 12px;
+  opacity: 0.6;
+  margin: -2px 0 12px;
+}
+
+/* 세세목 / 편성 내역 행 */
 /* 배경: --kd-ink(#211914)를 3% 알파로 — kkumdarak.css 의 ink-with-alpha 관용(예: --kd-outline)을 따름 */
 .kd-admin-subrow td { background: rgba(33, 25, 20, 0.03); font-size: 13px; }
+
+/* 펼침 영역 헤더: "편성 내역(산출근거)" */
+.kd-admin-subhead td {
+  background: rgba(33, 25, 20, 0.05);
+  font-family: var(--kd-font-body);
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--kd-ink);
+  padding-left: 26px;
+}
+.kd-admin-subhead-note {
+  font-weight: 500;
+  font-size: 11px;
+  opacity: 0.6;
+  margin-left: 10px;
+}
+
 .kd-admin-td-sub {
   padding-left: 26px;
   font-weight: 400;
+  vertical-align: top;
+  word-break: keep-all;
+  min-width: 130px;
+}
+.kd-admin-sub-main {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  word-break: keep-all;
+}
+/* 산출식: 항목명 아래 보조 텍스트(210-01 세세목용) */
+.kd-admin-sub-formula {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.45;
+  opacity: 0.6;
+  font-weight: 400;
+  white-space: normal;
+  word-break: keep-all;
+}
+/* 산출식 컬럼(집행 미태깅 비목): 항목명·편성액 옆 산출근거 */
+.kd-admin-td-formula {
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0.72;
+  white-space: normal;
+  word-break: keep-all;
 }
 .kd-admin-sub-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: var(--kd-yellow);
+  flex: 0 0 auto;
 }
 .kd-admin-sub-tag {
   font-size: 11px;
@@ -217,6 +271,38 @@
   border-radius: var(--kd-radius-pill);
   padding: 1px 8px;
   margin-left: 8px;
+  flex: 0 0 auto;
+}
+
+/* 세세목 안의 중첩 펼침 버튼 (예: 교육재료비 → 프로그램별) */
+.kd-admin-subexpand-btn {
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  background: transparent;
+  border: 0;
+  color: var(--kd-ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  text-align: left;
+}
+.kd-admin-subexpand-btn:hover { color: var(--kd-pink-deep); }
+
+/* 2단계(프로그램별) 헤더·행 — 한 단계 더 들여쓰기 */
+.kd-admin-subhead--deep td {
+  background: rgba(33, 25, 20, 0.06);
+  padding-left: 44px;
+  font-size: 11px;
+}
+.kd-admin-subrow--deep td { background: rgba(33, 25, 20, 0.05); }
+.kd-admin-td-sub2 { padding-left: 44px; }
+.kd-admin-sub-dot2 {
+  width: 5px;
+  height: 5px;
+  background: var(--kd-teal);
 }
 
 .kd-admin-period {
