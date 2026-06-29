@@ -256,6 +256,11 @@
   white-space: normal;
   word-break: keep-all;
 }
+/* 편성(참고치) 컬럼: 프로그램별 편성은 상한이 아니라 참고 — 흐리게 표시 */
+.kd-admin-td-ref {
+  opacity: 0.55;
+  font-weight: 400;
+}
 .kd-admin-sub-dot {
   width: 6px;
   height: 6px;
