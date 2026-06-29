@@ -32,6 +32,25 @@ const TABS: { id: AdminTab; label: string; ready: boolean }[] = [
 ];
 
 // ── 백엔드 GET /api/kkumdarak/budget/summary 응답 타입 ──
+//   비목 라인마다 subItems(편성 산출근거)를 포함한다.
+//   - subItemsExecutable=true(210-01): subItems 에 세세목별 집행/잔액/진척 포함.
+//   - false: subItems 는 편성 내역(label·budget·formula)만 — 항목별 집행은 없음.
+interface LineSubItem {
+  key?: string;
+  label: string;
+  budget: number;
+  formula: string;
+  isPersonnelActivity?: boolean;
+  executable: boolean;
+  // executable=true 일 때만 의미 있음
+  executed?: number;
+  balance?: number;
+  progress?: number;
+  count?: number;
+  // 일부 세세목(예: 교육재료비)은 프로그램별로 한 단계 더 드릴다운
+  breakdown?: { program: string; amount: number; detail: string }[] | null;
+}
+
 interface BudgetLineRow {
   lineKey: string;
   majorCode: string;
@@ -44,6 +63,8 @@ interface BudgetLineRow {
   balance: number;
   progress: number;
   count: number;
+  subItemsExecutable: boolean;
+  subItems: LineSubItem[];
 }
 
 interface SubItemRow {
@@ -55,6 +76,7 @@ interface SubItemRow {
   progress: number;
   count: number;
   isPersonnelActivity: boolean;
+  formula?: string;
 }
 
 interface ConstraintBlock {
@@ -81,9 +103,6 @@ interface BudgetSummary {
 
 const won = (n: number): string => `${(n ?? 0).toLocaleString('ko-KR')}원`;
 const pct = (n: number): string => `${(n ?? 0).toFixed(2)}%`;
-
-// 일반수용비 라인 식별자(세세목 펼침 대상)
-const GENERAL_SUPPLY_KEY = '210-01';
 
 // ── 로딩 스켈레톤 (블로킹 전체화면 "불러오는 중…" 대체) ──────────────────────
 //   레이아웃(총괄 카드 그리드 + 표 골격)은 즉시 그려지고 데이터만 비워둔다.
@@ -141,7 +160,17 @@ const BudgetView: React.FC = () => {
   const [data, setData] = useState<BudgetSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const [expanded, setExpanded] = useState(false);
+  // 비목별 펼침 상태 (lineKey → boolean). 모든 비목이 펼침 가능.
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  // 세세목 중첩 펼침 상태 (`lineKey:subKey` → boolean). 예: 교육재료비 → 프로그램별.
+  const [subExpanded, setSubExpanded] = useState<Record<string, boolean>>({});
+
+  const toggle = useCallback((lineKey: string) => {
+    setExpanded((prev) => ({ ...prev, [lineKey]: !prev[lineKey] }));
+  }, []);
+  const toggleSub = useCallback((subKey: string) => {
+    setSubExpanded((prev) => ({ ...prev, [subKey]: !prev[subKey] }));
+  }, []);
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
@@ -229,6 +258,10 @@ const BudgetView: React.FC = () => {
         </span>
       </div>
 
+      <p className="kd-admin-hint">
+        비목명을 누르면 편성액의 산출근거(편성 내역)를 볼 수 있습니다.
+      </p>
+
       {/* 비목 라인 표 */}
       <div className="kd-admin-table-wrap">
         <table className="kd-admin-table">
@@ -243,28 +276,23 @@ const BudgetView: React.FC = () => {
           </thead>
           <tbody>
             {data.lines.map((line) => {
-              const isGeneralSupply = line.lineKey === GENERAL_SUPPLY_KEY;
+              const isOpen = !!expanded[line.lineKey];
+              const executable = line.subItemsExecutable;
               return (
                 <React.Fragment key={line.lineKey}>
-                  <tr className={isGeneralSupply ? 'kd-admin-row-expandable' : undefined}>
+                  <tr className="kd-admin-row-expandable">
                     <td className="kd-admin-td-name">
-                      {isGeneralSupply ? (
-                        <button
-                          type="button"
-                          className="kd-admin-expand-btn"
-                          onClick={() => setExpanded((v) => !v)}
-                          aria-expanded={expanded}
-                        >
-                          <span className="kd-admin-expand-caret" aria-hidden="true">
-                            {expanded ? '▾' : '▸'}
-                          </span>
-                          {line.majorName}({line.majorCode}) · {line.subName}({line.subCode})
-                        </button>
-                      ) : (
-                        <span>
-                          {line.majorName}({line.majorCode}) · {line.subName}({line.subCode})
+                      <button
+                        type="button"
+                        className="kd-admin-expand-btn"
+                        onClick={() => toggle(line.lineKey)}
+                        aria-expanded={isOpen}
+                      >
+                        <span className="kd-admin-expand-caret" aria-hidden="true">
+                          {isOpen ? '▾' : '▸'}
                         </span>
-                      )}
+                        {line.majorName}({line.majorCode}) · {line.subName}({line.subCode})
+                      </button>
                     </td>
                     <td className="kd-admin-td-num">{won(line.budget)}</td>
                     <td className="kd-admin-td-num">{won(line.executed)}</td>
@@ -272,24 +300,120 @@ const BudgetView: React.FC = () => {
                     <td className="kd-admin-td-num">{pct(line.progress)}</td>
                   </tr>
 
-                  {/* 일반수용비 세세목 펼침 */}
-                  {isGeneralSupply &&
-                    expanded &&
-                    data.generalSupplySubItems.map((si) => (
-                      <tr key={si.key} className="kd-admin-subrow">
-                        <td className="kd-admin-td-name kd-admin-td-sub">
-                          <span className="kd-admin-sub-dot" aria-hidden="true" />
-                          {si.label}
-                          {si.isPersonnelActivity && (
-                            <span className="kd-admin-sub-tag">인력활동비</span>
+                  {/* 편성 내역(산출근거) 펼침 */}
+                  {isOpen && (
+                    <>
+                      <tr className="kd-admin-subhead">
+                        <td colSpan={5}>
+                          편성 내역(산출근거)
+                          {!executable && (
+                            <span className="kd-admin-subhead-note">
+                              항목별 집행은 비목 합계로 관리됩니다
+                            </span>
                           )}
                         </td>
-                        <td className="kd-admin-td-num">{won(si.budget)}</td>
-                        <td className="kd-admin-td-num">{won(si.executed)}</td>
-                        <td className="kd-admin-td-num">{won(si.balance)}</td>
-                        <td className="kd-admin-td-num">{pct(si.progress)}</td>
                       </tr>
-                    ))}
+
+                      {executable
+                        ? // 210-01: 세세목별 집행/잔액/진척 (기존 동작 유지) + 일부 세세목 프로그램별 드릴다운
+                          line.subItems.map((si) => {
+                            const subKey = `${line.lineKey}:${si.key || si.label}`;
+                            const hasBreakdown =
+                              Array.isArray(si.breakdown) && si.breakdown.length > 0;
+                            const subOpen = !!subExpanded[subKey];
+                            return (
+                              <React.Fragment key={subKey}>
+                                <tr className="kd-admin-subrow">
+                                  <td className="kd-admin-td-name kd-admin-td-sub">
+                                    {hasBreakdown ? (
+                                      <button
+                                        type="button"
+                                        className="kd-admin-subexpand-btn"
+                                        onClick={() => toggleSub(subKey)}
+                                        aria-expanded={subOpen}
+                                      >
+                                        <span className="kd-admin-expand-caret" aria-hidden="true">
+                                          {subOpen ? '▾' : '▸'}
+                                        </span>
+                                        {si.label}
+                                        {si.isPersonnelActivity && (
+                                          <span className="kd-admin-sub-tag">인력활동비</span>
+                                        )}
+                                      </button>
+                                    ) : (
+                                      <span className="kd-admin-sub-main">
+                                        <span className="kd-admin-sub-dot" aria-hidden="true" />
+                                        {si.label}
+                                        {si.isPersonnelActivity && (
+                                          <span className="kd-admin-sub-tag">인력활동비</span>
+                                        )}
+                                      </span>
+                                    )}
+                                    {si.formula && !hasBreakdown && (
+                                      <span className="kd-admin-sub-formula">{si.formula}</span>
+                                    )}
+                                  </td>
+                                  <td className="kd-admin-td-num">{won(si.budget)}</td>
+                                  <td className="kd-admin-td-num">{won(si.executed ?? 0)}</td>
+                                  <td className="kd-admin-td-num">{won(si.balance ?? 0)}</td>
+                                  <td className="kd-admin-td-num">{pct(si.progress ?? 0)}</td>
+                                </tr>
+
+                                {hasBreakdown && subOpen && (
+                                  <>
+                                    <tr className="kd-admin-subhead kd-admin-subhead--deep">
+                                      <td colSpan={5}>
+                                        프로그램별 편성 내역
+                                        <span className="kd-admin-subhead-note">
+                                          항목별 집행은 세세목 합계로 관리됩니다
+                                        </span>
+                                      </td>
+                                    </tr>
+                                    {si.breakdown!.map((b) => (
+                                      <tr
+                                        key={b.program}
+                                        className="kd-admin-subrow kd-admin-subrow--deep"
+                                      >
+                                        <td className="kd-admin-td-name kd-admin-td-sub kd-admin-td-sub2">
+                                          <span className="kd-admin-sub-main">
+                                            <span
+                                              className="kd-admin-sub-dot kd-admin-sub-dot2"
+                                              aria-hidden="true"
+                                            />
+                                            {b.program}
+                                          </span>
+                                        </td>
+                                        <td className="kd-admin-td-num">{won(b.amount)}</td>
+                                        <td className="kd-admin-td-formula" colSpan={3}>
+                                          {b.detail}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </>
+                                )}
+                              </React.Fragment>
+                            );
+                          })
+                        : // 그 외 비목: 항목명 · 편성액 · 산출식 (집행 컬럼 없음)
+                          line.subItems.map((si) => (
+                            <tr key={si.label} className="kd-admin-subrow">
+                              <td className="kd-admin-td-name kd-admin-td-sub">
+                                <span className="kd-admin-sub-main">
+                                  <span className="kd-admin-sub-dot" aria-hidden="true" />
+                                  {si.label}
+                                  {si.isPersonnelActivity && (
+                                    <span className="kd-admin-sub-tag">인력활동비</span>
+                                  )}
+                                </span>
+                              </td>
+                              <td className="kd-admin-td-num">{won(si.budget)}</td>
+                              <td className="kd-admin-td-formula" colSpan={3}>
+                                {si.formula}
+                              </td>
+                            </tr>
+                          ))}
+                    </>
+                  )}
                 </React.Fragment>
               );
             })}
