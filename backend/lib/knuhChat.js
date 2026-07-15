@@ -1,13 +1,14 @@
 // ═══════════════════════════════════════════════════════════════
 // KNUH(factchat) chat 클라이언트 — 얇은 HTTP 래퍼.
 //   · OpenAI 호환 chat/completions. 프롬프트 구성·파싱은 라우트가 담당(여기는 전송만).
-//   · 모델 기본 gpt-5.4(chat 모델). codex 계열은 /responses 가 필요하므로 여기서 쓰지 않음.
+//   · 모델 기본 gpt-5.5(chat 모델, 2026-07 상향 — 게이트웨이 실호출로 지원 확인).
+//     codex 계열은 /responses 가 필요하므로 여기서 쓰지 않음.
 //   · KNUH_API_KEY 미설정 시 code 'KNUH_NO_KEY' 로 throw → 라우트가 503 으로 안내.
 //   · node18+ 전역 fetch 사용, 30s AbortController 타임아웃(성공/실패 모두 clearTimeout).
 // ═══════════════════════════════════════════════════════════════
 
 const KNUH_ENDPOINT = 'https://factchat-cloud.mindlogic.ai/v1/gateway/chat/completions';
-const DEFAULT_MODEL = process.env.KNUH_CHAT_MODEL || 'gpt-5.4';
+const DEFAULT_MODEL = process.env.KNUH_CHAT_MODEL || 'gpt-5.5';
 const TIMEOUT_MS = 30000;
 
 // messages: [{role, content}], options: { model?, maxTokens? } → content 문자열 반환.
