@@ -1063,7 +1063,7 @@ router.get('/dashboard/summary', async (req, res) => {
     res.json({
       success: true,
       data: {
-        totalQuota: TOTAL_QUOTA, // 222
+        totalQuota: TOTAL_QUOTA, // 226
         totalActualParticipants,
         participantProgress: Math.round(participantRatio * 10000) / 100, // % (소수 2자리)
         totalSessions: TOTAL_SESSIONS, // 63
