@@ -3838,8 +3838,12 @@
     filter: drop-shadow(2px 2px 0 #1a1a1a);
   }
 
+  /* 섹션 높이는 .kd-diary-mobile(=JS 가 콘텐츠에서 파생한 높이)이 결정한다.
+     구 min-height:1620 은 카드가 적은 프로그램에서 콘텐츠 아래에 '빈 스크롤 꼬리'를 만들어,
+     스크롤 거리 > 아바타 이동거리 → 마지막 카드가 화면 위로 지나간 뒤 등장하는 원인이 됐다.
+     빈 프로그램(placeholder)은 .kd-diary-mobile 자체가 1620px 이므로 종전 높이 그대로다. */
   .kd-figma-diary {
-    min-height: 1620px;
+    min-height: 0;
   }
 
   .kd-diary-mobile {
@@ -3881,6 +3885,8 @@
     left: 42px;
     top: 260px;
     width: 72px;
+    /* height 는 폴백값 — 실제 높이는 VillageDiary.tsx 가 카드 수·실측 높이에서 파생해
+       인라인 style 로 지정한다(mobilePathHeight). CSS 고정값은 JS 미실행 시에만 쓰인다. */
     height: 875px;
     border-left-width: 12px;
     border-radius: 70% 22% 80% 18%;
@@ -5430,6 +5436,8 @@
 
 @media (max-width: 900px) {
   /* path: 세로 일직선 (S커브 제거) */
+  /* ⚠️ height 1010 은 "카드 5개" 시절의 폴백값. 실제 높이는 VillageDiary.tsx 의
+     mobilePathHeight(카드 수·실측 높이 파생)가 인라인 style 로 덮어쓴다. */
   .kd-diary-mobile .diary-path {
     width: 12px;
     height: 1010px;
@@ -5829,7 +5837,7 @@
   color: #ffffff;
   box-shadow: 2px 2px 0 #1a1a1a;
 }
-/* 모집마감 — 비활성/회색 톤. */
+/* 종료(배지 축) / 모집마감(신청 버튼 축) — 비활성·회색 톤 공용. */
 .program-status-badge.is-closed {
   background: #d8d2c4;
   border-color: #8d8675;
@@ -5849,14 +5857,18 @@
   min-width: 0;
 }
 
-/* ── 모집 상태 선택 (편집 패널: 상단 배지 축 + 신청 버튼 축, 각 2지선다) ─── */
+/* ── 모집 상태 선택 (편집 패널: 상단 배지 축 3지선다 + 신청 버튼 축 2지선다) ─── */
 .program-status-field {
   gap: 6px;
 }
+/* 상단 배지 축이 3지선다(진행중/신청중/종료)로 늘어나 좁은 편집 패널에서 한 줄을 넘길 수 있다.
+   → 줄바꿈 허용 + 행 간격 확보. 2지선다인 신청 버튼 축은 종전대로 한 줄에 들어간다. */
 .program-status-options {
   display: flex;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 8px 14px;
 }
+.program-status-radio { flex: 0 0 auto; }
 .program-status-radio {
   display: inline-flex;
   align-items: center;

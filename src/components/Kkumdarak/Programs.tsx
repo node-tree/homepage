@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useId, useRef } from 'react';
 import { KKUMDARAK_APPLY_URL } from './data';
 import MotionCharacter from './MotionCharacter';
 import ProgramCharacterPng, { characterPngForName } from './programCharacters';
@@ -139,22 +139,26 @@ type ProgramSettingsMap = Record<string, ProgramSetting>;
 
 // ── 모집 상태: 서로 독립적인 두 축 ─────────────────────────────────
 //   ① applyStatus — 신청 버튼 축: 'open'(신청하기) ↔ 'closed'(모집마감)
-//   ② phaseStatus — 상단 배지 축: 'ongoing'(진행중) ↔ 'recruiting'(신청중)
-//   두 축은 독립이라 (배지=진행중 + 버튼=모집마감), (배지=신청중 + 버튼=신청하기) 등 임의 조합 가능.
+//   ② phaseStatus — 상단 배지 축: 'ongoing'(진행중) / 'recruiting'(신청중) / 'closed'(종료)
+//   두 축은 독립이라 (배지=종료 + 버튼=신청하기), (배지=진행중 + 버튼=모집마감) 등 임의 조합 가능.
+//   ⚠️ 두 축의 'closed' 는 의미가 다르다 — applyStatus.closed = 신청 마감, phaseStatus.closed = 프로그램 종료.
+//      배지를 '종료'로 골라도 신청 버튼 축은 바뀌지 않는다(자동 연동 없음).
 //   레거시 단일 status('ongoing'|'recruiting'|'closed'|'open')·setting.closed 에서 폴백·마이그레이션
 //   (아래 resolveApplyStatus / resolvePhaseStatus 참고).
 type ApplyStatus = 'open' | 'closed';
-type PhaseStatus = 'ongoing' | 'recruiting';
+type PhaseStatus = 'ongoing' | 'recruiting' | 'closed';
 
 // 이전 버전 단일 status 값(읽기 전용 마이그레이션 소스).
 type LegacyStatus = 'ongoing' | 'recruiting' | 'closed' | 'open';
 
 // 배지(phaseStatus) 표시 라벨 + modifier 클래스(데스크톱·모바일 공용).
+//   라벨은 카드 제목 옆 한 줄에 들어가므로 짧게 유지한다(제목 줄바꿈 방지) — '프로그램 종료'가 아니라 '종료'.
 const PHASE_META: Record<PhaseStatus, { label: string; cls: string }> = {
   ongoing:    { label: '진행중', cls: 'is-ongoing' },
   recruiting: { label: '신청중', cls: 'is-recruiting' },
+  closed:     { label: '종료',   cls: 'is-closed' },
 };
-const PHASE_ORDER: PhaseStatus[] = ['ongoing', 'recruiting'];
+const PHASE_ORDER: PhaseStatus[] = ['ongoing', 'recruiting', 'closed'];
 
 // 신청 버튼(applyStatus) 편집 라벨.
 const APPLY_META: Record<ApplyStatus, { label: string }> = {
@@ -263,17 +267,23 @@ const resolveApplyStatus = (content?: ProgramContent, setting?: ProgramSetting):
 };
 
 //   ② 상단 배지 축 phaseStatus:
-//      · content.phaseStatus 명시 → 그대로(ongoing|recruiting)
+//      · content.phaseStatus 명시 → 그대로(ongoing|recruiting|closed)
 //      · 아니면 레거시 status: 'recruiting'→recruiting(신청중), 그 외(ongoing|closed|open)→ongoing(진행중)
 //      · 아니면 기본 ongoing
+//   ⚠️ 레거시 status:'closed' 는 "신청 마감"이지 "프로그램 종료"가 아니다 →
+//      배지 축 'closed'(종료)로 승격하지 않고 종전대로 ongoing 으로 읽는다.
+//      마찬가지로 setting.closed(신청 마감 boolean)도 배지 축에 관여하지 않는다.
+//      즉 '종료' 배지는 편집자가 phaseStatus 를 명시 저장한 경우에만 표시된다(기존 데이터 무영향).
+const PHASE_VALUES: PhaseStatus[] = ['ongoing', 'recruiting', 'closed'];
 const resolvePhaseStatus = (content?: ProgramContent): PhaseStatus => {
-  if (content?.phaseStatus === 'ongoing' || content?.phaseStatus === 'recruiting') return content.phaseStatus;
+  const v = content?.phaseStatus;
+  if (v && (PHASE_VALUES as string[]).includes(v)) return v;
   const legacy = content?.status as string | undefined;
   if (legacy === 'recruiting') return 'recruiting';
   return 'ongoing';
 };
 
-// 공개 표시용 모집 단계 배지 (진행중 / 신청중). 축제 카드는 신청 개념이 없어 렌더하지 않는다.
+// 공개 표시용 모집 단계 배지 (진행중 / 신청중 / 종료). 축제 카드는 신청 개념이 없어 렌더하지 않는다.
 const ProgramStatusBadge: React.FC<{
   program: Program;
   phase: PhaseStatus;
@@ -404,6 +414,11 @@ const ContentEditPanel: React.FC<{
   // 두 축 — 저장된 실효 상태(resolve*)를 기본 선택값으로 끌어와 토글 일관성 유지.
   const [applyStatus, setApplyStatus] = useState<ApplyStatus>(resolveApplyStatus(content, setting));
   const [phaseStatus, setPhaseStatus] = useState<PhaseStatus>(resolvePhaseStatus(content));
+  // 라디오 그룹 name 은 패널 인스턴스마다 유일해야 한다.
+  //   같은 프로그램의 데스크톱 카드와 모바일 카드가 동시에 DOM 에 존재하므로(한쪽은 display:none),
+  //   name 을 프로그램명으로만 만들면 두 패널이 같은 라디오 그룹으로 묶여 브라우저가
+  //   한쪽 체크를 해제해 버린다(= 데스크톱 패널에서 선택지가 하나도 체크돼 보이지 않던 원인).
+  const panelUid = useId();
 
   useEffect(() => {
     setName(content?.name ?? '');
@@ -520,7 +535,7 @@ const ContentEditPanel: React.FC<{
                 <label key={opt} className={`program-status-radio ${PHASE_META[opt].cls}`}>
                   <input
                     type="radio"
-                    name={`phase-${baseProgram.name}`}
+                    name={`phase-${panelUid}`}
                     checked={phaseStatus === opt}
                     onChange={() => setPhaseStatus(opt)}
                     disabled={locked}
@@ -537,7 +552,7 @@ const ContentEditPanel: React.FC<{
                 <label key={opt} className={`program-status-radio ${opt === 'closed' ? 'is-closed' : 'is-apply-open'}`}>
                   <input
                     type="radio"
-                    name={`apply-${baseProgram.name}`}
+                    name={`apply-${panelUid}`}
                     checked={applyStatus === opt}
                     onChange={() => setApplyStatus(opt)}
                     disabled={locked}
