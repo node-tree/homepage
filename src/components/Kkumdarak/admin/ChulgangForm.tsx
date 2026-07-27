@@ -9,8 +9,10 @@ import PhotoUpload from './PhotoUpload';
 //   · 회차: 등록된 회차가 있으면 드롭다운(자동기입) + 맨 위 "직접 입력" 옵션.
 //     "직접 입력"(또는 등록 회차 0건)이면 회차번호·교육일자·실참여를 직접 입력 →
 //     회차 미등록 상태에서도 출강확인서 생성 가능.
-//   · 「AI 초안」 → /forms/ai-draft(docType chulgang)로 본문 6칸 채움(KNUH, grounded).
+//   · 「AI 초안」 → /forms/ai-draft(docType chulgang)로 교육주제 + 본문 6칸 채움(KNUH, grounded).
 //     기존 본문에 내용이 있으면 덮어쓰기 confirm.
+//   · 교육주제: 비워 두면 AI 초안이 회차·회차기록(제목/내용/비고)·프로그램 grounding 을 근거로
+//     추측해 채운다. 채워진 뒤에도 평범한 입력 필드라 사용자가 그대로 수정할 수 있다(초기값일 뿐).
 //   · 진행사진 첨부(선택) → BinData/chulgang_photo.png 교체(없으면 더미 유지).
 //   · 클라이언트가 21개 플레이스홀더 값을 모두 조립해 POST → HWPX blob 다운로드.
 //   · {{확인년/월/일}}는 클라이언트 today(KST 환경) 기준 — Vercel UTC 시프트 회피.
@@ -20,6 +22,10 @@ const MANUAL = '__manual__'; // 회차 직접입력 센티넬(Mongo _id 와 충�
 
 // AI 초안이 채우는 본문 6키(화이트리스트 — 그 외 키는 무시해 fields 오염 방지)
 const AI_DRAFT_KEYS = ['교육목표', '세부내용', '교육재료', '평가_운영', '평가_반응', '평가_보완'] as const;
+
+// 참고: AI 초안이 실제로 채우는 키 = 교육주제(자동 추측) + 위 본문 6키.
+//   교육주제는 읽기전용이 아니다 — AI 값은 어디까지나 "초기값"이고 사용자가 자유롭게 수정한다.
+//   AI 가 빈 문자열을 주면(근거 없음) 기존 사용자 입력을 지우지 않는다(채움 로직의 주제채움 가드).
 
 interface ProgramStat {
   key: string;
@@ -32,6 +38,10 @@ interface SessionRow {
   sessionNo: number;
   date: string | null;
   attendance: number;
+  // 교육주제 자동 추측의 근거(강사일지 성격) — 등록 회차에 기록돼 있으면 AI 초안에 맥락으로 전달.
+  title?: string;
+  content?: string;
+  note?: string;
 }
 
 // Date → 'YYYY. M. D.' (UTC 게터 — YYYY-MM-DD 가 UTC 자정으로 해석되어 일자 시프트 방지)
@@ -154,6 +164,21 @@ const ChulgangForm: React.FC = () => {
     setFields((f) => ({ ...f, [key]: value }));
   };
 
+  // AI 초안에 넘길 회차 맥락(교육주제 추측 근거). 등록 회차를 선택했을 때만 — 직접입력이면 빈 문자열.
+  //   회차 기록의 제목·내용·비고가 곧 강사일지 성격의 1차 근거다(없으면 grounding 회차 구성으로 폴백).
+  const 회차맥락 = useMemo(() => {
+    if (!selectedSession) return '';
+    const d = fmtKoreanDate(selectedSession.date);
+    return [
+      `${selectedSession.sessionNo}회차${d ? ` · ${d}` : ''}`,
+      selectedSession.title?.trim() ? `제목: ${selectedSession.title.trim()}` : '',
+      selectedSession.content?.trim() ? `내용: ${selectedSession.content.trim()}` : '',
+      selectedSession.note?.trim() ? `비고: ${selectedSession.note.trim()}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+  }, [selectedSession]);
+
   // 회차 직접입력 모드: 등록 회차 0건이거나 "직접 입력" 선택 시
   const isManual = sessions.length === 0 || sessionId === MANUAL;
 
@@ -199,6 +224,8 @@ const ChulgangForm: React.FC = () => {
     ) {
       return;
     }
+    // 요청 직전의 교육주제 입력 여부 — 채움 판정·안내문구를 실제 동작과 일치시키는 기준.
+    const 주제입력있음 = !!fields.교육주제.trim();
     setAiBusy(true);
     setError('');
     setNotice('');
@@ -208,19 +235,34 @@ const ChulgangForm: React.FC = () => {
         programKey,
         회차: 기수회차,
         교육주제: fields.교육주제,
+        회차맥락,
         키워드,
       });
       if (res.data && typeof res.data === 'object') {
-        // 6키 화이트리스트 + 문자열 가드(그 외/중첩 키 무시)
+        // 7키(교육주제 + 본문 6) 화이트리스트 + 문자열 가드(그 외/중첩 키 무시)
+        const data = res.data as Record<string, unknown>;
+        // 교육주제 채움 가드 — "사용자 입력 불변"을 프롬프트(LLM 준수)가 아니라 코드로 보장한다.
+        //   ① AI 가 근거 없어 ''를 준 경우, ② 사용자가 이미 교육주제를 입력한 경우
+        //   → 둘 다 기존 값을 유지한다. 즉 교육주제 자동 채움은 "빈 칸일 때의 초기값"으로만 동작.
+        //   (본문 6칸은 기존대로 덮어쓰되 hasBodyContent() confirm 이 사전 동의를 받는다.)
+        // (setFields 업데이터는 지연 실행이라 그 안에서 플래그를 세우면 안 됨 — 여기서 미리 판정)
+        const 주제값 = typeof data.교육주제 === 'string' ? data.교육주제.trim() : '';
+        const 주제채움 = !!주제값 && !주제입력있음;
         setFields((f) => {
           const next = { ...f };
           for (const k of AI_DRAFT_KEYS) {
-            const v = (res.data as Record<string, unknown>)[k];
+            const v = data[k];
             if (typeof v === 'string') next[k] = v;
           }
+          // 업데이터 내부의 최신 f 기준으로 한 번 더 확인(요청 중 사용자가 입력했을 수 있음).
+          if (주제채움 && !f.교육주제.trim()) next.교육주제 = 주제값;
           return next;
         });
-        setNotice('AI 초안을 본문에 채웠습니다. 내용을 검토·수정하세요.');
+        setNotice(
+          주제채움
+            ? 'AI 초안을 교육주제·본문에 채웠습니다. 교육주제를 포함해 모두 자유롭게 수정할 수 있습니다.'
+            : 'AI 초안을 본문에 채웠습니다. 내용을 검토·수정하세요.',
+        );
       } else {
         // 파싱 실패 — 원문 안내(폼은 비우지 않음)
         setError(res.message || 'AI 응답을 해석하지 못했습니다. 직접 입력하세요.');

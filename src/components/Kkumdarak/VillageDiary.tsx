@@ -397,14 +397,22 @@ const CARD_GAP = 280;
 const PATH_TAIL = 120;
 const AVATAR_TRAVEL_PAD = 40;
 
-// ── 레이아웃 상수(모바일) — kkumdarak-diary-mobile-patch.css와 동기 ──
+// ── 레이아웃 상수(모바일) — kkumdarak.css 모바일 블록과 동기 ──
 // 카드 디자인: 사진은 거의 유지(108), 텍스트 영역만 축소(8/12/10 padding, h2 14/1.15, time 11)
-//   → 한 줄 카드 ≈ 171px, 두 줄 카드 ≈ 187px (border 포함)
-// 카드 간 gap 210 → 두 줄 카드도 ≈ 23px 여백, 1줄 카드는 ≈ 39px 여백 — 폰트 라운딩 안전 마진 확보
-// path top 260, height 1010 (CSS와 동기)
-//   마지막 dot y = 333 + 4*210 + 43 = 1216, +22 = 1238 → path end 1270
+//   실측(390x844 / 360x640, 카드 폭 232 고정): 두 줄 카드 187px, 네 줄 카드 203px (border 포함)
+// 카드 간 간격은 기본 210(MOBILE_CARD_GAP)이되, 제목이 길어 카드가 더 높아지면
+//   실측 높이 + MOBILE_CARD_MIN_SPACING 으로 자동 확장한다(겹침 방지 — 210 고정은 203px 카드에서 여백 7px 뿐).
+// ⚠️ path 높이·아바타 이동거리는 더 이상 고정 상수가 아니다(카드 수·실측 높이에서 파생).
+//   구 구현은 MOBILE_PATH_HEIGHT=1010 / MOBILE_AVATAR_END≈1163 을 "카드 5개" 전용으로 튜닝해 두어,
+//   카드가 6개 이상이면 컨테이너 높이(=스크롤 길이)만 늘고 아바타 이동거리는 그대로여서
+//   ① 뒤쪽 카드가 끝까지 등장하지 않고 ② 앞쪽 카드는 화면 위로 지나간 뒤에야 등장했다.
+//   → mobileCardTops → mobileAvatarTravel / mobilePathHeight 로 파생(데스크톱과 동일한 방식).
 const MOBILE_FIRST_CARD_Y = 333;
 const MOBILE_CARD_GAP = 210;
+// 실측 카드 높이가 gap 을 위협할 때 확보할 최소 카드 간 여백(겹침 가드).
+//   현재 콘텐츠 최대 높이 203 + 8 = 211 > 210 이 되지 않도록 8 로 둔다 → 현행 배치는 그대로 유지되고,
+//   제목이 더 길어져 카드가 203px 를 넘을 때만 간격이 자동으로 늘어난다.
+const MOBILE_CARD_MIN_SPACING = 8;
 // path 시각 중심 = .diary-path { left: 42 } + border-left-width 12 / 2 = 48
 // dot width 22 → dot 중심을 48에 맞추려면 left = 48 - 11 = 37 → JSX: lx - 11, lx = 48
 const MOBILE_PATH_CENTER_X = 48;
@@ -415,8 +423,19 @@ const MOBILE_DOT_Y_OFFSET = 43;
 const MOBILE_CONNECTOR_Y_OFFSET = 51;
 const MOBILE_AVATAR_START = 236;
 const MOBILE_PATH_TOP = 260;
-const MOBILE_PATH_HEIGHT = 1010; // CSS와 동기화
-const MOBILE_AVATAR_END = MOBILE_PATH_TOP + MOBILE_PATH_HEIGHT - 87 - 20; // ≈ 1163
+// path 바닥은 아바타 종료 지점 아래로 캐릭터 높이(≈87) + 여백 20 만큼 더 내려간다(구 상수와 동일 관계).
+const MOBILE_AVATAR_FOOT = 87 + 20;
+// path 는 마지막 dot 보다 최소 이만큼 아래까지 이어진다(길이 끊긴 느낌 방지 — 구 값 1270-1216-22 ≈ 32 계열).
+const MOBILE_PATH_TAIL = 54;
+// 마지막 카드가 등장 완료되는 progress. 1.0 이면 경계 등호·반올림에서 마지막 카드가 안 뜰 수 있어
+// 살짝 앞(0.98)에서 끝내고, 스크롤 마지막 구간에 여유를 둔다.
+const MOBILE_REVEAL_END = 0.98;
+
+// 아바타(캐릭터) 몸통 중심의 "도달 기준선" 오프셋
+//   캐릭터는 .diary-avatar(top 기준)에서 아래로 그려진다.
+//   데스크톱 ≈ 140*0.86 ≈ 120px, 모바일 ≈ 140*0.62 ≈ 87px → 몸통 중앙쯤이 dot Y 에 닿으면 "도달".
+const DESKTOP_AVATAR_REACH = 70;
+const MOBILE_AVATAR_REACH = 60;
 
 const usePrefersReducedMotion = () => {
   const [reduced, setReduced] = useState(false);
@@ -813,16 +832,70 @@ const VillageDiary: React.FC = () => {
     return lastTop + lastCardHeight + BOTTOM_PAD;
   }, [hasContent, cards]);
 
-  // 모바일 컨테이너 높이 — 카드 수가 많아 1620px 를 넘어도 마지막 카드가 잘리지 않게 동적 산출.
-  //   카드 top = MOBILE_FIRST_CARD_Y + i*MOBILE_CARD_GAP. 마지막 카드 + 사진 여유 + 하단 패딩.
+  // ── 모바일 카드 실측 높이 ────────────────────────────────────────
+  //   제목 줄 수에 따라 카드 높이가 187~203px 로 달라진다(폭 232 고정).
+  //   측정값이 없으면(초기 렌더·데스크톱에서 display:none) 0 → 기존 균일 gap 으로 폴백.
+  const [mobileCardHeights, setMobileCardHeights] = useState<number[]>([]);
+
+  // 모바일 카드 top 배열 — 카드 수·실측 높이에서 파생되는 단일 진실 소스.
+  //   dot/connector/path/아바타 이동거리/컨테이너 높이가 모두 이 배열을 참조한다.
+  const mobileCardTops = useMemo(() => {
+    const tops: number[] = [];
+    let y = MOBILE_FIRST_CARD_Y;
+    for (let i = 0; i < cards.length; i += 1) {
+      tops.push(y);
+      const h = mobileCardHeights[i] || 0;
+      // 기본 210, 다만 실측 카드가 높아 여백이 MOBILE_CARD_MIN_SPACING 미만이 되면 그만큼 넓힌다.
+      y += h > 0 ? Math.max(MOBILE_CARD_GAP, Math.round(h) + MOBILE_CARD_MIN_SPACING) : MOBILE_CARD_GAP;
+    }
+    return tops;
+  }, [cards.length, mobileCardHeights]);
+
+  // 마지막 dot Y → 아바타 이동거리 → path 높이 (데스크톱과 동일하게 콘텐츠에서 파생)
+  const mobileLastDotY = useMemo(
+    () =>
+      (mobileCardTops.length > 0 ? mobileCardTops[mobileCardTops.length - 1] : MOBILE_FIRST_CARD_Y) +
+      MOBILE_DOT_Y_OFFSET,
+    [mobileCardTops],
+  );
+  // progress=MOBILE_REVEAL_END 에서 아바타 도달선(start + travel + reach)이 마지막 dot 에 닿도록.
+  const mobileAvatarTravel = useMemo(
+    () =>
+      Math.max(
+        0,
+        Math.round((mobileLastDotY - MOBILE_AVATAR_START - MOBILE_AVATAR_REACH) / MOBILE_REVEAL_END),
+      ),
+    [mobileLastDotY],
+  );
+  const mobileAvatarEnd = MOBILE_AVATAR_START + mobileAvatarTravel;
+  // path 는 아바타 종료 지점(발밑)과 마지막 dot 아래 여유를 모두 덮는다.
+  const mobilePathHeight = useMemo(
+    () =>
+      hasContent
+        ? Math.max(mobileAvatarEnd + MOBILE_AVATAR_FOOT, mobileLastDotY + MOBILE_PATH_TAIL) - MOBILE_PATH_TOP
+        : 360,
+    [hasContent, mobileAvatarEnd, mobileLastDotY],
+  );
+
+  // 모바일 컨테이너 높이 — 카드 수가 많아도 마지막 카드/길이 잘리지 않게 동적 산출.
+  //   마지막 카드 하단(실측 높이 우선) + 하단 패딩, 그리고 path 바닥까지 모두 덮는다.
+  //   ⚠️ 1620px 하한(구 구현)은 두지 않는다 — 데스크톱(desktopHeight)과 동일하게 순수 콘텐츠 파생.
+  //   하한이 있으면 카드가 적을 때 콘텐츠는 끝났는데 스크롤만 남는 '빈 꼬리'가 생기고,
+  //   그만큼 스크롤 거리 > 아바타 이동거리가 되어 마지막 카드가 화면 위로 지나간 뒤 등장한다.
+  //   (빈 프로그램 placeholder 는 종전대로 1620.)
   const mobileHeight = useMemo(() => {
     if (!hasContent) return 1620;
-    const lastTop = MOBILE_FIRST_CARD_Y + (cards.length - 1) * MOBILE_CARD_GAP;
+    const lastTop = mobileCardTops[mobileCardTops.length - 1] ?? MOBILE_FIRST_CARD_Y;
     const lastHasImage = !!cards[cards.length - 1]?.imageUrl;
-    const lastCardHeight = lastHasImage ? 320 : 200;
+    const measuredLast = mobileCardHeights[cards.length - 1] || 0;
+    const lastCardHeight = measuredLast > 0 ? measuredLast : lastHasImage ? 320 : 200;
     const BOTTOM_PAD = 100;
-    return Math.max(1620, lastTop + lastCardHeight + BOTTOM_PAD);
-  }, [hasContent, cards]);
+    return Math.max(
+      lastTop + lastCardHeight + BOTTOM_PAD,
+      MOBILE_PATH_TOP + mobilePathHeight + 40,
+    );
+  }, [hasContent, cards, mobileCardTops, mobileCardHeights, mobilePathHeight]);
+
   const pathHeight = useMemo(
     () => (hasContent ? FIRST_CARD_Y + (cards.length - 1) * CARD_GAP - PATH_TOP + PATH_TAIL : 360),
     [hasContent, cards.length],
@@ -958,15 +1031,8 @@ const VillageDiary: React.FC = () => {
   const isEditingRef = useRef(isEditing);
   useEffect(() => { isEditingRef.current = isEditing; }, [isEditing]);
 
-  // 아바타(캐릭터) 몸통 중심의 "도달 기준선" 오프셋
-  //   캐릭터는 .diary-avatar(top 기준)에서 시작해 아래로 그려진다.
-  //   데스크톱 캐릭터 ≈ 140*0.86 ≈ 120px, 모바일 ≈ 140*0.62 ≈ 87px.
-  //   캐릭터 몸통 중앙쯤이 카드의 dot Y에 닿으면 "도달"로 본다.
-  //   모바일: progress=1에서 마지막 dot(1216)에 도달하려면
-  //     236 + (1163-236) + reach >= 1216 → reach >= 53. 여유 두고 60.
-  //     progress=0에서는 236 + 60 = 296 < 첫 dot(376) → 로드 시 여전히 숨김.
-  const DESKTOP_AVATAR_REACH = 70; // 아바타 top 기준 아래로 70px ≈ 몸통 중앙
-  const MOBILE_AVATAR_REACH = 60;
+  // DESKTOP_AVATAR_REACH / MOBILE_AVATAR_REACH 는 모듈 스코프 상수(위 레이아웃 상수 블록).
+  //   모바일 아바타 이동거리(mobileAvatarTravel)가 이 값을 참조해 파생되므로 선언 순서상 위로 올렸다.
 
   // 아바타 도달 위치(문서 좌표 기준의 논리값)로 카드/dot/connector 리빌.
   //   reflow-free: getBoundingClientRect 대신 progress + 레이아웃 상수로 계산.
@@ -988,17 +1054,17 @@ const VillageDiary: React.FC = () => {
       }
 
       // 모바일: 아바타 도달 Y = MOBILE_AVATAR_START + progress*travel + reach
-      const mobileTravel = MOBILE_AVATAR_END - MOBILE_AVATAR_START;
-      const mobileReachY = MOBILE_AVATAR_START + progress * mobileTravel + MOBILE_AVATAR_REACH;
+      //   travel/dotY 모두 mobileCardTops 파생 — 카드 수·높이가 바뀌어도 항상 스크롤과 일치한다.
+      const mobileReachY = MOBILE_AVATAR_START + progress * mobileAvatarTravel + MOBILE_AVATAR_REACH;
       for (let i = 0; i < mobileCardEls.current.length; i += 1) {
-        const dotY = MOBILE_FIRST_CARD_Y + i * MOBILE_CARD_GAP + MOBILE_DOT_Y_OFFSET;
+        const dotY = (mobileCardTops[i] ?? MOBILE_FIRST_CARD_Y + i * MOBILE_CARD_GAP) + MOBILE_DOT_Y_OFFSET;
         const on = mobileReachY >= dotY;
         mobileCardEls.current[i]?.classList.toggle('is-visible', on);
         mobileDotEls.current[i]?.classList.toggle('is-visible', on);
         mobileConnectorEls.current[i]?.classList.toggle('is-visible', on);
       }
     },
-    [avatarStart, avatarEnd],
+    [avatarStart, avatarEnd, mobileAvatarTravel, mobileCardTops],
   );
 
   const updateAvatar = useCallback(() => {
@@ -1020,13 +1086,12 @@ const VillageDiary: React.FC = () => {
 
     const mobileAvatar = mobileAvatarRef.current;
     if (mobileAvatar) {
-      const mobileTravel = MOBILE_AVATAR_END - MOBILE_AVATAR_START;
-      mobileAvatar.style.transform = `translateY(${Math.round(progress * mobileTravel)}px)`;
+      mobileAvatar.style.transform = `translateY(${Math.round(progress * mobileAvatarTravel)}px)`;
     }
 
     // 아바타 위치에 도달한 카드부터 리빌
     applyReveal(progress);
-  }, [avatarStart, avatarEnd, applyReveal]);
+  }, [avatarStart, avatarEnd, mobileAvatarTravel, applyReveal]);
 
   useEffect(() => {
     if (reduced) {
@@ -1045,7 +1110,7 @@ const VillageDiary: React.FC = () => {
       window.removeEventListener('resize', onScroll);
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
     };
-  }, [updateAvatar, reduced, selected, desktopHeight]);
+  }, [updateAvatar, reduced, selected, desktopHeight, mobileHeight]);
 
   // 리빌 fallback: reduced-motion → 전부 즉시 visible.
   //   일반 환경에서는 스크롤 핸들러(applyReveal)가 아바타 도달 기준으로 토글한다.
@@ -1078,6 +1143,30 @@ const VillageDiary: React.FC = () => {
       mobileConnectorEls.current.forEach((el) => el?.classList.add('is-visible'));
     }
   }, [isEditing, cards.length]);
+
+  // ── 모바일 카드 높이 실측 → mobileCardTops 갱신 ────────────────────
+  //   제목 줄 수/폰트 로드에 따라 카드 높이가 달라지므로 ResizeObserver 로 추적한다.
+  //   · 데스크톱에서는 .kd-diary-mobile 이 display:none → offsetHeight 0 → 측정값 무시(균일 gap 폴백).
+  //   · 편집 모드는 정적 흐름(폭 100%·사진 150)이라 보기 모드 높이와 무관 → 측정하지 않는다.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (isEditing || !hasContent) return;
+    const measure = () => {
+      const next = mobileCardEls.current.slice(0, cards.length).map((el) => (el ? el.offsetHeight : 0));
+      setMobileCardHeights((prev) =>
+        prev.length === next.length && prev.every((v, i) => v === next[i]) ? prev : next,
+      );
+    };
+    measure();
+    const RO = (window as unknown as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
+    if (!RO) {
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }
+    const ro = new RO(measure);
+    mobileCardEls.current.slice(0, cards.length).forEach((el) => el && ro.observe(el));
+    return () => ro.disconnect();
+  }, [cards, isEditing, hasContent, selected]);
 
   const setCardRef = (i: number) => (el: HTMLElement | null) => {
     cardEls.current[i] = el;
@@ -1298,7 +1387,11 @@ const VillageDiary: React.FC = () => {
               <>
                 <div
                   className="diary-path"
-                  style={{ borderLeftColor: program.accent, borderRightColor: program.accent }}
+                  style={{
+                    height: mobilePathHeight,
+                    borderLeftColor: program.accent,
+                    borderRightColor: program.accent,
+                  }}
                 />
                 <div
                   className="diary-avatar"
@@ -1312,7 +1405,7 @@ const VillageDiary: React.FC = () => {
               </>
             )}
             {cards.map((card, index) => {
-              const y = MOBILE_FIRST_CARD_Y + index * MOBILE_CARD_GAP;
+              const y = mobileCardTops[index] ?? MOBILE_FIRST_CARD_Y + index * MOBILE_CARD_GAP;
               // dot/connector를 path 시각 중심선(x=48)에 정렬 — side 무관
               const lx = MOBILE_PATH_CENTER_X;
               return (
