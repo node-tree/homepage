@@ -93,6 +93,7 @@
   gap: 14px;
 }
 .kdne-field { display: flex; flex-direction: column; gap: 5px; }
+.kdne-field--wide { grid-column: 1 / -1; }
 .kdne-field-label {
   font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
   font-size: 13px;

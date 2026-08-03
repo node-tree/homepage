@@ -119,7 +119,8 @@ const NewsEditor: React.FC<NewsEditorProps> = ({
       setSaving(status);
       setFeedback(null);
       try {
-        const toSave: NewsIssue = { ...clone(issue), status };
+        const trimmedUrl = (issue.downloadUrl || '').trim();
+        const toSave: NewsIssue = { ...clone(issue), status, downloadUrl: trimmedUrl || undefined };
         await onSave(toSave, status);
         setIssue(toSave);
         setDirty(false);
@@ -205,6 +206,14 @@ const NewsEditor: React.FC<NewsEditorProps> = ({
             <label className="kdne-field">
               <span className="kdne-field-label">날짜</span>
               <input placeholder="예: 2026.6" value={issue.date} onChange={(e) => patchIssue({ date: e.target.value })} />
+            </label>
+            <label className="kdne-field kdne-field--wide">
+              <span className="kdne-field-label">PDF 다운로드 링크 (선택 · 구글 드라이브 등)</span>
+              <input
+                placeholder="예: https://drive.google.com/file/d/1AbCDEFghi.../view?usp=sharing"
+                value={issue.downloadUrl || ''}
+                onChange={(e) => patchIssue({ downloadUrl: e.target.value })}
+              />
             </label>
           </div>
         </section>

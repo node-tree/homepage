@@ -7,6 +7,8 @@
 //   · 자체 DB 저장 없음 — 반환 URL 만 화면에서 사용.
 // ═══════════════════════════════════════════════════════════════
 
+import { clearSiteAuthStorage } from '../contexts/AuthContext';
+
 const isNodeTreeSite =
   typeof window !== 'undefined' &&
   (window.location.hostname === 'nodetree.kr' ||
@@ -89,6 +91,10 @@ async function handleAuthErrors(response: Response): Promise<void> {
     throw err;
   }
   if (response.status === 401) {
+    // 서버가 거부한 토큰(만료·서명 무효)은 즉시 정리한다. 남겨두면 isAuthenticated 가 true 로
+    // 유지돼 /login 이 "이미 로그인됨"으로 홈에 튕겨내는 무한 루프가 된다(kkumdarak 토큰은
+    // 자체 API 가 따로 정리하므로 여기서는 사이트 세션만 건드린다).
+    clearSiteAuthStorage();
     const err = new Error('인증이 만료되었습니다. 다시 로그인해주세요.') as Error & {
       code?: string;
     };

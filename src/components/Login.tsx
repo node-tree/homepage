@@ -18,13 +18,22 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
   
   const { login, isAuthenticated } = useAuth();
 
-  // 이미 로그인된 경우 홈으로 리다이렉트
+  // 로그인 후 복귀 경로(?next=). 오픈 리다이렉트 방지를 위해 같은 출처의 절대경로만 허용한다.
+  // (예: /admin/media 에서 세션 만료로 튕겨온 경우 로그인 직후 그 페이지로 돌아간다.)
+  const nextPath = (() => {
+    if (typeof window === 'undefined') return '/';
+    const raw = new URLSearchParams(window.location.search).get('next');
+    if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/';
+    return raw;
+  })();
+
+  // 이미 로그인된 경우 복귀 경로(없으면 홈)로 리다이렉트
   useEffect(() => {
     if (isAuthenticated) {
       if (onClose) { onClose(); return; }
-      window.location.href = '/';
+      window.location.href = nextPath;
     }
-  }, [isAuthenticated, onClose]);
+  }, [isAuthenticated, onClose, nextPath]);
 
   // 입력 필드 변경 처리
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,9 +79,9 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
         setError(null);
         setSuccess(true);
         
-        // 부드러운 리다이렉트
+        // 부드러운 리다이렉트 (?next= 가 있으면 원래 가려던 페이지로)
         setTimeout(() => {
-          window.location.href = '/';
+          window.location.href = nextPath;
         }, 800);
       } else {
         setError('사용자명 또는 비밀번호가 올바르지 않습니다.');

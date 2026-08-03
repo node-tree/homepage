@@ -318,6 +318,32 @@
   color: rgba(33, 25, 20, 0.62);
 }
 
+/* ── PDF 다운로드 버튼(read 헤더) ─────────────────────────────── */
+.kdn-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  padding: 9px 20px;
+  border-radius: 999px;
+  border: 2.5px solid var(--kdn-ink);
+  background: #ffffff;
+  color: var(--kdn-ink);
+  text-decoration: none;
+  box-shadow: 3px 3px 0 var(--kdn-ink);
+  transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease, color 0.14s ease;
+}
+.kdn-download:hover {
+  background: var(--kdn-ink);
+  color: #ffffff;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--kdn-ink);
+}
+
 .kdn-read-stack {
   display: flex;
   flex-direction: column;
