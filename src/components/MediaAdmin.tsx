@@ -11,7 +11,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, clearSiteAuthStorage } from '../contexts/AuthContext';
 import {
   imagekitAdminAPI,
   IkFile,
@@ -86,6 +86,15 @@ function parentPath(path: string): string | null {
   return idx <= 0 ? '/' : norm.slice(0, idx);
 }
 
+// 로그인 화면으로 보낸다.
+//   · 죽은 세션을 먼저 지운다 — 남아 있으면 /login 이 "이미 로그인됨"으로 보고 홈(/)으로
+//     되돌려 보내, 이미지호스팅을 눌러도 계속 본페이지로 튕기는 루프가 된다.
+//   · next 로 복귀 경로를 넘겨 로그인 직후 이 페이지로 돌아온다.
+function goLogin(): void {
+  clearSiteAuthStorage();
+  window.location.href = `/login?next=${encodeURIComponent('/admin/media')}`;
+}
+
 const MediaAdmin: React.FC = () => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -136,7 +145,7 @@ const MediaAdmin: React.FC = () => {
   // 리다이렉트하지 않고 안내 문구를 보여준다(아래 렌더 가드).
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      window.location.href = '/login';
+      goLogin();
     }
   }, [isLoading, isAuthenticated]);
 
@@ -165,7 +174,7 @@ const MediaAdmin: React.FC = () => {
           return;
         }
         if (e?.code === 'AUTH_EXPIRED') {
-          window.location.href = '/login';
+          goLogin();
           return;
         }
         setListError(e?.message || '목록을 불러오지 못했습니다.');
@@ -184,7 +193,7 @@ const MediaAdmin: React.FC = () => {
       setUsage(u);
     } catch (e: any) {
       if (e?.code === 'AUTH_EXPIRED') {
-        window.location.href = '/login';
+        goLogin();
         return;
       }
       // 용량 조회 실패는 치명적이지 않음 — 표시만 생략한다.
@@ -232,7 +241,7 @@ const MediaAdmin: React.FC = () => {
       enterFolder(`${normalizePath(browsePath)}/${name}`);
     } catch (e: any) {
       if (e?.code === 'AUTH_EXPIRED') {
-        window.location.href = '/login';
+        goLogin();
         return;
       }
       alert(e?.message || '폴더 생성에 실패했습니다.');
@@ -299,7 +308,7 @@ const MediaAdmin: React.FC = () => {
       if (e?.code === 'FORBIDDEN') {
         alert('삭제 권한이 없습니다.');
       } else if (e?.code === 'AUTH_EXPIRED') {
-        window.location.href = '/login';
+        goLogin();
         return;
       } else {
         alert(e?.message || '삭제에 실패했습니다.');
@@ -358,7 +367,7 @@ const MediaAdmin: React.FC = () => {
             return;
           }
           if (e?.code === 'AUTH_EXPIRED') {
-            window.location.href = '/login';
+            goLogin();
             return;
           }
           setUploads((prev) =>
