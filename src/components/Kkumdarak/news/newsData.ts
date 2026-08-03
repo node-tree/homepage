@@ -42,6 +42,7 @@ export interface NewsIssue {
   date: string;           // 날짜 표기(예: '2026.6')
   status?: NewsStatus;    // 정적 기본 상태(미지정 = published). 런타임 override 가 덮는다.
   images: NewsImage[];    // 업로드한 소식지 이미지(여러 장, 순서 = 표시 순서)
+  downloadUrl?: string;   // 원본 PDF 다운로드 링크(선택 · 보통 구글 드라이브 공유 URL)
 }
 
 // ── 보도 기사(외부 링크 카드) ─────────────────────────────────────
@@ -115,6 +116,7 @@ function normalizeIssue(b: any): NewsIssue {
         .filter((im: any) => im && typeof im.src === 'string')
         .map((im: any) => ({ src: im.src, alt: typeof im.alt === 'string' ? im.alt : '' }))
     : [];
+  const downloadUrl = typeof b.downloadUrl === 'string' ? b.downloadUrl.trim() : '';
   return {
     id: String(b.id),
     no: Number.isFinite(b.no) ? Number(b.no) : 1,
@@ -122,6 +124,7 @@ function normalizeIssue(b: any): NewsIssue {
     date: typeof b.date === 'string' ? b.date : '',
     status: b.status === 'draft' ? 'draft' : b.status === 'published' ? 'published' : undefined,
     images,
+    downloadUrl: downloadUrl || undefined,
   };
 }
 
@@ -171,4 +174,23 @@ export function isStaticIssue(id: string): boolean {
 // 다음 호수 제안값(현재 최대 no + 1). 빈 목록이면 1.
 export function suggestNextNo(issues: NewsIssue[]): number {
   return issues.reduce((mx, it) => Math.max(mx, it.no), 0) + 1;
+}
+
+// ── PDF 다운로드 링크 정규화 ────────────────────────────────────────
+//   편집자가 붙여넣는 구글 드라이브 "공유" URL(파일 뷰어 링크)을 그대로 두면
+//   새 탭에서 미리보기만 뜨고 즉시 다운로드가 안 된다. 파일 ID 를 뽑아
+//   uc?export=download 형태(직접 다운로드 URL)로 바꾼다.
+//   대상 패턴: /file/d/<ID>/... , open?id=<ID> , uc?id=<ID>(이미 변환된 형태는 그대로).
+//   그 외 형태(드롭박스 등 비-드라이브 URL)는 원본을 그대로 반환한다.
+export function normalizeDownloadUrl(url: string): string {
+  const v = (url || '').trim();
+  if (!v) return '';
+  if (!/drive\.google\.com/i.test(v)) return v;
+
+  const fileMatch = v.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  const idParamMatch = v.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  const fileId = fileMatch?.[1] || idParamMatch?.[1];
+  if (!fileId) return v;
+
+  return `https://drive.google.com/uc?export=download&id=${fileId}`;
 }

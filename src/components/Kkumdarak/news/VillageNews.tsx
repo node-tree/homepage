@@ -10,6 +10,7 @@ import {
   isStaticIssue,
   suggestNextNo,
   normalizeArticles,
+  normalizeDownloadUrl,
   type NewsIssue,
   type NewsArticle,
   type NewsStatus,
@@ -203,6 +204,7 @@ const VillageNews: React.FC = () => {
       date: issue.date,
       status: statusOf(issue),
       images: issue.images || [],
+      downloadUrl: issue.downloadUrl,
     }));
   }, [statusOf]);
 
@@ -364,6 +366,17 @@ const VillageNews: React.FC = () => {
               {issue.date}
               {isDraft && <span className="kdn-badge kdn-badge--read">준비중</span>}
             </p>
+            {issue.downloadUrl && (
+              <a
+                className="kdn-download"
+                href={normalizeDownloadUrl(issue.downloadUrl)}
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+              >
+                📄 PDF 내려받기
+              </a>
+            )}
           </header>
 
           {/* 편집자 도구막대 — 발행 토글 + 편집 진입 */}
