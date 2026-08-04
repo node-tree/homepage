@@ -30,17 +30,47 @@ const PHOTO_BINDATA_KEY = 'chulgang_photo.png';
 // ── 담당자 서명 고정 삽입 ────────────────────────────────────────────────────
 //   템플릿 마지막 줄이 「담당자: {{담당자}} (인)」 이다. 그 "(인)" 자리를 담당자 서명 이미지로
 //   바꿔 이름 오른쪽에 붙인다(글자처럼 취급 = 이름 뒤에 그대로 흐름).
-//   서명 파일이 없으면 이 단계를 통째로 건너뛰어 기존 "(인)" 텍스트가 그대로 남는다(회귀 없음).
+//   서명이 없으면 이 단계를 통째로 건너뛰어 기존 "(인)" 텍스트가 그대로 남는다(회귀 없음).
+//
+//   ⚠️ 서명 이미지는 저장소에 커밋하지 않는다 — 이 리포는 public 이라 실제 서명이 공개되면
+//   위조에 쓰일 수 있고 커밋 히스토리라 되돌리기도 어렵다. 대신 환경변수로 주입한다:
+//     · 운영(Vercel): env KKUMDARAK_SIGNATURE_PNG_B64 = PNG 의 base64(프리픽스 없음)
+//     · 로컬: backend/templates/forms/signature_damdangja.png (.gitignore 됨)
+//   우선순위는 env → 로컬파일. 둘 다 없으면 "(인)" 유지.
 const SIGNATURE_PATH = path.join(__dirname, '..', 'templates', 'forms', 'signature_damdangja.png');
 const SIGNATURE_ITEM_ID = 'imgSignature'; // content.hpf manifest item id (기존 image1 과 충돌 없음)
 const SIGNATURE_BINDATA_KEY = 'signature_damdangja.png';
 const SIGNATURE_WIDTH_MM = 20; // 이름 옆에 붙는 크기 — 셀 높이를 밀지 않는 선
 
+// 서명 PNG 바이트 로드 — env(base64) 우선, 없으면 로컬 파일. 둘 다 없거나 깨졌으면 null.
+//   서버리스 인스턴스마다 한 번만 디코드하도록 캐시한다(요청마다 40KB base64 디코드 방지).
+let signatureCache; // undefined=미조회, null=없음, Buffer=로드됨
+function loadSignatureBuffer() {
+  if (signatureCache !== undefined) return signatureCache;
+  const b64 = process.env.KKUMDARAK_SIGNATURE_PNG_B64;
+  if (b64 && b64.trim()) {
+    try {
+      // data URL 로 붙여넣었을 경우까지 허용(프리픽스 제거)
+      const raw = b64.trim().replace(/^data:image\/png;base64,/, '');
+      const buf = Buffer.from(raw, 'base64');
+      if (readPngSize(buf)) {
+        signatureCache = buf;
+        return signatureCache;
+      }
+      console.warn('KKUMDARAK_SIGNATURE_PNG_B64 이 PNG 로 해석되지 않습니다 — 파일 폴백');
+    } catch (e) {
+      console.warn('KKUMDARAK_SIGNATURE_PNG_B64 디코드 실패 — 파일 폴백:', e.message);
+    }
+  }
+  signatureCache = fs.existsSync(SIGNATURE_PATH) ? fs.readFileSync(SIGNATURE_PATH) : null;
+  return signatureCache;
+}
+
 // "(인)" 텍스트 run 을 서명 그림 run 으로 치환하는 sectionTransform 을 만든다.
-//   서명 파일이 없거나 PNG 가 아니면 null 을 반환(= 삽입 안 함).
+//   서명이 없거나 PNG 가 아니면 null 을 반환(= 삽입 안 함).
 function buildSignatureTransform() {
-  if (!fs.existsSync(SIGNATURE_PATH)) return null;
-  const buffer = fs.readFileSync(SIGNATURE_PATH);
+  const buffer = loadSignatureBuffer();
+  if (!buffer) return null;
   const size = readPngSize(buffer);
   if (!size || !size.width || !size.height) return null;
 
