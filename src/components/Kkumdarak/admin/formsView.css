@@ -135,6 +135,36 @@
 
 .kd-forms-section-title { font-weight: 700; color: var(--kd-ink); margin: 14px 0 6px; font-size: 0.95rem; }
 
+/* 교육주제 아래 계획서 근거 힌트 — 「계획서 기본주제 + AI 보강」 접목의 출처 표시.
+   입력칸을 밀어내지 않게 12px·행간 1.45, 되돌리기는 텍스트 링크형 버튼. */
+.kd-forms-hint {
+  font-family: var(--kd-font-body);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--kd-ink);
+  opacity: 0.65;
+  word-break: keep-all;
+}
+.kd-forms-hint-btn {
+  font-family: var(--kd-font-body);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--kd-teal-deep);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.kd-forms-hint-btn:hover { color: var(--kd-pink-deep); }
+/* 회차 배정 가정(손의 기억·마을의 신호) — 힌트 아래 줄로 분리해 한 줄이 길어지지 않게. */
+.kd-forms-hint-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  opacity: 0.85;
+}
+
 /* ── 사례비 지급내역서(서식4-1) — 행 단위 편집 표 ───────────────────── */
 .kd-sarebi-row {
   border: 1px solid var(--kd-outline);

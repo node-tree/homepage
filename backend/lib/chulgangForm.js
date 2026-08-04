@@ -1,5 +1,6 @@
+const fs = require('fs');
 const path = require('path');
-const { fillHwpx } = require('./hwpxFill');
+const { fillHwpx, buildInlinePicXml, readPngSize, mmToHwp } = require('./hwpxFill');
 
 // ═══════════════════════════════════════════════════════════════
 // 서식5 출강확인서 — body(클라이언트가 조립한 21개 값) → HWPX 채움.
@@ -25,6 +26,40 @@ const TEMPLATE_PATH = path.join(
 
 // 템플릿에 박힌 더미 사진 엔트리(BinData/<이 이름>) — 업로드 시 이 바이트만 교체.
 const PHOTO_BINDATA_KEY = 'chulgang_photo.png';
+
+// ── 담당자 서명 고정 삽입 ────────────────────────────────────────────────────
+//   템플릿 마지막 줄이 「담당자: {{담당자}} (인)」 이다. 그 "(인)" 자리를 담당자 서명 이미지로
+//   바꿔 이름 오른쪽에 붙인다(글자처럼 취급 = 이름 뒤에 그대로 흐름).
+//   서명 파일이 없으면 이 단계를 통째로 건너뛰어 기존 "(인)" 텍스트가 그대로 남는다(회귀 없음).
+const SIGNATURE_PATH = path.join(__dirname, '..', 'templates', 'forms', 'signature_damdangja.png');
+const SIGNATURE_ITEM_ID = 'imgSignature'; // content.hpf manifest item id (기존 image1 과 충돌 없음)
+const SIGNATURE_BINDATA_KEY = 'signature_damdangja.png';
+const SIGNATURE_WIDTH_MM = 20; // 이름 옆에 붙는 크기 — 셀 높이를 밀지 않는 선
+
+// "(인)" 텍스트 run 을 서명 그림 run 으로 치환하는 sectionTransform 을 만든다.
+//   서명 파일이 없거나 PNG 가 아니면 null 을 반환(= 삽입 안 함).
+function buildSignatureTransform() {
+  if (!fs.existsSync(SIGNATURE_PATH)) return null;
+  const buffer = fs.readFileSync(SIGNATURE_PATH);
+  const size = readPngSize(buffer);
+  if (!size || !size.width || !size.height) return null;
+
+  const width = mmToHwp(SIGNATURE_WIDTH_MM);
+  const height = Math.round((width * size.height) / size.width);
+  const picXml = buildInlinePicXml({ binaryItemId: SIGNATURE_ITEM_ID, width, height });
+
+  // 템플릿의 " (인)" run 전체를 그림 run 으로 교체(앞 공백은 유지해 이름과 붙지 않게).
+  const 인RunRe = /<hp:run charPrIDRef="(\d+)"><hp:t> \(인\)<\/hp:t><\/hp:run>/;
+  const transform = (xml) => {
+    if (!인RunRe.test(xml)) return xml; // 서식이 바뀌어 앵커가 없으면 아무것도 하지 않는다
+    return xml.replace(
+      인RunRe,
+      (m, charPrIDRef) =>
+        `<hp:run charPrIDRef="${charPrIDRef}"><hp:t>  </hp:t></hp:run>` + picXml,
+    );
+  };
+  return { transform, image: { fileName: SIGNATURE_BINDATA_KEY, itemId: SIGNATURE_ITEM_ID, buffer } };
+}
 
 // 서식5 의 21개 플레이스홀더. body 누락 키는 ''(미치환 토큰 방지 — fillHwpx 가 throw).
 const PLACEHOLDER_KEYS = [
@@ -112,7 +147,11 @@ async function generateChulgangForm(body, photoBuffer) {
     photoBuffer && Buffer.isBuffer(photoBuffer)
       ? { [PHOTO_BINDATA_KEY]: photoBuffer }
       : {};
-  const buffer = await fillHwpx(TEMPLATE_PATH, replacements, imageReplacements);
+  const signature = buildSignatureTransform(); // 서명 파일 없으면 null → "(인)" 유지
+  const buffer = await fillHwpx(TEMPLATE_PATH, replacements, imageReplacements, {
+    extraImages: signature ? [signature.image] : [],
+    sectionTransforms: signature ? [signature.transform] : [],
+  });
   const filenameBase = buildFilenameBase(body);
   return { buffer, filenameBase };
 }
@@ -121,9 +160,11 @@ module.exports = {
   generateChulgangForm,
   buildChulgangReplacements,
   buildFilenameBase,
+  buildSignatureTransform,
   clampCell,
   BODY_CELL_CAPS,
   PLACEHOLDER_KEYS,
   PHOTO_BINDATA_KEY,
+  SIGNATURE_PATH,
   TEMPLATE_PATH,
 };

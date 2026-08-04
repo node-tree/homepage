@@ -17,6 +17,7 @@ const KkumdarakEvidence = require('../models/KkumdarakEvidence');
 const { PERSONNEL, SETTLEMENT } = require('../data/checklistTemplates');
 const { buildProgramStats } = require('../lib/programStats');
 const { runAiDraft } = require('../lib/aiDraft');
+const { resolvePlanTopic } = require('../data/kkumdarakSessionPlan');
 const { decodePhoto } = require('../lib/photoDecode');
 
 const router = express.Router();
@@ -896,7 +897,8 @@ router.post('/forms/ai-draft', async (req, res) => {
         message: 'AI 응답을 JSON 으로 해석하지 못했습니다. 원문을 확인해 수동 입력하세요.',
       });
     }
-    return res.json({ success: true, data: result.parsed });
+    // plan: chulgang 에서 계획서 앵커가 적용됐을 때만 동봉(프론트 안내문구용).
+    return res.json({ success: true, data: result.parsed, plan: result.plan || null });
   } catch (error) {
     console.error('꿈다락 AI 초안 오류:', error);
     if (error.code === 'BAD_REQUEST' || error.code === 'PROGRAM_NOT_FOUND') {
@@ -915,6 +917,19 @@ router.post('/forms/ai-draft', async (req, res) => {
       error: error.message,
     });
   }
+});
+
+// ── GET /api/kkumdarak/forms/plan-topic ──────────────────────────────────────
+//   query { programKey, sessionNo }. 사업계획서(03-프로그램.md baked)의 «회차 기본주제»를 반환.
+//   출강확인서 작업창이 프로그램·회차를 고르는 즉시 교육주제를 자동 기입하는 데 쓴다
+//   (AI 호출 없음 — 계획서 상수 조회라 무료·즉시). AI 초안은 이 주제를 앵커로 보강만 한다.
+//   반환: { 기본주제, 정밀도('exact'|'stage'|'none'), 단계, 세부활동[], 근거, 가정, 총회차 }.
+router.get('/forms/plan-topic', (req, res) => {
+  const { programKey, sessionNo } = req.query || {};
+  if (!programKey || !PROGRAM_MAP[programKey]) {
+    return res.status(400).json({ success: false, message: '존재하지 않는 프로그램입니다.' });
+  }
+  return res.json({ success: true, data: resolvePlanTopic(programKey, sessionNo) });
 });
 
 // ═══════════════════════════════════════════════════════════════

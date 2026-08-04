@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useKkumdarakAuth } from '../KkumdarakAuthContext';
 import { kkumdarakAdminAPI } from '../../../services/kkumdarakAdminApi';
 import PhotoUpload from './PhotoUpload';
@@ -11,14 +11,23 @@ import PhotoUpload from './PhotoUpload';
 //     회차 미등록 상태에서도 출강확인서 생성 가능.
 //   · 「AI 초안」 → /forms/ai-draft(docType chulgang)로 교육주제 + 본문 6칸 채움(KNUH, grounded).
 //     기존 본문에 내용이 있으면 덮어쓰기 confirm.
-//   · 교육주제: 비워 두면 AI 초안이 회차·회차기록(제목/내용/비고)·프로그램 grounding 을 근거로
-//     추측해 채운다. 채워진 뒤에도 평범한 입력 필드라 사용자가 그대로 수정할 수 있다(초기값일 뿐).
+//   · 교육주제 = 「사업계획서 기본주제 + AI 보강」 접목(2026-08):
+//     ① 프로그램·회차를 고르면 /forms/plan-topic 이 계획서(03-프로그램.md baked)의 회차 기본주제를
+//        AI 없이 즉시 자동 기입한다(정밀도 exact=회차별 명시 / stage=단계 기준).
+//     ② 「AI 초안」은 그 기본주제를 앵커로 고정하고 회차맥락·키워드로 " — 보강구"만 덧붙인다.
+//        (서버 mergeTopic 이 코드로 강제 — LLM 이 주제를 새로 써 와도 기본주제는 훼손되지 않는다.)
+//     ③ 사용자가 직접 고쳐 쓰면 출처가 'user' 가 되어 자동기입·AI 가 더 이상 건드리지 않는다.
+//        「계획서 주제로」 버튼으로 언제든 기본주제로 되돌릴 수 있다.
 //   · 진행사진 첨부(선택) → BinData/chulgang_photo.png 교체(없으면 더미 유지).
 //   · 클라이언트가 21개 플레이스홀더 값을 모두 조립해 POST → HWPX blob 다운로드.
 //   · {{확인년/월/일}}는 클라이언트 today(KST 환경) 기준 — Vercel UTC 시프트 회피.
 // ═══════════════════════════════════════════════════════════════
 
 const MANUAL = '__manual__'; // 회차 직접입력 센티넬(Mongo _id 와 충돌 없음)
+
+// 담당자 고정 — 꿈다락 행정담당(사업계획서 강사 라인업 기준). 서식마다 손으로 적지 않는다.
+//   서명 이미지는 서버가 「담당자: 이한희」 오른쪽에 고정 삽입한다(chulgangForm.js).
+const 담당자 = '이한희';
 
 // AI 초안이 채우는 본문 6키(화이트리스트 — 그 외 키는 무시해 fields 오염 방지)
 const AI_DRAFT_KEYS = ['교육목표', '세부내용', '교육재료', '평가_운영', '평가_반응', '평가_보완'] as const;
@@ -32,6 +41,17 @@ interface ProgramStat {
   name: string;
   quota: number;
   주강사: string[];
+}
+// 계획서 회차 기본주제(GET /forms/plan-topic) — 교육주제 자동기입·AI 앵커의 근거.
+interface PlanTopic {
+  기본주제: string;
+  정밀도: 'exact' | 'stage' | 'none';
+  단계: string;
+  회차범위: string;
+  세부활동: string[];
+  근거: string;
+  가정: string;
+  총회차: number;
 }
 interface SessionRow {
   _id: string;
@@ -82,6 +102,18 @@ const ChulgangForm: React.FC = () => {
   const [키워드, set키워드] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
 
+  // 계획서 기본주제(자동기입 근거) + 교육주제 출처.
+  //   출처 'plan' = 계획서/AI 가 채운 값(자동 갱신 대상), 'user' = 사용자가 직접 쓴 값(불변).
+  //   ref 를 같이 두는 이유: 자동기입 effect 가 출처 변경마다 재실행되면 안 되고,
+  //   비동기 응답이 늦게 도착했을 때 "그 사이 사용자가 입력했는지"를 최신값으로 판정해야 한다.
+  const [planTopic, setPlanTopic] = useState<PlanTopic | null>(null);
+  const [topicSource, setTopicSource] = useState<'' | 'plan' | 'user'>('');
+  const topicSourceRef = useRef<'' | 'plan' | 'user'>('');
+  const markTopicSource = useCallback((v: '' | 'plan' | 'user') => {
+    topicSourceRef.current = v;
+    setTopicSource(v);
+  }, []);
+
   // 진행사진(base64 PNG, 프리픽스 없음). 빈 문자열이면 미첨부.
   const [photo, setPhoto] = useState('');
 
@@ -93,7 +125,6 @@ const ChulgangForm: React.FC = () => {
     교육시간: '', // "(HH:MM~HH:MM / N시간)"
     보조강사: '',
     교육주제: '',
-    담당자: '',
     교육목표: '',
     세부내용: '',
     교육재료: '',
@@ -203,6 +234,40 @@ const ChulgangForm: React.FC = () => {
   const 정원 = selectedProgram ? String(selectedProgram.quota) : '';
   const 프로그램명 = selectedProgram ? selectedProgram.name : '';
 
+  // ── 계획서 기본주제 자동 기입 ───────────────────────────────────────────────
+  //   프로그램 + 회차번호가 정해지는 즉시 사업계획서의 회차 주제를 교육주제에 채운다.
+  //   AI 호출이 아니라 상수 조회라 즉시·무료다. 사용자가 직접 쓴 주제('user')는 덮지 않는다.
+  useEffect(() => {
+    const n = parseInt(effSessionNo, 10);
+    if (!programKey || !Number.isInteger(n) || n < 1) {
+      setPlanTopic(null);
+      return;
+    }
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const p = (await kkumdarakAdminAPI.getPlanTopic(programKey, n, {
+          signal: controller.signal,
+        })) as PlanTopic | null;
+        setPlanTopic(p);
+        const base = (p?.기본주제 || '').trim();
+        if (!base) return;
+        if (topicSourceRef.current === 'user') return; // 사용자 입력 보호
+        setFields((f) => (f.교육주제 === base ? f : { ...f, 교육주제: base }));
+        markTopicSource('plan');
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return;
+        // 계획서 조회 실패는 치명적이지 않다(직접 입력·AI 초안으로 진행 가능) — 조용히 무시.
+        setPlanTopic(null);
+      }
+    })();
+    return () => controller.abort();
+  }, [programKey, effSessionNo, markTopicSource]);
+
+  // 계획서 주제 되돌리기 가능 여부 — 사용자가 고쳐 쓴 뒤에만 노출.
+  const planBase = (planTopic?.기본주제 || '').trim();
+  const canRestorePlan = !!planBase && fields.교육주제.trim() !== planBase;
+
   // 직접입력이면 회차번호 필수, 선택이면 세션 선택 필수
   const canSubmit =
     !!selectedProgram && (isManual ? !!manualSessionNo : !!selectedSession);
@@ -224,8 +289,10 @@ const ChulgangForm: React.FC = () => {
     ) {
       return;
     }
-    // 요청 직전의 교육주제 입력 여부 — 채움 판정·안내문구를 실제 동작과 일치시키는 기준.
-    const 주제입력있음 = !!fields.교육주제.trim();
+    // 요청 직전 상태 — 채움 판정·안내문구를 실제 동작과 일치시키는 기준.
+    //   "사용자가 직접 쓴 주제"만 불변이다. 계획서가 자동 기입한 값('plan')은 AI 가 앵커로 삼아
+    //   보강하므로 덮어써도 기본주제는 유지된다(서버 mergeTopic 이 보장).
+    const 사용자주제 = topicSourceRef.current === 'user' && !!fields.교육주제.trim();
     setAiBusy(true);
     setError('');
     setNotice('');
@@ -234,7 +301,9 @@ const ChulgangForm: React.FC = () => {
         docType: 'chulgang',
         programKey,
         회차: 기수회차,
+        회차번호: effSessionNo, // 서버가 계획서 기본주제(앵커)를 해석하는 키
         교육주제: fields.교육주제,
+        주제출처: 사용자주제 ? 'user' : 'plan',
         회차맥락,
         키워드,
       });
@@ -242,26 +311,30 @@ const ChulgangForm: React.FC = () => {
         // 7키(교육주제 + 본문 6) 화이트리스트 + 문자열 가드(그 외/중첩 키 무시)
         const data = res.data as Record<string, unknown>;
         // 교육주제 채움 가드 — "사용자 입력 불변"을 프롬프트(LLM 준수)가 아니라 코드로 보장한다.
-        //   ① AI 가 근거 없어 ''를 준 경우, ② 사용자가 이미 교육주제를 입력한 경우
-        //   → 둘 다 기존 값을 유지한다. 즉 교육주제 자동 채움은 "빈 칸일 때의 초기값"으로만 동작.
+        //   ① AI 가 근거 없어 ''를 준 경우, ② 사용자가 직접 쓴 교육주제가 있는 경우
+        //   → 둘 다 기존 값을 유지한다. 계획서가 자동 기입한 값은 "기본주제 + AI 보강"으로 갱신된다.
         //   (본문 6칸은 기존대로 덮어쓰되 hasBodyContent() confirm 이 사전 동의를 받는다.)
         // (setFields 업데이터는 지연 실행이라 그 안에서 플래그를 세우면 안 됨 — 여기서 미리 판정)
         const 주제값 = typeof data.교육주제 === 'string' ? data.교육주제.trim() : '';
-        const 주제채움 = !!주제값 && !주제입력있음;
+        const 주제채움 = !!주제값 && !사용자주제;
+        const 앵커 = (res.plan?.기본주제 || planBase || '').trim();
         setFields((f) => {
           const next = { ...f };
           for (const k of AI_DRAFT_KEYS) {
             const v = data[k];
             if (typeof v === 'string') next[k] = v;
           }
-          // 업데이터 내부의 최신 f 기준으로 한 번 더 확인(요청 중 사용자가 입력했을 수 있음).
-          if (주제채움 && !f.교육주제.trim()) next.교육주제 = 주제값;
+          // 요청 중 사용자가 주제를 직접 고쳤으면(ref 최신값) 덮지 않는다.
+          if (주제채움 && topicSourceRef.current !== 'user') next.교육주제 = 주제값;
           return next;
         });
+        if (주제채움 && topicSourceRef.current !== 'user') markTopicSource('plan');
         setNotice(
-          주제채움
-            ? 'AI 초안을 교육주제·본문에 채웠습니다. 교육주제를 포함해 모두 자유롭게 수정할 수 있습니다.'
-            : 'AI 초안을 본문에 채웠습니다. 내용을 검토·수정하세요.',
+          주제채움 && 앵커 && 주제값.includes(앵커)
+            ? `AI 초안을 채웠습니다. 교육주제는 계획서 기본주제 「${앵커}」를 유지한 채 보강했습니다.`
+            : 주제채움
+              ? 'AI 초안을 교육주제·본문에 채웠습니다. 교육주제를 포함해 모두 자유롭게 수정할 수 있습니다.'
+              : 'AI 초안을 본문에 채웠습니다. 내용을 검토·수정하세요.',
         );
       } else {
         // 파싱 실패 — 원문 안내(폼은 비우지 않음)
@@ -303,7 +376,7 @@ const ChulgangForm: React.FC = () => {
       확인년: String(today.getFullYear()),
       확인월: String(today.getMonth() + 1),
       확인일: String(today.getDate()),
-      담당자: fields.담당자,
+      담당자,
     };
     if (photo) body.photo = photo; // 사진 있으면만 포함(없으면 더미 유지 — 회귀 없음)
     try {
@@ -331,7 +404,7 @@ const ChulgangForm: React.FC = () => {
   return (
     <div className="kd-forms">
       <p className="kd-forms-desc">
-        프로그램·회차를 선택하면 강사·일자·실참여가 자동 기입됩니다. 등록된 회차가 없으면 "회차 직접 입력"으로 작성하세요. 본문은 「AI 초안」으로 생성하거나 직접 입력합니다.
+        프로그램·회차를 선택하면 강사·일자·실참여와 <strong>사업계획서의 회차 교육주제</strong>가 자동 기입됩니다. 등록된 회차가 없으면 "회차 직접 입력"으로 작성하세요. 「AI 초안」은 계획서 기본주제를 그대로 둔 채 회차 기록·키워드로 주제를 보강하고 본문 6칸을 채웁니다.
       </p>
 
       <div className="kd-forms-body">
@@ -484,23 +557,53 @@ const ChulgangForm: React.FC = () => {
               placeholder="(14:00~17:00 / 3시간)"
             />
           </label>
-          <label className="kd-field">
-            <span className="kd-field-label">교육주제</span>
+          <label className="kd-field kd-field-wide">
+            <span className="kd-field-label">
+              교육주제
+              {topicSource === 'plan' && planBase ? ' (계획서 자동)' : ''}
+            </span>
             <input
               type="text"
               className="kd-field-input"
               value={fields.교육주제}
-              onChange={(e) => setField('교육주제', e.target.value)}
+              onChange={(e) => {
+                setField('교육주제', e.target.value);
+                // 비우면 출처를 초기화 — 회차를 다시 고르면 계획서 주제가 재기입된다.
+                markTopicSource(e.target.value.trim() ? 'user' : '');
+              }}
+              placeholder={planBase || '프로그램·회차를 고르면 계획서 주제가 자동 기입됩니다'}
             />
+            {planTopic && planBase && (
+              <span className="kd-forms-hint">
+                계획서 기본주제 「{planBase}」 ·{' '}
+                {planTopic.정밀도 === 'stage'
+                  ? `${planTopic.회차범위} 단계 기준`
+                  : `${planTopic.회차범위} 명시`}
+                {canRestorePlan && (
+                  <>
+                    {' · '}
+                    <button
+                      type="button"
+                      className="kd-forms-hint-btn"
+                      onClick={() => {
+                        setField('교육주제', planBase);
+                        markTopicSource('plan');
+                      }}
+                    >
+                      계획서 주제로 되돌리기
+                    </button>
+                  </>
+                )}
+                {planTopic.가정 && (
+                  <span className="kd-forms-hint-note">※ {planTopic.가정}</span>
+                )}
+              </span>
+            )}
           </label>
           <label className="kd-field">
-            <span className="kd-field-label">담당자</span>
-            <input
-              type="text"
-              className="kd-field-input"
-              value={fields.담당자}
-              onChange={(e) => setField('담당자', e.target.value)}
-            />
+            <span className="kd-field-label">담당자 (고정)</span>
+            <input type="text" className="kd-field-input kd-field-readonly" value={담당자} readOnly />
+            <span className="kd-forms-hint">서명 이미지가 이름 오른쪽에 자동으로 들어갑니다.</span>
           </label>
         </div>
 

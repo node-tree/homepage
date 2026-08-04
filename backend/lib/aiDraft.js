@@ -1,5 +1,6 @@
 const { chat, parseJsonContent } = require('./knuhChat');
 const { PROGRAM_MAP } = require('../data/kkumdarakPrograms');
+const { resolvePlanTopic } = require('../data/kkumdarakSessionPlan');
 
 // ═══════════════════════════════════════════════════════════════
 // AI 초안(KNUH) — 프롬프트 구성 + 호출 + 파싱. 라우트는 얇게 유지.
@@ -69,13 +70,33 @@ function programContext(program) {
 //   비어 있으면 회차번호 + grounding 의 회차 구성 + 회차맥락(등록 회차의 제목·내용·비고)을
 //   근거로 추측해 채운다. 프론트는 이 값을 일반 입력 필드의 초기값으로만 쓰고(읽기전용 아님),
 //   사용자가 자유롭게 수정한다. 근거가 전혀 없으면 지어내지 말고 빈 문자열을 반환한다.
-function buildChulgangMessages({ program, 회차, 교육주제, 회차맥락, 키워드 }) {
+//
+//   ── 계획서 기본주제 접목(2026-08) ──
+//   서술형 grounding 에서 LLM 이 회차 주제를 "추측"하던 것을, 계획서(03-프로그램.md)에서 뽑아
+//   구조화한 kkumdarakSessionPlan 의 «기본 주제»를 앵커로 고정하고 AI 는 그 뒤에 회차맥락·키워드
+//   기반 보강구만 덧붙이는 방식으로 바꿨다. 즉 "기본 주제를 해치지 않는 접목":
+//     교육주제 = 「계획서 기본주제」 [ — 보강구(≤20자)]
+//   프롬프트는 1차 통제이고, 실제 보장은 mergeTopic() 이 코드로 한다(LLM 준수에 의존하지 않음).
+//   주제출처가 'user'(사용자가 직접 고쳐 씀)면 앵커·보강 모두 적용하지 않고 원문 그대로 둔다.
+function buildChulgangMessages({ program, 회차, 교육주제, 주제출처, 계획, 회차맥락, 키워드 }) {
   const ctx = programContext(program);
-  const hasTopic = !!(교육주제 && String(교육주제).trim());
+  // 사용자가 직접 쓴 주제만 "불변" 취급. 계획서에서 자동 기입된 값(주제출처 'plan')은 앵커로 쓴다.
+  const hasTopic = !!(교육주제 && String(교육주제).trim()) && 주제출처 !== 'plan';
+  const 기본주제 = 계획 && 계획.기본주제 ? String(계획.기본주제).trim() : '';
+  const 계획근거 = 기본주제
+    ? [
+        `계획서 기본주제(${계획.정밀도 === 'exact' ? '회차별 명시' : '단계 기준'}): ${기본주제}`,
+        계획.단계 ? `해당 단계: ${계획.단계}` : '',
+        계획.세부활동 && 계획.세부활동.length ? `단계 세부활동: ${계획.세부활동.join(' / ')}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n')
+    : '';
   const user = [
     ctx,
     회차 ? `회차: ${회차}` : '',
-    hasTopic ? `교육주제(사용자 입력): ${교육주제}` : '교육주제: (미입력 — 아래 규칙대로 추측해 채울 것)',
+    !hasTopic && 계획근거 ? 계획근거 : '',
+    hasTopic ? `교육주제(사용자 입력): ${교육주제}` : '교육주제: (미입력 — 아래 규칙대로 채울 것)',
     회차맥락 ? `회차 맥락(등록된 회차 기록):\n${회차맥락}` : '',
     키워드 ? `키워드: ${키워드}` : '',
     '',
@@ -86,11 +107,18 @@ function buildChulgangMessages({ program, 회차, 교육주제, 회차맥락, �
     '항목별 작성 가이드(분량은 한글 셀 용량을 넘지 않도록 지킬 것):',
     hasTopic
       ? '· 교육주제 = 사용자가 이미 입력했다. 그 값을 한 글자도 바꾸지 말고 그대로 반환하라(재작성·윤문 금지).'
-      : '· 교육주제 = 이 회차에서 다룰 주제를 명사구로 간결하게 추측해 채워라(10~30자, 문장·마침표 금지). ' +
-        '근거 우선순위: ① 회차 맥락(등록 회차의 제목·내용)이 있으면 그것을 최우선으로 요약, ' +
-        '② 없으면 「프로그램 정보」의 회차 구성(①②③… 목록)에서 해당 회차번호에 대응하는 항목을 사용, ' +
-        '③ 회차번호가 회차 구성 범위를 벗어나거나 근거가 전혀 없으면 프로그램 성격에 맞는 일반적 주제로. ' +
-        '어느 경우에도 없는 고유명사·강사명·수치를 지어내지 마라. 판단 근거가 정말 없으면 빈 문자열("")을 반환하라.',
+      : 기본주제
+        ? '· 교육주제 = 「계획서 기본주제」가 이 회차의 확정 주제다. 절대 바꾸거나 다른 말로 바꿔 쓰지 마라. ' +
+          `반드시 "${기본주제}" 로 시작하고, 회차 맥락·키워드에 그 회차의 구체적 활동이 있으면 ` +
+          '뒤에 " — " 를 붙여 20자 이내의 명사구 보강구 한 개만 덧붙여라. ' +
+          `예: "${기본주제} — (실제 활동 명사구)". 덧붙일 근거가 없으면 "${기본주제}" 를 그대로만 반환하라. ` +
+          '전체 40자 이내, 문장·마침표 금지, 보강구는 두 개 이상 붙이지 마라. ' +
+          '계획서 기본주제를 요약·의역·번안하는 것도 금지다(글자 그대로 보존).'
+        : '· 교육주제 = 이 회차에서 다룰 주제를 명사구로 간결하게 추측해 채워라(10~30자, 문장·마침표 금지). ' +
+          '근거 우선순위: ① 회차 맥락(등록 회차의 제목·내용)이 있으면 그것을 최우선으로 요약, ' +
+          '② 없으면 「프로그램 정보」의 회차 구성(①②③… 목록)에서 해당 회차번호에 대응하는 항목을 사용, ' +
+          '③ 회차번호가 회차 구성 범위를 벗어나거나 근거가 전혀 없으면 프로그램 성격에 맞는 일반적 주제로. ' +
+          '어느 경우에도 없는 고유명사·강사명·수치를 지어내지 마라. 판단 근거가 정말 없으면 빈 문자열("")을 반환하라.',
     '· 교육목표 = 이 회차에서 참여자가 달성할 목표를 1~2문장으로 간결히(60~120자).',
     '· 세부내용 = 이 회차 활동을 시작→전개→마무리의 흐름으로 단계적으로 서술하라. ' +
       '무엇을 어떻게 진행했고 참여자가 어떤 과정을 거쳤는지 구체적으로(3~5문장, 200~350자).',
@@ -108,6 +136,41 @@ function buildChulgangMessages({ program, 회차, 교육주제, 회차맥락, �
     { role: 'system', content: SYSTEM_GUARD },
     { role: 'user', content: user },
   ];
+}
+
+// ── 기본주제 앵커 강제(코드 보장) ────────────────────────────────────────────
+//   프롬프트를 어겨 AI 가 주제를 새로 써 오더라도 «계획서 기본주제»가 훼손되지 않게 합성한다.
+//     · AI 응답이 기본주제를 포함 → 그대로 사용(보강구까지 살림)
+//     · 포함하지 않고 짧은 명사구 → "기본주제 — AI구" 로 접목
+//     · 포함하지 않고 문장형/장문 → 기본주제만 사용(안전 폴백)
+//   기본주제가 없으면(계획 근거 없음) AI 값을 그대로 통과시킨다(기존 추측 동작 유지).
+const TOPIC_MAX = 40; // 출강확인서 교육주제 셀 — 한 줄 명사구 상한
+const SUFFIX_MAX = 24; // 접목 보강구 상한
+
+function mergeTopic(기본주제, ai주제) {
+  const base = String(기본주제 || '').trim();
+  const ai = String(ai주제 || '')
+    .replace(/\s*[\r\n]+\s*/g, ' ')
+    .trim();
+  if (!base) return ai;
+  if (!ai || ai === base) return base;
+  // AI 가 기본주제를 그대로 품고 있으면(앞·중간 어디든) 보강구 포함해 살린다.
+  if (ai.includes(base)) return ai.length <= TOPIC_MAX ? ai : base;
+  // 기본주제를 잃은 응답 — 짧은 명사구면 접목, 문장형이면 버린다.
+  const tail = ai.replace(/^[\s—–\-·:,]+/, '').replace(/[.。]\s*$/, '').trim();
+  if (tail && tail.length <= SUFFIX_MAX && !/[.!?]/.test(tail)) {
+    const merged = `${base} — ${tail}`;
+    if (merged.length <= TOPIC_MAX) return merged;
+  }
+  return base;
+}
+
+// "(1기수 / 5회차)" 또는 숫자 → 회차번호. 없으면 null.
+function parseSessionNo(회차번호, 회차) {
+  const direct = Number(회차번호);
+  if (Number.isInteger(direct) && direct > 0) return direct;
+  const m = String(회차 || '').match(/(\d+)\s*회차/);
+  return m ? Number(m[1]) : null;
 }
 
 // hoeuirok: 안건 배열 JSON 지시(최대 5)
@@ -239,12 +302,20 @@ async function runAiDraft(body) {
 
   let messages;
   let maxTokens = 2000;
+  // chulgang 만 계획서 앵커를 쓴다 — 응답 후 mergeTopic 에 넘기려고 여기서 잡아 둔다.
+  let 계획 = null;
+  let 주제고정 = false; // 사용자가 직접 쓴 주제 → 앵커·병합 모두 건너뜀
   if (docType === 'chulgang') {
+    const sessionNo = parseSessionNo(body.회차번호, body.회차);
+    계획 = programKey ? resolvePlanTopic(programKey, sessionNo) : null;
+    주제고정 = !!(body.교육주제 && String(body.교육주제).trim()) && body.주제출처 !== 'plan';
     // 7키(교육주제 + 6칸, 세부내용·평가 3종 풍부) → 한국어 토큰 밀도 고려 상향(truncation 방지).
     messages = buildChulgangMessages({
       program,
       회차: body.회차,
       교육주제: body.교육주제,
+      주제출처: body.주제출처,
+      계획,
       회차맥락: body.회차맥락,
       키워드: body.키워드,
     });
@@ -278,7 +349,15 @@ async function runAiDraft(body) {
   }
 
   const content = await chat(messages, { maxTokens });
-  return parseJsonContent(content);
+  const result = parseJsonContent(content);
+
+  // 계획서 기본주제 앵커 강제 — 프롬프트 준수 여부와 무관하게 코드로 보장.
+  //   사용자가 직접 쓴 주제(주제고정)는 손대지 않는다.
+  if (docType === 'chulgang' && result.parsed && 계획 && 계획.기본주제 && !주제고정) {
+    result.parsed.교육주제 = mergeTopic(계획.기본주제, result.parsed.교육주제);
+    result.plan = 계획; // 라우트가 근거·정밀도를 함께 내려 프론트 안내문구에 사용
+  }
+  return result;
 }
 
 module.exports = {
@@ -287,5 +366,7 @@ module.exports = {
   buildHoeuirokMessages,
   buildGyeolgwaMessages,
   buildInspectionMessages,
+  mergeTopic,
+  parseSessionNo,
   SYSTEM_GUARD,
 };

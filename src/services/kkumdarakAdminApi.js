@@ -228,9 +228,25 @@ export const kkumdarakAdminAPI = {
     return response.blob();
   },
 
+  // GET /api/kkumdarak/forms/plan-topic — 사업계획서의 회차 «기본주제»(AI 미사용, 상수 조회).
+  //   출강확인서에서 프로그램·회차 선택 즉시 교육주제를 자동 기입하는 데 쓴다.
+  //   반환: { 기본주제, 정밀도('exact'|'stage'|'none'), 단계, 세부활동[], 근거, 가정, 총회차 } | null.
+  getPlanTopic: async (programKey, sessionNo, { signal } = {}) => {
+    const qs = new URLSearchParams({ programKey: programKey || '' });
+    if (sessionNo) qs.append('sessionNo', String(sessionNo));
+    const response = await fetch(`${API_BASE_URL}/kkumdarak/forms/plan-topic?${qs.toString()}`, {
+      method: 'GET',
+      headers: authHeaders(),
+      signal,
+    });
+    const data = await parseJsonResponse(response, '계획서 주제 조회 실패');
+    return data.data || null;
+  },
+
   // POST /api/kkumdarak/forms/ai-draft — KNUH AI 초안.
-  //   body { docType, programKey, 회차?, 교육주제?, 회의주제?, 키워드 }.
-  //   반환: { data(파싱된 JSON|null), raw?(파싱 실패 원문), message? }.
+  //   body { docType, programKey, 회차?, 회차번호?, 교육주제?, 주제출처?, 회의주제?, 키워드 }.
+  //   주제출처 'plan'(계획서 자동기입) 이면 서버가 그 주제를 앵커로 삼아 보강만 한다.
+  //   반환: { data(파싱된 JSON|null), plan?(계획서 앵커 정보), raw?(파싱 실패 원문), message? }.
   //   401/403 만료 처리. 503(키 미설정·타임아웃 등)은 서버 message 를 그대로 throw.
   aiDraftForm: async (body) => {
     const response = await fetch(`${API_BASE_URL}/kkumdarak/forms/ai-draft`, {
@@ -249,7 +265,12 @@ export const kkumdarakAdminAPI = {
     if (!data || !data.success) {
       throw new Error('AI 초안 응답이 올바르지 않습니다.');
     }
-    return { data: data.data || null, raw: data.raw || '', message: data.message || '' };
+    return {
+      data: data.data || null,
+      plan: data.plan || null,
+      raw: data.raw || '',
+      message: data.message || '',
+    };
   },
 
   // 서식6 결과보고서 HWPX (blob)
