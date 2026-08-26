@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import { homeAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import PageLoader from './PageLoader';
 
 // [perf] three.js(WebGL) 캔버스는 무거우므로 지연 로딩한다.
 // 홈 셸(타이틀/레이아웃)을 먼저 그려 첫 화면을 빠르게 띄우고,
@@ -96,6 +95,17 @@ const Home: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [imageError, setImageError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // [perf] three 청크 프리페치.
+  // Home 셸이 마운트되는 즉시 GeometricParticles(→ three 163 kB gz) 요청을 시작해
+  // "main → Home 청크 → GeometricParticles 청크 → three 청크" 4단 워터폴에서
+  // 마지막 두 홉(RTT 2회)을 첫 페인트와 겹치게 만든다.
+  // lazy() 와 동일한 모듈 지정자를 쓰므로 webpack 이 같은 청크를 재사용한다.
+  useEffect(() => {
+    import('./GeometricParticles').catch(() => {
+      /* 프리페치 실패는 무시 — Suspense 경로가 정상 재시도한다 */
+    });
+  }, []);
 
   // 모바일 감지
   useEffect(() => {

@@ -1,16 +1,47 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { workAPI } from '../services/api';
 import WritePost from './WritePost';
 import { useAuth } from '../contexts/AuthContext';
 import ReconnectAnimation from './ReconnectAnimation';
-import CorrosionCanvas from './CorrosionCanvas';
 import { playHoverSound, playClickSound } from '../utils/sound';
 import { useEditorialLayout } from '../hooks/useEditorialLayout';
+import { useInViewOnce } from '../hooks/useInViewOnce';
 import PageLoader from './PageLoader';
 import { ImageLayoutItem } from './ImageGallery';
 import { ikUrl, ikRewriteHtml } from '../utils/ikUrl';
+
+// [perf] CorrosionCanvas 는 p5(gzip 331 kB)를 끌어온다. /work 진입 시점에
+// 즉시 받지 않도록 별도 청크로 분리하고, 히어로가 뷰포트(+200px)에
+// 들어올 때만 마운트한다. 실제 사용처는 공생직조 포스트 1건뿐이다.
+const CorrosionCanvas = lazy(() => import('./CorrosionCanvas'));
+
+const CORROSION_HERO_HEIGHT = 260;
+
+/** 뷰포트 진입 시에만 p5 캔버스를 마운트하는 히어로 래퍼 */
+const CorrosionHero: React.FC = () => {
+  const [heroRef, inView] = useInViewOnce<HTMLDivElement>('200px');
+  // 로드 전/후 동일 높이를 유지해 레이아웃 시프트를 만들지 않는다.
+  const placeholder = (
+    <div style={{ height: CORROSION_HERO_HEIGHT, width: '100%' }} aria-hidden="true" />
+  );
+
+  return (
+    <div className="corrosion-hero" ref={heroRef}>
+      {inView ? (
+        <Suspense fallback={placeholder}>
+          <CorrosionCanvas height={CORROSION_HERO_HEIGHT} />
+        </Suspense>
+      ) : (
+        placeholder
+      )}
+      <div className="corrosion-hero-overlay">
+        <span className="corrosion-hero-label">REACTION-DIFFUSION · TIDAL CORROSION</span>
+      </div>
+    </div>
+  );
+};
 
 interface Post {
   id: string;
@@ -516,14 +547,7 @@ const Work: React.FC<WorkProps> = ({ onPostsLoaded }) => {
           
           <article className="post-article">
             {/* 공생직조: 부식 reaction-diffusion 헤로 캔버스 */}
-            {selectedPost.id === CORROSIA_POST_ID && (
-              <div className="corrosion-hero">
-                <CorrosionCanvas height={260} />
-                <div className="corrosion-hero-overlay">
-                  <span className="corrosion-hero-label">REACTION-DIFFUSION · TIDAL CORROSION</span>
-                </div>
-              </div>
-            )}
+            {selectedPost.id === CORROSIA_POST_ID && <CorrosionHero />}
 
             <header className="post-header">
               <h1 className="post-title">{selectedPost.title}</h1>

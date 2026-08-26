@@ -12,6 +12,10 @@
 }
 
 /* p5.js background canvas container */
+/* [perf] p5 청크가 도착하기 전 자리를 잡아두는 슬롯.
+   IntersectionObserver 관찰 대상이며, 캔버스와 동일한 박스를 차지해
+   로드 전/후 레이아웃 변화(CLS)가 없다. */
+.team-bg-canvas-slot,
 .team-bg-canvas {
   position: fixed;
   top: 0;

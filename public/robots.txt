@@ -1,6 +1,9 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Disallow: /login
+Disallow: /monitor
+Disallow: /admin/
 
 Sitemap: https://nodetree.kr/sitemap.xml
 Sitemap: https://saengsanso.com/sitemap.xml
+Sitemap: https://isoartlab.com/sitemap.xml
