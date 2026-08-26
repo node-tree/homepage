@@ -5,6 +5,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 // data as material · precision as beauty · white silence
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// 캘린더 쓰기 API(/api/calendar/*)는 관리자 전용 — 로그인 토큰을 실어 보낸다.
+const authHeaders = (): Record<string, string> => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 const GITHUB_RAW = 'https://raw.githubusercontent.com/node-tree/claude-code-logs/main';
 const REFRESH_MS = 60_000;
 const MONO = "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Courier New', monospace";
@@ -1547,7 +1553,10 @@ const ClaudeMonitor: React.FC = () => {
                                 if (!window.confirm(`"${e.title}" 일정을 삭제할까요?`)) return;
                                 setDeletingUid(e.uid);
                                 try {
-                                  const res = await fetch(`/api/calendar/delete-event/${e.uid}`, { method: 'DELETE' });
+                                  const res = await fetch(`/api/calendar/delete-event/${e.uid}`, {
+                                    method: 'DELETE',
+                                    headers: authHeaders(),
+                                  });
                                   if (!res.ok) throw new Error('삭제 실패');
                                   setCalendar(prev => prev.filter(ev => ev.uid !== e.uid));
                                   // localStorage에 삭제 기록 (새로고침 후에도 안 보이게)
@@ -1676,7 +1685,7 @@ const ClaudeMonitor: React.FC = () => {
                         try {
                           const res = await fetch('/api/calendar/create-event', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': 'application/json', ...authHeaders() },
                             body: JSON.stringify({
                               title: addEventForm.title,
                               date: addEventForm.date,

@@ -261,7 +261,15 @@ router.get('/image-proxy', async (req, res) => {
     }
 
     const fetch = (await import('node-fetch')).default;
-    const imgRes = await fetch(url, { timeout: 8000, redirect: 'follow' });
+    // node-fetch v3 는 { timeout } 옵션을 무시한다 → AbortSignal 로 실제 타임아웃 적용.
+    const ac = new AbortController();
+    const abortTimer = setTimeout(() => ac.abort(), 8000);
+    let imgRes;
+    try {
+      imgRes = await fetch(url, { redirect: 'follow', signal: ac.signal });
+    } finally {
+      clearTimeout(abortTimer);
+    }
     if (!imgRes.ok) return res.status(400).end();
 
     // Content-Type이 이미지인지 확인

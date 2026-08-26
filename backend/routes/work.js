@@ -476,8 +476,8 @@ router.post('/:id/sync-obsidian', auth, adminOnly, async (req, res) => {
 });
 
 // GET /api/work/:id/research
-// 리서치 아카이브 페이지에서 호출. 로그인 필수(내부용).
-router.get('/:id/research', auth, async (req, res) => {
+// 리서치 아카이브 페이지에서 호출. 관리자 전용(내부 자료).
+router.get('/:id/research', auth, adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
     const { id } = req.params;
