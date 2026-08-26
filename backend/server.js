@@ -1,6 +1,8 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 
 // 환경변수 로드
@@ -9,7 +11,21 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 8000;
 
-// 미들웨어
+// Vercel/Render 등 리버스 프록시 뒤에서 실행되므로 X-Forwarded-For 1홉만 신뢰.
+// (express-rate-limit 의 IP 식별이 프록시 IP로 뭉치는 것을 방지. true 는 스푸핑 위험이라 사용하지 않는다.)
+app.set('trust proxy', 1);
+
+// ─── 보안 헤더 ───
+// API 전용 서버이므로 helmet 기본값으로 충분(HTML 을 서빙하지 않아 CSP 기본값도 무해).
+// 단, 이미지 프록시/업로드 응답이 타 오리진에서 로드될 수 있어 CORP 는 cross-origin 으로 완화.
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
+
+// ─── CORS ───
+// 정확한 도메인만 허용(와일드카드 정규식 금지).
+// 참고: 프로덕션·프리뷰 모두 프론트와 /api 가 동일 오리진(vercel.json rewrite)이라
+//       프리뷰 도메인은 CORS 목록이 필요 없다.
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
     ? [
@@ -17,16 +33,57 @@ app.use(cors({
         'https://www.nodetree.kr',
         'https://saengsanso.com',
         'https://www.saengsanso.com',
-        'https://nodetree-home.vercel.app',
-        'https://nodetree-home-git-main-your-username.vercel.app',
-        /\.vercel\.app$/,
-        /\.onrender\.com$/
+        'https://isoartlab.com',
+        'https://www.isoartlab.com',
+        'https://nodetree-home.vercel.app'
       ]
     : ['http://localhost:3000', 'http://localhost:3001'],
   credentials: true
 }));
-app.use(express.json({ limit: '10mb' }));
+
+// ─── 요청 본문 크기 제한 ───
+// 기본 100kb. HTML 본문을 다루는 콘텐츠 라우트는 1mb, base64 이미지를 받는
+// 업로드/예산 라우트만 10mb. (라우터 마운트 시점에 개별 적용 — 전역 파서를
+// 먼저 태우면 큰 본문이 100kb 에서 먼저 잘린다.)
+const jsonSmall = express.json({ limit: '100kb' });
+const jsonContent = express.json({ limit: '1mb' });
+const jsonUpload = express.json({ limit: '10mb' });
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// ─── Rate limit ───
+// 서버리스에서는 인스턴스별 메모리 스토어라 완벽하진 않지만
+// 단일 인스턴스로 몰리는 브루트포스/스팸은 실질적으로 차단된다.
+const makeAuthLimiter = () => rateLimit({
+  windowMs: 15 * 60 * 1000, // 15분
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' }
+});
+
+const contactLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1시간
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: '문의 전송이 너무 많습니다. 잠시 후 다시 시도해주세요.' }
+});
+
+const imageProxyLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1분
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: '요청이 너무 많습니다.' }
+});
+
+app.use('/api/auth/login', makeAuthLimiter());
+app.use('/api/auth/register', makeAuthLimiter());
+app.use('/api/auth/create-admin', makeAuthLimiter());
+app.use('/api/village-diary/login', makeAuthLimiter());
+app.use('/api/contact/send', contactLimiter);
+app.use('/api/saengsanso/image-proxy', imageProxyLimiter);
 
 // MongoDB 연결 (별도 모듈 — 순환 참조 방지 + 서버리스 연결 캐싱)
 const connectDB = require('./db');
@@ -69,41 +126,33 @@ const kkumdarakSettingsRoutes = require('./routes/kkumdarakSettings');
 const imagekitRoutes = require('./routes/imagekit');
 const aiRoutes = require('./routes/ai');
 
-app.use('/api/auth', authRoutes);
-app.use('/api/work', workRoutes);
-app.use('/api/about', aboutRoutes);
-app.use('/api/filed', filedRoutes);
-app.use('/api/cv', cvRouter);
-app.use('/api/human', humanRoutes);
-app.use('/api/contact', contactRoutes);
-app.use('/api/home', homeRoutes);
-app.use('/api/guestbook', guestbookRoutes);
-app.use('/api/saengsanso', saengsansoRoutes);
-app.use('/api/team-event', teamEventRoutes);
-app.use('/api/ocean', oceanRoutes);
-app.use('/api/calendar', calendarRoutes);
-app.use('/api/village-diary', villageDiaryRoutes);
-app.use('/api/village-news', villageNewsRoutes);
-app.use('/api/kkumdarak', kkumdarakBudgetRoutes);
-app.use('/api/kkumdarak-settings', kkumdarakSettingsRoutes);
-app.use('/api/imagekit', imagekitRoutes);
-app.use('/api/ai', aiRoutes);
+// 본문 파서는 라우터별로 명시 적용(위 jsonSmall/jsonContent/jsonUpload 참조)
+app.use('/api/auth', jsonSmall, authRoutes);
+app.use('/api/work', jsonContent, workRoutes);
+app.use('/api/about', jsonContent, aboutRoutes);
+app.use('/api/filed', jsonContent, filedRoutes);
+app.use('/api/cv', jsonContent, cvRouter);
+app.use('/api/human', jsonContent, humanRoutes);
+app.use('/api/contact', jsonSmall, contactRoutes);
+app.use('/api/home', jsonUpload, homeRoutes);              // 배경 이미지 base64
+app.use('/api/guestbook', jsonSmall, guestbookRoutes);
+app.use('/api/saengsanso', jsonUpload, saengsansoRoutes);  // 이미지 base64
+app.use('/api/team-event', jsonSmall, teamEventRoutes);
+app.use('/api/ocean', jsonSmall, oceanRoutes);
+app.use('/api/calendar', jsonSmall, calendarRoutes);
+app.use('/api/village-diary', jsonContent, villageDiaryRoutes);
+app.use('/api/village-news', jsonContent, villageNewsRoutes);
+app.use('/api/kkumdarak', jsonUpload, kkumdarakBudgetRoutes);  // 증빙 base64 + 서식 사진
+app.use('/api/kkumdarak-settings', jsonContent, kkumdarakSettingsRoutes);
+app.use('/api/imagekit', jsonSmall, imagekitRoutes);
+app.use('/api/ai', jsonContent, aiRoutes);
 
-// 기본 라우트
+// 그 외 경로(루트·디버그)는 기본 100kb
+app.use(jsonSmall);
+
+// 기본 라우트 — 헬스체크만. 내부 정보(DB명·환경·엔드포인트 목록) 노출 금지.
 app.get('/', (req, res) => {
-  res.json({
-    message: '노드트리 홈페이지 백엔드 서버가 실행 중입니다.',
-    mongoConnection: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    database: mongoose.connection.name,
-    environment: process.env.NODE_ENV || 'development',
-    vercel: process.env.VERCEL ? 'YES' : 'NO',
-    endpoints: {
-      auth: '/api/auth',
-      work: '/api/work',
-      filed: '/api/filed',
-      debug: '/api/debug'
-    }
-  });
+  res.json({ ok: true });
 });
 
 // 디버그 라우트 - MongoDB 연결 상태 확인
@@ -345,6 +394,23 @@ app.use('*', (req, res) => {
 // 에러 핸들러
 app.use((error, req, res, next) => {
   console.error('서버 에러:', error);
+
+  // 본문 크기 초과 → 500 이 아니라 413 으로 정확히 알린다.
+  if (error.type === 'entity.too.large' || error.status === 413) {
+    return res.status(413).json({
+      success: false,
+      message: '요청 본문이 너무 큽니다.'
+    });
+  }
+
+  // 잘못된 JSON 본문 → 400.
+  if (error.type === 'entity.parse.failed' || (error.status === 400 && 'body' in error)) {
+    return res.status(400).json({
+      success: false,
+      message: '요청 본문 형식이 올바르지 않습니다.'
+    });
+  }
+
   res.status(500).json({
     message: '서버 내부 오류가 발생했습니다.',
     error: process.env.NODE_ENV === 'development' ? error.message : '내부 서버 오류'

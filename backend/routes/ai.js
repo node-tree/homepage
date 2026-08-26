@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════════════════════
 // AI 글쓰기 라우트 — POST /api/ai/write
 //   · KNUH(factchat) chat() 재사용. KNUH 는 유료 크레딧 → 반드시 인증 게이팅.
-//   · 인증: 사이트 JWT(req.user) 또는 꿈다락 scope JWT 둘 다 허용(둘 중 하나면 통과).
-//     비로그인/무효 토큰 → 401. (마을일기는 꿈다락 인증, Work/About 은 사이트 인증.)
+//   · 인증: 사이트 관리자 JWT(role==='admin') 또는 꿈다락 scope JWT 만 허용.
+//     비로그인/무효 토큰 → 401, 권한 부족 → 403. (마을일기는 꿈다락 인증, Work/About 은 관리자 인증.)
 //   · mode: 'write'(새로 쓰기) | 'refine'(서정적으로 다듬기).
 //   · 시스템 프롬프트에 "반드시 서정적으로" 지시를 명시적으로 박는다.
 //   · 응답: { success, text } — 생성 본문만. 실패 시 한국어 메시지.
@@ -40,9 +40,9 @@ function findProgram(programId, programName) {
 const router = express.Router();
 
 // ── 결합 인증 미들웨어 ─────────────────────────────────────────
-//   사이트 JWT(모든 role) 또는 꿈다락 scope JWT 중 하나라도 유효하면 통과.
-//   둘 다 아니면 401. KNUH 크레딧 보호가 목적이므로 "로그인 여부"만 본다
-//   (역할 제한은 두지 않음 — 마을일기 편집자도 호출해야 하므로).
+//   사이트 관리자 JWT(role==='admin') 또는 꿈다락 scope JWT(scope==='kkumdarak') 만 통과.
+//   그 외(role==='user' 등 일반 계정)·무효 토큰·비로그인 → 401/403.
+//   KNUH 는 유료 크레딧이므로 "로그인 여부"가 아니라 "권한"으로 게이팅한다.
 const requireAnyAuth = (req, res, next) => {
   const authHeader = req.header('Authorization');
   if (!authHeader) {
@@ -54,12 +54,12 @@ const requireAnyAuth = (req, res, next) => {
   }
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // 사이트 JWT(role 보유) 또는 꿈다락 JWT(scope:'kkumdarak') 모두 허용.
-    if (decoded && (decoded.role || decoded.scope === 'kkumdarak')) {
+    // 관리자 JWT(role==='admin') 또는 꿈다락 JWT(scope==='kkumdarak') 만 허용.
+    if (decoded && (decoded.role === 'admin' || decoded.scope === 'kkumdarak')) {
       req.aiUser = decoded;
       return next();
     }
-    return res.status(401).json({ success: false, message: '유효하지 않은 인증입니다.' });
+    return res.status(403).json({ success: false, message: 'AI 기능 사용 권한이 없습니다.' });
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ success: false, message: '인증이 만료되었습니다. 다시 로그인해주세요.' });

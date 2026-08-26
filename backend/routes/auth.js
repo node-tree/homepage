@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const { adminOnly } = require('../middleware/auth');
 const HumanHeader = require('../models/User').HumanHeader;
 
 const router = express.Router();
@@ -23,12 +24,13 @@ if (!JWT_SECRET) {
   process.exit(1);
 }
 
-// 회원가입
-router.post('/register', async (req, res) => {
+// 회원가입 — 관리자만 계정을 생성할 수 있다(공개 가입 차단).
+router.post('/register', auth, adminOnly, async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password } = req.body || {};
 
-    if (!username || !email || !password) {
+    if (typeof username !== 'string' || typeof email !== 'string' || typeof password !== 'string'
+        || !username.trim() || !email.trim() || !password) {
       return res.status(400).json({
         success: false,
         message: '모든 필드를 입력해주세요.'
@@ -89,9 +91,10 @@ router.post('/register', async (req, res) => {
 // 로그인
 router.post('/login', async (req, res) => {
   try {
-    const { emailOrUsername, password } = req.body;
+    const { emailOrUsername, password } = req.body || {};
 
-    if (!emailOrUsername || !password) {
+    if (typeof emailOrUsername !== 'string' || typeof password !== 'string'
+        || !emailOrUsername.trim() || !password) {
       return res.status(400).json({
         success: false,
         message: '이메일/사용자명과 비밀번호를 입력해주세요.'
@@ -105,10 +108,13 @@ router.post('/login', async (req, res) => {
       $or: [{ email: emailOrUsername }, { username: emailOrUsername }]
     });
 
+    // 사용자 열거(user enumeration) 차단 — 미존재/비밀번호 오류 메시지를 통일한다.
+    const LOGIN_FAILED = '이메일 또는 비밀번호가 올바르지 않습니다';
+
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: '사용자를 찾을 수 없습니다.'
+        message: LOGIN_FAILED
       });
     }
 
@@ -117,7 +123,7 @@ router.post('/login', async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: '비밀번호가 잘못되었습니다.'
+        message: LOGIN_FAILED
       });
     }
 
@@ -202,8 +208,9 @@ router.post('/create-admin', async (req, res) => {
     }
 
     // 요청에서 관리자 정보 받기
-    const { username, email, password } = req.body;
-    if (!username || !email || !password) {
+    const { username, email, password } = req.body || {};
+    if (typeof username !== 'string' || typeof email !== 'string' || typeof password !== 'string'
+        || !username.trim() || !email.trim() || !password) {
       return res.status(400).json({
         success: false,
         message: 'username, email, password 필드가 필요합니다.'
@@ -266,12 +273,13 @@ router.get('/human/header', async (req, res) => {
     }
     res.json({ success: true, data: header });
   } catch (e) {
-    res.status(500).json({ success: false, message: '헤더 조회 실패', error: e.message });
+    console.error('헤더 조회 오류:', e);
+    res.status(500).json({ success: false, message: '헤더 조회 실패' });
   }
 });
 
 // PUT /human/header - 상단 제목/부제목 수정
-router.put('/human/header', require('../middleware/auth'), async (req, res) => {
+router.put('/human/header', auth, adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
     let header = await HumanHeader.findOne({});
@@ -283,7 +291,8 @@ router.put('/human/header', require('../middleware/auth'), async (req, res) => {
     await header.save();
     res.json({ success: true, data: header });
   } catch (e) {
-    res.status(500).json({ success: false, message: '헤더 수정 실패', error: e.message });
+    console.error('헤더 수정 오류:', e);
+    res.status(500).json({ success: false, message: '헤더 수정 실패' });
   }
 });
 

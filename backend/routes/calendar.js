@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { google } = require('googleapis');
+// 주의: 핸들러 내부의 지역변수 auth(OAuth2 클라이언트)와 이름이 겹치지 않도록 authMw 로 받는다.
+const authMw = require('../middleware/auth');
+const { adminOnly } = require('../middleware/auth');
 
 function getOAuth2Client() {
   const client = new google.auth.OAuth2(
@@ -14,7 +17,7 @@ function getOAuth2Client() {
 
 // POST /api/calendar/create-event
 // body: { title, date, endDate?, description?, location? }
-router.post('/create-event', async (req, res) => {
+router.post('/create-event', authMw, adminOnly, async (req, res) => {
   try {
     const { title, date, endDate, description, location } = req.body;
 
@@ -68,12 +71,12 @@ router.post('/create-event', async (req, res) => {
     });
   } catch (err) {
     console.error('Calendar create-event error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: '일정 생성에 실패했습니다.' });
   }
 });
 
 // DELETE /api/calendar/delete-event/:eventId
-router.delete('/delete-event/:eventId', async (req, res) => {
+router.delete('/delete-event/:eventId', authMw, adminOnly, async (req, res) => {
   try {
     let { eventId } = req.params;
     if (!eventId) return res.status(400).json({ error: 'eventId is required' });
@@ -92,7 +95,7 @@ router.delete('/delete-event/:eventId', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('Calendar delete-event error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: '일정 삭제에 실패했습니다.' });
   }
 });
 

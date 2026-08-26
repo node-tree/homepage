@@ -55,7 +55,7 @@ router.get('/', async (req, res) => {
 });
 
 // PUT /api/about - About 내용 수정 (관리자만)
-router.put('/', auth, async (req, res) => {
+router.put('/', auth, adminOnly, async (req, res) => {
   try {
     await ensureDBConnection();
     
