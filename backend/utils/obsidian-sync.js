@@ -131,6 +131,21 @@ const markdownToHtml = (md, opts = {}) => {
       continue;
     }
 
+    // standalone image: ![alt](https://...)  — http(s) 절대 URL만 허용
+    const img = line.match(/^\s*!\[([^\]\n]{0,300})\]\((https?:\/\/[^)\s]{1,2000})\)\s*$/);
+    if (img) {
+      closeList(listStack);
+      const alt = escapeHtml(img[1]);
+      out.push(
+        '<figure class="research-figure"><img src="' + escapeHtml(img[2]) +
+        '" alt="' + alt + '" loading="lazy" decoding="async"/>' +
+        (alt ? '<figcaption>' + alt + '</figcaption>' : '') +
+        '</figure>'
+      );
+      i++;
+      continue;
+    }
+
     // horizontal rule
     if (/^\s*---\s*$/.test(line)) {
       closeList(listStack);

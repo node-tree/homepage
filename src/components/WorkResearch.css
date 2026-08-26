@@ -550,3 +550,22 @@
     display: none;
   }
 }
+
+/* 리서치 본문 이미지 (옵시디안 ![]() → figure) */
+.research-body .research-figure {
+  margin: 1.5rem 0 2rem;
+}
+.research-body .research-figure img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  background: #0a0a0a;
+}
+.research-body .research-figure figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #888;
+  letter-spacing: 0.02em;
+}
