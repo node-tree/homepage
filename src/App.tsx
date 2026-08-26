@@ -316,32 +316,41 @@ function AppContent() {
   }
 
   const NODE_TREE_BASE = 'https://nodetree.kr';
-  const SEO_MAP: Record<string, { title: string; description: string; keywords?: string }> = {
+  // [SEO] path 를 함께 보관해 canonical / og:url 을 라우트별로 분리한다.
+  // (이전에는 전 페이지가 canonical=https://nodetree.kr 로 나가 하위 페이지가
+  //  홈의 중복으로 처리됐다.)
+  const SEO_MAP: Record<string, { path: string; title: string; description: string; keywords?: string }> = {
     HOME: {
+      path: '/',
       title: 'NODE TREE — 도시기록 아티스트 듀오',
       description: '이화영+정강현으로 구성된 도시기록 아티스트 듀오. 사운드, 영상, 설치를 통해 도시와 장소의 기억을 기록합니다.',
       keywords: 'NODE TREE, 노드트리, 이화영, 정강현, 사운드아트, 미디어아트, 도시기록, 현대미술',
     },
     ABOUT: {
+      path: '/about',
       title: 'NODE TREE | About — 소개',
       description: 'NODE TREE(이화영+정강현)는 도시기록을 주제로 사운드, 영상, 설치 작업을 하는 아티스트 듀오입니다.',
       keywords: 'NODE TREE 소개, 이화영, 정강현, 아티스트 듀오',
     },
     WORK: {
+      path: '/work',
       title: 'NODE TREE | Work — 작품',
       description: 'NODE TREE의 사운드, 영상, 설치 작품 목록. 위성악보, 에디아포닉, 낙원식당 등.',
       keywords: 'NODE TREE 작품, 위성악보, 에디아포닉, 낙원식당, 사운드 설치',
     },
     COMMONS: {
+      path: '/commons',
       title: 'NODE TREE | Commons — 공유지',
       description: 'NODE TREE의 공유 자료 및 리소스.',
     },
     CV: {
+      path: '/cv',
       title: 'NODE TREE | CV — 이력',
       description: '이화영+정강현 NODE TREE의 전시 이력, 레지던시, 수상 내역.',
       keywords: 'NODE TREE CV, 이화영 이력, 정강현 이력, 전시 이력',
     },
     CONTACT: {
+      path: '/contact',
       title: 'NODE TREE | Contact — 연락처',
       description: 'NODE TREE에 문의하기. 협업 및 전시 문의를 환영합니다.',
     },
@@ -373,7 +382,7 @@ function AppContent() {
       <SeoHead
         title={seo.title}
         description={seo.description}
-        url={NODE_TREE_BASE}
+        url={`${NODE_TREE_BASE}${seo.path === '/' ? '' : seo.path}`}
         keywords={seo.keywords}
       />
       {/* 데스크톱 네비게이션 */}

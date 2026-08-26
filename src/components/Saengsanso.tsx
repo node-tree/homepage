@@ -721,55 +721,6 @@ function PageShop() {
   );
 }
 
-// ─── 페이지: EXHIBITIONS (DB 연동) ───
-function PageExhibitions({ exhibitions, isAdmin, onAdd, onEdit, onDelete }: {
-  exhibitions: any[];
-  isAdmin: boolean;
-  onAdd: () => void;
-  onEdit: (item: any) => void;
-  onDelete: (id: string) => void;
-}) {
-  // year별 그룹핑
-  const grouped: Record<string, any[]> = {};
-  exhibitions.forEach(ex => {
-    const y = ex.year || 'N/A';
-    if (!grouped[y]) grouped[y] = [];
-    grouped[y].push(ex);
-  });
-
-  return (
-    <div style={{ flex: 1, overflowY: 'auto', paddingTop: '10px' }}>
-      <div style={{ display: 'flex', gap: '12px' }}>
-        <div style={{ flex: '0 0 196px', minWidth: '140px' }}>
-          <p style={TEXT_BASE}>ONSITE</p>
-        </div>
-        <div style={{ flex: 1 }}>
-          {Object.entries(grouped)
-            .sort(([a], [b]) => Number(b) - Number(a))
-            .map(([year, items]) => (
-              <div key={year} style={{ marginBottom: '32px' }}>
-                <p style={{ ...TEXT_BASE, marginBottom: '8px' }}><RedLabel>{year}</RedLabel></p>
-                {items.map((item: any, i: number) => (
-                  <p key={item._id || i} style={{ ...TEXT_BASE, cursor: 'pointer' }}>
-                    {item.date} {item.title}{item.venue ? ` — ${item.venue}` : ''}
-                    {item.note && <span style={{ ...TEXT_SM, color: C.cyan, display: 'block' }}>* {item.note}</span>}
-                    {isAdmin && (
-                      <>
-                        <button style={btnStyle} onClick={() => onEdit(item)}>수정</button>
-                        <button style={{ ...btnStyle, color: C.red }} onClick={() => onDelete(item._id)}>삭제</button>
-                      </>
-                    )}
-                  </p>
-                ))}
-              </div>
-            ))}
-          {isAdmin && <button style={addBtnStyle} onClick={onAdd}>+ 전시 추가</button>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── 페이지: PROJECTS (DB 연동) ───
 function PageProjects({ projects, isAdmin, onSave, onDelete }: {
   projects: any[];
@@ -1308,7 +1259,9 @@ function SaengsansoApp() {
 
   // DB 데이터 — FALLBACK으로 즉시 렌더링, DB 로드 후 교체
   const [loading, setLoading] = useState(false);
-  const [exhibitions, setExhibitions] = useState<any[]>(FALLBACK_EXHIBITIONS);
+  // 전시 목록은 현재 렌더 경로에서 읽히지 않는다(EXHIBITIONS 페이지 제거됨).
+  // API 응답 저장 로직은 그대로 두되 미사용 바인딩만 없앤다.
+  const [, setExhibitions] = useState<any[]>(FALLBACK_EXHIBITIONS);
   const [projects, setProjects] = useState<any[]>(FALLBACK_PROJECTS);
   const [news, setNews] = useState<any[]>(FALLBACK_NEWS);
   const [archives, setArchives] = useState<any[]>(FALLBACK_ARCHIVES);

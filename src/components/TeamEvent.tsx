@@ -37,7 +37,7 @@ function getVisitorId(): string {
 }
 
 export default function TeamEvent() {
-  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [color, setColor] = useState<TeamColor | null>(null);
   const [sessionActive, setSessionActive] = useState(false);

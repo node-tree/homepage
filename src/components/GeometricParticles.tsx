@@ -361,6 +361,32 @@ function ParticleSystem({
   const lineGeometryRef = useRef<THREE.BufferGeometry>(null);
   const lineGeometryInitialized = useRef(false);
 
+  // [perf] 언마운트 시 수동 생성 GPU 리소스 해제.
+  // R3F 는 JSX 로 선언한 객체만 자동 dispose 하므로, useFrame 안에서
+  // setAttribute 로 직접 붙인 BufferAttribute(라인 지오메트리)와
+  // points 의 geometry/material 은 명시적으로 반납해야
+  // 홈 ↔ 타 라우트를 반복 이동할 때 GPU 메모리가 누적되지 않는다.
+  useEffect(() => {
+    const pointsObj = pointsRef.current;
+    const lineGeom = lineGeometryRef.current;
+    return () => {
+      if (lineGeom) {
+        lineGeom.deleteAttribute('position');
+        lineGeom.dispose();
+      }
+      lineGeometryInitialized.current = false;
+      if (pointsObj) {
+        pointsObj.geometry?.dispose();
+        const mat = pointsObj.material as THREE.Material | THREE.Material[] | undefined;
+        if (Array.isArray(mat)) {
+          mat.forEach((m) => m.dispose());
+        } else {
+          mat?.dispose();
+        }
+      }
+    };
+  }, []);
+
   const sizes = useMemo(() => {
     const initialPoints = generateShapePoints('network', PARTICLE_COUNT, SHAPE_RADIUS, cities);
     initialPoints.forEach((point, i) => {
@@ -761,6 +787,28 @@ function CameraController({ cameraAngle, onMoving, isPointCloudMode }: { cameraA
 // Scene 컴포넌트
 // ═══════════════════════════════════════════════════════════════════════
 
+/**
+ * [a11y] prefers-reduced-motion 대응.
+ *
+ * 모션 감소 선호 시 Canvas 는 frameloop='demand' 로 돌아 자동 렌더를 하지 않는다.
+ * 다만 파티클 좌표·연결선은 useFrame 안에서 목표 형태로 수렴하므로,
+ * 한 프레임도 돌리지 않으면 빈 화면이 남는다.
+ * 마운트 직후 짧게 invalidate() 를 반복해 형태를 수렴시킨 뒤 멈춰 정지 이미지를 남긴다.
+ */
+function ReducedMotionSettler({ enabled }: { enabled: boolean }) {
+  const invalidate = useThree((state) => state.invalidate);
+  useEffect(() => {
+    if (!enabled) return;
+    let frames = 0;
+    let raf = requestAnimationFrame(function step() {
+      invalidate();
+      if (++frames < 180) raf = requestAnimationFrame(step);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [enabled, invalidate]);
+  return null;
+}
+
 function Scene({
   cities,
   mousePosition,
@@ -769,7 +817,8 @@ function Scene({
   wavePhase,
   cameraAngle,
   onCameraMoving,
-  showLines
+  showLines,
+  prefersReducedMotion
 }: {
   cities: CityData[];
   mousePosition: React.MutableRefObject<{ x: number; y: number }>;
@@ -779,10 +828,12 @@ function Scene({
   cameraAngle: number;
   onCameraMoving: (moving: boolean) => void;
   showLines: boolean;
+  prefersReducedMotion: boolean;
 }) {
   const isPointCloudMode = !showLines;
   return (
     <>
+      <ReducedMotionSettler enabled={prefersReducedMotion} />
       <CameraController cameraAngle={cameraAngle} onMoving={onCameraMoving} isPointCloudMode={isPointCloudMode} />
       <ParticleSystem
         mousePosition={mousePosition}
@@ -806,11 +857,49 @@ interface GeometricParticlesProps {
   cities?: CityData[];
 }
 
+/** SSR/구형 환경까지 안전한 matchMedia 조회 */
+function matches(query: string): boolean {
+  return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    ? window.matchMedia(query).matches
+    : false;
+}
+
 const GeometricParticles: React.FC<GeometricParticlesProps> = ({
   height = '600px',
   cities = DEFAULT_CITIES
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  // [perf] 모바일은 MSAA 를 끈다(픽셀 대비 비용이 가장 큰 항목).
+  // gl 옵션은 renderer 생성 시 1회만 반영되므로 첫 렌더에 확정한다.
+  const [isMobile] = useState(() => matches('(max-width: 768px)'));
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
+    matches('(prefers-reduced-motion: reduce)')
+  );
+  const [isDocumentHidden, setIsDocumentHidden] = useState(
+    () => typeof document !== 'undefined' && document.visibilityState === 'hidden'
+  );
+
+  // 탭이 백그라운드면 렌더 루프를 완전히 정지(배터리·CPU 절약)
+  useEffect(() => {
+    const onVisibility = () => setIsDocumentHidden(document.visibilityState === 'hidden');
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
+
+  // 접근성: 모션 감소 선호 시 상시 애니메이션 대신 요청 시 렌더
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const onChange = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  const frameloop: 'always' | 'demand' | 'never' = isDocumentHidden
+    ? 'never'
+    : prefersReducedMotion
+      ? 'demand'
+      : 'always';
   const mousePosition = useRef({ x: 0, y: 0 });
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentShape, setCurrentShape] = useState<ShapeType>('network');
@@ -911,7 +1000,10 @@ const GeometricParticles: React.FC<GeometricParticlesProps> = ({
         <Canvas
           camera={{ position: [0, 0, 8], fov: 45 }}
           style={{ background: 'transparent' }}
-          gl={{ antialias: true, alpha: true }}
+          /* [perf] DPR 상한 1.5 — 아이폰(DPR 3)에서 픽셀 9배 렌더를 막는다 */
+          dpr={[1, 1.5]}
+          frameloop={frameloop}
+          gl={{ antialias: !isMobile, alpha: true }}
         >
           <Scene
             cities={cities}
@@ -922,6 +1014,7 @@ const GeometricParticles: React.FC<GeometricParticlesProps> = ({
             cameraAngle={cameraAngle}
             onCameraMoving={handleCameraMoving}
             showLines={showLines}
+            prefersReducedMotion={prefersReducedMotion}
           />
         </Canvas>
       </div>

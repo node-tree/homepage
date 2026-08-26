@@ -5,6 +5,57 @@
     <!-- [perf] 작품 썸네일 등 외부 이미지 호스트 조기 연결 (TCP/TLS 핸드셰이크 선행) -->
     <link rel="preconnect" href="https://ik.imagekit.io" crossorigin />
     <link rel="dns-prefetch" href="https://ik.imagekit.io" />
+    <!--
+      [perf] S-CoreDream 은 rel=preload 를 걸지 않는다 — 실측 근거:
+      nodetree.kr 본문 대부분은 src/App.css 의 `font-family: 'Arial', sans-serif`
+      (14곳)로 덮여 있어 홈·/work·/cv·/about·/contact·/commons 어디서도
+      S-CoreDream 이 실제로 사용되지 않는다(playwright 로 document.fonts 상태 확인:
+      전 weight `unloaded`, 폰트 요청 0건). 이 상태에서 preload 를 걸면
+      169 KB 를 전 페이지에서 헛되이 받고 "preloaded but not used" 경고까지 난다.
+      실제 사용처(/NODETREECorpus·/buyeo)에서는 아래 @font-face 가 필요한 weight 만
+      unicode-range 로 골라 받는다.
+    -->
+    <!--
+      [perf] S-CoreDream WOFF2 서브셋 (KS 한글 완성형 + 자모 + 라틴 + 문장부호 + 기호)
+      원본 OTF 4종 2,937,784 B  →  WOFF2 4종 684,332 B (−76.7%)
+      font-display: swap 으로 FOIT(최대 3초 텍스트 블록) 대신 폴백을 즉시 표시한다.
+      CSS 청크가 아니라 여기 인라인으로 둔 이유: 고정 경로 유지 + CSS 왕복 대기 제거.
+      재생성: scripts/build-fonts.sh
+    -->
+    <style>
+      @font-face {
+        font-family: 'S-CoreDream';
+        font-style: normal;
+        font-weight: 300; /* Light */
+        font-display: swap;
+        src: url('%PUBLIC_URL%/fonts/SCDream3.woff2') format('woff2');
+        unicode-range: U+0000-00FF, U+1100-11FF, U+2000-206F, U+2070-209F, U+20A0-20CF, U+2100-2BFF, U+3000-303F, U+3040-30FF, U+3131-318E, U+3200-33FF, U+AC00-D7A3, U+FF00-FFEF;
+      }
+      @font-face {
+        font-family: 'S-CoreDream';
+        font-style: normal;
+        font-weight: 400; /* Regular */
+        font-display: swap;
+        src: url('%PUBLIC_URL%/fonts/SCDream4.woff2') format('woff2');
+        unicode-range: U+0000-00FF, U+1100-11FF, U+2000-206F, U+2070-209F, U+20A0-20CF, U+2100-2BFF, U+3000-303F, U+3040-30FF, U+3131-318E, U+3200-33FF, U+AC00-D7A3, U+FF00-FFEF;
+      }
+      @font-face {
+        font-family: 'S-CoreDream';
+        font-style: normal;
+        font-weight: 500; /* Medium */
+        font-display: swap;
+        src: url('%PUBLIC_URL%/fonts/SCDream5.woff2') format('woff2');
+        unicode-range: U+0000-00FF, U+1100-11FF, U+2000-206F, U+2070-209F, U+20A0-20CF, U+2100-2BFF, U+3000-303F, U+3040-30FF, U+3131-318E, U+3200-33FF, U+AC00-D7A3, U+FF00-FFEF;
+      }
+      @font-face {
+        font-family: 'S-CoreDream';
+        font-style: normal;
+        font-weight: 600; /* Bold */
+        font-display: swap;
+        src: url('%PUBLIC_URL%/fonts/SCDream6.woff2') format('woff2');
+        unicode-range: U+0000-00FF, U+1100-11FF, U+2000-206F, U+2070-209F, U+20A0-20CF, U+2100-2BFF, U+3000-303F, U+3040-30FF, U+3131-318E, U+3200-33FF, U+AC00-D7A3, U+FF00-FFEF;
+      }
+    </style>
     <link rel="icon" type="image/png" href="%PUBLIC_URL%/logo.png" />
     <link rel="icon" type="image/svg+xml" href="%PUBLIC_URL%/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

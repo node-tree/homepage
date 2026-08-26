@@ -318,7 +318,7 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
         }
       }
     },
-    [multiple, onSelect, onClose, search, browsePath]
+    [multiple, onSelect, onClose, browsePath]
   );
 
   const onDrop = useCallback(
