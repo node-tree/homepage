@@ -1,0 +1,99 @@
+{
+  "url": "http://localhost:3000/work/6969ed442fef7251ebe86598 wd-nakwon",
+  "console": [
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    },
+    {
+      "type": "log.error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "url": "http://localhost:8000/api/work/6969ed442fef7251ebe86598%20wd-nakwon/research/status"
+    },
+    {
+      "type": "log.error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "url": "http://localhost:8000/api/work/6969ed442fef7251ebe86598%20wd-nakwon/research/status"
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    },
+    {
+      "type": "log.error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "url": "http://localhost:8000/api/work/6969ed442fef7251ebe86598%20wd-nakwon/research/status"
+    },
+    {
+      "type": "log.error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "url": "http://localhost:8000/api/work/6969ed442fef7251ebe86598%20wd-nakwon/research/status"
+    }
+  ],
+  "pageErrors": [],
+  "failedRequests": [],
+  "hitTest_desktop": {
+    "header": true,
+    "headerHeight": 56,
+    "headerZ": "50",
+    "mainTop": 0,
+    "probes": [
+      {
+        "x": 0.15,
+        "tag": "section",
+        "cls": "pagehead",
+        "inHeader": false
+      },
+      {
+        "x": 0.5,
+        "tag": "section",
+        "cls": "pagehead",
+        "inHeader": false
+      },
+      {
+        "x": 0.85,
+        "tag": "section",
+        "cls": "pagehead",
+        "inHeader": false
+      }
+    ],
+    "covered": false
+  },
+  "height_desktop": 8263,
+  "hitTest_mobile": {
+    "header": true,
+    "headerHeight": 92,
+    "headerZ": "50",
+    "mainTop": 0,
+    "probes": [
+      {
+        "x": 0.15,
+        "tag": "section",
+        "cls": "pagehead",
+        "inHeader": false
+      },
+      {
+        "x": 0.5,
+        "tag": "section",
+        "cls": "pagehead",
+        "inHeader": false
+      },
+      {
+        "x": 0.85,
+        "tag": "section",
+        "cls": "pagehead",
+        "inHeader": false
+      }
+    ],
+    "covered": false
+  },
+  "height_mobile": 4891
+}
