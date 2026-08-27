@@ -35,16 +35,17 @@ const DharaniClockPage = lazy(() => import('./components/DharaniClockPage'));
 
 // [v5 리디자인] 새 페이지 5종(src/redesign) — nt.css 를 자기 청크로 들고 오므로
 // 레거시 라우트에는 로드되지 않는다. 기존 홈은 /legacy 로 남는다(삭제 금지).
+// 2026-08-27: 5종 전부 **DB 내용 그대로 + v5 판식**으로 재조판(src/redesign/pages).
+//   정적 시안(Works/IndexPage/Legacy 래퍼)은 제거했고, 원래 컴포넌트(src/components/*)는
+//   /legacy 편집기에서 계속 쓰이므로 삭제하지 않는다.
 const NtHome = lazy(() => import('./redesign/pages/Home'));
-const NtWorks = lazy(() => import('./redesign/pages/Works'));
 const NtWork = lazy(() => import('./redesign/pages/Work'));
-const NtIndex = lazy(() => import('./redesign/pages/IndexPage'));
+const NtWorkDetail = lazy(() => import('./redesign/pages/WorkDetail'));
 const NtAbout = lazy(() => import('./redesign/pages/About'));
-const NtLegacy = lazy(() => import('./redesign/pages/Legacy').then(m => ({ default: m.LegacyAbout })));
-const NtLegacyWork = lazy(() => import('./redesign/pages/Legacy').then(m => ({ default: m.LegacyWork })));
-const NtLegacyCommons = lazy(() => import('./redesign/pages/Legacy').then(m => ({ default: m.LegacyCommons })));
-const NtLegacyCV = lazy(() => import('./redesign/pages/Legacy').then(m => ({ default: m.LegacyCV })));
-const NtLegacyContact = lazy(() => import('./redesign/pages/Legacy').then(m => ({ default: m.LegacyContact })));
+const NtCommons = lazy(() => import('./redesign/pages/Commons'));
+const NtCommonsDetail = lazy(() => import('./redesign/pages/CommonsDetail'));
+const NtCV = lazy(() => import('./redesign/pages/CV'));
+const NtContact = lazy(() => import('./redesign/pages/Contact'));
 // 삼베 대리 신체는 라우트 전환에도 언마운트되면 안 되므로 <Routes> 바깥에 둔다(설계 §4.3).
 const SambeWalker = lazy(() => import('./redesign/components/SambeWalker'));
 // v5 전용 로딩 자리(웹폰트 요청 0). 인라인 스타일만 쓰므로 메인 번들에 nt.css 를 끌어오지 않는다.
@@ -533,19 +534,20 @@ function App() {
                   각자 Suspense 경계를 따로 두는 이유: 공용 PageLoader 의 「불러오는 중…」이
                   body 의 S-CoreDream(168 KB)을 깨워 새 페이지에서 쓰지도 않는 폰트를 받는다(실측). */}
               <Route path="/" element={ntBoot(<NtHome />)} />
-              <Route path="/work" element={ntBoot(<NtLegacyWork />)} />
-              <Route path="/works-v5" element={ntBoot(<NtWorks />)} />
-              <Route path="/work/:slug" element={ntBoot(<NtWork />)} />
-              <Route path="/index" element={ntBoot(<NtIndex />)} />
-              <Route path="/about" element={ntBoot(<NtLegacy />)} />
-              <Route path="/about-v5" element={ntBoot(<NtAbout />)} />
-              {/* ── 기존 발행 URL 보존 리다이렉트 ──
-                  구 내비(NAV_ITEMS)의 CV·COMMONS·CONTACT 는 v5 에서 페이지가 사라지고
-                  Index/About 로 흡수됐다. 외부 링크·검색 색인이 살아 있으므로 404 대신
-                  흡수된 자리로 넘긴다(replace → 뒤로가기에 중간 URL 이 남지 않는다). */}
-              <Route path="/cv" element={ntBoot(<NtLegacyCV />)} />
-              <Route path="/commons" element={ntBoot(<NtLegacyCommons />)} />
-              <Route path="/contact" element={ntBoot(<NtLegacyContact />)} />
+              <Route path="/about" element={ntBoot(<NtAbout />)} />
+              {/* /work?post=<id> (구 상세 URL) 은 목록 컴포넌트가 /work/<id> 로 넘긴다 */}
+              <Route path="/work" element={ntBoot(<NtWork />)} />
+              <Route path="/work/:id" element={ntBoot(<NtWorkDetail />)} />
+              <Route path="/commons" element={ntBoot(<NtCommons />)} />
+              <Route path="/commons/:id" element={ntBoot(<NtCommonsDetail />)} />
+              <Route path="/cv" element={ntBoot(<NtCV />)} />
+              <Route path="/contact" element={ntBoot(<NtContact />)} />
+              {/* ── 시안 URL 보존 리다이렉트 ──
+                  /works-v5 · /about-v5 · /index 는 v5 정적 시안이었다. 색인·외부 링크가
+                  남아 있으므로 404 대신 정식 페이지로 넘긴다(replace). */}
+              <Route path="/works-v5" element={<Navigate to="/work" replace />} />
+              <Route path="/about-v5" element={<Navigate to="/about" replace />} />
+              <Route path="/index" element={<Navigate to="/cv" replace />} />
               {/* 기존 홈(three.js 파티클 + 상태 기반 페이지 전환)은 삭제하지 않고 /legacy 로 */}
               <Route path="/legacy" element={<AppContent />} />
 
