@@ -79,3 +79,31 @@ v5 는 조판(정간 20 격자 · 계선 · 도판 창 · Mono 메타 · 결측 
    DB 에 필드가 생기면 `Work.tsx`·`PostDetail.tsx` 의 `—` 자리에 그대로 꽂으면 된다.
 4. **COMMONS 도판 흐름은 최근 8건** — 34건 전부를 피드로 깔면 3만 px 가 된다(실측). 나머지는 인덱스 행에 전량.
 5. `/work` 인덱스의 연도 묶음은 역순 정렬. 도판 흐름은 DB `sortOrder` 순서 그대로다.
+
+## 커밋 (브랜치 redesign/pages, push 안 함)
+
+| 해시 | 내용 |
+|---|---|
+| `6b1df08` | 공용 인프라(db.ts · RichHtml · PlateImage · bits · nt.css) + 시안 3파일 삭제 |
+| `5045532` | `/about` — NODE TREE 소개 v5 판식 |
+| `a4d1b86` | `/work` 목록 + `/work/:id` 상세(PostDetail 공용) |
+| `c291ae8` | `/commons` 목록 + `/commons/:id` 상세 |
+| `5d0a5d6` | `/cv` 아카이브 인덱스 판식 |
+| `ac9dbb8` | `/contact` 계선 블록 + 메시지 양식 |
+| `768c681` | 검증 리그 + 실행 로그 |
+| `9bec1b7` | 라우팅 전환 · 시안 URL 리다이렉트 · sitemap 60 URL |
+
+최종 스윕(9bec1b7 기준, 2026-08-27):
+```
+about          consoleErr 0 pageErr 0 failedReq 0 covered false false h 1648/2370
+work           consoleErr 0 pageErr 0 failedReq 0 covered false false h 8263/4891
+commons        consoleErr 0 pageErr 0 failedReq 0 covered false false h 9182/6014
+cv             consoleErr 0 pageErr 0 failedReq 0 covered false false h 7828/15439
+contact        consoleErr 0 pageErr 0 failedReq 0 covered false false h 1253/1873
+wd-ediaphonic  consoleErr 0 pageErr 0 failedReq 0 covered false false h 13545/6562   (PDF 도록+영상)
+wd-corrosia    consoleErr 0 pageErr 0 failedReq 0 covered false false h 1885/2535    (텍스트+리서치 아카이브)
+wd-nakwon      consoleErr 0 pageErr 0 failedReq 0 covered false false h 13009/5946   (이미지 13+방명록)
+cd-workbook    consoleErr 0 pageErr 0 failedReq 0 covered false false h 7444/3949    (인라인 PDF)
+cd-video       consoleErr 0 pageErr 0 failedReq 0 covered false false h 1732/1627    (YouTube 16:9 창)
+총 DB 텍스트 누락 0 토큰 · npm run build → Compiled successfully.
+```
