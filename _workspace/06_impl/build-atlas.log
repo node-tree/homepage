@@ -4,9 +4,12 @@
 [pick] vow      pool= 149 ->  48  seg= 48  area 371..925
 [pick] dharani  pool= 212 ->  40  seg= 40  area 395..1145
 [pick] charm    pool=  79 ->  24  seg= 24  area 274..894
-[pick] seed     pool=  36 ->   9  seg=  9  area 375..1104
-[tile] 169 tiles  texels=1230594  (29.3% of 2048^2)
-[pack] atlas 2048x1024  occupancy=58.7%
-[write] /Users/kanghyunjung/Desktop/etx/web/nodetreeHome/public/dharani/clock-glyphs.png  592472 bytes (578.6 KB)
-[write] /Users/kanghyunjung/Desktop/etx/web/nodetreeHome/public/dharani/clock-glyphs.json  52849 bytes
-[done] 0.8s  groups=169 rings={'donor': 48, 'vow': 48, 'dharani': 40, 'charm': 24, 'seed': 9}
+[seed] 행 경계 y=[217, 390]  행별 열 경계 x=[[168, 247], [148, 272], [129, 266]]
+[seed] 성분 131 · 유효 120 · 버린 잉크 0.054%
+[seed] 통일 창 141x202 종횡비 0.698 (확장 2회 · 최소 포함율 0.904)
+[pick] seed     격자 9 자  높이편차 1.00배 · 종횡비 [0.698, 0.698] · 잉크비 편차 1.88배 · 중심이탈 최대 0.187R · 판안쪽 True
+[tile] 169 tiles  texels=1361880  (32.5% of 2048^2)
+[pack] atlas 2048x1024  occupancy=64.9%
+[write] /Users/kanghyunjung/Desktop/etx/web/nodetreeHome/public/dharani/clock-glyphs.png  583272 bytes (569.6 KB)
+[write] /Users/kanghyunjung/Desktop/etx/web/nodetreeHome/public/dharani/clock-glyphs.json  58910 bytes
+[done] 1.3s  groups=169 rings={'donor': 48, 'vow': 48, 'dharani': 40, 'charm': 24, 'seed': 9}

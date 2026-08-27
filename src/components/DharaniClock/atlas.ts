@@ -23,6 +23,9 @@ export interface GlyphGroup {
   aspect: number;
   /** 종이/먹을 가른 문턱(판마다 다르다) — 셰이더가 그대로 쓴다 */
   densGate: number;
+  /** [종자자만] 통일 창 안에서 먹 무게중심이 어긋난 정도(창 크기의 비율).
+   *  렌더가 이만큼 되밀어 9자를 모두 중심에 세운다. */
+  centerOffset?: [number, number];
 }
 
 export type RingId = 'donor' | 'vow' | 'dharani' | 'charm' | 'seed';

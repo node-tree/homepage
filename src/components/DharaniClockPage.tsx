@@ -38,13 +38,17 @@ const DharaniClockPage: React.FC = () => {
         .dclockpage__hd{position:relative;z-index:10;height:56px;display:grid;
           grid-template-columns:repeat(20,1fr);align-items:center;background:#0B0B0E;
           border-bottom:1px solid rgba(220,221,211,.14)}
-        @media(max-width:767px){.dclockpage__hd{grid-template-columns:1fr auto;padding:0 20px}
-          .dclockpage__brand{grid-column:1}.dclockpage__hdclock{grid-column:2;padding-right:0}}
+        @media(max-width:767px){
+          .dclockpage__hd{display:flex;justify-content:space-between;align-items:center;padding:0 16px;gap:12px}
+          .dclockpage__brand{font-size:13px}
+          .dclockpage__brand span{display:none}
+          .dclockpage__hdclock{gap:8px;padding-right:0;font-size:10px;white-space:nowrap}
+        }
         .dclockpage__brand{grid-column:2/8;white-space:nowrap;font-family:'IBM Plex Sans',sans-serif;font-weight:500;
           font-size:15px;letter-spacing:.02em;color:#DCDDD3}
         .dclockpage__brand span{font-family:'Noto Sans KR',sans-serif;font-weight:300;
           color:rgba(220,221,211,.55);margin-left:10px;font-size:13px}
-        .dclockpage__hdclock{grid-column:16/21;display:flex;justify-content:flex-end;align-items:center;
+        .dclockpage__hdclock{grid-column:16/21;white-space:nowrap;display:flex;justify-content:flex-end;align-items:center;
           gap:14px;padding-right:24px;font-family:'IBM Plex Mono',monospace;font-size:11px;
           letter-spacing:.06em;color:rgba(220,221,211,.6)}
         .dclockpage__hdclock b{font-weight:500;color:#DCDDD3}

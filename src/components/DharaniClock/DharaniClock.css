@@ -14,6 +14,7 @@
   --tick-k: rgba(220, 221, 211, 0.8);
   --meta: rgba(220, 221, 211, 0.6);
   --meta-2: rgba(220, 221, 211, 0.35);
+  --hand2: rgba(220, 221, 211, 0.7);   /* 목업 hero-dark .hand2 */
 
   position: relative;
   overflow: hidden;
@@ -38,6 +39,7 @@
   --tick-k: #0f0f1a;
   --meta: #6b6b6b;
   --meta-2: #b2b2b2;
+  --hand2: #0f0f1a;                    /* 목업 v5/index .hand2 = var(--ink) */
 }
 
 /* ── 원반 ───────────────────────────────────────────────────────────── */
@@ -75,7 +77,7 @@
 .dclock--light .sweep { fill: var(--juseo); fill-opacity: 0.035; }
 .dclock .hand { stroke: var(--juseo); stroke-width: 1.4; }
 .dclock--light .hand { stroke: var(--juseo); stroke-width: 1.2; }
-.dclock .hand2 { stroke: var(--line-k); stroke-width: 1; }
+.dclock .hand2 { stroke: var(--hand2); stroke-width: 1; }
 .dclock__pivot { fill: var(--juseo); }
 
 /* OCR 판독 층 — 37번 §4-a 7 문법 */
@@ -90,11 +92,6 @@
 .dclock .ocr .now rect { stroke: var(--juseo); stroke-width: 1.1; }
 .dclock .ocr .now text { fill: var(--juseo); font-size: 8px; }
 
-.dclock__meter text {
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
-  fill: var(--meta);
-}
 
 /* ── 판독 블록 ───────────────────────────────────────────────────────
    원반 **밖** 우측 여백에 놓는다. 원반 지름이 912 로 묶여 있으므로 우측 여백은
@@ -220,5 +217,4 @@
   .dclock__cap { margin: 0 20px 22px; width: auto; }
   .dclock .ocr text { font-size: 9px; }
   .dclock .ocr .now text { font-size: 10px; }
-  .dclock__meter text { font-size: 12px; }
 }

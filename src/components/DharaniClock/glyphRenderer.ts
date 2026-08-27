@@ -44,6 +44,7 @@ layout(location=0) in vec2 aCorner;   // [-0.5, 0.5]^2
 layout(location=1) in vec4 aGeom;     // 각(rad) · 반지름 · 폭 · 높이
 layout(location=2) in vec4 aUv;       // u0 v0 u1 v1
 layout(location=3) in vec3 aStyle;    // 주서 · 종이문턱 · 알파
+layout(location=4) in vec2 aOfs;      // 중심 보정(뷰박스 단위)
 uniform float uHalf;
 out vec2 vUv;
 out float vGate;
@@ -52,7 +53,7 @@ out float vAlpha;
 void main() {
   float c = cos(aGeom.x), s = sin(aGeom.x);
   // 목업과 같은 배치: 글자를 12시(0, -r)에 놓고 SVG rotate(θ) 로 돌린다
-  vec2 loc = vec2(aCorner.x * aGeom.z, -aGeom.y + aCorner.y * aGeom.w);
+  vec2 loc = vec2(aCorner.x * aGeom.z - aOfs.x, -aGeom.y + aCorner.y * aGeom.w - aOfs.y);
   vec2 p = vec2(loc.x * c - loc.y * s, loc.x * s + loc.y * c);
   vUv = mix(aUv.xy, aUv.zw, aCorner + 0.5);
   vGate = aStyle.y; vVerm = aStyle.x; vAlpha = aStyle.z;
@@ -109,7 +110,7 @@ function compile(gl: WebGL2RenderingContext, type: number, src: string) {
   return sh;
 }
 
-const STRIDE = 11; // geom4 + uv4 + style3
+const STRIDE = 13; // geom4 + uv4 + style3 + ofs2
 
 class GLRenderer implements ClockRenderer {
   readonly mode = 'webgl2' as const;
@@ -164,6 +165,7 @@ class GLRenderer implements ClockRenderer {
     gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 4, gl.FLOAT, false, B, 0); gl.vertexAttribDivisor(1, 1);
     gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 4, gl.FLOAT, false, B, 16); gl.vertexAttribDivisor(2, 1);
     gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3, 3, gl.FLOAT, false, B, 32); gl.vertexAttribDivisor(3, 1);
+    gl.enableVertexAttribArray(4); gl.vertexAttribPointer(4, 2, gl.FLOAT, false, B, 44); gl.vertexAttribDivisor(4, 1);
     gl.bindVertexArray(null);
     this.vao = vao; this.inst = inst;
 
@@ -208,6 +210,7 @@ class GLRenderer implements ClockRenderer {
       data[o + 8] = g.vermilion ? 1 : 0;
       data[o + 9] = g.densGate;
       data[o + 10] = 1;
+      data[o + 11] = 0; data[o + 12] = 0;   // 고리 글자는 보정 없음
     });
     this.data = data;
     this.ringCount = live.length;
@@ -225,10 +228,14 @@ class GLRenderer implements ClockRenderer {
       const s = seeds[k];
       if (!s || s.alpha <= 0.001) { this.data[o + 10] = 0; continue; }
       const g = s.group;
+      const w = s.h * g.aspect;
       this.data[o] = 0;
       this.data[o + 1] = 0;
-      this.data[o + 2] = s.h * g.aspect;
+      this.data[o + 2] = w;
       this.data[o + 3] = s.h;
+      // 창 안에서 치우친 만큼 되민다 — 9자를 모두 원반 중심에 세운다
+      this.data[o + 11] = (g.centerOffset?.[0] ?? 0) * w;
+      this.data[o + 12] = (g.centerOffset?.[1] ?? 0) * s.h;
       this.data[o + 4] = g.uv[0]; this.data[o + 5] = g.uv[1];
       this.data[o + 6] = g.uv[2]; this.data[o + 7] = g.uv[3];
       this.data[o + 8] = g.vermilion ? 1 : 0;
@@ -399,8 +406,10 @@ class RasterRenderer implements ClockRenderer {
       if (!sd || sd.alpha <= 0.001) continue;
       const sp = this.sprite(sd.group, sd.h * k);
       const w = sd.h * sd.group.aspect;
+      const ox = (sd.group.centerOffset?.[0] ?? 0) * w;
+      const oy = (sd.group.centerOffset?.[1] ?? 0) * sd.h;
       ctx.globalAlpha = sd.alpha;
-      ctx.drawImage(sp, -w / 2, -sd.h / 2, w, sd.h);
+      ctx.drawImage(sp, -w / 2 - ox, -sd.h / 2 - oy, w, sd.h);
       ctx.globalAlpha = 1;
     }
     ctx.setTransform(1, 0, 0, 1, 0, 0);

@@ -103,25 +103,25 @@
    "plate": "dharani_ink_3_seed_p066.png",
    "key": -3,
    "plateBox": [
-    292.0,
-    2.0,
-    137,
-    277
+    256.0,
+    63.0,
+    141,
+    202
    ],
    "tile": [
-    206,
-    416
+    212,
+    303
    ],
    "render": [
-    274,
-    554
+    282,
+    404
    ],
-   "labPx": 13271,
-   "subPx": 12389,
-   "iou": 0.9095,
+   "labPx": 15700,
+   "subPx": 15008,
+   "iou": 0.9329,
    "vermilion": false
   }
  ],
- "iouMin": 0.9095,
- "iouMean": 0.9425
+ "iouMin": 0.9329,
+ "iouMean": 0.9472
 }

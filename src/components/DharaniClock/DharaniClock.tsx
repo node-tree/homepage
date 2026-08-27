@@ -7,7 +7,7 @@
 //   층위 — 아래에서 위로
 //     ① SVG(하)  고리선 8 · 눈금 200 · 가림 블록 · 중심 지(紙) 바탕
 //     ② canvas   먹 조각(WebGL2 SDF · 폴백 3× 래스터)
-//     ③ SVG(상)  부채꼴 · 바늘 2 · OCR 박스 · 중심 계기 글줄
+//     ③ SVG(상)  부채꼴 · 바늘 2 · OCR 박스
 //     ④ HTML     판독 블록 · 계기 라벨 · 캡션 · 그레인
 // ════════════════════════════════════════════════════════════════════════
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -21,7 +21,9 @@ import './DharaniClock.css';
 /** 박 / 32 ≈ 297ms — 사이트의 모든 전환이 쓰는 리듬(설계 §2.3) */
 export const STEP_MS = 300;
 const EMPTY_IDS: number[] = [];   // 참조 고정용 빈 배열
-const SEED_H = 132;              // 중심 종자자 표시 높이(뷰박스 단위)
+// 중심 종자자 표시 높이 — 목업은 중심 원을 0.85 비율로 채운다(글자 ±66 / 원 r78).
+// 같은 비율을 중심 칸(ring r112)에 적용: 112 × 0.85 × 2 ≈ 190.
+const SEED_H = 190;
 const SWEEP_DEG = 36;          // 독송 바늘 뒤 판독 부채꼴
 const OCR_WINDOW = BEATS_PER_GAK; // 판독의 기억은 한 각
 
@@ -366,12 +368,6 @@ const DharaniClock: React.FC<DharaniClockProps> = ({ theme = 'dark', beatOverrid
             })}
           </g>
 
-          <g className="dclock__meter">
-            <text x={0} y={-96} textAnchor="middle">
-              {`現 ${pad4(beat.index)} · 種字 ${pad2(seedNo + 1)} / 09 · 觀音願文`}
-            </text>
-            <text x={0} y={104} textAnchor="middle">1 名 = 1 拍 · {BEAT_SEC.toFixed(3)} S</text>
-          </g>
         </svg>
       </div>
 

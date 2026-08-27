@@ -28,7 +28,7 @@ import json, math, os, sys, time
 import numpy as np
 from PIL import Image
 from scipy.ndimage import zoom as ndzoom
-from scipy.cluster.vq import kmeans2
+from scipy import ndimage as ndi
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -71,58 +71,200 @@ RINGS = [
 #  **조각 무게중심을 9 군집(3열×3행 초기값)으로 다시 묶어** 한 자를 한 타일로 만든다.
 SEED_PLATE = 'dharani_ink_3_seed_p066.png'
 SEED_K = 9
+SEED_SPECK_TEXELS = 60      # 이보다 작은 연결 성분은 먼지·반점으로 보고 버린다
+SEED_WIN_MARGIN = 1.10      # 통일 창 = 성분 bbox 중앙값 × 여유
+SEED_ASPECT = (0.55, 0.70)  # 창 종횡비 허용 범위(원본 9자는 세로로 길다)
+SEED_KEEP = float(os.environ.get('SKEEP', 0.90))   # 창 밖 잘림 허용 하한(칸 잉크의 포함율)
+SEED_GROW_MAX = int(os.environ.get('SGROW', 4))    # 창 확대 반복 상한
 
 
 def log(*a):
     print(*a, flush=True)
 
 
-def cluster_seed_glyphs(meta, pieces, k):
-    """
-    종자자 판(p.66)의 조각을 **한 자 = 한 군집**으로 다시 묶는다.
-      재조판의 자동 군집은 판마다의 글자 피치(여기선 31.8)로 잘라서, 넓은 붓으로 쓴
-      범자 한 자(≈110×150 판화소)를 여러 군으로 쪼개 놓았다. 중심 종자자는 한 자가
-      통째여야 하므로, 조각 무게중심을 3열×3행 초기값의 k-means 로 9 군집으로 묶는다.
-      (판의 배열이 3×3 이라는 것은 도판에서 관찰된 사실이다 — 임의값이 아니다)
-    """
-    pl = [p for p in meta['pieces'] if p['plate'] == SEED_PLATE]
-    xs = np.array([p['centroidPlate'] for p in pl], dtype=np.float64)
-
-    def axis3(v):
-        """한 축을 3 무리로 — 열/행이 규칙적이라 축마다 1차원으로 가르는 편이
-        2차원 k-means 보다 글자 경계를 덜 넘는다."""
-        lo, hi = v.min(), v.max()
-        init = np.array([[lo + (hi - lo) * (i + 0.5) / 3] for i in range(3)])
-        c, l = kmeans2(v.reshape(-1, 1), init, minit='matrix', iter=64, seed=0)
-        order = np.argsort(c[:, 0])            # 왼→오 / 위→아래 순번으로 다시 매긴다
-        remap = np.zeros(3, int)
-        for rank, ci in enumerate(order):
-            remap[ci] = rank
-        return remap[l], c[:, 0][order]
-
-    cols, cx = axis3(xs[:, 0])
-    rows, cy = axis3(xs[:, 1])
-    lab = rows * 3 + cols
-    cent = np.array([[cx[c % 3], cy[c // 3]] for c in range(9)])
-    out = []
-    for c in range(k):
-        idx = [pl[i]['id'] for i in range(len(pl)) if lab[i] == c]
-        if not idx:
+def assemble_group(pieces, big, pl):
+    """글자 군의 조각들을 판 좌표계에 되돌려 한 장으로 합성한다(랩 3배 격자)."""
+    x0 = min(pieces[i]['bboxPlate'][0] for i in pl)
+    y0 = min(pieces[i]['bboxPlate'][1] for i in pl)
+    x1 = max(pieces[i]['bboxPlate'][0] + pieces[i]['bboxPlate'][2] for i in pl)
+    y1 = max(pieces[i]['bboxPlate'][1] + pieces[i]['bboxPlate'][3] for i in pl)
+    # 여백 잘라내기 — 군 전체가 사라지지 않는 선에서만
+    tr = min(TRIM_PLATE_PX, (x1 - x0) / 4.0, (y1 - y0) / 4.0)
+    x0 += tr; y0 += tr; x1 -= tr; y1 -= tr
+    gw, gh = int(round(x1 - x0)), int(round(y1 - y0))
+    LW, LH = int(round(gw * LAB_SS)), int(round(gh * LAB_SS))
+    R = np.zeros((LH, LW), np.uint8)
+    G = np.zeros((LH, LW), np.uint8)
+    for i in pl:
+        p = pieces[i]
+        ax, ay, aw, ah = p['atlas']
+        crop = big[ay:ay + ah, ax:ax + aw]
+        ox = int(round((p['bboxPlate'][0] - x0) * LAB_SS))
+        oy = int(round((p['bboxPlate'][1] - y0) * LAB_SS))
+        sh, sw = crop.shape[0], crop.shape[1]
+        sx0 = max(0, -ox); sy0 = max(0, -oy)
+        dx0 = max(0, ox); dy0 = max(0, oy)
+        cw = min(sw - sx0, LW - dx0); ch = min(sh - sy0, LH - dy0)
+        if cw <= 0 or ch <= 0:
             continue
-        bx0 = min(pieces[i]['bboxPlate'][0] for i in idx)
-        by0 = min(pieces[i]['bboxPlate'][1] for i in idx)
-        bx1 = max(pieces[i]['bboxPlate'][0] + pieces[i]['bboxPlate'][2] for i in idx)
-        by1 = max(pieces[i]['bboxPlate'][1] + pieces[i]['bboxPlate'][3] for i in idx)
+        cR = crop[sy0:sy0 + ch, sx0:sx0 + cw, 0]
+        cG = crop[sy0:sy0 + ch, sx0:sx0 + cw, 1]
+        dstR = R[dy0:dy0 + ch, dx0:dx0 + cw]
+        dstG = G[dy0:dy0 + ch, dx0:dx0 + cw]
+        take = cR > dstR                 # 거리장 합집합 = max(R), G 는 R 승자를 따른다
+        dstR[take] = cR[take]
+        dstG[take] = cG[take]
+    return R, G, x0, y0, gw, gh
+
+
+def _valley(proj, center, half):
+    """투영 곡선에서 중심 근방 골짜기(글자 사이 빈 줄)의 자리를 찾는다."""
+    lo = max(1, int(center - half)); hi = min(len(proj) - 1, int(center + half))
+    seg = proj[lo:hi]
+    return lo + int(np.argmin(seg)), float(seg.min())
+
+
+def seed_lattice_tiles(meta, big, pm, scale):
+    """
+    종자자 판(p.66) — **격자 창 + 연결성분 소유**로 9자를 낸다.
+
+      it.1 은 조각 무게중심의 1차원 k-means 로 갈랐고, 넓은 붓의 긴 꼬리가 이웃 칸까지
+      뻗어 군집이 글자 경계를 물었다(높이 편차 2.38배·종횡비 0.51~1.50·중심 이탈 0.474R).
+      이 판은 3행 × 3열로 정연하게 **쓰여 있으므로**, 조각을 나누는 대신
+        ① 판 전체 SDF 를 합성해 잉크장을 만들고
+        ② 행 경계는 전역 가로 투영의 골짜기, 열 경계는 **행마다** 세로 투영의 골짜기로 찾고
+           (아래 행은 글자가 왼쪽으로 몰려 있어 열 경계가 행마다 다르다 — 실측)
+        ③ 연결 성분을 그 무게중심이 속한 칸의 것으로 **소유**시켜 이웃의 꼬리를 제거하고
+        ④ 창은 성분 bbox 중앙값에서 얻은 **한 가지 크기**로 통일해 각 칸의 잉크 무게중심에
+           맞춰 놓는다(판 밖으로 나가지 않게 클램프).
+      결과: 9자 모두 같은 크기·같은 종횡비·중심 정렬.
+    """
+    PW, PH = pm['size']
+    SS = int(LAB_SS)
+    LW, LH = PW * SS, PH * SS
+    R = np.zeros((LH, LW), np.uint8)
+    G = np.zeros((LH, LW), np.uint8)
+    for p in meta['pieces']:
+        if p['plate'] != SEED_PLATE:
+            continue
+        ax, ay, aw, ah = p['atlas']
+        c = big[ay:ay + ah, ax:ax + aw]
+        ox = int(round(p['bboxPlate'][0] * SS)); oy = int(round(p['bboxPlate'][1] * SS))
+        sx0 = max(0, -ox); sy0 = max(0, -oy); dx0 = max(0, ox); dy0 = max(0, oy)
+        cw = min(c.shape[1] - sx0, LW - dx0); ch = min(c.shape[0] - sy0, LH - dy0)
+        if cw <= 0 or ch <= 0:
+            continue
+        cR = c[sy0:sy0 + ch, sx0:sx0 + cw, 0]; cG = c[sy0:sy0 + ch, sx0:sx0 + cw, 1]
+        dR = R[dy0:dy0 + ch, dx0:dx0 + cw]; dG = G[dy0:dy0 + ch, dx0:dx0 + cw]
+        t = cR > dR
+        dR[t] = cR[t]; dG[t] = cG[t]
+
+    gate = pm['densGate']
+    mask = (R >= 128) & (G / 255.0 >= gate)
+
+    # ② 행 경계 → 행별 열 경계
+    rowp = mask.sum(1).reshape(-1, SS).sum(1)
+    ry = [0]
+    for k in (1, 2):
+        v, _ = _valley(rowp, PH * k / 3.0, PH * 0.12)
+        ry.append(v)
+    ry.append(PH)
+    cxr = []
+    for r in range(3):
+        strip = mask[ry[r] * SS:ry[r + 1] * SS, :]
+        colp = strip.sum(0).reshape(-1, SS).sum(1)
+        e = [0]
+        for k in (1, 2):
+            v, _ = _valley(colp, PW * k / 3.0, PW * 0.12)
+            e.append(v)
+        e.append(PW)
+        if not (e[0] < e[1] < e[2] < e[3]):
+            raise SystemExit(f'종자자 격자 실패: 행 {r} 열 경계 {e}')
+        cxr.append(e)
+    log(f'[seed] 행 경계 y={ry[1:3]}  행별 열 경계 x={[c[1:3] for c in cxr]}')
+
+    # ③ 연결 성분 소유
+    lab, nl = ndi.label(mask, np.ones((3, 3), bool))
+    sizes = np.array(ndi.sum(mask, lab, range(1, nl + 1)))
+    com = ndi.center_of_mass(mask, lab, range(1, nl + 1))
+    ccy = np.array([c[0] for c in com]) / SS
+    ccx = np.array([c[1] for c in com]) / SS
+    keep = sizes >= SEED_SPECK_TEXELS
+    owner = np.zeros(nl + 1, np.int16) - 1
+    for i in range(nl):
+        if not keep[i]:
+            continue
+        r = 0 if ccy[i] < ry[1] else (1 if ccy[i] < ry[2] else 2)
+        e = cxr[r]
+        c = 0 if ccx[i] < e[1] else (1 if ccx[i] < e[2] else 2)
+        owner[i + 1] = r * 3 + c
+    cellOwner = owner[lab]                     # 화소마다 소유 칸(-1 = 티끌/종이)
+    log(f'[seed] 성분 {nl} · 유효 {int(keep.sum())} · 버린 잉크 '
+        f'{100 * sizes[~keep].sum() / sizes.sum():.3f}%')
+
+    stats = []
+    for k in range(9):
+        m = cellOwner == k
+        if not m.any():
+            raise SystemExit(f'종자자 격자 실패: 칸 {k} 가 비었다')
+        ys, xs = np.where(m)
+        stats.append(dict(k=k, ink=int(m.sum()),
+                          cx=xs.mean() / SS, cy=ys.mean() / SS,
+                          bw=(xs.max() - xs.min() + 1) / SS,
+                          bh=(ys.max() - ys.min() + 1) / SS))
+
+    # ④ 한 가지 창 크기 — 성분 bbox 중앙값에서 시작해, **어느 자도 잘리지 않을 때까지**
+    #    (칸 잉크의 SEED_KEEP 이상이 창 안에 들 때까지) 종횡비를 지킨 채 키운다.
+    def fit(W, H):
+        if W / H > SEED_ASPECT[1]:
+            H = int(round(W / SEED_ASPECT[1]))
+        if W / H < SEED_ASPECT[0]:
+            W = int(round(H * SEED_ASPECT[0]))
+        return min(W, PW), min(H, PH)
+
+    def kept(W, H):
+        out = []
+        for t in stats:
+            X = int(round(min(max(t['cx'] - W / 2.0, 0), PW - W)))
+            Y = int(round(min(max(t['cy'] - H / 2.0, 0), PH - H)))
+            m = (cellOwner == t['k'])
+            out.append(m[Y * SS:(Y + H) * SS, X * SS:(X + W) * SS].sum() / max(1, m.sum()))
+        return out
+
+    W, H = fit(int(round(np.median([t['bw'] for t in stats]) * SEED_WIN_MARGIN)),
+               int(round(np.median([t['bh'] for t in stats]) * SEED_WIN_MARGIN)))
+    grow = 0
+    while min(kept(W, H)) < SEED_KEEP and (W < PW and H < PH) and grow < SEED_GROW_MAX:
+        W, H = fit(int(round(W * 1.05)), int(round(H * 1.05)))
+        grow += 1
+    log(f'[seed] 통일 창 {W}x{H} 종횡비 {W / H:.3f} (확장 {grow}회 · 최소 포함율 {min(kept(W, H)):.3f})')
+
+    out = []
+    for t in stats:
+        X = int(round(min(max(t['cx'] - W / 2.0, 0), PW - W)))
+        Y = int(round(min(max(t['cy'] - H / 2.0, 0), PH - H)))
+        m = (cellOwner == t['k'])
+        # 소유 성분의 SDF 감쇠 폭(≈4 판화소)까지만 남기고 나머지는 종이로 둔다
+        grow = ndi.binary_dilation(m, ndi.generate_binary_structure(2, 2),
+                                   iterations=int(4 * SS))
+        sl = (slice(Y * SS, (Y + H) * SS), slice(X * SS, (X + W) * SS))
+        tR = np.where(grow[sl], R[sl], 0).astype(np.uint8)
+        tG = np.where(grow[sl], G[sl], 0).astype(np.uint8)
+        ys, xs = np.where(m[sl])
+        off = (float(xs.mean() / SS - W / 2.0), float(ys.mean() / SS - H / 2.0))
         out.append(dict(
-            key=-1 - c, plate=SEED_PLATE, plateIndex=-1, pieces=idx, n=len(idx),
-            bboxPlate=[bx0, by0, bx1 - bx0, by1 - by0],
-            centroidPlate=[float(cent[c][0]), float(cent[c][1])],
-            area=int(sum(pieces[i]['area'] for i in idx)),
-            segGlyphId=None, vermilion=False, source='cluster',
+            g=dict(key=-1 - t['k'], plate=SEED_PLATE, plateIndex=-1, pieces=[], n=0,
+                   bboxPlate=[X, Y, W, H], centroidPlate=[t['cx'], t['cy']],
+                   area=int(t['ink'] / (SS * SS)), segGlyphId=None,
+                   vermilion=False, source='lattice'),
+            R=tR, G=tG, plateBox=[X, Y, W, H],
+            inkPx=int(m[sl].sum()), inkRatio=float(m[sl].sum() / m[sl].size),
+            keptRatio=float(m[sl].sum() / max(1, m.sum())),
+            offR=float((off[0] ** 2 + off[1] ** 2) ** 0.5 / (H / 2.0)),
         ))
-    # 판 읽는 순서(위→아래, 오른쪽→왼쪽 = 동양 조판)로 정렬해 9자 순환이 판을 따르게 한다
-    out.sort(key=lambda g: (round(g['centroidPlate'][1] / 60), -g['centroidPlate'][0]))
-    return out
+    # 판 읽는 순서(위→아래, 오른쪽→왼쪽 = 동양 조판)
+    order = [2, 1, 0, 5, 4, 3, 8, 7, 6]
+    return [out[i] for i in order]
 
 
 def main():
@@ -147,16 +289,31 @@ def main():
     report = {}
     for rid, files, count, scale, red_only in RINGS:
         if files == [SEED_PLATE]:
-            sel = cluster_seed_glyphs(meta, pieces, count)
-            report[rid] = dict(mode='cluster-kmeans2', k=count, picked=len(sel),
-                               piecesPerGlyph=[g['n'] for g in sel],
-                               bboxPlate=[[round(v, 1) for v in g['bboxPlate']] for g in sel],
-                               areaMin=min(g['area'] for g in sel),
-                               areaMax=max(g['area'] for g in sel))
-            for g in sel:
-                picked.append(dict(ring=rid, g=g, scale=scale))
-            log(f'[pick] {rid:8s} 군집 {count} 자  조각/자 '
-                f'{[g["n"] for g in sel]}  area {report[rid]["areaMin"]}..{report[rid]["areaMax"]}')
+            sel = seed_lattice_tiles(meta, big, plates[SEED_PLATE], scale)
+            if len(sel) != count:
+                raise SystemExit(f'종자자 {count} 자를 얻지 못했다: {len(sel)}')
+            boxes = [t['plateBox'] for t in sel]
+            hs = [b[3] for b in boxes]; asp = [b[2] / b[3] for b in boxes]
+            ratios = [t['inkRatio'] for t in sel]
+            report[rid] = dict(
+                mode='lattice+component-ownership', k=count, picked=len(sel),
+                bboxPlate=boxes,
+                aspect=[round(a, 4) for a in asp],
+                heightSpread=round(max(hs) / min(hs), 4),
+                aspectRange=[round(min(asp), 4), round(max(asp), 4)],
+                inkRatio=[round(r, 4) for r in ratios],
+                inkSpread=round(max(ratios) / min(ratios), 4),
+                centerOffsetR=[round(t['offR'], 4) for t in sel],
+                centerOffsetMax=round(max(t['offR'] for t in sel), 4),
+                keptRatio=[round(t['keptRatio'], 4) for t in sel],
+                inPlate=all(b[0] >= 0 and b[1] >= 0 for b in boxes),
+                areaMin=min(t['g']['area'] for t in sel),
+                areaMax=max(t['g']['area'] for t in sel))
+            for t in sel:
+                picked.append(dict(ring=rid, g=t['g'], scale=scale, prebuilt=t))
+            log(f'[pick] {rid:8s} 격자 {count} 자  높이편차 {report[rid]["heightSpread"]:.2f}배 · '
+                f'종횡비 {report[rid]["aspectRange"]} · 잉크비 편차 {report[rid]["inkSpread"]:.2f}배 · '
+                f'중심이탈 최대 {report[rid]["centerOffsetMax"]:.3f}R · 판안쪽 {report[rid]["inPlate"]}')
             continue
         pool = []
         for f in files:
@@ -191,40 +348,14 @@ def main():
     tiles = []
     for idx, rec in enumerate(picked):
         g = rec['g']
-        pl = g['pieces']
-        # 군의 판 bbox = 조각 bbox 합집합 (조각 bbox 는 이미 SDF 여백 포함)
-        x0 = min(pieces[i]['bboxPlate'][0] for i in pl)
-        y0 = min(pieces[i]['bboxPlate'][1] for i in pl)
-        x1 = max(pieces[i]['bboxPlate'][0] + pieces[i]['bboxPlate'][2] for i in pl)
-        y1 = max(pieces[i]['bboxPlate'][1] + pieces[i]['bboxPlate'][3] for i in pl)
-        # 여백 잘라내기 — 군 전체가 사라지지 않는 선에서만
-        tr = min(TRIM_PLATE_PX, (x1 - x0) / 4.0, (y1 - y0) / 4.0)
-        x0 += tr; y0 += tr; x1 -= tr; y1 -= tr
-        gw, gh = int(round(x1 - x0)), int(round(y1 - y0))
-        # 랩 배율(3배)로 먼저 합성 — 원 텍셀을 재표본 없이 얹는다
-        LW, LH = int(round(gw * LAB_SS)), int(round(gh * LAB_SS))
-        R = np.zeros((LH, LW), np.uint8)
-        G = np.zeros((LH, LW), np.uint8)
-        for i in pl:
-            p = pieces[i]
-            ax, ay, aw, ah = p['atlas']
-            crop = big[ay:ay + ah, ax:ax + aw]
-            bx, by = p['bboxPlate'][0], p['bboxPlate'][1]
-            ox = int(round((bx - x0) * LAB_SS)); oy = int(round((by - y0) * LAB_SS))
-            sh, sw = crop.shape[0], crop.shape[1]
-            # 양쪽 잘라내기(여백 트림으로 원점이 음수가 될 수 있다)
-            sx0 = max(0, -ox); sy0 = max(0, -oy)
-            dx0 = max(0, ox); dy0 = max(0, oy)
-            cw = min(sw - sx0, LW - dx0); ch = min(sh - sy0, LH - dy0)
-            if cw <= 0 or ch <= 0:
-                continue
-            cR = crop[sy0:sy0 + ch, sx0:sx0 + cw, 0]
-            cG = crop[sy0:sy0 + ch, sx0:sx0 + cw, 1]
-            dstR = R[dy0:dy0 + ch, dx0:dx0 + cw]
-            dstG = G[dy0:dy0 + ch, dx0:dx0 + cw]
-            take = cR > dstR                       # 거리장 합집합 = max(R), G 는 R 승자를 따른다
-            dstR[take] = cR[take]
-            dstG[take] = cG[take]
+        if rec.get('prebuilt') is not None:
+            # 종자자 — 격자 창으로 이미 판 좌표계에서 잘라 왔다(조각 조립을 거치지 않는다)
+            pb = rec['prebuilt']
+            R, G = pb['R'], pb['G']
+            x0, y0, gw, gh = pb['plateBox']
+        else:
+            R, G, x0, y0, gw, gh = assemble_group(pieces, big, g['pieces'])
+
         # 목표 배율로 축소 (거리장 = 면적 평균이 성립)
         s = rec['scale'] / LAB_SS
         if abs(s - 1.0) > 1e-6:
@@ -242,8 +373,8 @@ def main():
         tw, th = Rf.shape[1], Rf.shape[0]
         # ── 먹이 실제로 서 있는 사각 ─────────────────────────────────────
         #   타일에는 SDF 여백이 남아 있어, 타일 높이를 고리 높이에 맞추면 글자가 그만큼
-        #   작아진다(목업 대비 글자가 줄어든 원인). 문턱(128) 위 텍셀의 사각을 재고
-        #   가장자리 AA 에 필요한 2 텍셀만 넓혀 **먹 사각**을 낸다. 렌더는 이 사각을 쓴다.
+        #   작아진다. 문턱(128) 위 텍셀의 사각을 재고 가장자리 AA 에 필요한 2 텍셀만
+        #   넓혀 **먹 사각**을 낸다. 렌더는 이 사각을 쓴다.
         ink = Rq >= 128.0
         if ink.any():
             ys, xs_ = np.where(ink)
@@ -251,7 +382,11 @@ def main():
             ix1 = min(tw, int(xs_.max()) + 3); iy1 = min(th, int(ys.max()) + 3)
         else:
             ix0, iy0, ix1, iy1 = 0, 0, tw, th
-        tiles.append(dict(idx=idx, ring=rec['ring'], g=g, w=tw, h=th, gain=gain,
+        if ink.any():
+            inkC = (float(xs_.mean()), float(ys.mean()))
+        else:
+            inkC = (tw / 2.0, th / 2.0)
+        tiles.append(dict(idx=idx, ring=rec['ring'], g=g, w=tw, h=th, gain=gain, inkC=inkC,
                           R=Rq.astype(np.uint8),
                           Gc=np.clip(Gq, 0, 255).astype(np.uint8),
                           inkBox=[ix0, iy0, ix1 - ix0, iy1 - iy0],
@@ -300,6 +435,9 @@ def main():
             # 판 화소 단위 사각 (SDF 여백 포함) — 화면 비율의 근거
             plateBox=[float(v) for v in t['plateBox']],
             # 서브아틀라스 텍셀 사각 — **먹 사각**(렌더가 쓰는 것)
+            #  ⚠ 종자자만 예외: 통일 창 자체를 렌더 사각으로 쓴다. 먹 사각으로 정규화하면
+            #    판에서 작게 쓰인 자(아래 행)가 화면에서 홀로 크게 부풀고, 납작한 자는
+            #    좌우로 늘어나 한 글자로 읽히지 않는다(it.1 판정 種字 07).
             atlas=[t['ax'] + ib[0], t['ay'] + ib[1], ib[2], ib[3]],
             uv=[round((t['ax'] + ib[0]) / AW, 8), round((t['ay'] + ib[1]) / AH, 8),
                 round((t['ax'] + ib[0] + ib[2]) / AW, 8), round((t['ay'] + ib[1] + ib[3]) / AH, 8)],
@@ -308,6 +446,17 @@ def main():
             atlasTile=[t['ax'], t['ay'], t['w'], t['h']],
             densGate=pm['densGate'],
         )
+        if t['ring'] == 'seed':
+            # 종자자는 통일 창을 그대로 렌더 사각으로 쓰고, 창 안 잉크 무게중심의
+            # 어긋남을 함께 실어 렌더가 **중심에 세우도록** 한다(판 가장자리 칸은 창이
+            # 클램프되어 글자가 창 안에서 치우친다).
+            entry['atlas'] = [t['ax'], t['ay'], t['w'], t['h']]
+            entry['uv'] = [round(t['ax'] / AW, 8), round(t['ay'] / AH, 8),
+                           round((t['ax'] + t['w']) / AW, 8), round((t['ay'] + t['h']) / AH, 8)]
+            entry['aspect'] = round(t['w'] / t['h'], 6)
+            entry['inkBox'] = ib
+            entry['centerOffset'] = [round(t['inkC'][0] / t['w'] - 0.5, 6),
+                                     round(t['inkC'][1] / t['h'] - 0.5, 6)]
         rings_out.setdefault(t['ring'], []).append(entry['id'])
         groups.append(entry)
 

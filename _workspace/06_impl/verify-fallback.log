@@ -1,4 +1,4 @@
-폴백: {"mode":"raster","webgl2":false,"beat":"210"} fps= 61
+폴백: {"mode":"raster","webgl2":false,"beat":"210"} fps= 60.3
 console(7):
   [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
   [log] Current API_BASE_URL: http://localhost:8000/api
