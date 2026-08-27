@@ -37,9 +37,10 @@ export const State: React.FC<{ text: string; onRetry?: () => void }> = ({ text, 
   </section>
 );
 
-/** 로그인 상태에서만 보이는 편집 안내(작성·수정·순서편집은 레거시 편집기에 그대로 있다). */
-export const AdminLine: React.FC = () => (
+/** 로그인 상태에서만 보이는 편집 안내(작성·수정·순서편집은 레거시 편집기에 그대로 있다).
+ *  page 를 주면 그 페이지의 레거시 편집 화면(/legacy/work 등)으로 곧장 간다. */
+export const AdminLine: React.FC<{ page?: 'about' | 'work' | 'commons' | 'cv' | 'contact' }> = ({ page }) => (
   <div className="adminline">
-    편집 · <a href="/legacy">레거시 편집기</a>에서 작성·수정·순서편집
+    편집 · <a href={page ? `/legacy/${page}` : '/legacy'}>레거시 편집기</a>에서 작성·수정·순서편집
   </div>
 );

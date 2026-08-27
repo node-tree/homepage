@@ -109,7 +109,7 @@
       "continue": true
     },
     {
-      "src": "/legacy/?",
+      "src": "/legacy(/.*)?",
       "headers": {
         "X-Robots-Tag": "noindex, follow"
       },

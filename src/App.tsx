@@ -305,8 +305,13 @@ function AppContent() {
   }, []);
 
   // URL 경로에 따라 페이지 설정
+  //   /legacy/<page> (레거시 편집기 라우트) 는 접두어를 벗겨 낸 뒤 같은 규칙으로 읽는다.
+  //   /legacy(접두어만) = HOME. 그래야 AdminLine 이 안내한 /legacy/work 가
+  //   레거시 Work 편집 화면으로 실제 도달한다(이전엔 전부 HOME 으로 떨어졌다).
   useEffect(() => {
-    const path = location.pathname.toUpperCase().replace('/', '');
+    const segments = location.pathname.split('/').filter(Boolean);
+    const rest = segments[0]?.toUpperCase() === 'LEGACY' ? segments.slice(1) : segments;
+    const path = (rest[0] || '').toUpperCase();
     if (path === '' || path === 'HOME') {
       setCurrentPage('HOME');
     } else if (path === 'LOGIN') {
@@ -327,9 +332,16 @@ function AppContent() {
       prefetch();
     }
     setCurrentPage(page);
-    navigate(page === 'HOME' ? '/' : `/${page.toLowerCase()}`);
+    // 레거시 안(/legacy·/legacy/*)에서는 레거시 내비로 순환한다 —
+    // 여기서 /work 로 나가면 v5 읽기전용 페이지로 새어 편집 UI 에 못 돌아온다.
+    const inLegacy = /^\/legacy(\/|$)/i.test(location.pathname);
+    if (inLegacy) {
+      navigate(page === 'HOME' ? '/legacy' : `/legacy/${page.toLowerCase()}`);
+    } else {
+      navigate(page === 'HOME' ? '/' : `/${page.toLowerCase()}`);
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [navigate]);
+  }, [navigate, location.pathname]);
 
   // 로그인 페이지일 때는 별도 렌더링
   if (location.pathname === '/login') {
@@ -548,8 +560,11 @@ function App() {
               <Route path="/works-v5" element={<Navigate to="/work" replace />} />
               <Route path="/about-v5" element={<Navigate to="/about" replace />} />
               <Route path="/index" element={<Navigate to="/cv" replace />} />
-              {/* 기존 홈(three.js 파티클 + 상태 기반 페이지 전환)은 삭제하지 않고 /legacy 로 */}
+              {/* 기존 홈(three.js 파티클 + 상태 기반 페이지 전환)은 삭제하지 않고 /legacy 로.
+                  /legacy/<page>(about·work·commons·cv·contact)는 그 페이지의 레거시
+                  편집 UI(작성·수정·삭제·순서편집)로 곧장 들어가는 문이다. */}
               <Route path="/legacy" element={<AppContent />} />
+              <Route path="/legacy/:page" element={<AppContent />} />
 
               <Route path="*" element={<AppContent />} />
             </Routes>

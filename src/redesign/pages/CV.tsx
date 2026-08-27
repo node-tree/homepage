@@ -119,7 +119,7 @@ const CV: React.FC = () => {
               );
             })}
             <div className="src">출처 · nodetree.kr DB /api/cv — {total}행. 밑줄(_)로 구분된 장소는 우단으로 옮겼다.</div>
-            {isAuthenticated && <AdminLine />}
+            {isAuthenticated && <AdminLine page="cv" />}
           </div>
 
           <div className="anchors">

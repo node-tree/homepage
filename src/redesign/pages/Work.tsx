@@ -126,7 +126,7 @@ const Work: React.FC = () => {
               <div className="src">
                 출처 · nodetree.kr DB /api/work — {list.length}건. 매체·장소는 DB 에 기재된 값이 없어 자리만 둔다.
               </div>
-              {isAuthenticated && <AdminLine />}
+              {isAuthenticated && <AdminLine page="work" />}
             </div>
 
             <div className="filt">

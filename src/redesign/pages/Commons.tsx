@@ -146,7 +146,7 @@ const Commons: React.FC = () => {
                 출처 · nodetree.kr DB /api/filed — {list.length}건{cat === '전체' ? '' : ` · 분류 ${cat} ${shown.length}건`}.
                 도판 흐름은 최근 8건, 인덱스는 전량.
               </div>
-              {isAuthenticated && <AdminLine />}
+              {isAuthenticated && <AdminLine page="commons" />}
             </div>
           </section>
         </>

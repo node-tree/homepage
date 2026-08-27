@@ -67,7 +67,7 @@ const About: React.FC = () => {
             )}
             {isAuthenticated && (
               <div className="adminline">
-                편집 · <a href="/legacy">레거시 편집기</a>에서 수정한다
+                편집 · <a href="/legacy/about">레거시 편집기</a>에서 수정한다
               </div>
             )}
           </div>

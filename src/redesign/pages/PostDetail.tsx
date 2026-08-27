@@ -186,7 +186,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ kind, base, label }) => {
               <div className="src" style={{ marginTop: 36 }}>
                 출처 · nodetree.kr DB {kind === 'work' ? '/api/work' : '/api/filed'} · {post.id}
               </div>
-              {isAuthenticated && <AdminLine />}
+              {isAuthenticated && <AdminLine page={kind === 'work' ? 'work' : 'commons'} />}
             </div>
           </section>
 
