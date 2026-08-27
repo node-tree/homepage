@@ -14,6 +14,12 @@ import { contactAPI } from '../../services/api';
 const ensureProtocol = (url: string): string =>
   !url ? url : url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
 
+// 표시 텍스트만 줄인다(href 는 언제나 전체 URL).
+//   'https://www.instagram.com/node.tree' → 'instagram.com/node.tree'
+//   390px 에서 프로토콜·www 까지 한 토막이라 값 칸을 20px 밀어냈다(계선 밖 넘침).
+const displayUrl = (url: string): string =>
+  !url ? url : url.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/+$/, '');
+
 const Contact: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const { data, error, loading, reload } = useContact();
@@ -138,9 +144,9 @@ const Contact: React.FC = () => {
                 <div className="prow out" key={`${l.name}-${l.url}`}>
                   <span className="n">{l.name}</span>
                   <span>
-                    {/* 주소는 DB 에 적힌 그대로 보인다(프로토콜을 임의로 지우지 않는다) */}
+                    {/* href 는 DB 원문(프로토콜 보강)을 그대로, 표시만 도메인부터 */}
                     <a href={ensureProtocol(l.url)} target="_blank" rel="noopener noreferrer">
-                      {l.url}
+                      {displayUrl(l.url)}
                     </a>
                   </span>
                 </div>
@@ -149,7 +155,7 @@ const Contact: React.FC = () => {
           )}
 
           <div className="src">출처 · nodetree.kr DB /api/contact</div>
-          {isAuthenticated && <AdminLine />}
+          {isAuthenticated && <AdminLine page="contact" />}
         </div>
       </section>
     </NtPage>

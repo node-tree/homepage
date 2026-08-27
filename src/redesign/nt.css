@@ -261,6 +261,9 @@
   font-size: 14px; color: var(--g1); border-bottom: 1px solid var(--line);
 }
 .nt .prow .n { color: var(--ink); }
+/* 값 칸은 긴 주소(URL·메일)를 계선 안에서 접는다 —
+   grid item 기본 min-width:auto 가 넘침을 만든다(390px /contact 20px 넘침 실측). */
+.nt .prow > * { min-width: 0; overflow-wrap: anywhere; }
 .nt .prow.out { border-bottom: 1px dashed var(--line); }
 .nt .sambe { display: flex; align-items: flex-end; gap: 22px; margin-top: 16px; color: var(--g2); }
 .nt .sambe .cap { font-size: 13.5px; color: var(--g1); line-height: 1.9; padding-bottom: 6px; }
