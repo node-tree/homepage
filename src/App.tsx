@@ -6,6 +6,7 @@ import './App.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import SeoHead from './components/SeoHead';
 import PageLoader from './components/PageLoader';
+import NtBoot from './redesign/components/NtBoot';
 import { playHoverSound, playClickSound, playNavSound, initAudioContext } from './utils/sound';
 import { prefetchAPI } from './services/api';
 
@@ -31,6 +32,18 @@ const Buyeo = lazy(() => import('./components/Buyeo'));
 const MediaAdmin = lazy(() => import('./components/MediaAdmin'));
 // [임시] 다라니 시계 검수 라우트 — 홈 히어로 편입 전까지만 유지한다
 const DharaniClockPage = lazy(() => import('./components/DharaniClockPage'));
+
+// [v5 리디자인] 새 페이지 5종(src/redesign) — nt.css 를 자기 청크로 들고 오므로
+// 레거시 라우트에는 로드되지 않는다. 기존 홈은 /legacy 로 남는다(삭제 금지).
+const NtHome = lazy(() => import('./redesign/pages/Home'));
+const NtWorks = lazy(() => import('./redesign/pages/Works'));
+const NtWork = lazy(() => import('./redesign/pages/Work'));
+const NtIndex = lazy(() => import('./redesign/pages/IndexPage'));
+const NtAbout = lazy(() => import('./redesign/pages/About'));
+// 삼베 대리 신체는 라우트 전환에도 언마운트되면 안 되므로 <Routes> 바깥에 둔다(설계 §4.3).
+const SambeWalker = lazy(() => import('./redesign/components/SambeWalker'));
+// v5 전용 로딩 자리(웹폰트 요청 0). 인라인 스타일만 쓰므로 메인 번들에 nt.css 를 끌어오지 않는다.
+const ntBoot = (el: React.ReactNode) => <Suspense fallback={<NtBoot />}>{el}</Suspense>;
 
 // /kkumdarak 리다이렉트 별칭 — hash(#admin/#intro 등)과 query를 보존한 채 /iso로 리다이렉트.
 // Kkumdarak가 window.location.hash를 직접 읽으므로 hash 유지가 필수(기존 발행 URL nodetree.kr/kkumdarak#intro 보존).
@@ -506,8 +519,26 @@ function App() {
               {/* [임시] 다라니 시계 검수 — /clock */}
               <Route path="/clock" element={<DharaniClockPage />} />
               <Route path="/work/research/:postId" element={<WorkResearch />} />
+
+              {/* ── v5 리디자인 5종 (설계 §1.2 URL 유지) ──
+                  각자 Suspense 경계를 따로 두는 이유: 공용 PageLoader 의 「불러오는 중…」이
+                  body 의 S-CoreDream(168 KB)을 깨워 새 페이지에서 쓰지도 않는 폰트를 받는다(실측). */}
+              <Route path="/" element={ntBoot(<NtHome />)} />
+              <Route path="/work" element={ntBoot(<NtWorks />)} />
+              <Route path="/work/:slug" element={ntBoot(<NtWork />)} />
+              <Route path="/index" element={ntBoot(<NtIndex />)} />
+              <Route path="/about" element={ntBoot(<NtAbout />)} />
+              {/* 기존 발행 URL /cv → 인덱스의 활동 연혁 앵커로 */}
+              <Route path="/cv" element={<Navigate to="/index#cv" replace />} />
+              {/* 기존 홈(three.js 파티클 + 상태 기반 페이지 전환)은 삭제하지 않고 /legacy 로 */}
+              <Route path="/legacy" element={<AppContent />} />
+
               <Route path="*" element={<AppContent />} />
             </Routes>
+          </Suspense>
+          {/* 삼베 대리 신체 — Routes 밖이라 라우트가 바뀌어도 유지된다(v5 라우트에서만 보인다) */}
+          <Suspense fallback={null}>
+            <SambeWalker />
           </Suspense>
         </BrowserRouter>
       </AuthProvider>

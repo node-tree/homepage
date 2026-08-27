@@ -1,0 +1,63 @@
+/* ══════════════════════════════════════════════════════════════════════
+   fonts.css — v5 리디자인 서체 self-host (설계 §3)
+   파일 생성: scripts/build-fonts-redesign.sh → src/assets/fonts/redesign/*.woff2
+   · 절대경로 url(/fonts/...) 는 CRA css-loader 가 빌드 타임에 해석하려다 실패하므로
+     (src/index.css 상단 주석 참조) 여기서는 **상대경로**로 두어 webpack 이 해시 URL 로 방출한다.
+   · font-display: swap — FOIT 대신 폴백 즉시 표시.
+   · Noto Sans KR 은 src/redesign 실사용 글자만 담은 서브셋(수십 KB)이다.
+   ══════════════════════════════════════════════════════════════════════ */
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../assets/fonts/redesign/PlexSans-400.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../assets/fonts/redesign/PlexSans-500.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../assets/fonts/redesign/PlexMono-400.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../assets/fonts/redesign/PlexMono-500.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Noto Sans KR';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('../assets/fonts/redesign/NotoSansKR-300.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Noto Sans KR';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../assets/fonts/redesign/NotoSansKR-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Noto Sans KR';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../assets/fonts/redesign/NotoSansKR-500.woff2') format('woff2');
+}

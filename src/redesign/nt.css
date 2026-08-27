@@ -1,0 +1,383 @@
+/* ══════════════════════════════════════════════════════════════════════
+   nt.css — nodetree.kr v5 공통 조판 (올라퍼 뼈대 + 정간 20)
+   정본: _workspace/03_mock/v5/nt.css — 클래스명·색·수치를 그대로 이식하고
+   선택자만 `.nt` 로 감쌌다(기존 App.css 5,183 줄과 격리. 새 라우트에서만 로드).
+   모바일: 목업의 `body.m` 규칙 = 여기서는 @media (max-width:767px).
+   ══════════════════════════════════════════════════════════════════════ */
+@import './fonts.css';
+
+.nt {
+  --bg: #FAFAF9;
+  --ink: #0F0F1A;
+  --g1: #3A3A3A;
+  --g2: #6B6B6B;
+  --g3: #B2B2B2;
+  --line: #E4E2DC;
+  --juseo: #BE3C28;
+  --jeong: calc(100vw / 20);
+  --beat: 9508ms;
+  --tick: 297ms;           /* 박/32 — 모션 리듬(설계 §2.3) */
+  /* 도판 placeholder. 절대경로 url(/...) 는 css-loader 가 빌드 타임에 해석하려다 실패하므로
+     상대경로로 둔다. 실도판은 ImageKit 절대 URL(https://ik.imagekit.io/gc3jtyt9o/...)로 교체 — 그때는 외부
+     URL 이라 css-loader 가 건드리지 않는다. */
+  --plate: url(../assets/redesign/doc.webp);
+  --mono: 'IBM Plex Mono', 'Noto Sans KR', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans: 'IBM Plex Sans', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  --kr: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--kr);
+  font-weight: 300;
+  font-size: 15px;
+  line-height: 1.85;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+.nt *,
+.nt *::before,
+.nt *::after { box-sizing: border-box; margin: 0; padding: 0; }
+.nt a { color: inherit; text-decoration: none; }
+.nt a:hover { color: var(--juseo); }
+
+/* ── 헤더 ── */
+.nt header {
+  position: fixed; top: 0; left: 0; right: 0; height: 56px; z-index: 50;
+  display: grid; grid-template-columns: repeat(20, 1fr); align-items: center;
+  background: var(--bg);
+}
+.nt header .brand {
+  grid-column: 1/5; padding-left: 24px;
+  font-family: var(--sans); font-weight: 500; font-size: 15px; letter-spacing: .01em;
+}
+.nt header .brand span {
+  font-family: var(--kr); font-weight: 300; color: var(--g2); margin-left: 10px; font-size: 13px;
+}
+.nt header .nav {
+  grid-column: 9/13; display: flex; gap: 28px; justify-content: center;
+  font-family: var(--sans); font-size: 13px; color: var(--g2);
+}
+.nt header .nav a.on { color: var(--ink); }
+.nt header .clock {
+  grid-column: 16/21; display: flex; justify-content: flex-end; align-items: center;
+  gap: 14px; padding-right: 24px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .06em; color: var(--g2);
+}
+.nt header .clock b { font-weight: 500; color: var(--ink); }
+.nt header .clock i { display: inline-block; width: 6px; height: 6px; background: var(--juseo); }
+.nt main { padding-top: 56px; }
+
+/* ── 페이지 표제 ── */
+.nt .pagehead {
+  display: grid; grid-template-columns: repeat(20, 1fr); padding: 88px 0 40px; align-items: end;
+}
+.nt .pagehead h1 {
+  grid-column: 2/9; font-weight: 400; font-size: 28px; line-height: 1.5; letter-spacing: -.01em;
+}
+.nt .pagehead h1 em {
+  font-style: normal; font-family: var(--sans); font-weight: 500; font-size: 15px;
+  color: var(--g2); margin-left: 14px; letter-spacing: .02em;
+}
+.nt .pagehead .note {
+  grid-column: 13/20; max-width: 62ch; font-size: 14px; color: var(--g1); line-height: 1.9;
+}
+.nt .pagehead .lab {
+  grid-column: 2/9; font-family: var(--mono); font-size: 11px; letter-spacing: .08em;
+  color: var(--g3); margin-bottom: 10px;
+}
+.nt .hair { height: 1px; background: var(--line); margin: 0 calc(var(--jeong) * 1) 0 calc(var(--jeong) * 1); }
+.nt .hair.dae { height: 2px; background: var(--ink); }
+
+/* ── 도판 창(봉인/개봉) ── */
+.nt .plate {
+  display: block; width: 100%; aspect-ratio: 16/9;
+  background: var(--plate) center/cover no-repeat;
+  filter: brightness(.72);
+  transition: filter .3s cubic-bezier(.16, 1, .3, 1);
+}
+.nt .plate:hover { filter: brightness(1); }
+.nt .plate.open { filter: brightness(1); }
+.nt .plate.absent { background: none; border: 1px dashed var(--line); filter: none; position: relative; }
+.nt .plate.absent::after {
+  content: attr(data-absent); position: absolute; left: 14px; bottom: 12px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: var(--g3);
+}
+
+/* ── 피드 항목(정간 어긋남 3·5·8·11·13·16) ── */
+.nt .item { position: relative; display: grid; grid-template-columns: repeat(20, 1fr); padding: 64px 0 24px; }
+.nt .item .fig { position: relative; }
+.nt .item .cap { margin-top: 14px; max-width: 62ch; color: var(--g1); font-size: 14px; line-height: 1.9; }
+.nt .item .cap p + p { margin-top: 12px; }
+.nt .item .cap .h { font-weight: 400; color: var(--ink); }
+.nt .item .cap .m {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .06em; color: var(--g2);
+  margin-top: 10px; display: flex; gap: 18px; flex-wrap: wrap;
+}
+.nt .item .cap .m .t { color: var(--g3); }
+.nt .item .cap .m .now { color: var(--juseo); }
+.nt .i1 .fig { grid-column: 9/19; }
+.nt .i2 .fig { grid-column: 6/16; }
+.nt .i3 .fig { grid-column: 3/12; }
+.nt .i4 .fig { grid-column: 11/20; }
+.nt .i5 .fig { grid-column: 5/13; }
+.nt .i6 .fig { grid-column: 8/17; }
+.nt .i7 .fig { grid-column: 2/9; }
+.nt .i8 .fig { grid-column: 12/19; }
+
+/* ── 텍스트 인덱스(확신도 선질) ── */
+.nt .index { display: grid; grid-template-columns: repeat(20, 1fr); padding: 24px 0 0; }
+.nt .index .rows { grid-column: 2/16; }
+.nt .index .filt {
+  grid-column: 17/20; position: sticky; top: 96px; align-self: start;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--g3); line-height: 2.4;
+}
+.nt .index .filt b { display: block; color: var(--g2); font-weight: 400; margin-bottom: 10px; }
+.nt .index .filt a { cursor: pointer; }
+.nt .index .filt a.on { color: var(--ink); }
+.nt .index .filt .key { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 14px; line-height: 2.1; }
+.nt .grp {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .1em; color: var(--g3);
+  padding: 34px 0 10px; border-bottom: 1px solid var(--line);
+}
+.nt .grp:first-child { padding-top: 0; }
+.nt .row {
+  display: grid; grid-template-columns: 5.2fr 3.6fr 1fr 3.2fr; gap: 20px;
+  padding: 11px 0; border-bottom: 1px solid var(--line); font-size: 14px; align-items: baseline;
+}
+.nt .row:hover .t { color: var(--juseo); }
+/* 제목을 상세로 링크해도 격자는 목업과 같아야 한다 — 링크는 격자에서 사라지고 자식이 칸을 차지한다
+   (display:contents 없이 감싸면 baseline 정렬이 밀려 행 높이가 3px 커진다 — 실측) */
+.nt .row > a { display: contents; }
+.nt .row .t { color: var(--ink); font-weight: 400; justify-self: start; }
+.nt .row .t.measured { border-bottom: 2px solid var(--ink); padding-bottom: 1px; }
+.nt .row .t.stated { border-bottom: 1px solid var(--g2); padding-bottom: 2px; }
+.nt .row .t.proxy { border-bottom: 1px dashed var(--g2); padding-bottom: 2px; }
+.nt .row .md { color: var(--g1); font-size: 13px; }
+.nt .row .yr,
+.nt .row .pl { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; color: var(--g2); }
+.nt .row .pl.absent { color: var(--line); }
+
+/* ── 세로쓰기 메타 ── */
+.nt .metav {
+  writing-mode: vertical-rl; text-orientation: mixed; height: 560px;
+  font-size: 13.5px; line-height: 2.2; color: var(--g1); letter-spacing: .02em;
+}
+.nt .metav b { font-weight: 400; color: var(--ink); }
+.nt .metav .k { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; color: var(--g3); }
+.nt .metav dl { display: block; }
+.nt .metav div { margin-left: 26px; }
+
+/* ── 본문 ── */
+.nt .body { font-size: 15px; line-height: 1.9; max-width: 62ch; color: var(--g1); }
+.nt .body p + p { margin-top: 20px; }
+.nt .body h2 {
+  font-size: 15px; font-weight: 400; color: var(--ink); margin: 44px 0 14px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--line);
+}
+.nt .src {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .05em; color: var(--g3);
+  margin-top: 16px; line-height: 1.9;
+}
+
+/* ── 보행로 + 푸터 ── */
+.nt .rail { position: relative; height: 1px; background: var(--line); margin: 96px calc(var(--jeong) * 1) 0; }
+.nt footer {
+  display: grid; grid-template-columns: repeat(20, 1fr); padding: 40px 0 64px;
+  font-family: var(--sans); font-size: 12px; color: var(--g2); line-height: 1.8;
+}
+.nt footer div { grid-column: span 4; }
+.nt footer div:first-child { grid-column: 2/6; }
+.nt footer b { display: block; color: var(--ink); font-weight: 500; margin-bottom: 4px; }
+
+/* ── 소형 시계(상세 우상단 56px) ── */
+.nt .miniclock { position: absolute; top: 0; right: calc(var(--jeong) * 1); width: 56px; height: 56px; }
+.nt .miniclock circle { fill: none; stroke: var(--line); stroke-width: 14; }
+.nt .miniclock circle.k { stroke: var(--ink); stroke-width: 18; }
+.nt .miniclock line.h1 { stroke: var(--juseo); stroke-width: 22; }
+.nt .miniclock line.h2 { stroke: var(--ink); stroke-width: 18; }
+
+/* ── 작품 상세 ── */
+.nt .detail { position: relative; display: grid; grid-template-columns: repeat(20, 1fr); padding: 76px 0 0; }
+.nt .detail .meta { grid-column: 1/4; padding-left: 24px; }
+.nt .detail .txt { grid-column: 5/17; }
+.nt .detail .title { font-size: 26px; font-weight: 400; line-height: 1.5; letter-spacing: -.01em; margin-bottom: 6px; }
+.nt .detail .title em {
+  font-style: normal; font-family: var(--sans); font-weight: 500; font-size: 14px;
+  color: var(--g2); margin-left: 14px;
+}
+.nt .detail .sub {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--g3); margin-bottom: 38px;
+}
+.nt .fw { margin: 34px 0 0; }
+.nt .fw .fcap { margin-top: 12px; font-family: var(--mono); font-size: 11px; letter-spacing: .05em; color: var(--g2); }
+.nt .nextwork {
+  display: grid; grid-template-columns: repeat(20, 1fr); margin-top: 96px;
+  border-top: 1px solid var(--line); padding-top: 18px;
+}
+.nt .nextwork a {
+  grid-column: 5/17; display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 15px; color: var(--ink);
+}
+.nt .nextwork a .k { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; color: var(--g3); }
+
+/* ── 아카이브 인덱스 ── */
+.nt .arch { display: grid; grid-template-columns: repeat(20, 1fr); }
+.nt .arch .anchors {
+  grid-column: 17/20; position: sticky; top: 96px; align-self: start;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--g3); line-height: 2.4;
+}
+.nt .arch .anchors b { display: block; color: var(--g2); font-weight: 400; margin-bottom: 8px; }
+.nt .arch .anchors .cnt { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 14px; line-height: 2.1; }
+.nt .arch .list { grid-column: 2/16; }
+.nt .yrow {
+  display: grid; grid-template-columns: 2fr 2.4fr 9fr 3fr; gap: 20px; padding: 11px 0;
+  border-bottom: 1px solid var(--line); font-size: 14px; align-items: baseline;
+  scroll-margin-top: 96px;                 /* 고정 헤더(56px) 가림 방지 — 앵커 점프 */
+}
+.nt .yrow .y { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; color: var(--ink); }
+.nt .yrow .y.dim { color: var(--line); }
+.nt .yrow .tag { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; color: var(--g3); }
+.nt .yrow .e { color: var(--g1); }
+.nt .yrow .e b { font-weight: 400; color: var(--ink); }
+.nt .yrow .pl { font-family: var(--mono); font-size: 11px; letter-spacing: .05em; color: var(--g2); }
+.nt .yrow .pl.absent { color: var(--line); }
+.nt .yrow.head { border-bottom: 2px solid var(--ink); padding-top: 44px; }
+.nt .yrow.head .tag { color: var(--ink); }
+
+/* ── About ── */
+.nt .about { display: grid; grid-template-columns: repeat(20, 1fr); padding: 0; }
+.nt .about .lft { grid-column: 2/8; }
+.nt .about .rgt { grid-column: 9/19; }
+.nt .about .lft p { font-size: 15px; line-height: 1.95; color: var(--g1); }
+.nt .about .lft p + p { margin-top: 20px; }
+.nt .blk { margin-bottom: 52px; }
+.nt .blk > b {
+  display: block; font-family: var(--mono); font-size: 11px; letter-spacing: .1em; color: var(--g3);
+  font-weight: 400; padding-bottom: 10px; border-bottom: 1px solid var(--line); margin-bottom: 16px;
+}
+.nt .blk.out > b { border-bottom: 1px dashed var(--g3); }
+.nt .prow {
+  display: grid; grid-template-columns: 2.2fr 7fr; gap: 20px; padding: 9px 0;
+  font-size: 14px; color: var(--g1); border-bottom: 1px solid var(--line);
+}
+.nt .prow .n { color: var(--ink); }
+.nt .prow.out { border-bottom: 1px dashed var(--line); }
+.nt .sambe { display: flex; align-items: flex-end; gap: 22px; margin-top: 16px; color: var(--g2); }
+.nt .sambe .cap { font-size: 13.5px; color: var(--g1); line-height: 1.9; padding-bottom: 6px; }
+.nt .sambe img.seedsym { width: 48px; height: auto; mix-blend-mode: multiply; align-self: flex-end; }
+
+/* ── 홈 히어로(다라니 시계) 자리 ──
+   시계 컴포넌트(.dclock)는 자체 CSS 를 갖는다. 여기서는 헤더 아래 자리만 잡는다. */
+.nt .hero-slot { margin-top: 56px; }
+.nt .hero-slot .dclock { min-height: min(1024px, calc(100vh - 56px)); }
+/* 히어로가 있는 페이지(홈)는 헤더 클리어런스를 히어로가 이미 가졌다 */
+.nt .hero-slot + main { padding-top: 0; }
+
+/* ── 페이지 진입(삼베가 먼저 도착한 뒤 콘텐츠) ── */
+.nt .reveal { opacity: 0; transform: translateY(6px); }
+.nt .reveal.in {
+  opacity: 1; transform: none;
+  transition: opacity var(--tick) cubic-bezier(.16, 1, .3, 1), transform var(--tick) cubic-bezier(.16, 1, .3, 1);
+}
+
+/* ══════════════ 모바일 390 (목업 body.m) ══════════════ */
+@media (max-width: 767px) {
+  .nt { --jeong: calc(100vw / 10); font-size: 14px; }
+  .nt header {
+    height: 92px; grid-template-columns: repeat(10, 1fr); grid-template-rows: 52px 40px; align-items: center;
+  }
+  .nt header .brand { grid-column: 1/7; grid-row: 1; padding-left: 16px; font-size: 14px; }
+  .nt header .brand span { font-size: 11px; margin-left: 8px; }
+  .nt header .clock { grid-column: 7/11; grid-row: 1; padding-right: 16px; gap: 8px; font-size: 10px; }
+  .nt header .nav {
+    grid-column: 1/11; grid-row: 2; justify-content: space-between; gap: 0; padding: 0 16px;
+    font-size: 12px; border-top: 1px solid var(--line); height: 40px; align-items: center;
+  }
+  .nt main { padding-top: 92px; }
+  .nt .hero-slot { margin-top: 92px; }
+  .nt .hero-slot .dclock { min-height: 0; }
+  .nt .pagehead { grid-template-columns: repeat(10, 1fr); padding: 36px 0 24px; }
+  .nt .pagehead h1 { grid-column: 2/10; font-size: 22px; }
+  .nt .pagehead h1 em { display: block; margin-left: 0; font-size: 12px; }
+  .nt .pagehead .lab,
+  .nt .pagehead .note { grid-column: 2/10; }
+  .nt .pagehead .note { margin-top: 14px; font-size: 13px; }
+  .nt .hair { margin: 0 var(--jeong); }
+  .nt .item { grid-template-columns: repeat(10, 1fr); padding: 32px 0 8px; }
+  .nt .item .fig { grid-column: 2/10 !important; }
+  .nt .item .cap { font-size: 13px; line-height: 1.85; }
+  .nt .item .cap .m { font-size: 10px; gap: 12px; }
+  .nt .index,
+  .nt .arch,
+  .nt .about,
+  .nt .detail,
+  .nt .nextwork { grid-template-columns: repeat(10, 1fr); }
+  .nt .index .rows,
+  .nt .arch .list,
+  .nt .about .lft,
+  .nt .about .rgt,
+  .nt .detail .meta,
+  .nt .detail .txt,
+  .nt .nextwork a { grid-column: 2/10; }
+  .nt .detail .meta { padding-left: 0; }
+  .nt .detail { padding-top: 28px; }
+  .nt .index .filt,
+  .nt .arch .anchors {
+    grid-column: 2/10; position: static; display: flex; flex-wrap: wrap; gap: 14px;
+    line-height: 1.9; margin-bottom: 22px;
+  }
+  .nt .index .filt b,
+  .nt .arch .anchors b { margin-bottom: 0; }
+  .nt .index .filt .key,
+  .nt .arch .anchors .cnt { margin-top: 0; border-top: 0; padding-top: 0; flex-basis: 100%; }
+  .nt .row,
+  .nt .yrow { display: block; padding: 12px 0; }
+  .nt .row .t { display: inline-block; margin-bottom: 4px; font-size: 13.5px; }
+  .nt .row .md,
+  .nt .row .yr,
+  .nt .row .pl {
+    display: inline; font-family: var(--mono); font-size: 10.5px; color: var(--g2); letter-spacing: .04em;
+  }
+  .nt .row .md,
+  .nt .row .yr { position: relative; }
+  .nt .row .yr::after { content: ' · '; }
+  .nt .row .md::after { content: ' · '; }
+  .nt .row .pl.absent { display: none; }
+  .nt .row .t.measured,
+  .nt .row .t.stated,
+  .nt .row .t.proxy { display: inline; }
+  .nt .yrow .y { display: inline-block; margin-right: 10px; font-size: 11px; }
+  .nt .yrow .tag { display: inline; margin-right: 10px; }
+  .nt .yrow .e { display: block; margin-top: 4px; font-size: 13.5px; }
+  .nt .yrow .pl { display: block; margin-top: 3px; font-size: 10.5px; }
+  .nt .yrow .pl.absent { display: none; }
+  .nt .yrow.head { padding-top: 32px; }
+  .nt .metav {
+    writing-mode: horizontal-tb; height: auto; font-family: var(--mono); font-size: 10.5px;
+    letter-spacing: .05em; color: var(--g2); line-height: 2; margin-bottom: 26px;
+    border-bottom: 1px solid var(--line); padding-bottom: 14px;
+  }
+  .nt .metav div { margin-left: 0; display: inline; }
+  .nt .metav div::after { content: ' · '; }
+  .nt .metav div:last-child::after { content: ''; }
+  .nt .metav .k { font-size: 10px; }
+  .nt .body,
+  .nt .about .lft p { font-size: 14px; line-height: 1.9; }
+  .nt .detail .title { font-size: 20px; }
+  .nt .miniclock { display: none; }
+  .nt .prow { grid-template-columns: auto 1fr; gap: 14px; font-size: 13px; }
+  .nt .prow .n { white-space: nowrap; }
+  .nt .rail { margin: 56px var(--jeong) 0; }
+  .nt footer { grid-template-columns: repeat(10, 1fr); padding: 32px 0 48px; }
+  .nt footer div,
+  .nt footer div:first-child { grid-column: 2/10; margin-bottom: 16px; }
+  .nt .sambe { gap: 16px; }
+  .nt .yrow { scroll-margin-top: 108px; }
+}
+
+/* ── 접근성 ── */
+@media (prefers-reduced-motion: reduce) {
+  .nt .plate { transition: none; }
+  .nt .reveal,
+  .nt .reveal.in { opacity: 1; transform: none; transition: none; }
+}

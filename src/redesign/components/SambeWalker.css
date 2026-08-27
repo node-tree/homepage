@@ -1,0 +1,38 @@
+/* 삼베 대리 신체 전역 레이어 — 설계 §4.3
+   z-index 40 = 고정 헤더(50) 아래. pointer-events 없음(장식 아님·조작 유도 금지). */
+.ntwalker {
+  position: fixed;
+  left: 0;
+  bottom: 28px;
+  width: 36px;
+  height: 64px;
+  z-index: 40;
+  pointer-events: none;
+  color: #6B6B6B;
+  will-change: transform;
+  transform: translate3d(-200px, 0, 0);   /* 스프라이트 로드 전에는 화면 밖 */
+}
+/* 레거시 라우트(/legacy·/iso·/ocean 등)에서는 나타나지 않는다 — 언마운트는 하지 않는다 */
+.ntwalker--off { display: none; }
+
+.ntwalker__fig,
+.ntwalker__fig svg {
+  width: 36px;
+  height: 64px;
+  display: block;
+}
+
+@media (max-width: 767px) {
+  .ntwalker,
+  .ntwalker__fig,
+  .ntwalker__fig svg { width: 27px; height: 48px; }
+}
+
+/* 320px 이하 세로 화면은 비표시(설계 §4.3) */
+@media (max-width: 320px) {
+  .ntwalker { display: none; }
+}
+
+@media print {
+  .ntwalker { display: none; }
+}
