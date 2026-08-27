@@ -14,18 +14,24 @@ import '../nt.css';
 // ════════════════════════════════════════════════════════════════════════
 
 const BASE = 'https://nodetree.kr';
+// v5 공용 OG 카드 — 히어로 포스터(_workspace/02_hero/hero-poster.png)에서 뜬 1200x630.
+// 페이지가 따로 지정하지 않으면 5종 전부 이 카드를 쓴다.
+// 치수 메타(og:image:width/height)는 public/index.html 에 1벌만 둔다.
+const OG_IMAGE = '/redesign/og.jpg';
 
 export interface NtPageProps {
   path: string;
   title: string;
   description: string;
   keywords?: string;
+  /** 공용 OG 카드 대신 쓸 이미지 경로(선택) */
+  image?: string;
   /** 헤더 바로 아래, main 바깥에 놓이는 영역(홈 다라니 시계 히어로) */
   hero?: React.ReactNode;
   children: React.ReactNode;
 }
 
-const NtPage: React.FC<NtPageProps> = ({ path, title, description, keywords, hero, children }) => {
+const NtPage: React.FC<NtPageProps> = ({ path, title, description, keywords, image, hero, children }) => {
   const reveal = useReveal();
   const { hash, pathname } = useLocation();
 
@@ -43,7 +49,13 @@ const NtPage: React.FC<NtPageProps> = ({ path, title, description, keywords, her
 
   return (
     <div className="nt">
-      <SeoHead title={title} description={description} url={`${BASE}${path === '/' ? '' : path}`} keywords={keywords} />
+      <SeoHead
+        title={title}
+        description={description}
+        url={`${BASE}${path === '/' ? '/' : path}`}
+        keywords={keywords}
+        image={`${BASE}${image ?? OG_IMAGE}`}
+      />
       <Header />
       {hero}
       <main className={`reveal${reveal ? ' in' : ''}`}>{children}</main>

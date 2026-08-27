@@ -397,8 +397,12 @@ function AppContent() {
       <SeoHead
         title={seo.title}
         description={seo.description}
-        url={`${NODE_TREE_BASE}${seo.path === '/' ? '' : seo.path}`}
+        url={`${NODE_TREE_BASE}${seo.path === '/' ? '/' : seo.path}`}
         keywords={seo.keywords}
+        /* AppContent 는 이제 /legacy 와 catch-all(*) 에서만 렌더된다.
+           둘 다 v5 홈의 중복이므로 색인에서 뺀다(링크는 따라가게 follow).
+           /legacy 는 vercel.json 의 X-Robots-Tag 로도 한 번 더 막는다. */
+        noindex
       />
       {/* 데스크톱 네비게이션 */}
       <Navigation currentPage={currentPage} onPageChange={handlePageChange} />
@@ -528,8 +532,13 @@ function App() {
               <Route path="/work/:slug" element={ntBoot(<NtWork />)} />
               <Route path="/index" element={ntBoot(<NtIndex />)} />
               <Route path="/about" element={ntBoot(<NtAbout />)} />
-              {/* 기존 발행 URL /cv → 인덱스의 활동 연혁 앵커로 */}
+              {/* ── 기존 발행 URL 보존 리다이렉트 ──
+                  구 내비(NAV_ITEMS)의 CV·COMMONS·CONTACT 는 v5 에서 페이지가 사라지고
+                  Index/About 로 흡수됐다. 외부 링크·검색 색인이 살아 있으므로 404 대신
+                  흡수된 자리로 넘긴다(replace → 뒤로가기에 중간 URL 이 남지 않는다). */}
               <Route path="/cv" element={<Navigate to="/index#cv" replace />} />
+              <Route path="/commons" element={<Navigate to="/index" replace />} />
+              <Route path="/contact" element={<Navigate to="/about#contact" replace />} />
               {/* 기존 홈(three.js 파티클 + 상태 기반 페이지 전환)은 삭제하지 않고 /legacy 로 */}
               <Route path="/legacy" element={<AppContent />} />
 

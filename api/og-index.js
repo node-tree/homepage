@@ -17,13 +17,15 @@ const path = require('path');
 // 호스트 → OG 값 매핑(코드 근거: App.tsx SEO_DATA, Saengsanso SSO_SEO_MAP).
 const OG_BY_HOST = {
   'nodetree.kr': {
-    title: 'NODE TREE — 도시기록 아티스트 듀오',
+    // 정본 = src/redesign/pages/Home.tsx 의 NtPage title/description(v5).
+    title: 'NODE TREE — 내버린 것들 곁에 머무는 뉴미디어 아티스트 듀오',
     siteName: 'NODE TREE',
     description:
-      '이화영+정강현으로 구성된 도시기록 아티스트 듀오. ' +
-      '사운드, 영상, 설치를 통해 도시와 장소의 기억을 기록합니다.',
+      '이화영+정강현. 부여에 착지한 도시기록 프로젝트팀. ' +
+      '지금 진행 중인 전시·상영·리서치를 시간 역순으로 둔다.',
     url: 'https://nodetree.kr/',
-    image: 'https://nodetree.kr/nodetree-og.png',
+    // v5 히어로(陀羅尼) 포스터에서 뜬 1200x630 카드.
+    image: 'https://nodetree.kr/redesign/og.jpg',
   },
   'saengsanso.com': {
     title: '생산소 省算所 SAENGSANSO — 충남 부여 대안예술공간',

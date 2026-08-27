@@ -44,7 +44,7 @@ const About: React.FC = () => (
 
       <div className="rgt">
         {ABOUT_BLOCKS.map((blk) => (
-          <div className={`blk${blk.out ? ' out' : ''}`} key={blk.label}>
+          <div className={`blk${blk.out ? ' out' : ''}`} key={blk.label} id={blk.anchor}>
             <b>{blk.label}</b>
             {blk.rows.map((r) => (
               <div className={`prow${r.out ? ' out' : ''}`} key={r.n}>

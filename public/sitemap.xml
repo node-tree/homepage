@@ -1,14 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  실제 라우터 경로만 등재한다(src/App.tsx <Route> + INTERNAL_NAV_ITEMS 기준).
-  이전 버전의 `/#about` 같은 해시 URL 은 독립 URL 로 색인되지 않아 전량 교체했다.
+  실제 라우터 경로만 등재한다(src/App.tsx <Route> 기준).
+  · v5 리디자인 5종: / · /work · /work/:slug · /index · /about
+  · /work/:slug 슬러그 정본 = src/redesign/data/works.ts 의 FEATURES(8점).
+  · /cv · /commons · /contact 는 리다이렉트 전용이라 등재하지 않는다
+    (/cv → /index#cv, /commons → /index, /contact → /about#contact).
+  · /legacy 는 구 판식 보존용 — noindex(vercel.json X-Robots-Tag + meta robots)라 미등재.
+  · 이전 버전의 `/#about` 같은 해시 URL 은 독립 URL 로 색인되지 않아 전량 교체했다.
 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 
   <!-- NODE TREE (nodetree.kr) -->
   <url>
     <loc>https://nodetree.kr/</loc>
-    <changefreq>monthly</changefreq>
+    <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
@@ -17,25 +22,59 @@
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://nodetree.kr/about</loc>
+    <loc>https://nodetree.kr/index</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://nodetree.kr/cv</loc>
+    <loc>https://nodetree.kr/about</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- 작품 상세 /work/:slug — FEATURES 8점 -->
+  <url>
+    <loc>https://nodetree.kr/work/imul</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://nodetree.kr/commons</loc>
+    <loc>https://nodetree.kr/work/nakwon-siktang</loc>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://nodetree.kr/contact</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.6</priority>
+    <loc>https://nodetree.kr/work/itorok</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
+  <url>
+    <loc>https://nodetree.kr/work/ediaphonic</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://nodetree.kr/work/heoeum-mangmu</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://nodetree.kr/work/ihaeng-gwedo</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://nodetree.kr/work/satellite-border</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://nodetree.kr/work/sodalguji</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- 그 밖의 단독 라우트 -->
   <url>
     <loc>https://nodetree.kr/ocean</loc>
     <changefreq>daily</changefreq>

@@ -102,9 +102,16 @@
       "continue": true
     },
     {
-      "src": "/(pdf|images|kkumdarak|audio)/(.*)",
+      "src": "/(pdf|images|kkumdarak|audio|redesign)/(.*)",
       "headers": {
         "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
+      },
+      "continue": true
+    },
+    {
+      "src": "/legacy/?",
+      "headers": {
+        "X-Robots-Tag": "noindex, follow"
       },
       "continue": true
     },

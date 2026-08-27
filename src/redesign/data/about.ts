@@ -31,6 +31,8 @@ export interface PersonRow {
 export interface AboutBlock {
   label: string;
   out?: boolean;
+  /** DOM id — 외부 발행 URL 이 가리키는 앵커(/contact → /about#contact) */
+  anchor?: string;
   rows: PersonRow[];
 }
 
@@ -55,6 +57,7 @@ export const ABOUT_BLOCKS: AboutBlock[] = [
   },
   {
     label: 'CONTACT',
+    anchor: 'contact',
     rows: [
       { n: 'Email', v: 'nodetreemedia@gmail.com' },
       { n: 'Studio', v: '충남 부여군 장암면 · 충남창작스튜디오(태안)' },
