@@ -1,94 +1,160 @@
 import React from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
-import MiniClock from '../components/MiniClock';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { AdminLine, Note, State } from '../components/bits';
 import NtPage from '../components/NtPage';
-import PlateFrame from '../components/PlateFrame';
-import VerticalMeta from '../components/VerticalMeta';
-import { DetailBlock, FEATURES, fallbackDetail, findDetail, findFeature } from '../data/works';
+import PlateImage from '../components/PlateImage';
+import { DbPost, monoDate, usePosts, useHeader, yearOf } from '../db';
 
-type Chunk =
-  | { kind: 'plate'; block: Extract<DetailBlock, { kind: 'plate' }> }
-  | { kind: 'text'; blocks: Exclude<DetailBlock, { kind: 'plate' }>[] };
+// ════════════════════════════════════════════════════════════════════════
+// ART WORK 목록(/work) — 내용은 DB(/api/work), 판식만 v5.
+//   목업 정본: _workspace/03_mock/v5/works.html
+//     상단 = 도판 흐름(정간 어긋남 i1~i8, 봉인 72% → 호버 100%. 원형 썸네일 금지)
+//     하단 = 텍스트 인덱스 행(제목 · 매체 · 연도 · 장소)
+//   DB 에 매체·장소 필드가 없으므로 그 칸은 **absent** — 자리는 남고 값이 없다(설계 §2.2).
+//   확신도 선질: 도판이 있는 글 measured(2px) · 도판 없는 글 stated(1px).
+//   구 URL /work?post=<id> 는 /work/<id> 로 넘긴다(발행 링크 보존).
+// ════════════════════════════════════════════════════════════════════════
 
-/** 도판 사이의 연속된 본문 블록을 한 덩어리로 묶는다. */
-function groupBlocks(blocks: DetailBlock[]): Chunk[] {
-  const out: Chunk[] = [];
-  for (const b of blocks) {
-    if (b.kind === 'plate') {
-      out.push({ kind: 'plate', block: b });
-    } else if (out.length && out[out.length - 1].kind === 'text') {
-      (out[out.length - 1] as Extract<Chunk, { kind: 'text' }>).blocks.push(b);
-    } else {
-      out.push({ kind: 'text', blocks: [b] });
-    }
-  }
-  return out;
-}
+/** 도판 흐름 8칸의 창 비율 — 목업 works.html 의 어긋남을 그대로 옮겼다. */
+const RATIOS = ['16/9', '3/2', '4/5', '16/9', '1/1', '3/2', '16/9', '4/5'];
 
-/**
- * Work 상세 — 좌 3정간 세로쓰기 메타 / 본문 12정간 / 잔여 4정간 비움(설계 §5.3).
- *   우상단 56px 소형 시계는 `.detail` 안 absolute 라 헤더(56px) 바로 아래에서 시작한다
- *   — 고정 헤더 가림 함정을 피하려고 흐름 위(main padding-top) 에 얹는다.
- */
 const Work: React.FC = () => {
-  const { slug = '' } = useParams();
-  const feature = findFeature(slug);
-  if (!feature) return <Navigate to="/work" replace />;
+  const { isAuthenticated } = useAuth();
+  const [params] = useSearchParams();
+  const legacyPost = params.get('post');
+  const year = params.get('yr') ?? 'all';
+  const { data: posts, error, loading, reload } = usePosts('work');
+  const header = useHeader('work');
 
-  const i = FEATURES.indexOf(feature);
-  const next = FEATURES[(i + 1) % FEATURES.length];
-  const detail = findDetail(slug) ?? fallbackDetail(feature, next);
+  // 구 상세 URL(/work?post=id) → 새 상세 라우트로. hooks 뒤에 둬야 훅 순서가 흔들리지 않는다.
+  if (legacyPost) return <Navigate to={`/work/${legacyPost}`} replace />;
+
+  const list = posts ?? [];
+  const years = Array.from(new Set(list.map((p) => yearOf(p.date) ?? '·')));
+  const shown = year === 'all' ? list : list.filter((p) => (yearOf(p.date) ?? '·') === year);
+  const features = list.slice(0, 8);
+
+  // 인덱스는 연도 묶음(역순). 도판 흐름은 DB 순서(sortOrder)를 그대로 따른다.
+  const byYear = new Map<string, DbPost[]>();
+  shown.forEach((p) => {
+    const y = yearOf(p.date) ?? '·';
+    if (!byYear.has(y)) byYear.set(y, []);
+    (byYear.get(y) as DbPost[]).push(p);
+  });
+  const groups = Array.from(byYear.entries())
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([year, rows]) => ({ year, rows }));
 
   return (
     <NtPage
-      path={`/work/${slug}`}
-      title={`NODE TREE | ${detail.title}`}
-      description={`${detail.title} — ${feature.spec}`}
-      keywords={`NODE TREE, ${detail.title}, 이화영, 정강현`}
+      path="/work"
+      title="NODE TREE | Work — 작품"
+      description="NODE TREE의 사운드, 영상, 설치 작품 목록. 위성악보, 에디아포닉, 낙원식당 등."
+      keywords="NODE TREE 작품, 위성악보, 에디아포닉, 낙원식당, 사운드 설치"
     >
-      <section className="detail">
-        <MiniClock />
-        <div className="meta">
-          <VerticalMeta rows={detail.meta} />
+      <section className="pagehead">
+        <div className="lab">
+          {header.title} · {list.length || '—'}
         </div>
-        <div className="txt">
-          <h1 className="title">
-            {detail.title}
-            {detail.titleEn ? <em>{detail.titleEn}</em> : null}
-          </h1>
-          <div className="sub">{detail.sub}</div>
-
-          {/* 도판(fw)과 본문(body)을 목업과 같은 덩어리로 묶는다 — 이어지는 p·h2 는 한 .body 안에
-              있어야 `p + p` 여백과 h2 계선 간격이 목업과 같아진다. */}
-          {groupBlocks(detail.blocks).map((chunk, k) =>
-            chunk.kind === 'plate' ? (
-              <div className="fw" key={k}>
-                <PlateFrame still={chunk.block.still} absent={chunk.block.absent} />
-                <div className="fcap">{chunk.block.caption}</div>
-              </div>
-            ) : (
-              <div className="body" key={k} style={{ marginTop: 44 }}>
-                {chunk.blocks.map((b, j) =>
-                  b.kind === 'h2' ? <h2 key={j}>{b.text}</h2> : <p key={j}>{b.kind === 'p' ? b.text : null}</p>
-                )}
-              </div>
-            )
-          )}
-
-          {detail.source ? (
-            <div className="src" style={{ marginTop: 36 }}>
-              {detail.source}
-            </div>
-          ) : null}
-        </div>
+        <h1>{header.title}</h1>
+        <Note text={header.subtitle} />
       </section>
+      <div className="hair" />
 
-      <div className="nextwork">
-        <Link to={`/work/${detail.next.slug}`}>
-          <span>다음 작품 — {detail.next.title}</span>
-          <span className="k">NEXT WORK →</span>
-        </Link>
-      </div>
+      {loading && <State text="LOADING · 기록을 불러오는 중…" />}
+      {error && <State text={`ERROR · ${error}`} onRetry={reload} />}
+      {!loading && !error && list.length === 0 && <State text="ABSENT · 아직 기록된 작품이 없습니다." />}
+
+      {features.length > 0 && (
+        <section className="feed">
+          {features.map((p, i) => (
+            <article key={p.id} className={`item i${i + 1}`}>
+              <div className="fig">
+                <Link to={`/work/${p.id}`}>
+                  <PlateImage
+                    src={p.thumbnail}
+                    alt={p.title}
+                    ratio={RATIOS[i % RATIOS.length]}
+                    note="ABSENT · 도판 미기재"
+                  />
+                </Link>
+                <div className="cap">
+                  <p>
+                    <Link to={`/work/${p.id}`}>
+                      <span className="h">{p.title}</span>
+                    </Link>
+                  </p>
+                  <div className="m">
+                    <span>{yearOf(p.date) ?? '—'}</span>
+                    <span className="t">{monoDate(p.date)}</span>
+                    <span className="t">
+                      {p.images && p.images.length ? `도판 ${p.images.length}` : '도판 —'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
+
+      {list.length > 0 && (
+        <>
+          <div className="hair dae" style={{ marginTop: 64 }} />
+          <section className="index">
+            <div className="rows">
+              {groups.map((g, gi) => (
+                <React.Fragment key={`${g.year}-${gi}`}>
+                  <div className="grp">
+                    {g.year} · {g.rows.length}
+                  </div>
+                  {g.rows.map((p) => (
+                    <div className="row" key={p.id}>
+                      <Link to={`/work/${p.id}`}>
+                        <span className={`t ${p.thumbnail || (p.images && p.images.length) ? 'measured' : 'stated'}`}>
+                          {p.title}
+                        </span>
+                        <span className="md absent">—</span>
+                        <span className="yr">{yearOf(p.date) ?? '—'}</span>
+                        <span className="pl absent">—</span>
+                      </Link>
+                    </div>
+                  ))}
+                </React.Fragment>
+              ))}
+              <div className="src">
+                출처 · nodetree.kr DB /api/work — {list.length}건. 매체·장소는 DB 에 기재된 값이 없어 자리만 둔다.
+              </div>
+              {isAuthenticated && <AdminLine />}
+            </div>
+
+            <div className="filt">
+              <b>연도 YEAR</b>
+              <Link to="/work" className={year === 'all' ? 'on' : undefined}>
+                ALL {list.length}
+              </Link>
+              <br />
+              {years.map((y) => (
+                <React.Fragment key={y}>
+                  <Link to={`/work?yr=${y}`} className={year === y ? 'on' : undefined}>
+                    {y}
+                  </Link>
+                  <br />
+                </React.Fragment>
+              ))}
+              <div className="key">
+                <b>확신도 CONFIDENCE</b>
+                measured · 도판 있음
+                <br />
+                stated · 본문만
+                <br />
+                absent · DB 미기재
+              </div>
+            </div>
+          </section>
+        </>
+      )}
     </NtPage>
   );
 };
