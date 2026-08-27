@@ -1,0 +1,82 @@
+── beat.ts 왕복 검산 ──
+  beat=0 -> data-beat=0  PASS
+  beat=1 -> data-beat=1  PASS
+  beat=19 -> data-beat=19  PASS
+  beat=842 -> data-beat=842  PASS
+  beat=1514 -> data-beat=1514  PASS
+  beat=3028 -> data-beat=3028  PASS
+  6/6 PASS
+── 탭 가시성 ── data-raf: 보임 on → 숨김 off → 복귀 on  PASS
+── reduced-motion ── data-raf=reduced · 0.9초 간격 두 프레임 동일=true (428843 B) PASS
+════ clock_tablet_dark
+  mode=webgl2 webgl2=true beat=512 fps=60.7 canvas=1228x1228 disc(x,y,w,h)=205,96,614,614 hand=rotate(60.8518)
+  ticks=200 redacted=28 ocrBoxes=13 nowBoxes=1 overlapPx(readbox/lab/cap)=0/0/0
+  lab: 陀羅尼 時計 | 3,029 拍 / 日 · 1 角 = 20 井間 | 大綱 3 · 5 · 8 · 11 · 13 · 16 | ■ 讀誦 0512 / 3029  — 角 25 · OCR L2
+  readbox: 判讀 · OCR L2 | 讀 0512 · 種字 · siddham · 未判讀 | 品官 · 觀音願文 · 兩主 ‖ 單身 | 現 0512 · 種字 09 / 09 · 施主名單 | 1 名 = 1 拍 · 9.508 S | L2 · stated · REDACTED 0 · 角 25
+  console(6):
+    [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+    [log] Current API_BASE_URL: http://localhost:8000/api
+    [log] process.env.NODE_ENV: development
+    [log] isNodeTreeSite: false
+    [warning] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+    [warning] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+════ clock_desktop_dark
+  mode=webgl2 webgl2=true beat=512 fps=60 canvas=1824x1824 disc(x,y,w,h)=504,100,912,912 hand=rotate(60.8518)
+  ticks=200 redacted=28 ocrBoxes=13 nowBoxes=1 overlapPx(readbox/lab/cap)=0/0/0
+  lab: 陀羅尼 時計 | 3,029 拍 / 日 · 1 角 = 20 井間 | 大綱 3 · 5 · 8 · 11 · 13 · 16 | ■ 讀誦 0512 / 3029  — 角 25 · OCR L2
+  readbox: 判讀 · OCR L2 | 讀 0512 · 種字 · siddham · 未判讀 | 品官 · 觀音願文 · 兩主 ‖ 單身 | 現 0512 · 種字 09 / 09 · 施主名單 | 1 名 = 1 拍 · 9.508 S | L2 · stated · REDACTED 0 · 角 25
+  console(6):
+    [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+    [log] Current API_BASE_URL: http://localhost:8000/api
+    [log] process.env.NODE_ENV: development
+    [log] isNodeTreeSite: false
+    [warning] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+    [warning] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+════ clock_desktop_light
+  mode=webgl2 webgl2=true beat=513 fps=60.8 canvas=1824x1824 disc(x,y,w,h)=504,100,912,912 hand=rotate(60.9706)
+  ticks=200 redacted=28 ocrBoxes=14 nowBoxes=1 overlapPx(readbox/lab/cap)=0/0/0
+  lab: 陀羅尼 時計 | 3,029 拍 / 日 · 1 角 = 20 井間 | 大綱 3 · 5 · 8 · 11 · 13 · 16 | ■ 讀誦 0513 / 3029  — 角 25 · OCR L2
+  readbox: 判讀 · OCR L2 | 讀 0513 · 種字 · siddham · 未判讀 | 品官 · 觀音願文 · 兩主 ‖ 單身 | 現 0513 · 種字 01 / 09 · 施主名單 | 1 名 = 1 拍 · 9.508 S | L2 · stated · REDACTED 0 · 角 25
+  console(6):
+    [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+    [log] Current API_BASE_URL: http://localhost:8000/api
+    [log] process.env.NODE_ENV: development
+    [log] isNodeTreeSite: false
+    [warning] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+    [warning] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+════ clock_mobile_dark
+  mode=webgl2 webgl2=true beat=513 fps=60.3 canvas=780x780 disc(x,y,w,h)=0,56,390,390 hand=rotate(60.9706)
+  ticks=200 redacted=28 ocrBoxes=14 nowBoxes=1 overlapPx(readbox/lab/cap)=0/0/0
+  lab: 陀羅尼 時計 | 3,029 拍 / 日 · 1 角 = 20 井間 | 大綱 3 · 5 · 8 · 11 · 13 · 16 | ■ 讀誦 0513 / 3029  — 角 25 · OCR L2
+  readbox: 判讀 · OCR L2 | 讀 0513 · 種字 · siddham · 未判讀 | 品官 · 觀音願文 · 兩主 ‖ 單身 | 現 0513 · 種字 01 / 09 · 施主名單 | 1 名 = 1 拍 · 9.508 S | L2 · stated · REDACTED 0 · 角 25
+  console(6):
+    [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+    [log] Current API_BASE_URL: http://localhost:8000/api
+    [log] process.env.NODE_ENV: development
+    [log] isNodeTreeSite: false
+    [warning] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+    [warning] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+════ clock_mobile_light
+  mode=webgl2 webgl2=true beat=514 fps=60.5 canvas=780x780 disc(x,y,w,h)=0,56,390,390 hand=rotate(61.0895)
+  ticks=200 redacted=28 ocrBoxes=15 nowBoxes=1 overlapPx(readbox/lab/cap)=0/0/0
+  lab: 陀羅尼 時計 | 3,029 拍 / 日 · 1 角 = 20 井間 | 大綱 3 · 5 · 8 · 11 · 13 · 16 | ■ 讀誦 0514 / 3029  — 角 25 · OCR L2
+  readbox: 判讀 · OCR L2 | 讀 0514 · 種字 · siddham · 未判讀 | 品官 · 觀音願文 · 兩主 ‖ 單身 | 現 0514 · 種字 02 / 09 · 施主名單 | 1 名 = 1 拍 · 9.508 S | L2 · stated · REDACTED 0 · 角 25
+  console(6):
+    [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+    [log] Current API_BASE_URL: http://localhost:8000/api
+    [log] process.env.NODE_ENV: development
+    [log] isNodeTreeSite: false
+    [warning] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+    [warning] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+════ clock_reduced_dark
+  mode=webgl2 webgl2=true beat=514 fps=61.1 canvas=1824x1824 disc(x,y,w,h)=504,100,912,912 hand=rotate(61.0895)
+  ticks=200 redacted=28 ocrBoxes=15 nowBoxes=1 overlapPx(readbox/lab/cap)=0/0/0
+  lab: 陀羅尼 時計 | 3,029 拍 / 日 · 1 角 = 20 井間 | 大綱 3 · 5 · 8 · 11 · 13 · 16 | ■ 讀誦 0514 / 3029  — 角 25 · OCR L2
+  readbox: 判讀 · OCR L2 | 讀 0514 · 種字 · siddham · 未判讀 | 品官 · 觀音願文 · 兩主 ‖ 單身 | 現 0514 · 種字 02 / 09 · 施主名單 | 1 名 = 1 拍 · 9.508 S | L2 · stated · REDACTED 0 · 角 25
+  console(6):
+    [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+    [log] Current API_BASE_URL: http://localhost:8000/api
+    [log] process.env.NODE_ENV: development
+    [log] isNodeTreeSite: false
+    [warning] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+    [warning] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.

@@ -1,0 +1,12 @@
+[load] atlas /Users/kanghyunjung/공생직조-lab/webgpu/wg-018-retypeset/assets/sdf_atlas_p0.png
+[load] atlas shape (3355, 8192, 3)
+[pick] donor    pool=  78 ->  48  seg= 48  area 174..1387
+[pick] vow      pool= 149 ->  48  seg= 48  area 371..925
+[pick] dharani  pool= 212 ->  40  seg= 40  area 395..1145
+[pick] charm    pool=  79 ->  24  seg= 24  area 274..894
+[pick] seed     pool=  36 ->   9  seg=  9  area 375..1104
+[tile] 169 tiles  texels=1230594  (29.3% of 2048^2)
+[pack] atlas 2048x1024  occupancy=58.7%
+[write] /Users/kanghyunjung/Desktop/etx/web/nodetreeHome/public/dharani/clock-glyphs.png  592472 bytes (578.6 KB)
+[write] /Users/kanghyunjung/Desktop/etx/web/nodetreeHome/public/dharani/clock-glyphs.json  52849 bytes
+[done] 0.8s  groups=169 rings={'donor': 48, 'vow': 48, 'dharani': 40, 'charm': 24, 'seed': 9}

@@ -29,6 +29,8 @@ const Team = lazy(() => import('./components/Team'));
 const Kkumdarak = lazy(() => import('./components/Kkumdarak/Kkumdarak'));
 const Buyeo = lazy(() => import('./components/Buyeo'));
 const MediaAdmin = lazy(() => import('./components/MediaAdmin'));
+// [임시] 다라니 시계 검수 라우트 — 홈 히어로 편입 전까지만 유지한다
+const DharaniClockPage = lazy(() => import('./components/DharaniClockPage'));
 
 // /kkumdarak 리다이렉트 별칭 — hash(#admin/#intro 등)과 query를 보존한 채 /iso로 리다이렉트.
 // Kkumdarak가 window.location.hash를 직접 읽으므로 hash 유지가 필수(기존 발행 URL nodetree.kr/kkumdarak#intro 보존).
@@ -501,6 +503,8 @@ function App() {
               <Route path="/buyeo/:stop" element={<Buyeo />} />
               <Route path="/monitor" element={<ClaudeMonitor />} />
               <Route path="/admin/media" element={<MediaAdmin />} />
+              {/* [임시] 다라니 시계 검수 — /clock */}
+              <Route path="/clock" element={<DharaniClockPage />} />
               <Route path="/work/research/:postId" element={<WorkResearch />} />
               <Route path="*" element={<AppContent />} />
             </Routes>

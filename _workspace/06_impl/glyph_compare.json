@@ -1,0 +1,127 @@
+{
+ "zoom": 2.0,
+ "rows": [
+  {
+   "ring": "donor",
+   "id": 0,
+   "plate": "donor_page_yangju_p088.png",
+   "key": 170,
+   "plateBox": [
+    46.0,
+    40.0,
+    83,
+    82
+   ],
+   "tile": [
+    108,
+    107
+   ],
+   "render": [
+    166,
+    164
+   ],
+   "labPx": 5471,
+   "subPx": 5404,
+   "iou": 0.9454,
+   "vermilion": false
+  },
+  {
+   "ring": "vow",
+   "id": 48,
+   "plate": "vow_gwaneum_p062.png",
+   "key": 119,
+   "plateBox": [
+    62.0,
+    314.0,
+    71,
+    82
+   ],
+   "tile": [
+    92,
+    107
+   ],
+   "render": [
+    142,
+    164
+   ],
+   "labPx": 3622,
+   "subPx": 3573,
+   "iou": 0.9373,
+   "vermilion": false
+  },
+  {
+   "ring": "dharani",
+   "id": 96,
+   "plate": "dharani_ink_2_p066.png",
+   "key": 332,
+   "plateBox": [
+    194.0,
+    88.0,
+    54,
+    72
+   ],
+   "tile": [
+    70,
+    94
+   ],
+   "render": [
+    108,
+    144
+   ],
+   "labPx": 4539,
+   "subPx": 4491,
+   "iou": 0.9575,
+   "vermilion": false
+  },
+  {
+   "ring": "charm",
+   "id": 136,
+   "plate": "red_dharani_sheet_p107_artifact.png",
+   "key": 562,
+   "plateBox": [
+    126.0,
+    66.0,
+    43,
+    74
+   ],
+   "tile": [
+    56,
+    96
+   ],
+   "render": [
+    86,
+    148
+   ],
+   "labPx": 3563,
+   "subPx": 3513,
+   "iou": 0.9628,
+   "vermilion": true
+  },
+  {
+   "ring": "seed",
+   "id": 160,
+   "plate": "dharani_ink_3_seed_p066.png",
+   "key": -3,
+   "plateBox": [
+    292.0,
+    2.0,
+    137,
+    277
+   ],
+   "tile": [
+    206,
+    416
+   ],
+   "render": [
+    274,
+    554
+   ],
+   "labPx": 13271,
+   "subPx": 12389,
+   "iou": 0.9095,
+   "vermilion": false
+  }
+ ],
+ "iouMin": 0.9095,
+ "iouMean": 0.9425
+}

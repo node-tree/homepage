@@ -1,0 +1,224 @@
+/* ══════════════════════════════════════════════════════════════════════
+   DharaniClock.css — 陀羅尼 時計
+   격자 = 20 정간(설계 §2.1). 유채는 주서 1색뿐. 글로우·그라데이션 없음.
+   ══════════════════════════════════════════════════════════════════════ */
+.dclock {
+  --jeong: calc(100% / 20);
+  --stage: #0b0b0e;
+  --ink: #dcddd3;
+  --juseo: #be3c28;
+  --redact: #151519;
+  --line: rgba(220, 221, 211, 0.18);
+  --line-k: rgba(220, 221, 211, 0.55);
+  --tick: rgba(220, 221, 211, 0.35);
+  --tick-k: rgba(220, 221, 211, 0.8);
+  --meta: rgba(220, 221, 211, 0.6);
+  --meta-2: rgba(220, 221, 211, 0.35);
+
+  position: relative;
+  overflow: hidden;
+  background: var(--stage);
+  color: var(--ink);
+  display: grid;
+  grid-template-columns: repeat(20, 1fr);
+  align-content: center;
+  align-items: center;
+  padding: 40px 0;
+  min-height: 720px;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.dclock--light {
+  --stage: #fafaf9;
+  --ink: #0f0f1a;
+  --redact: #e4e2dc;
+  --line: #e4e2dc;
+  --line-k: #0f0f1a;
+  --tick: #b2b2b2;
+  --tick-k: #0f0f1a;
+  --meta: #6b6b6b;
+  --meta-2: #b2b2b2;
+}
+
+/* ── 원반 ───────────────────────────────────────────────────────────── */
+.dclock__disc {
+  grid-column: 5 / 17;
+  position: relative;
+  /* 12 정간(=1920 에서 1152)이 히어로 높이(1024)를 넘으므로 판의 지름을 912 로 묶는다 */
+  width: min(100%, 912px);
+  aspect-ratio: 1 / 1;
+  justify-self: center;
+  margin-bottom: 24px;
+}
+
+.dclock__svg,
+.dclock__gl {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.dclock__svg--under { z-index: 0; }
+.dclock__gl { z-index: 1; }
+.dclock__svg--over { z-index: 2; }
+.dclock__svg--over { pointer-events: none; }
+
+.dclock .ring { fill: none; stroke: var(--line); stroke-width: 1; }
+.dclock .ring.k { stroke: var(--line-k); }
+.dclock .tick { stroke: var(--tick); stroke-width: 0.6; }
+.dclock .tick.k { stroke: var(--tick-k); stroke-width: 1; }
+.dclock .redacted rect { fill: var(--redact); stroke: none; }
+.dclock__core { fill: var(--stage); }
+
+.dclock .sweep { fill: var(--ink); fill-opacity: 0.045; }
+.dclock--light .sweep { fill: var(--juseo); fill-opacity: 0.035; }
+.dclock .hand { stroke: var(--juseo); stroke-width: 1.4; }
+.dclock--light .hand { stroke: var(--juseo); stroke-width: 1.2; }
+.dclock .hand2 { stroke: var(--line-k); stroke-width: 1; }
+.dclock__pivot { fill: var(--juseo); }
+
+/* OCR 판독 층 — 37번 §4-a 7 문법 */
+.dclock .ocr rect { fill: none; stroke: var(--line-k); stroke-width: 0.8; }
+.dclock .ocr rect.u { stroke-dasharray: 2 2; }
+.dclock .ocr rect.b { stroke: var(--line); stroke-dasharray: 1 3; }
+.dclock .ocr text {
+  font-size: 7px;
+  letter-spacing: 0.06em;
+  fill: var(--meta);
+}
+.dclock .ocr .now rect { stroke: var(--juseo); stroke-width: 1.1; }
+.dclock .ocr .now text { fill: var(--juseo); font-size: 8px; }
+
+.dclock__meter text {
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  fill: var(--meta);
+}
+
+/* ── 판독 블록 ───────────────────────────────────────────────────────
+   원반 **밖** 우측 여백에 놓는다. 원반 지름이 912 로 묶여 있으므로 우측 여백은
+   (100% − 912)/2 이고, 그 안에 들어갈 만큼 넓은 화면(≥1600)에서만 겹쳐 놓는다.
+   그보다 좁으면 원반 아래로 흘려 보낸다(겹침 금지). */
+.dclock__readbox {
+  position: static;
+  grid-column: 5 / 17;
+  margin: 0 0 22px;
+  width: auto;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  line-height: 2.1;
+  color: var(--meta);
+  border-left: 1px solid var(--line-k);
+  padding-left: 14px;
+}
+.dclock__readbox .hd { color: var(--ink); letter-spacing: 0.14em; margin-bottom: 6px; }
+.dclock__readbox .ln.k { color: var(--ink); }
+.dclock__readbox .ln.dim { color: var(--meta-2); }
+.dclock__readbox .r { color: var(--juseo); }
+
+/* ── 계기 라벨(좌하) · 캡션(우하) ────────────────────────────────────── */
+.dclock__lab {
+  position: static;
+  grid-column: 5 / 17;
+  margin: 0 0 18px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--meta);
+  line-height: 1.9;
+}
+.dclock__lab b { color: var(--ink); font-weight: 500; }
+.dclock__lab .r { color: var(--juseo); }
+
+.dclock__cap {
+  position: static;
+  grid-column: 5 / 17;
+  margin: 0;
+  width: auto;
+  text-align: left;
+  font-family: 'Noto Sans KR', system-ui, sans-serif;
+  font-weight: 300;
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--meta);
+}
+.dclock__cap .h { color: var(--ink); font-weight: 400; }
+.dclock__cap .m {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  color: var(--meta-2);
+}
+
+/* ── 그레인 (도판 창의 결) ───────────────────────────────────────────── */
+.dclock__grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='ntgrain'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.86 0 0 0 0 0.87 0 0 0 0 0.83 0 0 0 .07 0'/></filter><rect width='100%' height='100%' filter='url(%23ntgrain)'/></svg>");
+}
+.dclock--light .dclock__grain { opacity: 0.28; mix-blend-mode: multiply; }
+
+.dclock__fallback {
+  grid-column: 3 / 19;
+  padding: 96px 0;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--meta);
+  line-height: 2;
+}
+.dclock__fallback span { color: var(--juseo); }
+
+/* ── 넓은 화면(≥1600): 목업 배치 — 판독 블록 우측 여백 · 라벨 좌하 · 캡션 우하 ── */
+@media (min-width: 1600px) {
+  .dclock { min-height: 1024px; }
+  /* ⚠ 그리드 컨테이너의 절대배치 자식은 **그리드 영역**이 컨테이닝 블록이 된다.
+     grid-column 을 풀지 않으면 left/right 가 원반 칸 기준으로 잡혀 원반 위에 얹힌다. */
+  .dclock__readbox,
+  .dclock__lab,
+  .dclock__cap { grid-column: auto; }
+  .dclock__readbox {
+    position: absolute;
+    top: 112px;
+    /* 원반 오른쪽 끝( 50% + 지름/2 ) 다음부터 */
+    left: calc(50% + min(30%, 456px) + 20px);
+    right: var(--jeong);
+    margin: 0;
+  }
+  .dclock__lab {
+    position: absolute;
+    left: var(--jeong);
+    bottom: 40px;
+    margin: 0;
+  }
+  .dclock__cap {
+    position: absolute;
+    right: var(--jeong);
+    bottom: 40px;
+    width: calc(var(--jeong) * 4);
+    text-align: right;
+    margin: 0;
+    border: 0;
+    padding: 0;
+  }
+}
+
+/* ── 좁은 화면·모바일: 원반 폭 100% · 라벨 아래로 ───────────────────── */
+@media (max-width: 767px) {
+  .dclock {
+    display: block;
+    min-height: 0;
+    padding: 0 0 40px;
+  }
+  .dclock__disc {
+    width: 100%;
+    margin: 0 0 28px;
+  }
+  .dclock__readbox,
+  .dclock__lab,
+  .dclock__cap { margin: 0 20px 22px; width: auto; }
+  .dclock .ocr text { font-size: 9px; }
+  .dclock .ocr .now text { font-size: 10px; }
+  .dclock__meter text { font-size: 12px; }
+}
