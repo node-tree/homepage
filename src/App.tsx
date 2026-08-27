@@ -40,6 +40,11 @@ const NtWorks = lazy(() => import('./redesign/pages/Works'));
 const NtWork = lazy(() => import('./redesign/pages/Work'));
 const NtIndex = lazy(() => import('./redesign/pages/IndexPage'));
 const NtAbout = lazy(() => import('./redesign/pages/About'));
+const NtLegacy = lazy(() => import('./redesign/pages/Legacy').then(m => ({ default: m.LegacyAbout })));
+const NtLegacyWork = lazy(() => import('./redesign/pages/Legacy').then(m => ({ default: m.LegacyWork })));
+const NtLegacyCommons = lazy(() => import('./redesign/pages/Legacy').then(m => ({ default: m.LegacyCommons })));
+const NtLegacyCV = lazy(() => import('./redesign/pages/Legacy').then(m => ({ default: m.LegacyCV })));
+const NtLegacyContact = lazy(() => import('./redesign/pages/Legacy').then(m => ({ default: m.LegacyContact })));
 // 삼베 대리 신체는 라우트 전환에도 언마운트되면 안 되므로 <Routes> 바깥에 둔다(설계 §4.3).
 const SambeWalker = lazy(() => import('./redesign/components/SambeWalker'));
 // v5 전용 로딩 자리(웹폰트 요청 0). 인라인 스타일만 쓰므로 메인 번들에 nt.css 를 끌어오지 않는다.
@@ -528,17 +533,19 @@ function App() {
                   각자 Suspense 경계를 따로 두는 이유: 공용 PageLoader 의 「불러오는 중…」이
                   body 의 S-CoreDream(168 KB)을 깨워 새 페이지에서 쓰지도 않는 폰트를 받는다(실측). */}
               <Route path="/" element={ntBoot(<NtHome />)} />
-              <Route path="/work" element={ntBoot(<NtWorks />)} />
+              <Route path="/work" element={ntBoot(<NtLegacyWork />)} />
+              <Route path="/works-v5" element={ntBoot(<NtWorks />)} />
               <Route path="/work/:slug" element={ntBoot(<NtWork />)} />
               <Route path="/index" element={ntBoot(<NtIndex />)} />
-              <Route path="/about" element={ntBoot(<NtAbout />)} />
+              <Route path="/about" element={ntBoot(<NtLegacy />)} />
+              <Route path="/about-v5" element={ntBoot(<NtAbout />)} />
               {/* ── 기존 발행 URL 보존 리다이렉트 ──
                   구 내비(NAV_ITEMS)의 CV·COMMONS·CONTACT 는 v5 에서 페이지가 사라지고
                   Index/About 로 흡수됐다. 외부 링크·검색 색인이 살아 있으므로 404 대신
                   흡수된 자리로 넘긴다(replace → 뒤로가기에 중간 URL 이 남지 않는다). */}
-              <Route path="/cv" element={<Navigate to="/index#cv" replace />} />
-              <Route path="/commons" element={<Navigate to="/index" replace />} />
-              <Route path="/contact" element={<Navigate to="/about#contact" replace />} />
+              <Route path="/cv" element={ntBoot(<NtLegacyCV />)} />
+              <Route path="/commons" element={ntBoot(<NtLegacyCommons />)} />
+              <Route path="/contact" element={ntBoot(<NtLegacyContact />)} />
               {/* 기존 홈(three.js 파티클 + 상태 기반 페이지 전환)은 삭제하지 않고 /legacy 로 */}
               <Route path="/legacy" element={<AppContent />} />
 

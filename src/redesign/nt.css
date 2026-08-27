@@ -54,7 +54,7 @@
   font-family: var(--kr); font-weight: 300; color: var(--g2); margin-left: 10px; font-size: 13px;
 }
 .nt header .nav {
-  grid-column: 9/13; display: flex; gap: 28px; justify-content: center;
+  grid-column: 5/16; display: flex; gap: clamp(14px, 1.6vw, 28px); justify-content: center;
   font-family: var(--sans); font-size: 13px; color: var(--g2);
 }
 .nt header .nav a.on { color: var(--ink); }
@@ -290,7 +290,7 @@
   .nt header .brand span { font-size: 11px; margin-left: 8px; }
   .nt header .clock { grid-column: 7/11; grid-row: 1; padding-right: 16px; gap: 8px; font-size: 10px; }
   .nt header .nav {
-    grid-column: 1/11; grid-row: 2; justify-content: space-between; gap: 0; padding: 0 16px;
+    grid-column: 1/11; grid-row: 2; justify-content: space-between; gap: clamp(14px, 1.6vw, 28px); padding: 0 16px;
     font-size: 12px; border-top: 1px solid var(--line); height: 40px; align-items: center;
   }
   .nt main { padding-top: 92px; }
@@ -381,3 +381,10 @@
   .nt .reveal,
   .nt .reveal.in { opacity: 1; transform: none; transition: none; }
 }
+
+/* 내비 복원(7항목) — 모바일은 한 줄 가로 스크롤 */
+@media (max-width: 767px) {
+  .nt header .nav { overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; gap: 18px; padding: 0 16px; justify-content: flex-start; }
+  .nt header .nav::-webkit-scrollbar { display: none; }
+}
+.nt .nt-legacy-wrap { padding: 96px calc(var(--jeong) * 1) 0; }
