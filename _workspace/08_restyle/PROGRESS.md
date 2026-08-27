@@ -107,3 +107,47 @@ cd-workbook    consoleErr 0 pageErr 0 failedReq 0 covered false false h 7444/394
 cd-video       consoleErr 0 pageErr 0 failedReq 0 covered false false h 1732/1627    (YouTube 16:9 창)
 총 DB 텍스트 누락 0 토큰 · npm run build → Compiled successfully.
 ```
+
+---
+
+## iteration 2 제출 (2026-08-27) — evaluator REWORK 2건 수정 후 동결
+
+| 해시 | 내용 |
+|---|---|
+| `63d634b` | blocker 1 — `/legacy/<page>` 라우트 · 레거시 내비 순환 · AdminLine 페이지별 링크 |
+| `c16cd85` | blocker 2 — `/contact` 390 가로 넘침(`.prow` 값 칸 접힘 + 표시 URL 축약) · 검증 리그 `verify2.js` |
+
+검증 리그: `node _workspace/08_restyle/verify2.js` (CDP 직접 구동 · swiftshader 강제 —
+헤드리스에서 three.js Canvas 예외가 레거시 트리를 통째로 언마운트시켜 빈 화면이 나오던
+함정을 `--use-angle=swiftshader --enable-unsafe-swiftshader` 로 막았다).
+산출: `verify2.json` · `shots2/*.png`. 인증은 테스트 계정이 없어 CDP 로 주입(UI 도달 확인용).
+
+```
+[blocker 1] 레거시 편집기 도달
+/legacy          active HOME      · 홈 편집                    · .nt 없음
+/legacy/about    active NODE TREE · 편집 / 글 편집
+/legacy/work     active ART WORK  · 편집 / 새 글 작성 / 순서 편집
+/legacy/commons  active COMMONS   · 편집 / 새 글 작성 / 순서 편집
+/legacy/cv       active CV        · 편집 / 글 편집
+/legacy/contact  active CONTACT   · 편집
+글 상세(첫 항목 Corrosia) → 수정 ○ 삭제 ○
+내비 순환: /legacy/cv 에서 'ART WORK' 클릭 → /legacy/work 유지(.nt 없음, 새 글 작성 ○)
+모바일 390: /legacy/work 도달 ○ (innerWidth=scrollWidth=390)
+v5 AdminLine href: /about→/legacy/about · /work→/legacy/work · /commons→/legacy/commons
+                   · /cv→/legacy/cv · /contact→/legacy/contact (각 1개)
+비로그인 /work: .adminline 0 · a[href^="/legacy"] 0
+
+[blocker 2] 390 모바일 넘침
+/contact  innerWidth 390 · body.scrollWidth 390 · documentElement.scrollWidth 390 · header 390
+/about    innerWidth 390 · body.scrollWidth 390 · documentElement.scrollWidth 390 · header 390
+크롭: shots2/ovf-contact-390.png · shots2/ovf-about-390.png
+(SNS 표시 'instagram.com/node.tree' · href 는 전체 URL 유지)
+
+[회귀] 콘솔 원문 수집(필터 없음)
+/ /about /work /commons /cv /contact /legacy — consoleError 0 · pageError 0
+실패요청: /legacy 1건 = 페이지 이탈 시 취소된 http://localhost:8000/api/home/all (ERR_ABORTED)
+경고는 React Router v7 future flag 2종(+ 홈의 WebGL2 래스터 폴백 안내)
+npm run build → Compiled successfully (경고 0)
+```
+
+여기서 동결 — 이후 파일 변경 없음.
