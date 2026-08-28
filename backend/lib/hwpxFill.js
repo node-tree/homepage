@@ -69,6 +69,26 @@ function enableTableSplitAcrossPages(xml) {
   return { xml: out, changed };
 }
 
+// ── 줄배치 캐시 제거(2026-08) ────────────────────────────────────────────────
+//   증상: 채운 셀의 글자가 뭉쳐 한 줄에 겹쳐 찍히고 줄바꿈이 안 된다.
+//   원인: 템플릿의 각 문단에는 한글이 계산해 둔 «줄배치 캐시»(hp:linesegarray)가 들어 있다.
+//        이 캐시는 «{{세부내용}}» 같은 짧은 플레이스홀더 한 줄을 기준으로 만들어진 값이라,
+//        그 자리에 300~400자를 넣어도 한글은 캐시대로 "한 줄"로 그리려 든다.
+//        서식6 결과보고서(키당 600~780자)처럼 긴 셀일수록 증상이 심하다.
+//   조치: 채운 뒤 section XML 의 줄배치 캐시를 통째로 지운다. 캐시가 없으면 한글이 파일을
+//        열 때 실제 글자 기준으로 다시 계산하므로 정상 줄바꿈이 나온다.
+//        (문단·글자 속성 자체는 건드리지 않는다 — 지우는 것은 «계산 결과»뿐이다.)
+//   모든 서식이 같은 결함을 공유하므로 서식별 코드가 아니라 여기서 일괄 처리한다.
+//   반환: { xml, removed } — removed 는 지운 캐시 수(자가검증·로깅용).
+function stripLineSegCache(xml) {
+  let removed = 0;
+  const out = xml.replace(/<hp:linesegarray>[\s\S]*?<\/hp:linesegarray>/g, () => {
+    removed++;
+    return '';
+  });
+  return { xml: out, removed };
+}
+
 // PNG IHDR 에서 픽셀 크기 읽기(서명 이미지 종횡비 계산용). PNG 가 아니면 null.
 //   시그니처 8바이트 + 길이4 + 'IHDR'4 다음에 width(4) height(4) 빅엔디안.
 function readPngSize(buf) {
@@ -184,6 +204,9 @@ async function fillHwpx(templatePath, replacements, imageReplacements = {}, opti
       if (/^Contents\/section\d+\.xml$/.test(name)) {
         xml = enableTableSplitAcrossPages(xml).xml;
         for (const t of sectionTransforms) xml = t(xml);
+        // 줄배치 캐시 제거는 서식별 transform 뒤에 — transform 들이 캐시를 포함한
+        // 문단 통째로를 앵커로 잡기 때문에 먼저 지우면 앵커가 어긋난다.
+        xml = stripLineSegCache(xml).xml;
       }
       // 새로 넣는 이미지의 manifest item 등록(content.hpf 도 Contents/ 하위 XML 이지만
       // 확장자가 .hpf 라 이 분기에 안 걸리므로 아래 별도 분기에서 처리한다)
@@ -270,6 +293,7 @@ module.exports = {
   formatKoreanDate,
   escapeXmlText,
   enableTableSplitAcrossPages,
+  stripLineSegCache,
   buildInlinePicXml,
   addManifestImage,
   readPngSize,

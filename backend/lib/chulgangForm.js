@@ -91,6 +91,71 @@ function buildSignatureTransform() {
   return { transform, image: { fileName: SIGNATURE_BINDATA_KEY, itemId: SIGNATURE_ITEM_ID, buffer } };
 }
 
+// ── 운영방식: 항상 「대면」 한 줄만 (2026-08) ──────────────────────────────────
+//   템플릿의 운영방식 칸에는 (대면)·(비대면)·(병행) 세 안이 예시로 모두 박혀 있고,
+//   그중 해당하는 것에 표시해 제출하는 서식이다. 꿈다락은 전 회차 대면으로 운영하므로
+//   생성 시점에 «대면» 한 줄만 남기고 나머지 네 줄(비대면·병행과 각 부연)을 걷어낸다.
+//   분(分)은 템플릿이 120분으로 박혀 있으나 실제 회당 운영시간을 쓴다:
+//     ① 입력된 교육시간("(14:00~17:00 / 3시간)")에서 시간/분을 읽고
+//     ② 못 읽으면 180분(대다수 프로그램이 회당 3시간).
+//   앵커(대면 문단 ~ 병행 부연 문단)를 못 찾으면 아무것도 하지 않는다(서식 교체 대비).
+const DEFAULT_RUNTIME_MINUTES = 180;
+
+// "(14:00~17:00 / 3시간)" · "3시간" · "180분" → 분. 못 읽으면 null.
+function parseRuntimeMinutes(교육시간) {
+  const t = String(교육시간 || '');
+  const hour = t.match(/([\d.]+)\s*시간/);
+  if (hour) {
+    const m = Math.round(parseFloat(hour[1]) * 60);
+    if (m > 0) return m;
+  }
+  const min = t.match(/(\d+)\s*분/);
+  if (min) {
+    const m = Number(min[1]);
+    if (m > 0) return m;
+  }
+  return null;
+}
+
+// 운영방식 칸 머리의 체크박스(대면/비대면/병행) 중 «대면» 을 체크 상태로.
+//   템플릿은 hp:checkBtn 폼 컨트롤 3개(caption 대면·비대면·병행)가 모두 UNCHECKED 다.
+//   caption="대면" 은 caption="비대면" 과 문자열이 달라(따옴표 포함) 정확일치로 구분된다.
+function checkDaemyeonBox(xml) {
+  return xml.replace('caption="대면" value="UNCHECKED"', 'caption="대면" value="CHECKED"');
+}
+
+// 운영방식 다섯 문단을 「대면」 한 문단으로 줄이는 transform.
+function buildUnyeongTransform(body) {
+  const minutes = parseRuntimeMinutes((body || {}).교육시간) || DEFAULT_RUNTIME_MINUTES;
+  // 대면 문단 시작 ~ 병행 부연 문단 끝. 사이 문단 수·순서는 템플릿 고정.
+  const blockRe =
+    /<hp:p\b[^>]*>(?:(?!<\/hp:p>)[\s\S])*?○ \(대면\) 교육 내용에 따라 대면 수업 진행\([^)]*\)[\s\S]*?이어서 대면 수업 진행<\/hp:t><\/hp:run>(?:(?!<\/hp:p>)[\s\S])*?<\/hp:p>/;
+  return (input) => {
+    const xml = checkDaemyeonBox(input); // 체크박스는 문단 앵커와 무관하게 항상 적용
+    const m = xml.match(blockRe);
+    if (!m) return xml; // 서식이 바뀌어 앵커가 없으면 문단은 그대로 둔다(체크는 적용됨)
+    // 대면 문단만 떼어내 분(分)만 갈아끼운다(문단 속성·글자 속성 그대로 보존).
+    const firstEnd = m[0].indexOf('</hp:p>') + '</hp:p>'.length;
+    const daemyeon = m[0]
+      .slice(0, firstEnd)
+      .replace(/대면 수업 진행\([^)]*\)/, `대면 수업 진행(${minutes}분)`);
+    return xml.replace(blockRe, daemyeon);
+  };
+}
+
+// ── 교육내용 라벨의 「해당 회차」를 실제 회차로 (2026-08) ──────────────────────
+//   템플릿은 교육내용 칸 라벨이 «교육내용 / 해당 회차» 로 되어 있다. 아래 칸이 그 회차의
+//   교육목표·세부내용·교육재료이므로, 라벨에 실제 회차(예 «5회차»)를 적어 어느 회차의
+//   기록인지 문서 안에서 바로 드러나게 한다. 회차를 못 읽으면 원문("해당 회차")을 둔다.
+//   ⚠️ 문서 아래쪽 진행사진 안내문에도 "해당 회차 교육의 다과…" 라는 문장이 있으므로
+//      문단 전체가 정확히 "해당 회차" 인 run 만 정확일치로 바꾼다.
+function buildHoechaLabelTransform(body) {
+  const m = String((body || {}).기수회차 || '').match(/(\d+)\s*회차/);
+  if (!m) return null;
+  const label = `${m[1]}회차`;
+  return (xml) => xml.replace('<hp:t>해당 회차</hp:t>', `<hp:t>${label}</hp:t>`);
+}
+
 // 서식5 의 21개 플레이스홀더. body 누락 키는 ''(미치환 토큰 방지 — fillHwpx 가 throw).
 const PLACEHOLDER_KEYS = [
   '출강강사',
@@ -178,9 +243,14 @@ async function generateChulgangForm(body, photoBuffer) {
       ? { [PHOTO_BINDATA_KEY]: photoBuffer }
       : {};
   const signature = buildSignatureTransform(); // 서명 파일 없으면 null → "(인)" 유지
+  const transforms = [
+    buildUnyeongTransform(body),      // 운영방식 → 대면 한 줄
+    buildHoechaLabelTransform(body),  // 교육내용 라벨 → N회차
+    signature ? signature.transform : null,
+  ].filter(Boolean);
   const buffer = await fillHwpx(TEMPLATE_PATH, replacements, imageReplacements, {
     extraImages: signature ? [signature.image] : [],
-    sectionTransforms: signature ? [signature.transform] : [],
+    sectionTransforms: transforms,
   });
   const filenameBase = buildFilenameBase(body);
   return { buffer, filenameBase };
@@ -188,6 +258,10 @@ async function generateChulgangForm(body, photoBuffer) {
 
 module.exports = {
   generateChulgangForm,
+  buildUnyeongTransform,
+  checkDaemyeonBox,
+  buildHoechaLabelTransform,
+  parseRuntimeMinutes,
   buildChulgangReplacements,
   buildFilenameBase,
   buildSignatureTransform,
