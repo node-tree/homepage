@@ -7,7 +7,7 @@
 //   세션(KkumdarakSession)이 회차·실참여를 오버레이한다(실참여=세션 attendance 합).
 //
 //   주강사: 출강확인서(서식5) 자동기입용. buildProgramStats 가 GET /programs 응답에 노출.
-//   grounding: AI 초안(KNUH)의 사실 근거 텍스트 — 백엔드 ai-draft 라우트에서만 사용(프롬프트
+//   grounding: AI 초안(Claude)의 사실 근거 텍스트 — 백엔드 ai-draft 라우트에서만 사용(프롬프트
 //     grounding). 클라이언트로 내보내지 않는다(buildProgramStats 미노출). 옵시디안 03-프로그램.md
 //     ·01-사업개념.md 를 읽어 프로그램별 3~6문장으로 요약해 baked(런타임 옵시디안 접근 불가).
 //

@@ -9,7 +9,7 @@ import PhotoUpload from './PhotoUpload';
 //   · 회차: 등록된 회차가 있으면 드롭다운(자동기입) + 맨 위 "직접 입력" 옵션.
 //     "직접 입력"(또는 등록 회차 0건)이면 회차번호·교육일자·실참여를 직접 입력 →
 //     회차 미등록 상태에서도 출강확인서 생성 가능.
-//   · 「AI 초안」 → /forms/ai-draft(docType chulgang)로 교육주제 + 본문 6칸 채움(KNUH, grounded).
+//   · 「AI 초안」 → /forms/ai-draft(docType chulgang)로 교육주제 + 본문 6칸 채움(Claude, grounded).
 //     기존 본문에 내용이 있으면 덮어쓰기 confirm.
 //   · 교육주제 = 「사업계획서 기본주제 + AI 보강」 접목(2026-08):
 //     ① 프로그램·회차를 고르면 /forms/plan-topic 이 계획서(03-프로그램.md baked)의 회차 기본주제를
@@ -621,7 +621,7 @@ const ChulgangForm: React.FC = () => {
             className="kd-ledger-action kd-ledger-action--form"
             onClick={handleAiDraft}
             disabled={!selectedProgram || aiBusy}
-            title={!selectedProgram ? '프로그램을 먼저 선택하세요' : 'KNUH AI 로 본문 초안 생성'}
+            title={!selectedProgram ? '프로그램을 먼저 선택하세요' : 'Claude AI 로 본문 초안 생성'}
           >
             {aiBusy ? 'AI 생성 중…' : 'AI 초안'}
           </button>

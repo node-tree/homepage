@@ -1,9 +1,9 @@
-const { chat, parseJsonContent } = require('./knuhChat');
+const { chat, parseJsonContent } = require('./claudeChat');
 const { PROGRAM_MAP } = require('../data/kkumdarakPrograms');
 const { resolvePlanTopic } = require('../data/kkumdarakSessionPlan');
 
 // ═══════════════════════════════════════════════════════════════
-// AI 초안(KNUH) — 프롬프트 구성 + 호출 + 파싱. 라우트는 얇게 유지.
+// AI 초안(Claude) — 프롬프트 구성 + 호출 + 파싱. 라우트는 얇게 유지.
 //   "이상한 글 방지" 가드를 system 메시지에 명시. grounding/주강사/주제/키워드를 user 로.
 //   grounding 은 여기(백엔드)에서만 PROGRAM_MAP 으로 읽는다(클라이언트 미노출).
 //
@@ -280,9 +280,9 @@ function buildInspectionMessages({ program, 용역명, 산출물, 검수결과, 
   ];
 }
 
-// 라우트 진입점. body 검증 + 프롬프트 + KNUH 호출 + 파싱.
+// 라우트 진입점. body 검증 + 프롬프트 + Claude 호출 + 파싱.
 //   반환: { parsed, raw } (parsed=null 이면 파싱 실패 — 라우트가 raw 동봉).
-//   throw: KNUH_NO_KEY / KNUH_TIMEOUT / KNUH_HTTP_ERROR 등(라우트가 503 매핑).
+//   throw: AI_NO_KEY / AI_TIMEOUT / AI_HTTP_ERROR 등(라우트가 503 매핑).
 //   maxTokens: 한국어는 토큰 밀도가 높아 풍부한 출력은 truncation 위험 → docType 별 상향.
 const VALID_DOCTYPES = ['chulgang', 'hoeuirok', 'gyeolgwa', 'inspection'];
 
