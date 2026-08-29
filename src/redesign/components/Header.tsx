@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { BEATS, pad4 } from '../../components/DharaniClock/beat';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBeat } from '../useBeat';
+import { useEditMode } from '../edit/EditModeContext';
 
 /**
  * Header — 내비 4항목(설계 §1.1) + 독송 카운터(§2.3) + 관리자 문(§보조).
@@ -35,6 +36,7 @@ const Header: React.FC = () => {
   const beat = useBeat();
   const { pathname, search } = useLocation();
   const { isAuthenticated, isLoading, logout } = useAuth();
+  const edit = useEditMode();
 
   // 로그인 후에는 보던 자리로 돌려보낸다(Login 은 같은 출처 절대경로만 허용).
   const next = encodeURIComponent(`${pathname}${search}`);
@@ -71,7 +73,10 @@ const Header: React.FC = () => {
           <a href={`/login?next=${next}`}>LOGIN</a>
         ) : (
           <>
-            <a href={legacyEditPath(pathname)}>EDIT</a>
+            {/* EDIT = v5 안의 편집 모드 토글(레거시로 나가지 않는다). 켜진 상태는 DONE 으로 표시. */}
+            <button type="button" onClick={edit.toggle} aria-pressed={edit.editing} className={edit.editing ? "on" : undefined}>
+              {edit.editing ? "DONE" : "EDIT"}
+            </button>
             <a className="wide" href="/admin/media">
               MEDIA
             </a>

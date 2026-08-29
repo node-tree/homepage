@@ -26,6 +26,7 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
     // 역슬래시·제어문자는 브라우저가 '/'로 정규화해 `/\evil.com` → `//evil.com` 이탈이 가능하다.
     // 그래서 문자열 검사 대신 현재 출처 기준으로 URL 을 해석하고, 출처가 다르면 홈으로 폴백,
     // 같으면 pathname+search+hash 만 재조립해 되돌린다(스킴·호스트는 절대 대입하지 않는다).
+    // eslint-disable-next-line no-control-regex -- 제어문자 거부가 목적이다
     if (!raw || !raw.startsWith('/') || /[\\\u0000-\u001f]/.test(raw)) return '/';
     try {
       const u = new URL(raw, window.location.origin);

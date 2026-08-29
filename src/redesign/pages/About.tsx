@@ -1,9 +1,14 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { AdminLine, State } from '../components/bits';
 import NtPage from '../components/NtPage';
 import PlateImage from '../components/PlateImage';
 import RichHtml, { imagesIn } from '../components/RichHtml';
 import { useAbout } from '../db';
+import { useEditMode } from '../edit';
+
+// 제자리 편집기(BlockEditor 포함)는 편집 모드에서만 내려받는다.
+const AboutEdit = lazy(() => import('../edit/AboutEdit'));
 
 // ════════════════════════════════════════════════════════════════════════
 // About(/about · 내비 NODE TREE) — 내용은 DB(/api/about), 판식만 v5.
@@ -22,6 +27,7 @@ function splitTitle(raw: string): { ko: string; en?: string } {
 
 const About: React.FC = () => {
   const { isAuthenticated } = useAuth();
+  const { editing, setEditing } = useEditMode();
   const { data, error, loading, reload } = useAbout();
 
   const heading = splitTitle(data?.content || data?.title || 'NODE TREE');
@@ -57,7 +63,13 @@ const About: React.FC = () => {
         </section>
       )}
 
-      {data && (
+      {data && editing && (
+        <Suspense fallback={<State text="LOADING · 편집기를 불러오는 중…" />}>
+          <AboutEdit data={data} onSaved={reload} onClose={() => setEditing(false)} />
+        </Suspense>
+      )}
+
+      {data && !editing && (
         <section className="about" style={{ paddingTop: 56 }}>
           <div className="lft">
             {data.htmlContent ? (
@@ -65,11 +77,7 @@ const About: React.FC = () => {
             ) : (
               <div className="src">ABSENT · 아직 소개글이 없습니다.</div>
             )}
-            {isAuthenticated && (
-              <div className="adminline">
-                편집 · <a href="/legacy/about">레거시 편집기</a>에서 수정한다
-              </div>
-            )}
+            {isAuthenticated && <AdminLine page="about" />}
           </div>
 
           <div className="rgt">

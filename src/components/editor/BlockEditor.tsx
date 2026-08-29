@@ -51,6 +51,9 @@ interface BlockEditorProps {
   placeholder?: string;
   // AI 작성 톤 컨텍스트. 마을일기=village-diary, 작품=artwork, 그 외 general.
   aiContext?: AiContext;
+  // 링크 URL 입력을 바깥 대화상자에 맡긴다(v5 편집 모드의 PromptDialog).
+  // 주지 않으면 예전대로 window.prompt 를 쓴다 — 레거시 호출부는 그대로 둔다.
+  onRequestLink?: (apply: (url: string) => void) => void;
 }
 
 const COLORS = [
@@ -96,7 +99,13 @@ const SortableBlock: React.FC<{ id: string; children: (handleProps: any) => Reac
   );
 };
 
-const BlockEditor: React.FC<BlockEditorProps> = ({ value, onChange, placeholder, aiContext = 'general' }) => {
+const BlockEditor: React.FC<BlockEditorProps> = ({
+  value,
+  onChange,
+  placeholder,
+  aiContext = 'general',
+  onRequestLink,
+}) => {
   const [blocks, setBlocks] = useState<Block[]>(() => htmlToBlocks(value));
   const [addMenuAt, setAddMenuAt] = useState<number | null>(null);
   const [tplMenuAt, setTplMenuAt] = useState<number | null>(null);
@@ -398,8 +407,22 @@ const BlockEditor: React.FC<BlockEditorProps> = ({ value, onChange, placeholder,
                 className="bk-fmt"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
-                  const url = prompt('링크 URL:');
-                  if (url) inlineApiRef.current?.exec('createLink', url);
+                  // 바깥 대화상자가 포커스를 가져가면 선택 영역이 풀린다 —
+                  // 누른 순간의 Range 를 떠 두었다가 적용 직전에 되돌린다.
+                  const sel = window.getSelection();
+                  const saved = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).cloneRange() : null;
+                  const apply = (url: string) => {
+                    if (!url) return;
+                    if (saved) {
+                      const now = window.getSelection();
+                      now?.removeAllRanges();
+                      now?.addRange(saved);
+                    }
+                    inlineApiRef.current?.exec('createLink', url);
+                  };
+                  if (onRequestLink) onRequestLink(apply);
+                  // eslint-disable-next-line no-alert
+                  else apply(window.prompt('링크 URL:') || '');
                 }}
               >
                 🔗

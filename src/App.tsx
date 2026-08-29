@@ -7,6 +7,9 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import SeoHead from './components/SeoHead';
 import PageLoader from './components/PageLoader';
 import NtBoot from './redesign/components/NtBoot';
+// v5 내장 편집 모드 — 라우터 바로 안에 둔다(페이지 컴포넌트 자신이 useEditMode() 를 부른다).
+// DOM 을 그리지 않는 제공자라 레거시 라우트에는 아무 영향이 없다.
+import { EditModeProvider } from './redesign/edit/EditModeContext';
 import { playHoverSound, playClickSound, playNavSound, initAudioContext } from './utils/sound';
 import { prefetchAPI } from './services/api';
 
@@ -46,6 +49,9 @@ const NtCommons = lazy(() => import('./redesign/pages/Commons'));
 const NtCommonsDetail = lazy(() => import('./redesign/pages/CommonsDetail'));
 const NtCV = lazy(() => import('./redesign/pages/CV'));
 const NtContact = lazy(() => import('./redesign/pages/Contact'));
+// v5 내장 편집 — 글 작성/수정 풀페이지(/work/new · /work/:id/edit · /commons/…).
+// 로그인하지 않았으면 컴포넌트 안에서 /login?next= 로 돌린다.
+const NtPostForm = lazy(() => import('./redesign/edit/PostForm'));
 // 삼베 대리 신체는 라우트 전환에도 언마운트되면 안 되므로 <Routes> 바깥에 둔다(설계 §4.3).
 const SambeWalker = lazy(() => import('./redesign/components/SambeWalker'));
 // v5 전용 로딩 자리(웹폰트 요청 0). 인라인 스타일만 쓰므로 메인 번들에 nt.css 를 끌어오지 않는다.
@@ -523,6 +529,7 @@ function App() {
     <HelmetProvider>
       <AuthProvider>
         <BrowserRouter>
+          <EditModeProvider>
           {/* [code-split] 모든 스탠드얼론 라우트를 단일 Suspense 경계로 감싼다.
               각 라우트 컴포넌트가 lazy이므로 진입 시점에만 청크를 로드한다. */}
           <Suspense fallback={<PageLoader />}>
@@ -549,9 +556,17 @@ function App() {
               <Route path="/about" element={ntBoot(<NtAbout />)} />
               {/* /work?post=<id> (구 상세 URL) 은 목록 컴포넌트가 /work/<id> 로 넘긴다 */}
               <Route path="/work" element={ntBoot(<NtWork />)} />
+              {/* 정적 구간(new)이 :id 보다 먼저 매칭된다(v6 랭킹) — 순서와 무관하게 안전 */}
+              <Route path="/work/new" element={ntBoot(<NtPostForm kind="work" base="/work" label="ART WORK" />)} />
               <Route path="/work/:id" element={ntBoot(<NtWorkDetail />)} />
+              <Route path="/work/:id/edit" element={ntBoot(<NtPostForm kind="work" base="/work" label="ART WORK" />)} />
               <Route path="/commons" element={ntBoot(<NtCommons />)} />
+              <Route path="/commons/new" element={ntBoot(<NtPostForm kind="filed" base="/commons" label="COMMONS" />)} />
               <Route path="/commons/:id" element={ntBoot(<NtCommonsDetail />)} />
+              <Route
+                path="/commons/:id/edit"
+                element={ntBoot(<NtPostForm kind="filed" base="/commons" label="COMMONS" />)}
+              />
               <Route path="/cv" element={ntBoot(<NtCV />)} />
               <Route path="/contact" element={ntBoot(<NtContact />)} />
               {/* ── 시안 URL 보존 리다이렉트 ──
@@ -573,6 +588,7 @@ function App() {
           <Suspense fallback={null}>
             <SambeWalker />
           </Suspense>
+          </EditModeProvider>
         </BrowserRouter>
       </AuthProvider>
     </HelmetProvider>

@@ -1,8 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { Suspense, lazy, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { AdminLine, State } from '../components/bits';
 import NtPage from '../components/NtPage';
 import { useCv } from '../db';
+import { useEditMode } from '../edit';
+
+// 제자리 편집기는 편집 모드에서만 내려받는다.
+const CvEdit = lazy(() => import('../edit/CvEdit'));
 
 // ════════════════════════════════════════════════════════════════════════
 // CV(/cv) — 내용은 DB(/api/cv 의 줄글), 판식만 v5.
@@ -55,6 +59,7 @@ export function parseCv(text: string): CvSection[] {
 
 const CV: React.FC = () => {
   const { isAuthenticated } = useAuth();
+  const { editing, setEditing } = useEditMode();
   const { data, error, loading, reload } = useCv();
   const sections = useMemo(() => (data ? parseCv(data.content) : []), [data]);
 
@@ -88,7 +93,13 @@ const CV: React.FC = () => {
       {loading && <State text="LOADING · 이력을 불러오는 중…" />}
       {error && <State text={`ERROR · ${error}`} onRetry={reload} />}
 
-      {sections.length > 0 && (
+      {data && editing && (
+        <Suspense fallback={<State text="LOADING · 편집기를 불러오는 중…" />}>
+          <CvEdit data={data} onSaved={reload} onClose={() => setEditing(false)} />
+        </Suspense>
+      )}
+
+      {sections.length > 0 && !editing && (
         <section className="arch">
           <div className="list">
             {sections.map((s) => {

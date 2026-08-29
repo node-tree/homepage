@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { AdminLine, Note, State } from '../components/bits';
 import NtPage from '../components/NtPage';
 import PlateImage from '../components/PlateImage';
-import { monoDate, usePosts, useHeader, yearOf } from '../db';
+import { DbHeader, monoDate, usePosts, useHeader, yearOf } from '../db';
+import { useEditMode } from '../edit';
+
+// 편집 가설물은 편집 모드에서만 내려받는다(읽기 전용 방문자에겐 dnd-kit 을 지우지 않는다).
+const PostAdminList = lazy(() => import('../edit/PostAdminList'));
 
 // ════════════════════════════════════════════════════════════════════════
 // COMMONS 목록(/commons) — 내용은 DB(/api/filed), 판식만 v5.
@@ -19,11 +23,14 @@ const CATEGORIES = ['전체', '문화예술교육', '커뮤니티'] as const;
 
 const Commons: React.FC = () => {
   const { isAuthenticated } = useAuth();
+  const { editing } = useEditMode();
   const [params] = useSearchParams();
   const legacyPost = params.get('post');
   const cat = params.get('cat') ?? '전체';
   const { data: posts, error, loading, reload } = usePosts('filed');
-  const header = useHeader('filed');
+  const dbHeader = useHeader('filed');
+  const [headOverride, setHeadOverride] = useState<DbHeader | null>(null);
+  const header = headOverride ?? dbHeader;
 
   if (legacyPost) return <Navigate to={`/commons/${legacyPost}`} replace />;
 
@@ -57,6 +64,20 @@ const Commons: React.FC = () => {
         <Note text={header.subtitle} />
       </section>
       <div className="hair" />
+
+      {editing && posts && (
+        <Suspense fallback={<State text="LOADING · 편집기를 불러오는 중…" />}>
+          <PostAdminList
+            kind="filed"
+            base="/commons"
+            label="COMMONS"
+            posts={posts}
+            header={header}
+            onChanged={reload}
+            onHeaderSaved={setHeadOverride}
+          />
+        </Suspense>
+      )}
 
       <section className="index" style={{ paddingTop: 40 }}>
         <div className="rows">

@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { AdminLine, State } from '../components/bits';
 import NtPage from '../components/NtPage';
 import { useContact } from '../db';
+import { useEditMode } from '../edit';
 import { useAuth } from '../../contexts/AuthContext';
 import { contactAPI } from '../../services/api';
+
+// 제자리 편집기는 편집 모드에서만 내려받는다.
+const ContactEdit = lazy(() => import('../edit/ContactEdit'));
 
 // ════════════════════════════════════════════════════════════════════════
 // CONTACT(/contact) — 내용·기능은 레거시 그대로(DB /api/contact + 메시지 전송),
@@ -22,6 +26,7 @@ const displayUrl = (url: string): string =>
 
 const Contact: React.FC = () => {
   const { isAuthenticated } = useAuth();
+  const { editing, setEditing } = useEditMode();
   const { data, error, loading, reload } = useContact();
 
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
@@ -75,6 +80,13 @@ const Contact: React.FC = () => {
       {loading && <State text="LOADING · 연락처를 불러오는 중…" />}
       {error && <State text={`ERROR · ${error}`} onRetry={reload} />}
 
+      {data && editing && (
+        <Suspense fallback={<State text="LOADING · 편집기를 불러오는 중…" />}>
+          <ContactEdit data={data} onSaved={reload} onClose={() => setEditing(false)} />
+        </Suspense>
+      )}
+
+      {!editing && (
       <section className="about" style={{ paddingTop: 56 }}>
         <div className="lft">
           <div className="blk">
@@ -158,6 +170,7 @@ const Contact: React.FC = () => {
           {isAuthenticated && <AdminLine page="contact" />}
         </div>
       </section>
+      )}
     </NtPage>
   );
 };

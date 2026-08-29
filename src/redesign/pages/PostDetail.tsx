@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { AdminLine, State } from '../components/bits';
@@ -8,6 +8,10 @@ import PlateImage from '../components/PlateImage';
 import RichHtml from '../components/RichHtml';
 import VerticalMeta from '../components/VerticalMeta';
 import { DbPost, Kind, monoDate, usePosts, useResearchSynced, yearOf } from '../db';
+import { useEditMode } from '../edit';
+
+// 상세의 편집 문 — 편집 모드에서만 내려받는다.
+const PostDetailAdmin = lazy(() => import('../edit/PostDetailAdmin'));
 
 // ════════════════════════════════════════════════════════════════════════
 // 글 상세(/work/:id · /commons/:id) — 내용은 DB, 판식만 v5.
@@ -80,6 +84,7 @@ export interface PostDetailProps {
 const PostDetail: React.FC<PostDetailProps> = ({ kind, base, label }) => {
   const { id = '' } = useParams();
   const { isAuthenticated } = useAuth();
+  const { editing } = useEditMode();
   const { data: posts, error, loading, reload } = usePosts(kind);
   const researchSynced = useResearchSynced(kind === 'work' ? id : undefined);
 
@@ -181,6 +186,12 @@ const PostDetail: React.FC<PostDetailProps> = ({ kind, base, label }) => {
                     </Link>
                   )}
                 </div>
+              )}
+
+              {editing && (
+                <Suspense fallback={null}>
+                  <PostDetailAdmin kind={kind} base={base} id={post.id} title={post.title} />
+                </Suspense>
               )}
 
               <div className="src" style={{ marginTop: 36 }}>

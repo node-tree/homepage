@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { AdminLine, Note, State } from '../components/bits';
 import NtPage from '../components/NtPage';
 import PlateImage from '../components/PlateImage';
-import { DbPost, monoDate, usePosts, useHeader, yearOf } from '../db';
+import { DbHeader, DbPost, monoDate, usePosts, useHeader, yearOf } from '../db';
+import { useEditMode } from '../edit';
+
+// 편집 가설물은 편집 모드에서만 내려받는다(dnd-kit 을 읽기 전용 방문자에게 지우지 않는다).
+const PostAdminList = lazy(() => import('../edit/PostAdminList'));
 
 // ════════════════════════════════════════════════════════════════════════
 // ART WORK 목록(/work) — 내용은 DB(/api/work), 판식만 v5.
@@ -21,11 +25,15 @@ const RATIOS = ['16/9', '3/2', '4/5', '16/9', '1/1', '3/2', '16/9', '4/5'];
 
 const Work: React.FC = () => {
   const { isAuthenticated } = useAuth();
+  const { editing } = useEditMode();
   const [params] = useSearchParams();
   const legacyPost = params.get('post');
   const year = params.get('yr') ?? 'all';
   const { data: posts, error, loading, reload } = usePosts('work');
-  const header = useHeader('work');
+  const dbHeader = useHeader('work');
+  // 표제를 방금 고쳤다면 재적재 없이 그 값을 보여 준다(헤더 API 는 캐시가 5분이다).
+  const [headOverride, setHeadOverride] = useState<DbHeader | null>(null);
+  const header = headOverride ?? dbHeader;
 
   // 구 상세 URL(/work?post=id) → 새 상세 라우트로. hooks 뒤에 둬야 훅 순서가 흔들리지 않는다.
   if (legacyPost) return <Navigate to={`/work/${legacyPost}`} replace />;
@@ -61,6 +69,20 @@ const Work: React.FC = () => {
         <Note text={header.subtitle} />
       </section>
       <div className="hair" />
+
+      {editing && posts && (
+        <Suspense fallback={<State text="LOADING · 편집기를 불러오는 중…" />}>
+          <PostAdminList
+            kind="work"
+            base="/work"
+            label="ART WORK"
+            posts={posts}
+            header={header}
+            onChanged={reload}
+            onHeaderSaved={setHeadOverride}
+          />
+        </Suspense>
+      )}
 
       {loading && <State text="LOADING · 기록을 불러오는 중…" />}
       {error && <State text={`ERROR · ${error}`} onRetry={reload} />}

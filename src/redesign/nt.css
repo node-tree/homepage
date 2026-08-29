@@ -81,6 +81,7 @@
 }
 .nt header .auth a:hover,
 .nt header .auth button:hover { color: var(--juseo); }
+.nt header .auth button.on { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 .nt main { padding-top: 56px; }
 
 /* ── 페이지 표제 ── */

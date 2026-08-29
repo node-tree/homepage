@@ -1,4 +1,5 @@
 import React from 'react';
+import { useEditMode } from '../edit';
 
 // ════════════════════════════════════════════════════════════════════════
 // bits — v5 DB 페이지가 함께 쓰는 작은 조각들(표제 부제 · 상태 표시 · 관리자 줄).
@@ -37,10 +38,19 @@ export const State: React.FC<{ text: string; onRetry?: () => void }> = ({ text, 
   </section>
 );
 
-/** 로그인 상태에서만 보이는 편집 안내(작성·수정·순서편집은 레거시 편집기에 그대로 있다).
- *  page 를 주면 그 페이지의 레거시 편집 화면(/legacy/work 등)으로 곧장 간다. */
-export const AdminLine: React.FC<{ page?: 'about' | 'work' | 'commons' | 'cv' | 'contact' }> = ({ page }) => (
-  <div className="adminline">
-    편집 · <a href={page ? `/legacy/${page}` : '/legacy'}>레거시 편집기</a>에서 작성·수정·순서편집
-  </div>
-);
+/** 로그인 상태에서만 보이는 편집 줄.
+ *  이제 편집은 **이 페이지 안에서** 한다(v5 판식·v5 헤더 그대로) — 레거시 앱으로 튕기지 않는다.
+ *  /legacy 편집기는 백업으로 남아 있으므로 작은 보조 문으로만 걸어 둔다. */
+export const AdminLine: React.FC<{ page?: 'about' | 'work' | 'commons' | 'cv' | 'contact' }> = ({ page }) => {
+  const { editing, canEdit, toggle } = useEditMode();
+  if (!canEdit) return null;
+  return (
+    <div className="adminline">
+      편집 ·{' '}
+      <button type="button" className="nte-linkbtn" onClick={toggle} aria-pressed={editing}>
+        {editing ? '편집 모드 끄기' : '이 페이지에서 편집'}
+      </button>{' '}
+      · <a href={page ? `/legacy/${page}` : '/legacy'}>레거시 편집기</a>(백업)
+    </div>
+  );
+};

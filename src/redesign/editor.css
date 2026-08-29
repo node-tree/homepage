@@ -1,0 +1,407 @@
+/* ══════════════════════════════════════════════════════════════════════
+   editor.css — v5 내장 편집 모드 전용 판식.
+   nt.css 의 토큰(--ink/--line/--g1~3/--mono/--juseo/--jeong)을 그대로 쓴다.
+   금칙 준수: 아이콘·스피너·컬러 강조 없음. 둥근 모서리·그림자 없음.
+   선질 규칙: 편집 UI 는 「가설물」이므로 점선 계선(1px dashed)을 기본으로 쓴다.
+   ※ 헤더는 fixed(z-index 50)다 — 편집 UI 의 고정 바는 전부 **화면 하단**에만 둔다.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── 편집 패널(목록 상단 가설물) ── */
+.nt .nte-panel {
+  display: grid;
+  grid-template-columns: repeat(20, 1fr);
+  padding: 28px 0 0;
+}
+.nt .nte-panel > .nte-in {
+  grid-column: 2/20;
+  border: 1px dashed var(--g3);
+  padding: 20px 22px 22px;
+}
+.nt .nte-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  color: var(--g2);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+.nt .nte-legend b { font-weight: 400; color: var(--ink); }
+.nt .nte-acts { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; }
+
+/* ── 단추(전부 계선 사각. 채움 없음) ── */
+.nt .nte-btn {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  color: var(--g1);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 6px 14px;
+  cursor: pointer;
+  line-height: 1.6;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+.nt .nte-btn:hover:not(:disabled) { border-color: var(--ink); color: var(--ink); }
+.nt .nte-btn:focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
+.nt .nte-btn:disabled { color: var(--g3); border-color: var(--line); cursor: default; }
+.nt .nte-btn.pri { border-color: var(--ink); color: var(--ink); }
+.nt .nte-btn.pri:hover:not(:disabled) { background: var(--ink); color: var(--bg); }
+.nt .nte-btn.warn { color: var(--juseo); border-color: var(--line); }
+.nt .nte-btn.warn:hover:not(:disabled) { border-color: var(--juseo); color: var(--juseo); }
+
+/* 계선 없는 글자 단추(안내 줄 안에서 링크처럼) */
+.nt .nte-linkbtn {
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-bottom: 1px dashed var(--g3);
+  padding: 0;
+  cursor: pointer;
+}
+.nt .nte-linkbtn:hover { color: var(--juseo); border-bottom-color: var(--juseo); }
+.nt .nte-linkbtn:focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
+
+/* ── 폼 원자 ── */
+.nt .nte-field { margin-bottom: 22px; }
+.nt .nte-field > label,
+.nt .nte-field > .nte-label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  color: var(--g3);
+  margin-bottom: 7px;
+}
+.nt .nte-field .nte-hint {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--g3);
+  margin-top: 6px;
+  line-height: 1.8;
+}
+.nt .nte-field .nte-err {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  color: var(--juseo);
+  margin-top: 6px;
+}
+.nt .nte-input,
+.nt .nte-textarea,
+.nt .nte-select {
+  width: 100%;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--kr);
+  font-weight: 300;
+  font-size: 14px;
+  line-height: 1.8;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding: 7px 0;
+  appearance: none;
+}
+.nt .nte-textarea {
+  border: 1px solid var(--line);
+  padding: 11px 13px;
+  resize: vertical;
+  min-height: 110px;
+}
+.nt .nte-textarea.tall { min-height: 420px; font-family: var(--mono); font-size: 12.5px; line-height: 2; }
+.nt .nte-select { border-bottom: 1px solid var(--line); padding-right: 18px; }
+.nt .nte-input:focus,
+.nt .nte-textarea:focus,
+.nt .nte-select:focus { outline: none; border-color: var(--ink); }
+.nt .nte-input.bad,
+.nt .nte-textarea.bad { border-color: var(--juseo); }
+
+/* ── 편집 목록(드래그 순서) ── */
+.nt .nte-list { border-top: 1px solid var(--line); }
+.nt .nte-item {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr 7.5rem 9rem;
+  gap: 16px;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+  font-size: 14px;
+}
+.nt .nte-item.dragging { border-bottom-style: dashed; }
+.nt .nte-grip {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--g3);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 3px 6px;
+  cursor: grab;
+  touch-action: none;
+  justify-self: start;
+}
+.nt .nte-grip:focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
+.nt .nte-item .nte-t { color: var(--ink); overflow-wrap: anywhere; }
+.nt .nte-item .nte-meta {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--g2);
+}
+.nt .nte-item .nte-rowacts { display: flex; gap: 10px; justify-self: end; }
+.nt .nte-empty {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--g3);
+  padding: 18px 0;
+}
+
+/* ── 고정 하단 저장 바(헤더는 fixed 이므로 상단에 두지 않는다) ── */
+.nt .nte-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  background: var(--bg);
+  border-top: 1px solid var(--ink);
+  padding: 12px calc(var(--jeong) * 1);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nt .nte-bar .nte-barlab {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  color: var(--g2);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.nt .nte-bar .nte-acts { justify-content: flex-end; }
+/* 바가 떠 있는 동안의 아래 여백은 EditBar 가 body 에 직접 준다(푸터까지 밀어내야 한다). */
+
+/* ── 알림(토스트) ── */
+.nt .nte-toasts {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(92vw, 460px);
+  pointer-events: none;
+}
+.nt .nte-toast {
+  background: var(--bg);
+  border: 1px solid var(--ink);
+  padding: 10px 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.nt .nte-toast.err { border-color: var(--juseo); color: var(--juseo); }
+
+/* ── 대화상자(삭제 확인 · 링크 입력) ── */
+.nt .nte-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(15, 15, 26, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.nt .nte-dialog {
+  background: var(--bg);
+  border: 1px solid var(--ink);
+  width: min(100%, 460px);
+  padding: 24px 26px 22px;
+}
+.nt .nte-dialog h2 {
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--ink);
+  margin-bottom: 10px;
+  letter-spacing: -0.01em;
+}
+.nt .nte-dialog p {
+  font-size: 13.5px;
+  line-height: 1.9;
+  color: var(--g1);
+  overflow-wrap: anywhere;
+}
+.nt .nte-dialog .nte-acts { margin-top: 22px; justify-content: flex-end; }
+
+/* ── 썸네일 고르기 ── */
+.nt .nte-thumb { display: grid; grid-template-columns: 220px 1fr; gap: 20px; align-items: start; }
+.nt .nte-thumb .nte-thumbview { border: 1px dashed var(--line); }
+.nt .nte-thumb .nte-thumbview img { display: block; width: 100%; height: auto; }
+.nt .nte-thumb .nte-thumbnone {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--g3);
+  padding: 28px 12px;
+  text-align: center;
+}
+
+/* ── 폼 페이지 골격 ── */
+.nt .nte-form { display: grid; grid-template-columns: repeat(20, 1fr); padding: 12px 0 0; }
+.nt .nte-form > .nte-in { grid-column: 2/17; }
+/* BlockEditor(레거시 엔진)는 자체 CSS 를 갖는다 — 바깥 여백만 v5 리듬에 맞춘다 */
+.nt .nte-blockeditor { margin-top: 4px; border: 1px solid var(--line); }
+
+/* ── 배열 편집(Contact 이메일·소셜) ── */
+.nt .nte-arr { border-top: 1px solid var(--line); }
+.nt .nte-arrrow {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr auto;
+  gap: 14px;
+  align-items: end;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.nt .nte-arrrow.one { grid-template-columns: 1fr auto; }
+.nt .nte-arrrow .nte-field { margin-bottom: 0; }
+.nt .nte-arrrow .nte-rowacts { display: flex; gap: 8px; }
+
+/* ══════════════ 모바일 390 ══════════════ */
+@media (max-width: 767px) {
+  .nt .nte-panel { grid-template-columns: repeat(10, 1fr); }
+  .nt .nte-panel > .nte-in { grid-column: 2/10; padding: 16px 14px 18px; }
+  .nt .nte-form { grid-template-columns: repeat(10, 1fr); }
+  .nt .nte-form > .nte-in { grid-column: 2/10; }
+  .nt .nte-item {
+    grid-template-columns: 2.6rem 1fr;
+    row-gap: 6px;
+    padding: 12px 0;
+  }
+  .nt .nte-item .nte-meta { grid-column: 2/3; }
+  .nt .nte-item .nte-rowacts { grid-column: 2/3; justify-self: start; }
+  .nt .nte-thumb { grid-template-columns: 1fr; }
+  .nt .nte-arrrow { grid-template-columns: 1fr; row-gap: 10px; }
+  .nt .nte-arrrow.one { grid-template-columns: 1fr; }
+  .nt .nte-arrrow .nte-rowacts { justify-content: flex-start; }
+  .nt .nte-bar { padding: 10px 16px; }
+  .nt .nte-toasts { right: 12px; left: 12px; bottom: 12px; max-width: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nt .nte-btn { transition: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   BlockEditor(레거시 엔진) v5 정돈 — `.nt .nte-blockeditor` 안에서만 덮어쓴다.
+   /legacy 편집기의 판식은 건드리지 않는다(같은 CSS 파일을 그쪽은 읽지 않는다).
+   고치는 것은 판식과 **두 개의 실제 결함**이다:
+     ① .bk-global-toolbar 가 sticky top:0 · z-index:50 → v5 고정 헤더(z 50)와 같은 층에서
+        겹친다. top 을 헤더 높이만큼 내리고 층을 낮춘다(고정 헤더 함정).
+     ② .bk-inserter-actions 가 opacity:0(호버에만 보임) → 새 글은 본문이 비어 있어
+        「+ 블록」을 찾을 수 없다. v5 안에서는 항상 보이게 둔다.
+   ══════════════════════════════════════════════════════════════════════ */
+.nt .nte-blockeditor .bk-editor { max-width: none; margin: 0; color: var(--ink); padding: 14px 16px; }
+
+/* ① 고정 헤더 아래로 */
+.nt .nte-blockeditor .bk-global-toolbar {
+  top: 56px;
+  z-index: 30;
+  background: var(--bg);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding: 8px 0;
+  margin-bottom: 4px;
+}
+.nt .nte-blockeditor .bk-tool,
+.nt .nte-blockeditor .bk-add-btn,
+.nt .nte-blockeditor .bk-mini-btn,
+.nt .nte-blockeditor .bk-fmt,
+.nt .nte-blockeditor .bk-mini-select {
+  border-radius: 0;
+  border-color: var(--line);
+  background: transparent;
+  color: var(--g1);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  padding: 5px 11px;
+}
+.nt .nte-blockeditor .bk-tool:hover,
+.nt .nte-blockeditor .bk-mini-btn:hover,
+.nt .nte-blockeditor .bk-fmt:hover,
+.nt .nte-blockeditor .bk-add-btn.ghost:hover {
+  background: transparent;
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.nt .nte-blockeditor .bk-add-btn:hover,
+.nt .nte-blockeditor .bk-fmt.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.nt .nte-blockeditor .bk-tool-hint,
+.nt .nte-blockeditor .bk-mini-label,
+.nt .nte-blockeditor .bk-empty,
+.nt .nte-blockeditor .bk-hint {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--g3);
+}
+
+/* ② 「+ 블록」은 언제나 보인다 */
+.nt .nte-blockeditor .bk-inserter-actions { opacity: 1; background: transparent; }
+.nt .nte-blockeditor .bk-inserter { margin-left: 0; }
+.nt .nte-blockeditor .bk-inserter:hover .bk-inserter-line { background: var(--line); }
+
+/* 블록 손잡이·메뉴도 같은 선질로 */
+.nt .nte-blockeditor .bk-block-side { opacity: 1; }
+.nt .nte-blockeditor .bk-handle,
+.nt .nte-blockeditor .bk-side-btn {
+  border-radius: 0;
+  border-color: var(--line);
+  background: transparent;
+  color: var(--g3);
+}
+.nt .nte-blockeditor .bk-side-btn:hover { background: transparent; color: var(--ink); border-color: var(--ink); }
+.nt .nte-blockeditor .bk-side-btn.danger:hover { background: transparent; color: var(--juseo); border-color: var(--juseo); }
+.nt .nte-blockeditor .bk-block-content { border-radius: 0; }
+.nt .nte-blockeditor .bk-block-inner:hover .bk-block-content { background: transparent; border-color: var(--line); }
+.nt .nte-blockeditor .bk-menu {
+  border-radius: 0;
+  border-color: var(--ink);
+  box-shadow: none;
+  padding: 4px;
+}
+.nt .nte-blockeditor .bk-menu-item {
+  border-radius: 0;
+  font-family: var(--kr);
+  font-size: 13px;
+  color: var(--g1);
+}
+.nt .nte-blockeditor .bk-menu-item:hover { background: var(--bg); color: var(--ink); }
+.nt .nte-blockeditor .bk-inline { font-family: var(--kr); font-weight: 300; line-height: 1.9; color: var(--ink); }
+
+@media (max-width: 767px) {
+  /* 모바일 헤더는 92px 두 줄 */
+  .nt .nte-blockeditor .bk-global-toolbar { top: 92px; }
+  .nt .nte-blockeditor .bk-editor { padding: 12px 12px; }
+}
