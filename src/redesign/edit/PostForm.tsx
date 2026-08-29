@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import BlockEditor from '../../components/editor/BlockEditor';
+import Editor2 from '../editor2/Editor2';
 import ImageKitPicker from '../../components/editor/ImageKitPicker';
 import { ikUrl } from '../../utils/ikUrl';
 import NtPage from '../components/NtPage';
@@ -211,14 +211,13 @@ const PostFormInner: React.FC<PostFormProps & { id?: string }> = ({ kind, base, 
             <div className="nte-field">
               <div className="nte-label">본문 BODY</div>
               <div className="nte-blockeditor">
-                <BlockEditor
+                <Editor2
                   value={body}
                   onChange={(html) => {
                     setBody(html);
                     touch();
                   }}
                   placeholder="본문을 입력하십시오"
-                  aiContext={kind === 'work' ? 'artwork' : 'general'}
                   onRequestLink={requestLink}
                 />
               </div>

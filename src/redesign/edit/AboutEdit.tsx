@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import BlockEditor from '../../components/editor/BlockEditor';
+import Editor2 from '../editor2/Editor2';
 import { aboutAPI } from '../../services/api';
 import { DbAbout } from '../db';
 import EditBar from './ui/EditBar';
@@ -97,7 +97,7 @@ const AboutEdit: React.FC<AboutEditProps> = ({ data, onSaved, onClose }) => {
           <div className="nte-field">
             <div className="nte-label">본문 BODY</div>
             <div className="nte-blockeditor">
-              <BlockEditor
+              <Editor2
                 value={html}
                 onChange={(next) => {
                   setHtml(next);

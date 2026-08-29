@@ -1,0 +1,66 @@
+/* ══════════════════════════════════════════════════════════════════════
+   richlayout.css — 글 본문 레이아웃 계약(편집기 2.0 과 공개 페이지가 **같이** 쓴다 = WYSIWYG).
+   컨테이너에 .rl 을 준다. 토큰은 nt.css 의 --ink/--g*/--line/--mono/--kr/--jeong 을 그대로.
+   노드: figure.nt-fig · .nt-embed · .nt-spacer · [data-nt=raw] · (2차) .nt-cols · .nt-gallery · .nt-free
+   ══════════════════════════════════════════════════════════════════════ */
+
+.rl { --rl-gap: 28px; }
+.rl > * + * { margin-top: 20px; }
+.rl h2 { font-size: 20px; font-weight: 500; line-height: 1.5; margin-top: 44px; }
+.rl h3 { font-size: 16px; font-weight: 500; line-height: 1.6; margin-top: 32px; }
+.rl blockquote { border-left: 1px solid var(--g2); padding-left: 18px; color: var(--g1); margin-left: 0; }
+.rl hr { border: 0; border-top: 1px solid var(--line); margin: 40px 0; }
+.rl a { color: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--g3); }
+.rl ul, .rl ol { padding-left: 1.4em; }
+
+/* ── 도판 ── */
+.rl figure.nt-fig {
+  --w: 100%;
+  margin: var(--rl-gap) auto; width: var(--w); max-width: 100%;
+  display: flow-root;
+}
+.rl figure.nt-fig img { display: block; width: 100%; height: auto; }
+.rl figure.nt-fig a { display: block; text-decoration: none; }
+.rl figure.nt-fig figcaption {
+  margin-top: 8px; font-family: var(--mono); font-size: 11px; letter-spacing: .04em; line-height: 1.7; color: var(--g2);
+}
+.rl figure.nt-fig figcaption.is-empty { display: none; }
+.rl figure.nt-fig .nt-credit { color: var(--g3); margin-left: 10px; }
+.rl figure.nt-fig .nt-credit::before { content: '· '; }
+
+/* 폭 프리셋 */
+.rl figure.nt-fig[data-width="narrow"] { --w: 48%; }
+.rl figure.nt-fig[data-width="text"]   { --w: 100%; }
+.rl figure.nt-fig[data-width="wide"]   { --w: 134%; margin-left: -17%; margin-right: -17%; max-width: none; }
+.rl figure.nt-fig[data-width="bleed"]  { --w: 100vw; width: 100vw; max-width: none; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); }
+.rl figure.nt-fig[data-width="bleed"] figcaption { padding: 0 var(--jeong, 24px); }
+/* 정렬(좁게·custom 일 때만 의미) */
+.rl figure.nt-fig[data-align="left"]:not([data-width="wide"]):not([data-width="bleed"])  { margin-left: 0; margin-right: auto; }
+.rl figure.nt-fig[data-align="right"]:not([data-width="wide"]):not([data-width="bleed"]) { margin-left: auto; margin-right: 0; }
+/* 텍스트 감싸기 */
+.rl figure.nt-fig[data-float="left"]  { float: left;  margin: 6px var(--rl-gap) 16px 0; }
+.rl figure.nt-fig[data-float="right"] { float: right; margin: 6px 0 16px var(--rl-gap); }
+.rl figure.nt-fig[data-float="left"]:not([data-width="custom"]),
+.rl figure.nt-fig[data-float="right"]:not([data-width="custom"]) { --w: 46%; }
+.rl::after { content: ''; display: block; clear: both; }
+
+/* ── 임베드 ── */
+.rl .nt-embed { position: relative; width: 100%; aspect-ratio: 16/9; background: var(--plate, #ECECE8); margin: var(--rl-gap) 0; }
+.rl .nt-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+/* ── 여백 ── */
+.rl .nt-spacer { --h: 64px; height: var(--h); margin: 0; }
+
+/* ── 원문 보존 블록 ── */
+.rl [data-nt="raw"] { margin: var(--rl-gap) 0; overflow-x: auto; }
+.rl [data-nt="raw"] table { border-collapse: collapse; font-size: 13px; }
+.rl [data-nt="raw"] td, .rl [data-nt="raw"] th { border: 1px solid var(--line); padding: 6px 10px; }
+
+/* ── 모바일 ── */
+@media (max-width: 767px) {
+  .rl { --rl-gap: 20px; }
+  .rl figure.nt-fig[data-width="narrow"] { --w: 72%; }
+  .rl figure.nt-fig[data-width="wide"] { --w: 100%; margin-left: 0; margin-right: 0; }
+  .rl figure.nt-fig[data-float="left"], .rl figure.nt-fig[data-float="right"] { float: none; margin: var(--rl-gap) 0; --w: 100%; }
+  .rl figure.nt-fig[data-width="custom"] { --w: 100% !important; }
+}
