@@ -3,6 +3,7 @@ import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { AdminLine, Note, State } from '../components/bits';
 import NtPage from '../components/NtPage';
+import VerticalSeal from '../components/VerticalSeal';
 import PlateImage from '../components/PlateImage';
 import { DbHeader, monoDate, usePosts, useHeader, yearOf } from '../db';
 import { useEditMode } from '../edit';
@@ -57,6 +58,7 @@ const Commons: React.FC = () => {
       keywords="NODE TREE 커먼즈, 문화예술교육, 커뮤니티, 생산소"
     >
       <section className="pagehead">
+        <VerticalSeal place="head" mark="共有地" roman="COMMONS" />
         <div className="lab">
           {header.title} · {list.length || '—'}
         </div>

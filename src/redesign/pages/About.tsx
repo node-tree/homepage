@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { AdminLine, State } from '../components/bits';
 import NtPage from '../components/NtPage';
+import VerticalSeal from '../components/VerticalSeal';
 import PlateImage from '../components/PlateImage';
 import RichHtml, { imagesIn } from '../components/RichHtml';
 import { useAbout } from '../db';
@@ -41,6 +42,7 @@ const About: React.FC = () => {
       keywords="NODE TREE 소개, 이화영, 정강현, 아티스트 듀오"
     >
       <section className="pagehead">
+        <VerticalSeal place="head" mark="紹介" roman="ABOUT" />
         <div className="lab">{data?.title || 'ABOUT'}</div>
         <h1>
           {heading.ko}

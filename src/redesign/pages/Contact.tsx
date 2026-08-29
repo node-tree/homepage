@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useState } from 'react';
 import { AdminLine, State } from '../components/bits';
 import NtPage from '../components/NtPage';
+import VerticalSeal from '../components/VerticalSeal';
 import { useContact } from '../db';
 import { useEditMode } from '../edit';
 import { useAuth } from '../../contexts/AuthContext';
@@ -69,6 +70,7 @@ const Contact: React.FC = () => {
       keywords="NODE TREE 연락처, 문의, 협업"
     >
       <section className="pagehead">
+        <VerticalSeal place="head" mark="連絡" roman="CONTACT" />
         <div className="lab">CONTACT</div>
         <h1>
           CONTACT

@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { AdminLine, State } from '../components/bits';
 import NtPage from '../components/NtPage';
+import VerticalSeal from '../components/VerticalSeal';
 import { useCv } from '../db';
 import { useEditMode } from '../edit';
 
@@ -79,6 +80,7 @@ const CV: React.FC = () => {
       keywords="NODE TREE CV, 이화영 이력, 정강현 이력, 전시 이력"
     >
       <section className="pagehead">
+        <VerticalSeal place="head" mark="履歷" roman="CV" />
         <div className="lab">
           {data?.title || 'CV'}
           {span ? ` · ${span}` : ''}

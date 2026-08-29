@@ -607,3 +607,77 @@
   .nt header .clock { font-size: 9.5px; gap: 6px; padding-right: 12px; }
   .nt header .auth { font-size: 9px; gap: 8px; padding-right: 12px; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   세로 표찰(VerticalSeal) — 판의 가장자리에만 선다.
+   판식 규칙: 한자는 세우고(text-orientation: upright) 라틴·숫자는 눕힌다(mixed).
+   자리는 둘뿐이다 — 표제 왼쪽 1정간(.vhead) · 푸터 오른쪽 끝 간기(.vfoot).
+   상세의 세로 메타(.metav)는 따로 있다(§세로쓰기 메타).
+   ⚠ 둘 다 격자 칸을 배정받은 **흐름 배치**다. 절대배치가 없으므로 고정 헤더(z-50)
+   뒤로 숨을 일이 없다(reference_nodetreehome_fixed_header).
+   ══════════════════════════════════════════════════════════════════════ */
+.nt .vseal {
+  writing-mode: vertical-rl;
+  display: flex;                    /* vertical-rl 에서 flex 주축은 위→아래다 */
+  align-items: center;
+  font-family: var(--kr);
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--g3);
+}
+.nt .vseal .mk { text-orientation: upright; letter-spacing: .18em; color: var(--g1); }
+.nt .vseal .rm {
+  text-orientation: mixed; font-family: var(--mono); font-size: 9.5px; letter-spacing: .2em;
+}
+
+/* ── ① 페이지 표제 왼쪽 1정간 — 책의 제첨(題簽) 자리. 표제 칸(2/9)은 건드리지 않는다 ── */
+.nt .pagehead .vhead {
+  grid-column: 1/2; grid-row: 1 / span 2;
+  justify-self: end; align-self: end;
+  padding-right: 14px; padding-bottom: 3px;
+  gap: 12px;
+}
+
+/* ── ② 홈 히어로 — 표찰을 두지 않는다 ──
+   다라니 시계는 이미 제 계기 라벨로 「陀羅尼 時計」·「1 名 = 1 拍 · 9.508 S」를 여백에 낸다
+   (1920 실측: 좌하 .dclock__lab · 우상 .dclock__readbox). 바깥 슬롯에 같은 말을 세로로 한 번
+   더 세우면 동어반복이다. 홈의 세로쓰기는 푸터 간기(③)가 맡는다. */
+
+/* ── ③ 푸터 오른쪽 끝 — 간기(刊記). 네 칸(2/6·6/10·10/14·14/18) 뒤 빈 자리 ── */
+.nt footer .vfoot {
+  grid-column: 18/21; justify-self: end; align-self: start;
+  padding-right: 24px; gap: 10px;
+}
+.nt footer .vfoot .mk { letter-spacing: .22em; color: var(--g2); }
+
+/* ══════════════ 모바일 390 — 세로는 지키되 라틴 줄은 접는다 ══════════════ */
+@media (max-width: 767px) {
+  /* 1정간이 100vw/10(390 에서 39px · 320 에서 32px)뿐이라 두 줄이 서면 계선을 넘는다 */
+  .nt .pagehead .vhead { font-size: 11px; padding-right: 9px; padding-bottom: 2px; }
+  .nt .pagehead .vhead .rm { display: none; }
+  /* 간기는 남긴다 — 모바일에서 세로쓰기가 살아 있는 한 자리 */
+  .nt footer .vfoot {
+    grid-column: 2/10; justify-self: end; align-self: start;
+    padding-right: 0; margin-bottom: 0; font-size: 12px; gap: 8px;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   세로 메타(.metav) 칸 넘침 교정 — 2026-08-30.
+   증상: vertical-rl 의 줄 너비(=block 축)가 내용으로 정해져 3정간(216px)을 넘고
+        본문 칸(.txt = 5/17, x=288)을 14px 침범해 「年 YEAR 2026」이 제목 위에 얹혔다(1440 실측).
+   처방: 줄을 block 축으로 균등 분배(flex-direction:column)해 배정된 칸 안에서만 서게 한다.
+        칸도 본문 칸 바로 앞(1/5)까지 넓혀 글줄이 눌리지 않게 한다.
+   ⚠ 모바일(<768)의 가로 한 줄 폴백을 깨지 않도록 전부 min-width:768 안에 둔다.
+   ══════════════════════════════════════════════════════════════════════ */
+@media (min-width: 768px) {
+  .nt .detail .meta { grid-column: 1/5; padding: 0 20px 0 24px; }
+  .nt .metav { display: flex; flex-direction: column; }
+  .nt .metav div { margin-left: 0; flex: 1 1 0; min-width: 0; }
+}
+/* 1024 미만에서는 정간 자체가 좁다 — 글자를 한 단 줄이고 여백을 좁힌다 */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .nt .detail .meta { padding: 0 12px 0 16px; }
+  .nt .metav { font-size: 12px; line-height: 1.8; }
+}

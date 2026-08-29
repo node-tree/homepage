@@ -3,6 +3,7 @@ import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { AdminLine, Note, State } from '../components/bits';
 import NtPage from '../components/NtPage';
+import VerticalSeal from '../components/VerticalSeal';
 import PlateImage from '../components/PlateImage';
 import { DbHeader, DbPost, monoDate, usePosts, useHeader, yearOf } from '../db';
 import { useEditMode } from '../edit';
@@ -62,6 +63,7 @@ const Work: React.FC = () => {
       keywords="NODE TREE 작품, 위성악보, 에디아포닉, 낙원식당, 사운드 설치"
     >
       <section className="pagehead">
+        <VerticalSeal place="head" mark="作品" roman="WORK" />
         <div className="lab">
           {header.title} · {list.length || '—'}
         </div>

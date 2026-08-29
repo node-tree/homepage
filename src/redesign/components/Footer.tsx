@@ -1,5 +1,6 @@
 import React from 'react';
 import { FOOTER } from '../data/about';
+import VerticalSeal from './VerticalSeal';
 
 /** Footer — 목업 공통 푸터(4열). 문구 정본 = v5 목업. */
 const Footer: React.FC = () => (
@@ -32,6 +33,8 @@ const Footer: React.FC = () => (
       <b>{FOOTER.beat.b}</b>
       {FOOTER.beat.text}
     </div>
+    {/* 간기(刊記) — 판을 닫는 자리. 머리의 讀誦 카운터와 짝이다. */}
+    <VerticalSeal place="foot" mark="扶餘" roman="BUYEO" />
   </footer>
 );
 
