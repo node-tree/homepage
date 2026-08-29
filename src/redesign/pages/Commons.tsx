@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { AdminLine, Note, State } from '../components/bits';
 import NtPage from '../components/NtPage';
 import VerticalSeal from '../components/VerticalSeal';
-import PlateImage from '../components/PlateImage';
+import JustifiedFeed, { FeedEntry } from '../components/JustifiedFeed';
 import { DbHeader, monoDate, usePosts, useHeader, yearOf } from '../db';
 import { useEditMode } from '../edit';
 
@@ -112,35 +112,21 @@ const Commons: React.FC = () => {
       )}
 
       {shown.length > 0 && (
-        <section className="feed">
-          {/* 도판 흐름은 최근 8건 — 나머지는 아래 텍스트 인덱스에 전부 실린다(누락 없음) */}
-          {shown.slice(0, 8).map((p, i) => (
-            <article key={p.id} className={`item i${(i % 8) + 1}`}>
-              <div className="fig">
-                <Link to={`/commons/${p.id}`}>
-                  <PlateImage
-                    src={p.thumbnail}
-                    alt={p.title}
-                    ratio={i % 3 === 0 ? '16/9' : i % 3 === 1 ? '3/2' : '4/5'}
-                    note="ABSENT · 도판 미기재"
-                  />
-                </Link>
-                <div className="cap">
-                  <p>
-                    <Link to={`/commons/${p.id}`}>
-                      <span className="h">{p.title}</span>
-                    </Link>
-                  </p>
-                  <div className="m">
-                    {p.category ? <span>{p.category}</span> : <span className="t">분류 —</span>}
-                    <span>{yearOf(p.date) ?? '—'}</span>
-                    <span className="t">{monoDate(p.date)}</span>
-                  </div>
-                </div>
-              </div>
-            </article>
-          ))}
-        </section>
+        <JustifiedFeed
+          entries={shown.map(
+            (p): FeedEntry => ({
+              id: p.id,
+              href: `/commons/${p.id}`,
+              src: p.thumbnail,
+              title: p.title,
+              meta: [
+                { text: p.category ?? '분류 —', dim: !p.category },
+                { text: yearOf(p.date) ?? '—' },
+                { text: monoDate(p.date), dim: true },
+              ],
+            }),
+          )}
+        />
       )}
 
       {shown.length > 0 && (

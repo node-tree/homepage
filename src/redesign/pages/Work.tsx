@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { AdminLine, Note, State } from '../components/bits';
 import NtPage from '../components/NtPage';
 import VerticalSeal from '../components/VerticalSeal';
-import PlateImage from '../components/PlateImage';
+import JustifiedFeed, { FeedEntry } from '../components/JustifiedFeed';
 import { DbHeader, DbPost, monoDate, usePosts, useHeader, yearOf } from '../db';
 import { useEditMode } from '../edit';
 
@@ -21,8 +21,6 @@ const PostAdminList = lazy(() => import('../edit/PostAdminList'));
 //   구 URL /work?post=<id> 는 /work/<id> 로 넘긴다(발행 링크 보존).
 // ════════════════════════════════════════════════════════════════════════
 
-/** 도판 흐름 8칸의 창 비율 — 목업 works.html 의 어긋남을 그대로 옮겼다. */
-const RATIOS = ['16/9', '3/2', '4/5', '16/9', '1/1', '3/2', '16/9', '4/5'];
 
 const Work: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -42,7 +40,18 @@ const Work: React.FC = () => {
   const list = posts ?? [];
   const years = Array.from(new Set(list.map((p) => yearOf(p.date) ?? '·')));
   const shown = year === 'all' ? list : list.filter((p) => (yearOf(p.date) ?? '·') === year);
-  const features = list.slice(0, 8);
+  // 도판 흐름 = 필터된 전 글(연도 필터를 같이 탄다). 원본 비율 · 글줄 정렬.
+  const entries: FeedEntry[] = shown.map((p) => ({
+    id: p.id,
+    href: `/work/${p.id}`,
+    src: p.thumbnail,
+    title: p.title,
+    meta: [
+      { text: yearOf(p.date) ?? '—' },
+      { text: monoDate(p.date), dim: true },
+      { text: p.images && p.images.length ? `도판 ${p.images.length}` : '도판 —', dim: true },
+    ],
+  }));
 
   // 인덱스는 연도 묶음(역순). 도판 흐름은 DB 순서(sortOrder)를 그대로 따른다.
   const byYear = new Map<string, DbPost[]>();
@@ -90,38 +99,7 @@ const Work: React.FC = () => {
       {error && <State text={`ERROR · ${error}`} onRetry={reload} />}
       {!loading && !error && list.length === 0 && <State text="ABSENT · 아직 기록된 작품이 없습니다." />}
 
-      {features.length > 0 && (
-        <section className="feed">
-          {features.map((p, i) => (
-            <article key={p.id} className={`item i${i + 1}`}>
-              <div className="fig">
-                <Link to={`/work/${p.id}`}>
-                  <PlateImage
-                    src={p.thumbnail}
-                    alt={p.title}
-                    ratio={RATIOS[i % RATIOS.length]}
-                    note="ABSENT · 도판 미기재"
-                  />
-                </Link>
-                <div className="cap">
-                  <p>
-                    <Link to={`/work/${p.id}`}>
-                      <span className="h">{p.title}</span>
-                    </Link>
-                  </p>
-                  <div className="m">
-                    <span>{yearOf(p.date) ?? '—'}</span>
-                    <span className="t">{monoDate(p.date)}</span>
-                    <span className="t">
-                      {p.images && p.images.length ? `도판 ${p.images.length}` : '도판 —'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </article>
-          ))}
-        </section>
-      )}
+      {shown.length > 0 && <JustifiedFeed entries={entries} />}
 
       {list.length > 0 && (
         <>

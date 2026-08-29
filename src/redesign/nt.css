@@ -174,6 +174,35 @@
 .nt .row .pl { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; color: var(--g2); }
 .nt .row .pl.absent { color: var(--line); }
 
+
+/* ── 도판 흐름 · 글줄 정렬(JustifiedFeed, 2026-08-30) ──
+   원본 비율 · 행 높이 균일 · 봉인 없음 · 전 글 수록. 정간 어긋남(.item .i1~.i8)은 홈 피드(FeedRow)에만 남는다. */
+.nt .jfeed { margin: 48px var(--jeong) 0; }
+.nt .jrow { display: flex; align-items: flex-start; margin-bottom: 40px; }
+.nt .jfig { margin: 0; min-width: 0; }
+.nt .jfig .jwin {
+  display: block; width: 100%; background: var(--plate); overflow: hidden; position: relative;
+}
+.nt .jfig .jwin img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.nt .jfig.absent .jwin { background: none; border: 1px dashed var(--line); }
+.nt .jfig .jabsent {
+  position: absolute; left: 12px; bottom: 10px; font-family: var(--mono); font-size: 10px;
+  letter-spacing: .08em; color: var(--g3);
+}
+.nt .jfig figcaption { margin-top: 10px; display: flex; flex-direction: column; gap: 3px; }
+.nt .jfig figcaption .h { font-size: 14px; line-height: 1.6; color: var(--ink); }
+.nt .jfig figcaption .m {
+  display: flex; gap: 12px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; color: var(--g2);
+}
+.nt .jfig figcaption .m .t { color: var(--g3); }
+.nt .jfig:hover figcaption .h { color: var(--juseo); }
+@media (max-width: 767px) {
+  .nt .jfeed { margin-top: 28px; }
+  .nt .jrow { margin-bottom: 28px; }
+  .nt .jfig figcaption .h { font-size: 13.5px; }
+  .nt .jfig figcaption .m { font-size: 10px; gap: 10px; }
+}
+
 /* ── 세로쓰기 메타 ── */
 .nt .metav {
   writing-mode: vertical-rl; text-orientation: mixed; height: 560px;
