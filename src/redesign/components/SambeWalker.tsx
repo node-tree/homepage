@@ -110,10 +110,7 @@ const SambeWalker: React.FC = () => {
     const target = Math.max(st.current.x - jeong, Math.min(st.current.x + jeong, entry));
     st.current.target = target;
     st.current.arrived = false;
-    // 모바일은 화면 폭이 좁아 페이지별 보행로 높이를 그대로 쓰면 본문 위를 걷는다 → 화면 밑단에 붙인다.
-    if (hostRef.current) {
-      hostRef.current.style.bottom = `${window.innerWidth <= 767 ? 12 : spec.bottom}px`;
-    }
+    // 높이는 CSS 단일 규칙(헤더 계선 아래 top) — 페이지별 bottom(walker-routes.json)은 더 쓰지 않는다.
   }, [pathname]);
 
   // ── rAF 루프

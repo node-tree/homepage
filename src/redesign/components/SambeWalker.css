@@ -3,12 +3,14 @@
 .ntwalker {
   position: fixed;
   left: 0;
-  bottom: 28px;
-  width: 36px;
-  height: 64px;
+  /* 헤더 계선(56px) 바로 아래를 걷는다 — 2026-08-30 사용자 "잘 보이게 위쪽에".
+     헤더는 z-50 이라 위로 올라가도 가리지 않는다. 하단(bottom) 배치는 폐기. */
+  top: 62px;
+  width: 44px;
+  height: 78px;
   z-index: 40;
   pointer-events: none;
-  color: #6B6B6B;
+  color: #3A3A3A;
   will-change: transform;
   transform: translate3d(-200px, 0, 0);   /* 스프라이트 로드 전에는 화면 밖 */
 }
@@ -17,15 +19,16 @@
 
 .ntwalker__fig,
 .ntwalker__fig svg {
-  width: 36px;
-  height: 64px;
+  width: 44px;
+  height: 78px;
   display: block;
 }
 
 @media (max-width: 767px) {
+  .ntwalker { top: 98px; }   /* 모바일 헤더 92px 계선 아래 */
   .ntwalker,
   .ntwalker__fig,
-  .ntwalker__fig svg { width: 27px; height: 48px; }
+  .ntwalker__fig svg { width: 33px; height: 59px; }
 }
 
 /* 320px 이하 세로 화면은 비표시(설계 §4.3) */
