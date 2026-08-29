@@ -96,3 +96,21 @@
 .nt-raw__lab { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: var(--g3); margin-bottom: 8px; }
 .nt-raw__body { pointer-events: none; }
 .nt-bubble__host { position: absolute; z-index: 40; transform: translate(-50%, -100%); }
+
+/* 2차 — 컬럼·갤러리·프리폼 편집 상태 */
+.nt-editor2 .nt-cols { outline: 1px dashed var(--line); outline-offset: 6px; }
+.nt-editor2 .nt-col { outline: 1px dotted var(--line); padding: 4px; min-height: 40px; }
+.nt-editor2 .nt-tool--cols { margin: 0 0 10px; }
+.nt-editor2 .nt-gallery.is-selected, .nt-editor2 .nt-free.is-selected { outline: 1px solid var(--juseo); outline-offset: 4px; }
+.nt-editor2 .nt-gallery figcaption { display: flex; align-items: center; gap: 6px; }
+.nt-editor2 .nt-gallery figcaption input { flex: 1; min-width: 0; font: inherit; color: var(--g1); background: none; border: 0; border-bottom: 1px dashed var(--line); outline: none; }
+.nt-editor2 .nt-gallery__ops button { font: inherit; background: none; border: 1px solid var(--line); color: var(--g2); padding: 0 5px; cursor: pointer; }
+.nt-editor2 .nt-gallery .nt-tool, .nt-editor2 .nt-free .nt-tool { flex-basis: 100%; }
+.nt-editor2 .nt-gallery[data-layout="justify"] .nt-tool { width: 100%; }
+.nt-editor2 .nt-free .nt-free__stage { outline: 1px dashed var(--g3); background: repeating-linear-gradient(90deg, transparent 0 calc(5% - 1px), rgba(0,0,0,.05) calc(5% - 1px) 5%), repeating-linear-gradient(0deg, transparent 0 calc(5% - 1px), rgba(0,0,0,.05) calc(5% - 1px) 5%); }
+.nt-editor2 .nt-free__item { cursor: move; outline: 1px solid transparent; }
+.nt-editor2 .nt-free__item.is-active { outline: 1px solid var(--juseo); }
+.nt-editor2 .nt-free__item textarea { width: 100%; min-height: 60px; font: inherit; font-size: 14px; line-height: 1.8; color: var(--g1); background: rgba(250,250,249,.85); border: 1px dashed var(--line); resize: vertical; outline: none; }
+.nt-editor2 .nt-free__grip { position: absolute; right: -5px; bottom: -5px; width: 10px; height: 10px; background: var(--bg); border: 1px solid var(--g2); cursor: nwse-resize; }
+.nt-editor2 .nt-free { height: auto; }
+.nt-editor2 .nt-free .nt-free__stage { position: relative; height: var(--h); }

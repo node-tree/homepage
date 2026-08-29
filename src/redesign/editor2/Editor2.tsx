@@ -7,7 +7,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ImageKitPicker from '../../components/editor/ImageKitPicker';
 import '../richlayout.css';
 import './editor2.css';
+import { Column, Columns } from './nodes/Columns';
 import Figure from './nodes/Figure';
+import { Freeform } from './nodes/Freeform';
+import { Gallery } from './nodes/Gallery';
 import { Embed, Raw, Spacer, embedUrl } from './nodes/misc';
 import { normalizeLegacy } from './normalize';
 import { CLOSED, SlashItem, SlashMenu, useSlash } from './SlashMenu';
@@ -47,6 +50,10 @@ const Editor2: React.FC<Editor2Props> = ({ value, onChange, placeholder, onReque
       Embed,
       Spacer,
       Raw,
+      Columns,
+      Column,
+      Gallery,
+      Freeform,
     ],
     content: normalizeLegacy(value || ''),
     // 트랜잭션마다 React 트리를 다시 그리지 않는다(NodeView flushSync 경고·성능). 메뉴 상태는 이벤트로 받는다.
@@ -158,11 +165,17 @@ const Editor2: React.FC<Editor2Props> = ({ value, onChange, placeholder, onReque
       const { apply } = (e as CustomEvent).detail;
       setPicker({ open: true, onPick: (urls) => urls[0] && apply(urls[0]) });
     };
+    const onGalleryAdd = (e: Event) => {
+      const { apply } = (e as CustomEvent).detail;
+      setPicker({ open: true, multiple: true, onPick: (urls) => urls.length && apply(urls) });
+    };
     window.addEventListener('nt-fig-link', onLink);
     window.addEventListener('nt-fig-replace', onReplace);
+    window.addEventListener('nt-gallery-add', onGalleryAdd);
     return () => {
       window.removeEventListener('nt-fig-link', onLink);
       window.removeEventListener('nt-fig-replace', onReplace);
+      window.removeEventListener('nt-gallery-add', onGalleryAdd);
     };
   }, [onRequestLink]);
 
@@ -207,6 +220,15 @@ const Editor2: React.FC<Editor2Props> = ({ value, onChange, placeholder, onReque
               })
             : undefined,
       },
+      {
+        key: 'gallery',
+        label: '갤러리',
+        hint: '여러 장 · 글줄/격자/벽돌',
+        run: (ed) => pickImages(true, (urls) => urls.length && ed.chain().focus().insertGallery(urls.map((src) => ({ src }))).run()),
+      },
+      { key: 'cols2', label: '컬럼 2', hint: '나란히', run: (ed) => ed.chain().focus().insertColumns(2).run() },
+      { key: 'cols3', label: '컬럼 3', hint: '세 칸', run: (ed) => ed.chain().focus().insertColumns(3).run() },
+      { key: 'free', label: '자유배치', hint: '캔버스 · 드래그·겹침', run: (ed) => ed.chain().focus().insertFreeform().run() },
       { key: 'hr', label: '구분선', hint: '계선', run: (ed) => ed.chain().focus().setHorizontalRule().run() },
       { key: 'space', label: '여백', hint: '64px', run: (ed) => ed.chain().focus().insertContent({ type: 'ntSpacer', attrs: { h: 64 } }).run() },
     ],

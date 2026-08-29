@@ -14,7 +14,7 @@ import '../richlayout.css';
 
 const PURIFY: any = {
   ADD_TAGS: ['iframe', 'figure', 'figcaption'],
-  ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'src', 'target', 'data-nt', 'data-width', 'data-align', 'data-float', 'data-layout', 'data-cols', 'data-gap', 'loading', 'decoding'],
+  ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'src', 'target', 'data-nt', 'data-width', 'data-align', 'data-float', 'data-layout', 'data-cols', 'data-gap', 'data-kind', 'data-keep', 'loading', 'decoding'],
   // 옛 판식을 지운다 — 내용이 아니라 껍데기다.
   FORBID_TAGS: ['font', 'style'],
   FORBID_ATTR: ['style', 'class', 'align', 'bgcolor', 'face', 'size', 'border', 'cellpadding', 'cellspacing'],
@@ -22,7 +22,7 @@ const PURIFY: any = {
 
 // ── 편집기 2.0 계약(richlayout.css)은 통과시킨다: nt- 접두 class · data-nt* · 제한된 style(커스텀 속성·좌표) ──
 //   레거시 판식(임의 style/class)은 여전히 지운다 — 계약 밖은 껍데기다.
-const SAFE_STYLE = /^\s*((--w|--h|--cols|--ratio|--gap|left|top|width|height|z-index)\s*:\s*[\w.%\-\s]+;?\s*)+$/;
+const SAFE_STYLE = /^\s*((--w|--h|--r|--cols|--ratio|--gap|left|top|width|height|z-index)\s*:\s*[\w.%\-\s]+;?\s*)+$/;
 let hooked = false;
 function ensureHook() {
   if (hooked) return;
