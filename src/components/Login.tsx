@@ -23,8 +23,17 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
   const nextPath = (() => {
     if (typeof window === 'undefined') return '/';
     const raw = new URLSearchParams(window.location.search).get('next');
-    if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/';
-    return raw;
+    // 역슬래시·제어문자는 브라우저가 '/'로 정규화해 `/\evil.com` → `//evil.com` 이탈이 가능하다.
+    // 그래서 문자열 검사 대신 현재 출처 기준으로 URL 을 해석하고, 출처가 다르면 홈으로 폴백,
+    // 같으면 pathname+search+hash 만 재조립해 되돌린다(스킴·호스트는 절대 대입하지 않는다).
+    if (!raw || !raw.startsWith('/') || /[\\\u0000-\u001f]/.test(raw)) return '/';
+    try {
+      const u = new URL(raw, window.location.origin);
+      if (u.origin !== window.location.origin || u.pathname === '/login') return '/';
+      return `${u.pathname}${u.search}${u.hash}`;
+    } catch {
+      return '/';
+    }
   })();
 
   // 이미 로그인된 경우 복귀 경로(없으면 홈)로 리다이렉트
