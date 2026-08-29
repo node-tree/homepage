@@ -30,17 +30,21 @@ interface RoutesFile { routes: Record<string, RouteSpec>; default: RouteSpec }
 
 /** v5 리디자인 라우트에서만 걷는다(레거시 홈·/iso·/ocean 에는 나타나지 않는다). */
 export function isRedesignPath(pathname: string): boolean {
-  if (pathname === '/' || pathname === '/index' || pathname === '/about') return true;
-  if (pathname === '/work') return true;
-  return /^\/work\/(?!research\/)[^/]+$/.test(pathname);
+  // v5 판식을 쓰는 모든 라우트(편집 라우트 /work/new·/:id/edit 포함). 2026-08-30 사용자 "모든 페이지에서".
+  if (['/', '/index', '/about', '/cv', '/contact', '/work', '/commons'].includes(pathname)) return true;
+  if (/^\/work\/research\//.test(pathname)) return false;   // 레거시 리서치 뷰어
+  return /^\/(work|commons)\/[^/]+(\/edit)?$/.test(pathname);
 }
 
 /** 라우트 패턴 선택 — /work/:slug 는 파라미터 자리를 하나로 본다. */
 function specFor(file: RoutesFile | null, pathname: string): RouteSpec {
   const fallback: RouteSpec = { entry: 7, patrol: [2, 18], bottom: 28 };
   if (!file) return fallback;
-  const key =
-    file.routes[pathname] ? pathname : /^\/work\/[^/]+$/.test(pathname) ? '/work/:slug' : pathname;
+  const key = file.routes[pathname]
+    ? pathname
+    : /^\/work\/[^/]+/.test(pathname) ? '/work/:slug'
+    : /^\/commons\/[^/]+/.test(pathname) ? '/commons/:slug'
+    : pathname;
   return file.routes[key] ?? file.default ?? fallback;
 }
 

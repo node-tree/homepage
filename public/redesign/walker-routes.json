@@ -3,14 +3,88 @@
   "_fields": {
     "entry": "라우트 진입 시 걸어가 서는 자리(도착하면 콘텐츠 reveal)",
     "patrol": "가만히 두면 왕복하는 두 끝",
-    "bottom": "뷰포트 아래에서 띄우는 px — 페이지별 보행로 높이"
+    "bottom": "(미사용 — 2026-08-30부터 높이는 CSS 단일 규칙: 헤더 계선 아래)"
   },
   "routes": {
-    "/": { "entry": 7, "patrol": [2, 18], "bottom": 28 },
-    "/work": { "entry": 16, "patrol": [15.4, 18.6], "bottom": 40 },
-    "/work/:slug": { "entry": 3.4, "patrol": [1.2, 4.2], "bottom": 40 },
-    "/index": { "entry": 17, "patrol": [16.4, 19], "bottom": 52 },
-    "/about": { "entry": 8, "patrol": [1.6, 8.4], "bottom": 44 }
+    "/": {
+      "entry": 7,
+      "patrol": [
+        2,
+        18
+      ],
+      "bottom": 28
+    },
+    "/work": {
+      "entry": 16,
+      "patrol": [
+        15.4,
+        18.6
+      ],
+      "bottom": 40
+    },
+    "/work/:slug": {
+      "entry": 3.4,
+      "patrol": [
+        1.2,
+        4.2
+      ],
+      "bottom": 40
+    },
+    "/index": {
+      "entry": 17,
+      "patrol": [
+        16.4,
+        19
+      ],
+      "bottom": 52
+    },
+    "/about": {
+      "entry": 8,
+      "patrol": [
+        1.6,
+        8.4
+      ],
+      "bottom": 44
+    },
+    "/commons": {
+      "entry": 16,
+      "patrol": [
+        15.4,
+        18.6
+      ],
+      "bottom": 40
+    },
+    "/commons/:slug": {
+      "entry": 3.4,
+      "patrol": [
+        1.2,
+        4.2
+      ],
+      "bottom": 40
+    },
+    "/cv": {
+      "entry": 17,
+      "patrol": [
+        16.4,
+        19
+      ],
+      "bottom": 52
+    },
+    "/contact": {
+      "entry": 8,
+      "patrol": [
+        1.6,
+        8.4
+      ],
+      "bottom": 44
+    }
   },
-  "default": { "entry": 7, "patrol": [2, 18], "bottom": 28 }
+  "default": {
+    "entry": 7,
+    "patrol": [
+      2,
+      18
+    ],
+    "bottom": 28
+  }
 }
