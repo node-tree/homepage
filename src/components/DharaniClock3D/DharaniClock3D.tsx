@@ -16,7 +16,6 @@ import './DharaniClock3D.css';
 //   · reduced-motion = 정지 프레임. 모바일 = 시차 off · dpr ≤ 1.5 · 30fps 상한. WebGL 불가 → 2D 시계 폴백(Home 에서).
 // ════════════════════════════════════════════════════════════════════════
 
-const HALF = 470;
 const RING_DEPTH = 62;      // 고리 한 겹당 뒤로 물러나는 깊이
 const ROT_SEC = BEAT_SEC * BEATS_PER_GAK; // 자전 1주 = 한 각
 const STEP_MS = 300;
