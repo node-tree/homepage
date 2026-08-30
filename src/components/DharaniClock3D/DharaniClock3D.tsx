@@ -16,32 +16,40 @@ import './DharaniClock3D.css';
 //   · reduced-motion = 정지 프레임. 모바일 = 시차 off · dpr ≤ 1.5 · 30fps 상한. WebGL 불가 → 2D 시계 폴백(Home 에서).
 // ════════════════════════════════════════════════════════════════════════
 
-const RING_DEPTH = 62;      // 고리 한 겹당 뒤로 물러나는 깊이
+// 고리 깊이 층 = 0 (2026-08-30 사용자 "중앙이 안 맞아": 층이 다르면 기울였을 때 바늘 축과 바깥 고리의 동심이 깨진다).
+// 3D 감은 원반 전체의 기울기·자전·원근으로만 낸다. 값을 올리면 얕은 원뿔로 돌아간다.
+const RING_DEPTH = 0;
 const ROT_SEC = BEAT_SEC * BEATS_PER_GAK; // 자전 1주 = 한 각
 const STEP_MS = 300;
 const SEED_H = 190;
 export type Theme3D = 'light' | 'dark';
 /** 테마 팔레트 — 2D 시계(glyphRenderer.ts)와 같은 규칙: 라이트 = 흰 바탕 + 먹(농담→불투명도), 다크 = 검정 무대 + 크림(루마 밴드) */
 const PALETTE = {
-  light: { bg: 0xfafaf9, ink: INK_DARKROOM, redact: 0xe6e6e1, paper: 0xf1f1ee, line: 0x0f0f1a, tickA: 0.22, ringA: 0.08, gakNeedle: 0x0f0f1a, uLight: 1 },
-  dark: { bg: 0x0b0b0e, ink: CREAM, redact: 0x151519, paper: 0x141418, line: 0xdcddd3, tickA: 0.28, ringA: 0.1, gakNeedle: 0xdcddd3, uLight: 0 },
+  light: { bg: 0xfafaf9, ink: INK_DARKROOM, redact: 0xe6e6e1, paper: 0xf1f1ee, line: 0x0f0f1a, tickA: 0.14, ringA: 0, gakNeedle: 0x0f0f1a, uLight: 1 },
+  dark: { bg: 0x0b0b0e, ink: CREAM, redact: 0x151519, paper: 0x141418, line: 0xdcddd3, tickA: 0.2, ringA: 0, gakNeedle: 0xdcddd3, uLight: 0 },
 } as const;
 /** 시각 중심 보정용 표본 고리: 앞(눈금 r432, z0)·뒤(donor r402, z −4층) */
 const SAMPLE_RINGS: [number, number][] = [[432, 0], [402, -RING_DEPTH * 4]];
 const tmpV = new THREE.Vector3();
 
 const VS = /* glsl */ `
-in float aGate; in float aVerm; in float aAlpha;
-out vec2 vUv; out float vGate; out float vVerm; out float vAlpha;
+in float aGate; in float aVerm; in float aAlpha; in float aRing; in float aAng;
+uniform float uDepth; uniform float uStrikeAng; uniform float uStrike;
+out vec2 vUv; out float vGate; out float vVerm; out float vAlpha; out float vHit;
 void main() {
   vUv = uv; vGate = aGate; vVerm = aVerm; vAlpha = aAlpha;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  // 이벤트: 층 깊이(uDepth, 하드컷 양자화는 JS 가) — 바깥 고리일수록 뒤로
+  vec3 p = position; p.z -= aRing * uDepth;
+  // 스캔 스트라이크: 讀誦 바늘 근처(±14°) 글자가 한 순간 튄다
+  float da = abs(mod(aAng - uStrikeAng + 540.0, 360.0) - 180.0);
+  vHit = uStrike * (1.0 - smoothstep(4.0, 14.0, da));
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
 }`;
 
 // glyphRenderer.ts FS(다크)와 같은 규칙. uAlphaMul = 종자자 크로스페이드용.
 const FS = /* glsl */ `
 precision highp float;
-in vec2 vUv; in float vGate; in float vVerm; in float vAlpha;
+in vec2 vUv; in float vGate; in float vVerm; in float vAlpha; in float vHit;
 uniform sampler2D uAtlas; uniform vec3 uInk; uniform vec3 uVerm; uniform vec2 uBand; uniform float uEdge; uniform float uAlphaMul; uniform float uLight;
 out vec4 o;
 void main() {
@@ -55,6 +63,9 @@ void main() {
   else if (uLight > 0.5) { rgb = uInk; aa *= (0.72 + dens * 0.28); }
   else rgb = uInk * mix(uBand.x, uBand.y, clamp(dens, 0.0, 1.0));
   aa *= vAlpha * uAlphaMul;
+  // 스트라이크: 먹이 순간 반전(주서로) — 이케다식 하드 플래시
+  rgb = mix(rgb, uVerm * 1.2, vHit);
+  aa = min(1.0, aa * (1.0 + vHit * 0.8));
   o = vec4(rgb * aa, aa);
 }`;
 
@@ -71,6 +82,9 @@ function glyphMaterial(atlas: THREE.Texture, pal: (typeof PALETTE)[Theme3D]): TH
       uBand: { value: new THREE.Vector2(INK_BAND[0], INK_BAND[1]) },
       uEdge: { value: SDF_EDGE },
       uAlphaMul: { value: 1 },
+      uDepth: { value: 0 },
+      uStrikeAng: { value: 0 },
+      uStrike: { value: 0 },
     },
     transparent: true,
     depthWrite: false,
@@ -89,7 +103,7 @@ const polar = (r: number, deg: number): [number, number] => {
 
 /** 고리 글자 전부를 한 지오메트리로. 접선 방향으로 서고, 하반부는 반전해 항상 읽힌다(2D 규칙). */
 function buildGlyphGeometry(slots: Slot[]): { geo: THREE.BufferGeometry; redact: THREE.BufferGeometry } {
-  const pos: number[] = [], uv: number[] = [], gate: number[] = [], verm: number[] = [], alpha: number[] = [], idx: number[] = [];
+  const pos: number[] = [], uv: number[] = [], gate: number[] = [], verm: number[] = [], alpha: number[] = [], idx: number[] = [], ring: number[] = [], ang: number[] = [];
   const rpos: number[] = [], ridx: number[] = [];
   let v = 0, rv = 0;
   slots.forEach((s) => {
@@ -118,6 +132,8 @@ function buildGlyphGeometry(slots: Slot[]): { geo: THREE.BufferGeometry; redact:
       verm.push(g.vermilion ? 1 : 0);
       // 뒤 고리일수록 아주 조금 옅게(깊이감) — 임의 장식이 아니라 대기 원근
       alpha.push(1 - s.ri * 0.06);
+      ring.push(s.ri);
+      ang.push(s.a);
     });
     idx.push(v, v + 1, v + 2, v, v + 2, v + 3);
     v += 4;
@@ -128,6 +144,8 @@ function buildGlyphGeometry(slots: Slot[]): { geo: THREE.BufferGeometry; redact:
   geo.setAttribute('aGate', new THREE.Float32BufferAttribute(gate, 1));
   geo.setAttribute('aVerm', new THREE.Float32BufferAttribute(verm, 1));
   geo.setAttribute('aAlpha', new THREE.Float32BufferAttribute(alpha, 1));
+  geo.setAttribute('aRing', new THREE.Float32BufferAttribute(ring, 1));
+  geo.setAttribute('aAng', new THREE.Float32BufferAttribute(ang, 1));
   geo.setIndex(idx);
   const redact = new THREE.BufferGeometry();
   redact.setAttribute('position', new THREE.Float32BufferAttribute(rpos, 3));
@@ -148,6 +166,8 @@ function seedGeometry(set: ClockGlyphSet, seedId: number): THREE.BufferGeometry 
   geo.setAttribute('aGate', new THREE.Float32BufferAttribute([g.densGate, g.densGate, g.densGate, g.densGate], 1));
   geo.setAttribute('aVerm', new THREE.Float32BufferAttribute([0, 0, 0, 0], 1));
   geo.setAttribute('aAlpha', new THREE.Float32BufferAttribute([1, 1, 1, 1], 1));
+  geo.setAttribute('aRing', new THREE.Float32BufferAttribute([0, 0, 0, 0], 1));
+  geo.setAttribute('aAng', new THREE.Float32BufferAttribute([-999, -999, -999, -999], 1));
   geo.setIndex([0, 1, 2, 0, 2, 3]);
   return geo;
 }
@@ -169,7 +189,7 @@ function tickGeometry(): THREE.BufferGeometry {
   return geo;
 }
 
-function ringLine(r: number, z: number, n = 256): THREE.BufferGeometry {
+export function ringLine(r: number, z: number, n = 256): THREE.BufferGeometry {
   const pts: number[] = [];
   for (let i = 0; i <= n; i++) {
     const [x, y] = polar(r, (i / n) * 360);
@@ -233,7 +253,8 @@ const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ theme = 'light', now, o
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobile ? 1.5 : 2));
     renderer.setClearColor(pal.bg, 1);
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(30, 1, 10, 6000);
+    // fov 14 = 망원. 원근이 크면 기울인 원의 투영 타원 중심이 허브에서 벗어난다(1440 실측 −32px) → 거의 정사영에 가깝게.
+    const camera = new THREE.PerspectiveCamera(9, 1, 10, 40000);
     // 원반은 다섯 깊이 층(0 … −4×RING_DEPTH)의 **중간 깊이**가 원점에 오게 놓는다 —
     // 기울였을 때 보이는 덩어리의 중심이 뷰포트 중앙에 서고, 앞·뒤 고리가 위아래로 대칭으로 밀린다.
     const disc = new THREE.Group();
@@ -243,6 +264,8 @@ const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ theme = 'light', now, o
     scene.add(pivot);
 
     const stat = { frames: 0, ms: 0, last: 0, draws: 0, tris: 0 };
+    // 이케다식 이벤트: strike(박마다 120 ms) · burst(무작위 7±3박 또는 클릭/탭: 층이 3D 로 터졌다 돌아온다, 하드컷) · sweep(헤어라인)
+    const ev = { burstT0: -1e9, burstDur: 1100, nextBurstBeat: -1, strikeT0: -1e9, sweepT0: -1e9, spinJump: 0, tiltJump: 0 };
     const state = { theta: 0, tilt: -0.34, px: 0, py: 0, tx: 0, ty: 0, readDeg: 0, readFrom: 0, readT0: 0, gakDeg: 0, gakFrom: 0, gakT0: 0, seedCur: 0, seedPrev: 0, seedT0: 0, lastIndex: -1 };
     let raf = 0;
     let set: ClockGlyphSet | null = null;
@@ -272,18 +295,7 @@ const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ theme = 'light', now, o
     const ticks = new THREE.LineSegments(tickGeometry(), tickMat);
     disc.add(ticks);
     disposables.push(ticks.geometry, tickMat);
-    const ringMat = new THREE.LineBasicMaterial({ color: pal.line, transparent: true, opacity: pal.ringA });
-    [[380, 0], [316, 1], [253, 2], [191, 3], [136, 4]].forEach(([r, ri]) => {
-      const l = new THREE.LineLoop(ringLine(r + 22, -ri * RING_DEPTH), ringMat);
-      disc.add(l);
-      disposables.push(l.geometry);
-    });
-    disposables.push(ringMat);
-    // 중심 지(紙) 바탕 — 검정 무대 위 아주 옅은 원
-    const paper = new THREE.Mesh(new THREE.CircleGeometry(112, 96), new THREE.MeshBasicMaterial({ color: pal.paper }));
-    paper.position.z = 1;
-    disc.add(paper);
-    disposables.push(paper.geometry, paper.material as THREE.Material);
+    // 고리 안내선·중심 지(紙) 원은 두지 않는다(사용자 "배경에 도형 같은 게 있어 이상해") — 글자·눈금·바늘만 남긴다.
     // 바늘
     const readNeedle = needle(418, 2.2, 0xbe3c28, 6);
     const gakNeedle = needle(300, 1.4, pal.gakNeedle, 5);
@@ -293,6 +305,21 @@ const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ theme = 'light', now, o
     pin.position.z = 7;
     disc.add(pin);
     disposables.push(pin.geometry, pin.material as THREE.Material);
+    // 헤어라인 스윕(화면 공간·카메라 자식) — 이벤트 때 3단 하드컷으로 가로지른다
+    const sweepMat = new THREE.MeshBasicMaterial({ color: pal.line, transparent: true, opacity: 0, depthTest: false });
+    const sweep = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 4000), sweepMat);
+    sweep.renderOrder = 10;
+    scene.add(sweep);
+    disposables.push(sweep.geometry, sweepMat);
+    let glyphMat: THREE.ShaderMaterial | null = null;
+    const trigger = (t = performance.now()) => {
+      ev.burstT0 = t;
+      ev.spinJump = (Math.floor(Math.random() * 7) - 3) * (Math.PI / 12); // ±45° 를 15° 단위로
+      ev.tiltJump = (Math.floor(Math.random() * 5) - 2) * 0.08;
+      ev.sweepT0 = t;
+    };
+    const onTap = () => trigger();
+    host.addEventListener('pointerdown', onTap);
 
     // 글자 고리(아틀라스)
     loadClockGlyphs().then((s) => {
@@ -309,12 +336,11 @@ const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ theme = 'light', now, o
       const { geo, redact } = buildGlyphGeometry(slots);
       const mat = glyphMaterial(tex, pal);
       const glyphs = new THREE.Mesh(geo, mat);
+      glyphMat = mat;
       disc.add(glyphs);
       disposables.push(geo, mat);
-      const rmat = new THREE.MeshBasicMaterial({ color: pal.redact });
-      const rmesh = new THREE.Mesh(redact, rmat);
-      disc.add(rmesh);
-      disposables.push(redact, rmat);
+      // 가림(REDACTED) 칸은 빈 자리로 둔다 — 사각을 그리면 도형으로 읽힌다(결측은 침묵으로).
+      redact.dispose();
       // 종자자 두 장(크로스페이드)
       seedIds = s.rings.seed || [];
       seedMat = glyphMaterial(tex, pal);
@@ -363,6 +389,12 @@ const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ theme = 'light', now, o
         if (state.lastIndex >= 0) {
           swapSeed(b.index);
           state.seedT0 = t;
+          ev.strikeT0 = t;
+          if (ev.nextBurstBeat < 0) ev.nextBurstBeat = b.index + 4 + Math.floor(Math.random() * 6);
+          if (!reduced && b.index >= ev.nextBurstBeat) {
+            trigger(t);
+            ev.nextBurstBeat = b.index + 4 + Math.floor(Math.random() * 6);
+          }
         }
         state.lastIndex = b.index;
       }
@@ -380,15 +412,36 @@ const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ theme = 'light', now, o
         seedMat.uniforms.uAlphaMul.value = ease(kS);
         seedPrevMat.uniforms.uAlphaMul.value = 1 - ease(kS);
       }
-      // 원반: 느린 자전(한 각에 1주) + 기울기 호흡(±12°) + 시차
+      // ── 이벤트 값(하드컷 양자화 — 부드럽게 굴리지 않는다)
+      const kb = (t - ev.burstT0) / ev.burstDur;           // 0…1 동안 버스트
+      const q = (x: number, n: number) => Math.floor(Math.max(0, Math.min(1, x)) * n) / n;
+      const burst = kb >= 0 && kb < 1 ? (kb < 0.5 ? q(kb * 2, 4) : q((1 - kb) * 2, 4)) : 0; // 0→1→0 을 4단으로
+      const depth = burst * 170;
+      if (glyphMat) glyphMat.uniforms.uDepth.value = depth;
+      const ks = (t - ev.strikeT0) / 120;
+      const strike = ks >= 0 && ks < 1 ? 1 : 0;
+      if (glyphMat) {
+        glyphMat.uniforms.uStrike.value = reduced ? 0 : strike;
+        glyphMat.uniforms.uStrikeAng.value = state.readDeg;
+      }
+      // 헤어라인 스윕: 300 ms 안에 3칸으로 건너뛴다
+      const kw = (t - ev.sweepT0) / 300;
+      if (kw >= 0 && kw < 1) {
+        sweepMat.opacity = 0.9;
+        const lane = q(kw, 3) * 2 - 1; // −1, −1/3, +1/3
+        sweep.position.set(lane * camera.position.z * Math.tan((camera.fov * Math.PI) / 360) * camera.aspect * 0.8, 0, camera.position.z - 400);
+        sweep.quaternion.copy(camera.quaternion);
+      } else sweepMat.opacity = 0;
+      const jump = burst > 0 ? { spin: ev.spinJump * burst, tilt: ev.tiltJump * burst } : { spin: 0, tilt: 0 };
+      // 원반: 느린 자전(한 각에 1주) + 기울기 호흡(±12°) + 시차 (+ 이벤트 점프)
       const sec = b.sec;
-      const spin = reduced ? 0 : ((sec % ROT_SEC) / ROT_SEC) * Math.PI * 2;
-      const breathe = reduced ? 0 : Math.sin(sec / 23) * (12 * Math.PI) / 180;
+      const spin = (reduced ? 0 : ((sec % ROT_SEC) / ROT_SEC) * Math.PI * 2) + jump.spin;
+      const breathe = (reduced ? 0 : Math.sin(sec / 23) * (12 * Math.PI) / 180) + jump.tilt;
       state.px += (state.tx - state.px) * 0.04;
       state.py += (state.ty - state.py) * 0.04;
       pivot.rotation.set(state.tilt + breathe * 0.6 + state.py * 0.05, state.px * 0.05 + breathe * 0.35, spin);
-      camera.position.x = state.px * 40;
-      camera.position.y = -state.py * 30;
+      camera.position.x = state.px * camera.position.z * 0.02;
+      camera.position.y = -state.py * camera.position.z * 0.015;
       camera.lookAt(0, 0, 0);
       // ── 시각 중심 고정: 기울기·자전·시차가 바뀌어도 **투영된 원반의 경계상자 중심**이 뷰포트 중앙에 서게
       //    매 프레임 보정한다(사용자 "계속 벗어난다" 2026-08-30). 원점이 아니라 보이는 덩어리를 맞춘다.
@@ -403,9 +456,11 @@ const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ theme = 'light', now, o
           if (tmpV.y < minY) minY = tmpV.y; if (tmpV.y > maxY) maxY = tmpV.y;
         }
       }
-      const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+      // 잠금 기준 = 타원(바깥 고리) 중심과 허브(바늘 축)의 중간 — 둘 다 뷰포트 중앙에서 같은 거리 안에 둔다
+      tmpV.set(0, 0, 6).applyMatrix4(disc.matrixWorld).project(camera);
+      const cx = ((minX + maxX) / 2 + tmpV.x) / 2, cy = ((minY + maxY) / 2 + tmpV.y) / 2;
       // NDC 오프셋 → 원점 깊이에서의 월드 거리(카메라 거리 × tan(fov/2))
-      const halfH = camera.position.length() * Math.tan((camera.fov * Math.PI) / 360);
+      const halfH = camera.position.z * Math.tan((camera.fov * Math.PI) / 360);
       pivot.position.x -= cx * halfH * camera.aspect;
       pivot.position.y -= cy * halfH;
       renderer.render(scene, camera);
@@ -420,7 +475,7 @@ const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ theme = 'light', now, o
 
     // 검증 손잡이(개발)
     if (process.env.NODE_ENV !== 'production') {
-      (window as any).__ntHero = { renderer, scene, camera, disc, pivot, stat, state, frameOnce: () => frame(performance.now()) };
+      (window as any).__ntHero = { renderer, scene, camera, disc, pivot, stat, state, ev, trigger, frameOnce: () => frame(performance.now()) };
     }
 
     return () => {
@@ -429,6 +484,7 @@ const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ theme = 'light', now, o
       window.clearTimeout(raf);
       ro.disconnect();
       host.removeEventListener('pointermove', onMove);
+      host.removeEventListener('pointerdown', onTap);
       disposables.forEach((d) => d.dispose());
       if (seedMesh) seedMesh.geometry.dispose();
       if (seedPrevMesh) seedPrevMesh.geometry.dispose();
