@@ -51,6 +51,11 @@ const PageLoader: React.FC<PageLoaderProps> = ({ message = '불러오는 중...'
           color: '#999',
           letterSpacing: '0.05em',
           fontWeight: 300,
+          // [perf] 본문 폰트(S-CoreDream)를 상속하면 이 한 줄(한글·weight 300) 때문에
+          //   SCDream3.woff2 169KB 를 lazy 라우트마다 받는다 — 정작 0.3초 뒤 사라지는 문구다.
+          //   (생산소는 S-CoreDream 을 아예 쓰지 않는데도 페이지 무게의 22% 를 이걸로 썼다. 2026-08-30 실측)
+          //   대체 문구이므로 시스템 폰트로 그린다.
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
         }}
       >
         {message}

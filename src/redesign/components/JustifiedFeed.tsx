@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ikUrl } from '../../utils/ikUrl';
 
@@ -37,9 +37,23 @@ function remember(src: string, ratio: number) {
   }
 }
 
-/** 도판 URL(썸네일 폭 고정 — 행 높이 ≤ 420px 이므로 1200 이면 레티나까지 넉넉하다) */
+/** 도판 URL 기본값(srcSet 을 못 만드는 경우의 폴백) */
 export function feedSrc(src: string): string {
   return ikUrl(src.startsWith('//') ? `https:${src}` : src, { w: 1200 });
+}
+
+/** 격자 칸 실측 폭: 1920 3열 = 560px · 390 2열 = 185px. DPR 2~3 을 덮는 계단. */
+const FEED_WIDTHS = [400, 560, 800, 1120, 1600];
+
+/**
+ * [perf] 칸은 560px(모바일 185px)인데 전 도판을 w-1200 한 벌로 받고 있었다 —
+ * /commons 34장 = 3.0MB(2026-08-30 실측). 브라우저가 뷰포트·DPR 을 보고 고르게 srcSet 을 준다.
+ * ImageKit 변환이 안 되는 URL(GIF·외부 호스트·이미 쿼리가 붙은 것)은 폭이 바뀌지 않으므로 생략한다.
+ */
+export function feedSrcSet(src: string): string {
+  const base = src.startsWith('//') ? `https:${src}` : src;
+  if (ikUrl(base, { w: 400 }) === ikUrl(base, { w: 1600 })) return '';
+  return FEED_WIDTHS.map((w) => `${ikUrl(base, { w })} ${w}w`).join(', ');
 }
 
 interface Row { items: (FeedEntry & { ratio: number })[]; height: number }
@@ -89,23 +103,13 @@ const JustifiedFeed: React.FC<{ entries: FeedEntry[] }> = ({ entries }) => {
     return () => ro.disconnect();
   }, []);
 
-  // 비율을 미리 읽는다 — 모르는 것만.
-  useEffect(() => {
-    let alive = true;
-    entries.forEach((e) => {
-      if (!e.src || dims.has(e.src)) return;
-      const img = new Image();
-      img.onload = () => {
-        if (!alive || !img.naturalWidth || !img.naturalHeight) return;
-        remember(e.src as string, img.naturalWidth / img.naturalHeight);
-        bump((n) => n + 1);
-      };
-      img.src = feedSrc(e.src);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [entries]);
+  // 비율은 실제로 그려지는 <img> 의 onLoad 에서 읽는다.
+  // (예전엔 new Image() 로 미리 받았는데, srcSet 이 붙으면 브라우저가 고른 폭과 어긋나 같은 도판을 두 번 받는다.)
+  const onImgLoad = useCallback((src: string, el: HTMLImageElement) => {
+    if (dims.has(src) || !el.naturalWidth || !el.naturalHeight) return;
+    remember(src, el.naturalWidth / el.naturalHeight);
+    bump((n) => n + 1);
+  }, []);
 
   const entriesWithRatio = useMemo(() => entries.map((e) => ({ ...e, ratio: e.src ? dims.get(e.src) ?? null : null })), [entries, dims.size]); // eslint-disable-line react-hooks/exhaustive-deps
   void width; // ResizeObserver 는 되돌림(글줄 정렬)용으로 남긴다
@@ -117,7 +121,19 @@ const JustifiedFeed: React.FC<{ entries: FeedEntry[] }> = ({ entries }) => {
         return (
           <figure className={`gfig${e.src ? '' : ' absent'}${portrait ? ' portrait' : ''}`} key={e.id}>
             <Link to={e.href} className="gwin" aria-label={e.title}>
-              {e.src ? <img src={feedSrc(e.src)} alt={e.title} loading="lazy" decoding="async" /> : <span className="gabsent">ABSENT · 도판 미기재</span>}
+              {e.src ? (
+                <img
+                  src={feedSrc(e.src)}
+                  srcSet={feedSrcSet(e.src) || undefined}
+                  sizes="(max-width: 767px) 50vw, 33vw"
+                  alt={e.title}
+                  loading="lazy"
+                  decoding="async"
+                  onLoad={(ev) => onImgLoad(e.src as string, ev.currentTarget)}
+                />
+              ) : (
+                <span className="gabsent">ABSENT · 도판 미기재</span>
+              )}
             </Link>
             <figcaption>
               <Link to={e.href} className="h">
