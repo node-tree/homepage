@@ -71,7 +71,8 @@ export const SAMBE_CAP = '옷이 몸보다 먼저 도착해 기다린다.';
 export const FOOTER = {
   // 척추 문장 = 「사라진 것들이 돌아오는 방식」(About/포트폴리오-재구성-2026 §0 명제·★언어 정책, 2026-08-30 사용자 정정)
   brand: { b: 'NODE TREE', lines: ['사라진 것들이 돌아오는 방식', '뉴미디어 아티스트 듀오 이화영·정강현 · 충남 부여'] },
-  contact: { b: 'Contact', text: 'nodetreemedia@gmail.com' },
+  // 메일함 둘 — 대표(media)와 사업/기획(pmaker). 둘 다 살아 있는 주소다(2026-08-30 추가).
+  contact: { b: 'Contact', texts: ['nodetreemedia@gmail.com', 'nodetree.pmaker@gmail.com'] },
   mediation: { b: 'Mediation', links: [{ href: 'https://saengsanso.com', text: 'saengsanso.com' }, { href: 'https://isoartlab.com', text: 'isoartlab.com' }] },
   beat: { b: '讀誦', text: '1명 = 1박 · 9.508 s · 3,029 / 日' },
 };

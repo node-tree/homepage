@@ -16,7 +16,12 @@ const Footer: React.FC = () => (
     </div>
     <div>
       <b>{FOOTER.contact.b}</b>
-      {FOOTER.contact.text}
+      {FOOTER.contact.texts.map((t, i) => (
+        <React.Fragment key={t}>
+          {i > 0 && <br />}
+          <a href={`mailto:${t}`}>{t}</a>
+        </React.Fragment>
+      ))}
     </div>
     <div>
       <b>{FOOTER.mediation.b}</b>
