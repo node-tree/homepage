@@ -209,6 +209,7 @@
 .nt .gfig { margin: 0; min-width: 0; }
 .nt .gfig .gwin { display: block; aspect-ratio: 3/2; background: var(--plate); overflow: hidden; position: relative; }
 .nt .gfig .gwin img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.nt .gfig.portrait .gwin { background: #0B0B0E; } /* 세로 도판은 검정 무대(히어로 다크와 같은 #0B0B0E) 위에 담는다 — 2026-08-30 */
 .nt .gfig.portrait .gwin img { object-fit: contain; }
 .nt .gfig.absent .gwin { background: none; border: 1px dashed var(--line); }
 .nt .gfig .gabsent { position: absolute; left: 12px; bottom: 10px; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: var(--g3); }

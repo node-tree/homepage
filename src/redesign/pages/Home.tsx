@@ -16,8 +16,8 @@ const Home: React.FC = () => {
   return (
     <NtPage
       path="/"
-      title="NODE TREE — 내버린 것들 곁에 머무는 뉴미디어 아티스트 듀오"
-      description="이화영+정강현. 부여에 착지한 도시기록 프로젝트팀. 지금 진행 중인 전시·상영·리서치를 시간 역순으로 둔다."
+      title="NODE TREE · 사라진 것들이 돌아오는 방식"
+      description="뉴미디어 아티스트 듀오 이화영·정강현. 내버려진 사물, 끊긴 이야기, 연고 없는 땅 곁에 머물며 재배치하고 다시 발화하게 한다. 충남 부여."
       keywords="NODE TREE, 노드트리, 이화영, 정강현, 공생직조, 이물, 위성악보, 미디어아트, 부여"
       hero={
         <section className="hero-slot">
