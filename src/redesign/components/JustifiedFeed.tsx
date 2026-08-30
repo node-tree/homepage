@@ -3,14 +3,11 @@ import { Link } from 'react-router-dom';
 import { ikUrl } from '../../utils/ikUrl';
 
 // ════════════════════════════════════════════════════════════════════════
-// JustifiedFeed — 목록의 도판 흐름(2026-08-30 재설계).
-//   원칙(사용자 "글 리스트 이미지가 이상하다" → 리서치: Cargo Justify · 에디토리얼 인덱스):
-//   · 도판은 **원본 비율 그대로**(강제 창 비율·크롭 없음). 포스터는 세로로, 설치 전경은 가로로 선다.
-//   · 한 행의 높이가 같다 — 글줄처럼 정렬(justify). 마지막 행은 늘리지 않는다.
-//   · 봉인(72% 흐림)을 두지 않는다. 도판은 처음부터 보인다. 호버는 제목 색만 주서(朱書).
-//   · 모든 글이 도판 흐름에 실린다(8건 제한 폐기). 도판 없는 글은 점선 창(absent)으로 자리만.
-//   · 비율은 이미지를 한 번 미리 읽어 알아낸다(모듈 캐시 + sessionStorage). 읽기 전엔 3:2 로 잡고
-//     읽히면 재배치 — 자리 변동을 최소화하려고 행 높이는 고정 목표치를 쓴다.
+// JustifiedFeed → 균일 격자(2026-08-30 사용자 결정 "추천대로": 정돈 + 세로 도판 안 자르기).
+//   · 3열(모바일 2열) · 칸 비율 3:2 고정 · 가로 도판은 칸을 채우고(cover), 세로(비율<1)는 여백 두고 담는다(contain).
+//   · 봉인(흐림) 없음, 호버는 제목만 주서. 모든 글 수록, 도판 없는 글은 점선 칸.
+//   · 비율은 미리 읽어(모듈+sessionStorage 캐시) cover/contain 을 정한다 — 읽기 전엔 cover.
+//   (글줄 정렬 layout() 은 남겨 둔다 — 되돌릴 때 쓴다.)
 // ════════════════════════════════════════════════════════════════════════
 
 export interface FeedEntry {
@@ -110,49 +107,33 @@ const JustifiedFeed: React.FC<{ entries: FeedEntry[] }> = ({ entries }) => {
     };
   }, [entries]);
 
-  const rows = useMemo(() => {
-    if (!width) return [];
-    const mobile = width < 560;
-    const tablet = width < 900;
-    const gap = mobile ? 14 : 24;
-    const targetH = mobile ? Math.min(width * 0.9, 300) : tablet ? 260 : 340;
-    const maxPerRow = mobile ? 1 : tablet ? 3 : 4;
-    const withRatio = entries.map((e) => ({ ...e, ratio: e.src ? dims.get(e.src) ?? ABSENT_RATIO : ABSENT_RATIO }));
-    return layout(withRatio, width, targetH, gap, maxPerRow).map((r) => ({ ...r, gap }));
-  }, [entries, width, dims.size]); // eslint-disable-line react-hooks/exhaustive-deps
+  const entriesWithRatio = useMemo(() => entries.map((e) => ({ ...e, ratio: e.src ? dims.get(e.src) ?? null : null })), [entries, dims.size]); // eslint-disable-line react-hooks/exhaustive-deps
+  void width; // ResizeObserver 는 되돌림(글줄 정렬)용으로 남긴다
 
   return (
-    <div className="jfeed" ref={hostRef}>
-      {rows.map((row, ri) => (
-        <div className="jrow" key={ri} style={{ gap: row.gap }}>
-          {row.items.map((e) => {
-            const w = Math.round(e.ratio * row.height);
-            return (
-              <figure className={`jfig${e.src ? '' : ' absent'}`} key={e.id} style={{ width: w, flex: `0 1 ${w}px` }}>
-                <Link to={e.href} className="jwin" style={{ height: Math.round(row.height) }} aria-label={e.title}>
-                  {e.src ? (
-                    <img src={feedSrc(e.src)} alt={e.title} loading="lazy" decoding="async" />
-                  ) : (
-                    <span className="jabsent">ABSENT · 도판 미기재</span>
-                  )}
-                </Link>
-                <figcaption>
-                  <Link to={e.href} className="h">
-                    {e.title}
-                  </Link>
-                  <span className="m">
-                    {e.meta.map((m, i) => (
-                      <span key={i} className={m.dim ? 't' : undefined}>
-                        {m.text}
-                      </span>
-                    ))}
+    <div className="gfeed" ref={hostRef}>
+      {entriesWithRatio.map((e) => {
+        const portrait = e.ratio !== null && e.ratio < 0.9;
+        return (
+          <figure className={`gfig${e.src ? '' : ' absent'}${portrait ? ' portrait' : ''}`} key={e.id}>
+            <Link to={e.href} className="gwin" aria-label={e.title}>
+              {e.src ? <img src={feedSrc(e.src)} alt={e.title} loading="lazy" decoding="async" /> : <span className="gabsent">ABSENT · 도판 미기재</span>}
+            </Link>
+            <figcaption>
+              <Link to={e.href} className="h">
+                {e.title}
+              </Link>
+              <span className="m">
+                {e.meta.map((m, i) => (
+                  <span key={i} className={m.dim ? 't' : undefined}>
+                    {m.text}
                   </span>
-                </figcaption>
-              </figure>
-            );
-          })}
-        </div>
-      ))}
+                ))}
+              </span>
+            </figcaption>
+          </figure>
+        );
+      })}
     </div>
   );
 };

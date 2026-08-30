@@ -203,6 +203,27 @@
   .nt .jfig figcaption .m { font-size: 10px; gap: 10px; }
 }
 
+
+/* ── 도판 흐름 · 균일 격자(2026-08-30 결정) ── 3열 · 3:2 칸 · 가로 cover / 세로 contain */
+.nt .gfeed { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px 24px; margin: 48px var(--jeong) 0; }
+.nt .gfig { margin: 0; min-width: 0; }
+.nt .gfig .gwin { display: block; aspect-ratio: 3/2; background: var(--plate); overflow: hidden; position: relative; }
+.nt .gfig .gwin img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.nt .gfig.portrait .gwin img { object-fit: contain; }
+.nt .gfig.absent .gwin { background: none; border: 1px dashed var(--line); }
+.nt .gfig .gabsent { position: absolute; left: 12px; bottom: 10px; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: var(--g3); }
+.nt .gfig figcaption { margin-top: 10px; display: flex; flex-direction: column; gap: 3px; }
+.nt .gfig figcaption .h { font-size: 14px; line-height: 1.6; color: var(--ink); }
+.nt .gfig figcaption .m { display: flex; gap: 12px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; color: var(--g2); }
+.nt .gfig figcaption .m .t { color: var(--g3); }
+.nt .gfig:hover figcaption .h { color: var(--juseo); }
+@media (max-width: 1023px) { .nt .gfeed { gap: 32px 18px; } }
+@media (max-width: 767px) {
+  .nt .gfeed { grid-template-columns: repeat(2, 1fr); gap: 24px 12px; margin-top: 28px; }
+  .nt .gfig figcaption .h { font-size: 13px; }
+  .nt .gfig figcaption .m { font-size: 10px; gap: 8px; flex-wrap: wrap; }
+}
+
 /* ── 세로쓰기 메타 ── */
 .nt .metav {
   writing-mode: vertical-rl; text-orientation: mixed; height: 560px;
