@@ -45,7 +45,7 @@ export function feedSrc(src: string): string {
 interface Row { items: (FeedEntry & { ratio: number })[]; height: number }
 
 /** 글줄 정렬 — 목표 높이에 가장 가깝게 행을 끊는다. 마지막 행은 목표 높이 이하로만. */
-function layout(entries: (FeedEntry & { ratio: number })[], width: number, targetH: number, gap: number, maxPerRow: number): Row[] {
+export function layout(entries: (FeedEntry & { ratio: number })[], width: number, targetH: number, gap: number, maxPerRow: number): Row[] {
   const rows: Row[] = [];
   let cur: (FeedEntry & { ratio: number })[] = [];
   let sum = 0;

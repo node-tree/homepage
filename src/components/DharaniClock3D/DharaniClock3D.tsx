@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { buildSlots, loadClockGlyphs, type ClockGlyphSet, type Slot } from '../DharaniClock/atlas';
 import { BEATS, BEATS_PER_GAK, BEAT_SEC, beatAt, gakAngle, pad4, readingAngle } from '../DharaniClock/beat';
-import { CREAM, INK_BAND, SDF_EDGE, VERM } from '../DharaniClock/glyphRenderer';
+import { CREAM, INK_BAND, INK_DARKROOM, SDF_EDGE, VERM } from '../DharaniClock/glyphRenderer';
 import './DharaniClock3D.css';
 
 // ════════════════════════════════════════════════════════════════════════
@@ -20,8 +20,15 @@ const RING_DEPTH = 62;      // 고리 한 겹당 뒤로 물러나는 깊이
 const ROT_SEC = BEAT_SEC * BEATS_PER_GAK; // 자전 1주 = 한 각
 const STEP_MS = 300;
 const SEED_H = 190;
-const BG = 0x0b0b0e;
-const REDACT = 0x151519;
+export type Theme3D = 'light' | 'dark';
+/** 테마 팔레트 — 2D 시계(glyphRenderer.ts)와 같은 규칙: 라이트 = 흰 바탕 + 먹(농담→불투명도), 다크 = 검정 무대 + 크림(루마 밴드) */
+const PALETTE = {
+  light: { bg: 0xfafaf9, ink: INK_DARKROOM, redact: 0xe6e6e1, paper: 0xf1f1ee, line: 0x0f0f1a, tickA: 0.22, ringA: 0.08, gakNeedle: 0x0f0f1a, uLight: 1 },
+  dark: { bg: 0x0b0b0e, ink: CREAM, redact: 0x151519, paper: 0x141418, line: 0xdcddd3, tickA: 0.28, ringA: 0.1, gakNeedle: 0xdcddd3, uLight: 0 },
+} as const;
+/** 시각 중심 보정용 표본 고리: 앞(눈금 r432, z0)·뒤(donor r402, z −4층) */
+const SAMPLE_RINGS: [number, number][] = [[432, 0], [402, -RING_DEPTH * 4]];
+const tmpV = new THREE.Vector3();
 
 const VS = /* glsl */ `
 in float aGate; in float aVerm; in float aAlpha;
@@ -35,7 +42,7 @@ void main() {
 const FS = /* glsl */ `
 precision highp float;
 in vec2 vUv; in float vGate; in float vVerm; in float vAlpha;
-uniform sampler2D uAtlas; uniform vec3 uInk; uniform vec3 uVerm; uniform vec2 uBand; uniform float uEdge; uniform float uAlphaMul;
+uniform sampler2D uAtlas; uniform vec3 uInk; uniform vec3 uVerm; uniform vec2 uBand; uniform float uEdge; uniform float uAlphaMul; uniform float uLight;
 out vec4 o;
 void main() {
   vec2 t = texture(uAtlas, vUv).rg;
@@ -43,21 +50,23 @@ void main() {
   float w = clamp(fwidth(d) * 0.75, 0.002, 0.25);
   float paper = smoothstep(vGate * 0.5, vGate, dens);
   float a = smoothstep(uEdge - w, uEdge + w, d) * paper;
-  vec3 rgb;
-  if (vVerm > 0.5) rgb = uVerm * 1.20 * (0.70 + dens * 0.30);
+  vec3 rgb; float aa = a;
+  if (vVerm > 0.5) { rgb = uVerm * 1.20 * (0.70 + dens * 0.30); if (uLight > 0.5) aa *= (0.72 + dens * 0.28); }
+  else if (uLight > 0.5) { rgb = uInk; aa *= (0.72 + dens * 0.28); }
   else rgb = uInk * mix(uBand.x, uBand.y, clamp(dens, 0.0, 1.0));
-  float aa = a * vAlpha * uAlphaMul;
+  aa *= vAlpha * uAlphaMul;
   o = vec4(rgb * aa, aa);
 }`;
 
-function glyphMaterial(atlas: THREE.Texture): THREE.ShaderMaterial {
+function glyphMaterial(atlas: THREE.Texture, pal: (typeof PALETTE)[Theme3D]): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     glslVersion: THREE.GLSL3,
     vertexShader: VS,
     fragmentShader: FS,
     uniforms: {
       uAtlas: { value: atlas },
-      uInk: { value: new THREE.Vector3(...CREAM) },
+      uInk: { value: new THREE.Vector3(...pal.ink) },
+      uLight: { value: pal.uLight },
       uVerm: { value: new THREE.Vector3(...VERM) },
       uBand: { value: new THREE.Vector2(INK_BAND[0], INK_BAND[1]) },
       uEdge: { value: SDF_EDGE },
@@ -179,6 +188,7 @@ function needle(len: number, width: number, color: number, z: number): THREE.Mes
 }
 
 export interface DharaniClock3DProps {
+  theme?: Theme3D;
   /** 검증용 시각 오버라이드 */
   now?: () => Date;
   onFallback?: () => void;
@@ -193,7 +203,8 @@ export function webgl2Available(): boolean {
   }
 }
 
-const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ now, onFallback }) => {
+const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ theme = 'light', now, onFallback }) => {
+  const pal = PALETTE[theme];
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [beat, setBeat] = useState(() => beatAt((now ?? (() => new Date()))()));
@@ -220,7 +231,7 @@ const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ now, onFallback }) => {
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobile ? 1.5 : 2));
-    renderer.setClearColor(BG, 1);
+    renderer.setClearColor(pal.bg, 1);
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(30, 1, 10, 6000);
     // 원반은 다섯 깊이 층(0 … −4×RING_DEPTH)의 **중간 깊이**가 원점에 오게 놓는다 —
@@ -257,11 +268,11 @@ const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ now, onFallback }) => {
     fit();
 
     // 눈금·고리선(먹, 옅게)
-    const tickMat = new THREE.LineBasicMaterial({ color: 0xdcddd3, transparent: true, opacity: 0.28 });
+    const tickMat = new THREE.LineBasicMaterial({ color: pal.line, transparent: true, opacity: pal.tickA });
     const ticks = new THREE.LineSegments(tickGeometry(), tickMat);
     disc.add(ticks);
     disposables.push(ticks.geometry, tickMat);
-    const ringMat = new THREE.LineBasicMaterial({ color: 0xdcddd3, transparent: true, opacity: 0.10 });
+    const ringMat = new THREE.LineBasicMaterial({ color: pal.line, transparent: true, opacity: pal.ringA });
     [[380, 0], [316, 1], [253, 2], [191, 3], [136, 4]].forEach(([r, ri]) => {
       const l = new THREE.LineLoop(ringLine(r + 22, -ri * RING_DEPTH), ringMat);
       disc.add(l);
@@ -269,13 +280,13 @@ const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ now, onFallback }) => {
     });
     disposables.push(ringMat);
     // 중심 지(紙) 바탕 — 검정 무대 위 아주 옅은 원
-    const paper = new THREE.Mesh(new THREE.CircleGeometry(112, 96), new THREE.MeshBasicMaterial({ color: 0x141418 }));
+    const paper = new THREE.Mesh(new THREE.CircleGeometry(112, 96), new THREE.MeshBasicMaterial({ color: pal.paper }));
     paper.position.z = 1;
     disc.add(paper);
     disposables.push(paper.geometry, paper.material as THREE.Material);
     // 바늘
     const readNeedle = needle(418, 2.2, 0xbe3c28, 6);
-    const gakNeedle = needle(300, 1.4, 0xdcddd3, 5);
+    const gakNeedle = needle(300, 1.4, pal.gakNeedle, 5);
     disc.add(readNeedle, gakNeedle);
     disposables.push(readNeedle.geometry, readNeedle.material as THREE.Material, gakNeedle.geometry, gakNeedle.material as THREE.Material);
     const pin = new THREE.Mesh(new THREE.CircleGeometry(4, 24), new THREE.MeshBasicMaterial({ color: 0xbe3c28 }));
@@ -296,18 +307,18 @@ const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ now, onFallback }) => {
       disposables.push(tex);
       const slots = buildSlots(s);
       const { geo, redact } = buildGlyphGeometry(slots);
-      const mat = glyphMaterial(tex);
+      const mat = glyphMaterial(tex, pal);
       const glyphs = new THREE.Mesh(geo, mat);
       disc.add(glyphs);
       disposables.push(geo, mat);
-      const rmat = new THREE.MeshBasicMaterial({ color: REDACT });
+      const rmat = new THREE.MeshBasicMaterial({ color: pal.redact });
       const rmesh = new THREE.Mesh(redact, rmat);
       disc.add(rmesh);
       disposables.push(redact, rmat);
       // 종자자 두 장(크로스페이드)
       seedIds = s.rings.seed || [];
-      seedMat = glyphMaterial(tex);
-      seedPrevMat = glyphMaterial(tex);
+      seedMat = glyphMaterial(tex, pal);
+      seedPrevMat = glyphMaterial(tex, pal);
       disposables.push(seedMat, seedPrevMat);
       const b0 = beatAt((nowRef.current ?? (() => new Date()))());
       state.seedCur = b0.index % 9;
@@ -379,6 +390,24 @@ const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ now, onFallback }) => {
       camera.position.x = state.px * 40;
       camera.position.y = -state.py * 30;
       camera.lookAt(0, 0, 0);
+      // ── 시각 중심 고정: 기울기·자전·시차가 바뀌어도 **투영된 원반의 경계상자 중심**이 뷰포트 중앙에 서게
+      //    매 프레임 보정한다(사용자 "계속 벗어난다" 2026-08-30). 원점이 아니라 보이는 덩어리를 맞춘다.
+      pivot.updateMatrixWorld(true);
+      camera.updateMatrixWorld(true);
+      let minX = 1, maxX = -1, minY = 1, maxY = -1;
+      for (const [rr, zz] of SAMPLE_RINGS) {
+        for (let k = 0; k < 24; k++) {
+          const a = (k / 24) * Math.PI * 2;
+          tmpV.set(Math.sin(a) * rr, Math.cos(a) * rr, zz).applyMatrix4(disc.matrixWorld).project(camera);
+          if (tmpV.x < minX) minX = tmpV.x; if (tmpV.x > maxX) maxX = tmpV.x;
+          if (tmpV.y < minY) minY = tmpV.y; if (tmpV.y > maxY) maxY = tmpV.y;
+        }
+      }
+      const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+      // NDC 오프셋 → 원점 깊이에서의 월드 거리(카메라 거리 × tan(fov/2))
+      const halfH = camera.position.length() * Math.tan((camera.fov * Math.PI) / 360);
+      pivot.position.x -= cx * halfH * camera.aspect;
+      pivot.position.y -= cy * halfH;
       renderer.render(scene, camera);
       stat.frames += 1;
       if (stat.last) stat.ms += t - stat.last;
@@ -406,14 +435,14 @@ const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ now, onFallback }) => {
       renderer.dispose();
       if (process.env.NODE_ENV !== 'production') (window as any).__ntHero = null;
     };
-  }, [onFallback]);
+  }, [onFallback, pal]);
 
   return (
-    <div className={`dclock3d${ready ? ' is-ready' : ''}`} ref={hostRef} aria-label="陀羅尼 時計 — 3차원 봉안 원반" role="img">
+    <div className={`dclock3d dclock3d--${theme}${ready ? ' is-ready' : ''}`} ref={hostRef} aria-label="陀羅尼 時計 — 3차원 봉안 원반" role="img">
       <canvas ref={canvasRef} className="dclock3d__gl" />
       <div className="dclock3d__grain" aria-hidden />
       <div className="dclock3d__lab" aria-hidden>
-        陀羅尼 時計 · 奉安 · <span>WEBGL2 · 5 RINGS · Z −{RING_DEPTH * 4}</span>
+        陀羅尼 時計 · 奉安 · <span>WEBGL2 · 5 RINGS · Z −{RING_DEPTH * 4} · {theme.toUpperCase()}</span>
       </div>
       <div className="dclock3d__read" aria-hidden>
         <span className="k">讀誦</span> <b>{pad4(beat.index)}</b> <span>/ {BEATS}</span>

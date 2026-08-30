@@ -21,10 +21,10 @@ const Home: React.FC = () => {
       hero={
         <section className="hero-slot hero-slot--full">
           {fallback ? (
-            <DharaniClock theme="dark" />
+            <DharaniClock theme="light" />
           ) : (
-            <Suspense fallback={<div className="dclock3d" aria-hidden />}>
-              <DharaniClock3D onFallback={onFallback} />
+            <Suspense fallback={<div className="dclock3d dclock3d--light" aria-hidden />}>
+              <DharaniClock3D theme="light" onFallback={onFallback} />
             </Suspense>
           )}
         </section>
