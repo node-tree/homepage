@@ -20,7 +20,6 @@ export interface FeedEntry {
 }
 
 const CACHE_KEY = 'nt.dims.v1';
-const ABSENT_RATIO = 3 / 2;
 const dims = new Map<string, number>();
 try {
   const raw = sessionStorage.getItem(CACHE_KEY);
