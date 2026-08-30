@@ -11,7 +11,10 @@ import { ikUrl } from '../utils/ikUrl';
 const saengsansoAPI = _ssoAPI as Record<string, any>;
 
 // ─── 랜덤 테마 (접속 시 결정) ───
-const THEME_COLORS = ['#C8D64A', '#DAAA20'] as const; // 샤르트뢰즈 그린, 골든 머스타드
+// 접속마다 지면색이 바뀌는 장치는 생산소의 성격이라 그대로 둔다.
+// 다만 채도를 내렸다 — 색상환 자리(연두·황토)는 그대로라 브랜드는 이어지고, 눈의 피로만 걷힌다.
+//   구: #C8D64A 샤르트뢰즈 · #DAAA20 골든 머스타드 (2026-08-30 이전)
+const THEME_COLORS = ['#BFC49B', '#DCD3BC'] as const; // 세이지, 웜 샌드
 const THEME_BG = THEME_COLORS[Math.floor(Math.random() * THEME_COLORS.length)];
 
 const C = {
@@ -21,7 +24,8 @@ const C = {
   black: '#1A1A14',    // 블랙
   dark: '#1A1A14',     // 블랙
   white: THEME_BG,     // 랜덤 테마 배경
-  gray65: '#4A5030',   // 올리브 그레이
+  gray65: '#55524A',   // 보조 — 색면 두 종 모두에서 중립인 웜 그레이
+  mark: '#1A1A14',     // 강조 계선 — 활성 내비·호버 표식. 색면 위에서는 잉크가 가장 또렷하다
 };
 
 // 테마색 rgba 헬퍼
@@ -1574,7 +1578,7 @@ function SaengsansoApp() {
                 <span key={copy} style={{
                   fontSize: '48px', fontWeight: 900,
                   fontFamily: "Verdana, 'Noto Sans Korean', 'Apple SD Gothic Neo', sans-serif",
-                  color: '#000000', lineHeight: '1.1',
+                  color: C.black, lineHeight: '1.1',
                   whiteSpace: 'nowrap',
                   display: 'inline-block',
                   flexShrink: 0,
@@ -1632,12 +1636,12 @@ function SaengsansoApp() {
                   textTransform: 'uppercase' as const, letterSpacing: 'normal',
                   cursor: 'pointer', whiteSpace: 'nowrap' as const, verticalAlign: 'middle',
                   color: C.dark,
-                  borderBottom: isActive ? `2px solid ${C.accent}` : '2px solid transparent',
+                  borderBottom: isActive ? `2px solid ${C.mark}` : '2px solid transparent',
                   transition: 'border-color 0.3s, color 0.3s',
                 }}
-                  onMouseEnter={e => { e.currentTarget.style.borderBottomColor = C.accent; e.currentTarget.style.color = C.accent; }}
+                  onMouseEnter={e => { e.currentTarget.style.borderBottomColor = C.mark; e.currentTarget.style.color = C.accent; }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.borderBottomColor = isActive ? C.accent : 'transparent';
+                    e.currentTarget.style.borderBottomColor = isActive ? C.mark : 'transparent';
                     e.currentTarget.style.color = C.dark;
                   }}
                 >
