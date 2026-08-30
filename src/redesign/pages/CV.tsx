@@ -16,6 +16,11 @@ const CvEdit = lazy(() => import('../edit/CvEdit'));
 //     섹션([개인전]·[전시/공연]…)은 2px 계선의 head 행 + 우단 앵커.
 //   원문은 `연도 항목_장소_장소` 꼴이므로 밑줄(_)을 장소 칸으로 옮겨 앉힌다 —
 //   **글자는 하나도 버리지 않는다**(위치만 바뀐다).
+//   2026-08-30 개정(사용자 결정)
+//     · 첫 묶음(프로필 — 단체명·구성원·학력·연혁)은 이력 행과 선질이 다르다.
+//       판머리 아래 **별도 자리(.prof)**로 올린다 — 이력 행(.yrow)과 섞지 않는다.
+//     · 우단의 ANCHOR 와 COUNT 가 같은 섹션 목록을 두 번 세웠다 — **한 줄로 합친다**
+//       (`개인전 10` 꼴. WORK 의 연도 필터 · COMMONS 의 분류 필터와 같은 선질).
 // ════════════════════════════════════════════════════════════════════════
 
 interface CvRow {
@@ -63,6 +68,11 @@ const CV: React.FC = () => {
   const { editing, setEditing } = useEditMode();
   const { data, error, loading, reload } = useCv();
   const sections = useMemo(() => (data ? parseCv(data.content) : []), [data]);
+  // 프로필(첫 묶음)은 이력 행에서 빼내 위로 올린다. 연도 없는 줄 = 이름/구성원, 연도 있는 줄 = 연혁.
+  const profile = sections[0]?.label === '프로필' ? sections[0] : null;
+  const body = profile ? sections.slice(1) : sections;
+  const who = profile?.rows.filter((r) => !r.year) ?? [];
+  const hist = profile?.rows.filter((r) => r.year) ?? [];
 
   const years = sections
     .flatMap((s) => s.rows.map((r) => r.year))
@@ -92,6 +102,32 @@ const CV: React.FC = () => {
       </section>
       <div className="hair dae" />
 
+      {profile && !editing && (
+        <section className="prof">
+          <div className="who">
+            {who.map((r, i) => (
+              <div className={i === 0 ? 'nm' : 'mem'} key={`who-${i}`}>
+                {r.entry}
+                {r.place ? ` · ${r.place}` : ''}
+              </div>
+            ))}
+          </div>
+          {hist.length > 0 && (
+            <div className="hist">
+              {hist.map((r, i) => (
+                <div className="hrow" key={`hist-${i}`}>
+                  <span className="y">{r.year}</span>
+                  <span className="e">
+                    {r.entry}
+                    {r.place ? ` · ${r.place}` : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       {loading && <State text="LOADING · 이력을 불러오는 중…" />}
       {error && <State text={`ERROR · ${error}`} onRetry={reload} />}
 
@@ -101,10 +137,10 @@ const CV: React.FC = () => {
         </Suspense>
       )}
 
-      {sections.length > 0 && !editing && (
+      {body.length > 0 && !editing && (
         <section className="arch">
           <div className="list">
-            {sections.map((s) => {
+            {body.map((s) => {
               let lastYear: string | null = null;
               return (
                 <React.Fragment key={s.anchor}>
@@ -136,22 +172,15 @@ const CV: React.FC = () => {
           </div>
 
           <div className="anchors">
-            <b>ANCHOR</b>
-            {sections.map((s) => (
+            <b>목차 SECTION</b>
+            {body.map((s) => (
               <React.Fragment key={s.anchor}>
-                <a href={`#${s.anchor}`}>{s.label}</a>
+                <a href={`#${s.anchor}`}>
+                  {s.label} {s.rows.length}
+                </a>
                 <br />
               </React.Fragment>
             ))}
-            <div className="cnt">
-              <b>COUNT</b>
-              {sections.map((s, i) => (
-                <React.Fragment key={s.anchor}>
-                  {i > 0 && <br />}
-                  {s.label} {s.rows.length}
-                </React.Fragment>
-              ))}
-            </div>
           </div>
         </section>
       )}

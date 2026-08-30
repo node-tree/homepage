@@ -16,7 +16,10 @@ const PostAdminList = lazy(() => import('../edit/PostAdminList'));
 //   목업 정본: _workspace/03_mock/v5/index.html <section class="feed"> (피드 행)
 //     도판 창(정간 어긋남 i1~i8 순환) + 캡션(제목) + Mono 메타(분류 · 날짜)
 //   카테고리 탭(전체 · 문화예술교육 · 커뮤니티)은 알약 버튼 대신 **URL 로 되는 궤적 필터**로 옮겼다.
-//   꿈다락(異素) 배너는 「바깥」이므로 점선 계선(매개 블록 선질)으로 둔다.
+//   2026-08-30 개정 — 도판 격자가 전 글을 수록하게 되어 하단 텍스트 인덱스가 같은 목록을
+//     되풀이했다. **인덱스를 걷어내고 격자 하나만 둔다**(사용자 결정).
+//   이소(異素)는 본체가 다른 도메인에 있는 자리다 — 판머리 바로 아래 「매개의 문」으로 세운다.
+//     「바깥」이므로 점선 계선을 쓴다(.out 관례와 같다).
 //   구 URL /commons?post=<id> 는 /commons/<id> 로 넘긴다.
 // ════════════════════════════════════════════════════════════════════════
 
@@ -38,17 +41,6 @@ const Commons: React.FC = () => {
   const list = posts ?? [];
   const shown = cat === '전체' ? list : list.filter((p) => p.category === cat);
   const count = (c: string) => (c === '전체' ? list.length : list.filter((p) => p.category === c).length);
-
-  // 인덱스는 연도 묶음(역순). 도판 흐름은 DB 순서(sortOrder)를 그대로 따른다.
-  const byYear = new Map<string, typeof shown>();
-  shown.forEach((p) => {
-    const y = yearOf(p.date) ?? '·';
-    if (!byYear.has(y)) byYear.set(y, []);
-    (byYear.get(y) as typeof shown).push(p);
-  });
-  const groups = Array.from(byYear.entries())
-    .sort((a, b) => b[0].localeCompare(a[0]))
-    .map(([year, rows]) => ({ year, rows }));
 
   return (
     <NtPage
@@ -81,16 +73,25 @@ const Commons: React.FC = () => {
         </Suspense>
       )}
 
-      <section className="index" style={{ paddingTop: 40 }}>
-        <div className="rows">
-          <div className="grp">매개 MEDIATION — 본체는 각자의 도메인에 있다</div>
-          <a className="prow-l out" href="/iso" target="_blank" rel="noopener noreferrer">
-            <span className="t">이소 異素</span>
-            <span className="md">꿈다락 토요문화학교 · 지역 어린이·청소년 예술교육 프로그램</span>
-            <span className="go">바로가기 →</span>
-          </a>
-        </div>
+      <section className="gate">
+        <a href="https://isoartlab.com" target="_blank" rel="noopener noreferrer">
+          <div className="l">
+            <div className="kick">매개 MEDIATION · 본체는 각자의 도메인에 있다</div>
+            <div className="nm">
+              이소 異素<span className="dom">isoartlab.com</span>
+            </div>
+            <p className="desc">
+              노드트리가 충남 부여군 장암면에서 운영하는 꿈다락 토요문화학교입니다. 마을의 어린이·청소년과 주민이 함께
+              공간과 도구를 만들고, 소리와 기록으로 채우고, 세대를 건너 나눕니다. 프로그램·일정·마을일기·마을소식은
+              이소 홈페이지에 쌓입니다.
+            </p>
+            <div className="in">소개 · 프로그램 · 일정 · 마을일기 · 마을소식 · 오시는 길</div>
+          </div>
+          <span className="go">이소 홈페이지 →</span>
+        </a>
+      </section>
 
+      <section className="index">
         <div className="filt">
           <b>분류 CATEGORY</b>
           {CATEGORIES.map((c) => (
@@ -101,6 +102,10 @@ const Commons: React.FC = () => {
               <br />
             </React.Fragment>
           ))}
+          <div className="key">
+            <b>도판 PLATE</b>
+            점선 칸 · 도판 미기재
+          </div>
         </div>
       </section>
 
@@ -134,26 +139,9 @@ const Commons: React.FC = () => {
           <div className="hair dae" style={{ marginTop: 64 }} />
           <section className="index">
             <div className="rows">
-              {groups.map((g, gi) => (
-                <React.Fragment key={`${g.year}-${gi}`}>
-                  <div className="grp">
-                    {g.year} · {g.rows.length}
-                  </div>
-                  {g.rows.map((p) => (
-                    <div className="row" key={p.id}>
-                      <Link to={`/commons/${p.id}`}>
-                        <span className={`t ${p.thumbnail ? 'measured' : 'stated'}`}>{p.title}</span>
-                        <span className={`md${p.category ? '' : ' absent'}`}>{p.category ?? '—'}</span>
-                        <span className="yr">{yearOf(p.date) ?? '—'}</span>
-                        <span className="pl">{monoDate(p.date) || '—'}</span>
-                      </Link>
-                    </div>
-                  ))}
-                </React.Fragment>
-              ))}
               <div className="src">
-                출처 · nodetree.kr DB /api/filed — {list.length}건{cat === '전체' ? '' : ` · 분류 ${cat} ${shown.length}건`}.
-                도판 흐름은 최근 8건, 인덱스는 전량.
+                출처 · nodetree.kr DB /api/filed — {list.length}건
+                {cat === '전체' ? '' : ` · 분류 ${cat} ${shown.length}건`}. 도판 격자에 전량을 수록한다.
               </div>
               {isAuthenticated && <AdminLine page="commons" />}
             </div>

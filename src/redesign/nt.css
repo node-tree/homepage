@@ -175,6 +175,71 @@
 .nt .row .pl.absent { color: var(--line); }
 
 
+/* ── 매개(媒介)의 문 — 본체가 다른 도메인에 있는 자리로 건너가는 계선(2026-08-30).
+   「바깥」이므로 점선 계선을 쓴다(.blk.out · .prow.out 관례와 같다).
+   호버에서 계선이 실선(ink)으로 여며지고 표찰이 뒤집힌다 — 글로우·그림자를 쓰지 않는다. */
+.nt .gate { display: grid; grid-template-columns: repeat(20, 1fr); padding: 44px 0 0; }
+.nt .gate > a {
+  grid-column: 2/17; display: grid; grid-template-columns: 1fr auto; gap: 24px 32px; align-items: end;
+  padding: 24px 26px 22px; border: 1px dashed var(--g3); color: inherit;
+  transition: border-color .25s ease;
+}
+.nt .gate > a:hover { border-color: var(--ink); color: inherit; }
+.nt .gate .kick {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .1em; color: var(--g3);
+  padding-bottom: 12px; border-bottom: 1px solid var(--line);
+}
+.nt .gate .nm { margin-top: 14px; font-size: 21px; line-height: 1.4; color: var(--ink); }
+.nt .gate .nm .dom {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .06em; color: var(--g2); margin-left: 14px;
+}
+.nt .gate > a:hover .nm { color: var(--juseo); }
+.nt .gate .desc { margin-top: 10px; font-size: 13.5px; line-height: 1.95; color: var(--g1); max-width: 44em; }
+.nt .gate .in {
+  margin-top: 12px; font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; color: var(--g3);
+}
+.nt .gate .go {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .12em; color: var(--ink);
+  border: 1px solid var(--ink); padding: 10px 20px; white-space: nowrap;
+  transition: background .2s ease, color .2s ease;
+}
+.nt .gate > a:hover .go { background: var(--ink); color: var(--bg); }
+.nt .gate > a:active .go { transform: translateY(1px); }
+@media (max-width: 767px) {
+  .nt .gate { grid-template-columns: repeat(10, 1fr); padding-top: 32px; }
+  .nt .gate > a { grid-column: 2/10; grid-template-columns: 1fr; gap: 18px; padding: 18px 16px 20px; }
+  .nt .gate .nm { font-size: 18px; }
+  .nt .gate .nm .dom { display: block; margin: 6px 0 0; }
+  .nt .gate .desc { font-size: 13px; max-width: none; }
+  .nt .gate .go { justify-self: start; padding: 9px 16px; }
+}
+
+/* ── CV 프로필 — 이력 행(.yrow)과 선질이 다른 윗자리(2026-08-30).
+   좌 = 단체명·구성원(본문 선질) · 우 = 연혁(Mono 연도 + 한 줄). 계선 하나로만 갈라 둔다. */
+.nt .prof { display: grid; grid-template-columns: repeat(20, 1fr); padding: 40px 0 0; }
+.nt .prof .who { grid-column: 2/9; }
+.nt .prof .nm { font-size: 23px; line-height: 1.35; color: var(--ink); letter-spacing: -.01em; }
+.nt .prof .mem { margin-top: 10px; font-size: 14px; line-height: 1.9; color: var(--g1); }
+.nt .prof .hist { grid-column: 10/17; border-left: 1px solid var(--line); padding-left: 24px; }
+.nt .prof .hrow {
+  display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: baseline;
+  padding: 4px 0; font-size: 13.5px; line-height: 1.85; color: var(--g1);
+}
+.nt .prof .hrow .y {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .06em; color: var(--g3); white-space: nowrap;
+}
+@media (max-width: 767px) {
+  .nt .prof { grid-template-columns: repeat(10, 1fr); padding-top: 28px; }
+  .nt .prof .who,
+  .nt .prof .hist { grid-column: 2/10; }
+  .nt .prof .nm { font-size: 19px; }
+  .nt .prof .hist {
+    border-left: 0; padding-left: 0; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line);
+  }
+  .nt .prof .hrow { grid-template-columns: 1fr; gap: 2px; padding: 7px 0; }
+}
+
+
 /* ── 도판 흐름 · 글줄 정렬(JustifiedFeed, 2026-08-30) ──
    원본 비율 · 행 높이 균일 · 봉인 없음 · 전 글 수록. 정간 어긋남(.item .i1~.i8)은 홈 피드(FeedRow)에만 남는다. */
 .nt .jfeed { margin: 48px var(--jeong) 0; }
@@ -501,7 +566,10 @@
 
 /* ── DB 본문(레거시 에디터 HTML)의 v5 조판 ── */
 .nt .rich { font-size: 15px; line-height: 1.9; color: var(--g1); }
-.nt .rich > * { max-width: 62ch; }
+/* 본문 글줄 폭 — `ch` 는 라틴 '0' 자폭이라 한글에선 62ch 가 33자(498px)밖에 안 된다.
+   그 결과 도판·영상은 칸 전체(1152px)를 쓰는데 글만 왼쪽 43% 에 몰렸다(2026-08-30 실측·사용자 지적).
+   칸을 채우되 54em(≈54자)에서 멈춘다 — 1440 이하에서는 도판과 우단이 같이 여며진다. */
+.nt .rich > * { max-width: min(100%, 54em); }
 .nt .rich p + p,
 .nt .rich div + div,
 .nt .rich p + div,
