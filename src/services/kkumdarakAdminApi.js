@@ -243,7 +243,7 @@ export const kkumdarakAdminAPI = {
     return data.data || null;
   },
 
-  // POST /api/kkumdarak/forms/ai-draft — KNUH AI 초안.
+  // POST /api/kkumdarak/forms/ai-draft — Claude AI 초안.
   //   body { docType, programKey, 회차?, 회차번호?, 교육주제?, 주제출처?, 회의주제?, 키워드 }.
   //   주제출처 'plan'(계획서 자동기입) 이면 서버가 그 주제를 앵커로 삼아 보강만 한다.
   //   반환: { data(파싱된 JSON|null), plan?(계획서 앵커 정보), raw?(파싱 실패 원문), message? }.

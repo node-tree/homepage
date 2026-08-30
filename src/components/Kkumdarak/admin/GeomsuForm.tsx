@@ -53,7 +53,7 @@ const GeomsuForm: React.FC = () => {
   const setField = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
 
   // 검수의견 AI 초안(docType inspection). 용역명·산출물·검수결과 grounding. programKey 불필요.
-  //   기존 의견이 있으면 덮어쓰기 확인. KNUH 실패·빈응답은 안내 후 직접 입력 유지.
+  //   기존 의견이 있으면 덮어쓰기 확인. Claude 실패·빈응답은 안내 후 직접 입력 유지.
   const handleAiDraft = async () => {
     if (aiBusy) return;
     if (!f.용역명.trim()) {

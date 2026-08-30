@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════
 // AI 글쓰기 라우트 — POST /api/ai/write
-//   · KNUH(factchat) chat() 재사용. KNUH 는 유료 크레딧 → 반드시 인증 게이팅.
+//   · Claude(Anthropic) chat() 재사용. API 는 종량 과금 → 반드시 인증 게이팅.
 //   · 인증: 사이트 관리자 JWT(role==='admin') 또는 꿈다락 scope JWT 만 허용.
 //     비로그인/무효 토큰 → 401, 권한 부족 → 403. (마을일기는 꿈다락 인증, Work/About 은 관리자 인증.)
 //   · mode: 'write'(새로 쓰기) | 'refine'(서정적으로 다듬기).
@@ -10,7 +10,7 @@
 
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const { chat } = require('../lib/knuhChat');
+const { chat } = require('../lib/claudeChat');
 // 꿈다락 프로그램 마스터(단일 진실원). 로드 실패해도 라우트는 동작(맥락 주입만 생략).
 let PROGRAMS = [];
 let PROGRAM_MAP = {};
@@ -42,7 +42,7 @@ const router = express.Router();
 // ── 결합 인증 미들웨어 ─────────────────────────────────────────
 //   사이트 관리자 JWT(role==='admin') 또는 꿈다락 scope JWT(scope==='kkumdarak') 만 통과.
 //   그 외(role==='user' 등 일반 계정)·무효 토큰·비로그인 → 401/403.
-//   KNUH 는 유료 크레딧이므로 "로그인 여부"가 아니라 "권한"으로 게이팅한다.
+//   Claude API 는 종량 과금이므로 "로그인 여부"가 아니라 "권한"으로 게이팅한다.
 const requireAnyAuth = (req, res, next) => {
   const authHeader = req.header('Authorization');
   if (!authHeader) {
@@ -179,11 +179,17 @@ ${src}`;
     return res.json({ success: true, text: out });
   } catch (error) {
     console.error('AI write 오류:', error.code || '', error.message);
-    if (error.code === 'KNUH_NO_KEY') {
-      return res.status(503).json({ success: false, message: 'AI 기능이 현재 설정되지 않았습니다(KNUH 키 없음).' });
+    if (error.code === 'AI_NO_KEY' || error.code === 'AI_AUTH_ERROR') {
+      return res.status(503).json({ success: false, message: 'AI 기능이 현재 설정되지 않았습니다(Claude API 키 없음·무효).' });
     }
-    if (error.code === 'KNUH_TIMEOUT') {
+    if (error.code === 'AI_TIMEOUT') {
       return res.status(504).json({ success: false, message: 'AI 응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.' });
+    }
+    if (error.code === 'AI_RATE_LIMIT') {
+      return res.status(429).json({ success: false, message: 'AI 호출 한도에 걸렸습니다. 잠시 후 다시 시도해주세요.' });
+    }
+    if (error.code === 'AI_REFUSAL') {
+      return res.status(422).json({ success: false, message: 'AI 가 이 요청의 생성을 거절했습니다. 주제·키워드를 바꿔 다시 시도해주세요.' });
     }
     return res.status(502).json({ success: false, message: 'AI 글 생성에 실패했습니다. 잠시 후 다시 시도해주세요.' });
   }

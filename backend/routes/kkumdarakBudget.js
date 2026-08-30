@@ -881,10 +881,10 @@ router.post('/forms/geomsu', async (req, res) => {
 });
 
 // ── POST /api/kkumdarak/forms/ai-draft ───────────────────────────────────────
-//   AI 초안(KNUH). body { docType, programKey, 회차?, 교육주제?, 회의주제?, 키워드 }.
+//   AI 초안(Claude). body { docType, programKey, 회차?, 교육주제?, 회의주제?, 키워드 }.
 //   grounding 은 백엔드 PROGRAM_MAP 에서만 읽어 프롬프트에 주입(클라이언트 미노출).
 //   반환: { success, data(파싱된 JSON|null), raw?(파싱 실패 시 원문) }.
-//   KNUH 키 미설정/타임아웃/HTTP 오류 → 503 + 사용자 안내. 잘못된 입력 → 400.
+//   Claude 키 미설정/타임아웃/HTTP 오류 → 503 + 사용자 안내. 잘못된 입력 → 400.
 router.post('/forms/ai-draft', async (req, res) => {
   try {
     const result = await runAiDraft(req.body || {});
@@ -904,13 +904,25 @@ router.post('/forms/ai-draft', async (req, res) => {
     if (error.code === 'BAD_REQUEST' || error.code === 'PROGRAM_NOT_FOUND') {
       return res.status(400).json({ success: false, message: error.message });
     }
-    if (error.code === 'KNUH_NO_KEY') {
+    if (error.code === 'AI_NO_KEY' || error.code === 'AI_AUTH_ERROR') {
       return res.status(503).json({
         success: false,
-        message: 'AI 기능이 설정되지 않았습니다(KNUH_API_KEY 미설정). 관리자에게 문의하세요.',
+        message: 'AI 기능이 설정되지 않았습니다(ANTHROPIC_API_KEY 미설정·무효). 관리자에게 문의하세요.',
       });
     }
-    // KNUH_TIMEOUT / KNUH_HTTP_ERROR / KNUH_BAD_RESPONSE / 네트워크 등 → 503
+    if (error.code === 'AI_RATE_LIMIT') {
+      return res.status(429).json({
+        success: false,
+        message: 'AI 호출 한도에 걸렸습니다. 잠시 후 다시 시도하거나 직접 입력하세요.',
+      });
+    }
+    if (error.code === 'AI_REFUSAL') {
+      return res.status(422).json({
+        success: false,
+        message: 'AI 가 이 요청의 생성을 거절했습니다. 키워드를 바꿔 다시 시도하거나 직접 입력하세요.',
+      });
+    }
+    // AI_TIMEOUT / AI_HTTP_ERROR / AI_BAD_RESPONSE / 네트워크 등 → 503
     return res.status(503).json({
       success: false,
       message: 'AI 초안 생성에 실패했습니다. 잠시 후 다시 시도하거나 직접 입력하세요.',

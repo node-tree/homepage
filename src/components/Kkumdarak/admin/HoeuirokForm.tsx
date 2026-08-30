@@ -310,7 +310,7 @@ const HoeuirokForm: React.FC = () => {
             className="kd-ledger-action kd-ledger-action--form"
             onClick={handleAiDraft}
             disabled={aiBusy}
-            title="KNUH AI 로 논의안건 초안 생성"
+            title="Claude AI 로 논의안건 초안 생성"
           >
             {aiBusy ? 'AI 생성 중…' : 'AI 초안'}
           </button>

@@ -436,4 +436,8 @@ startServer();
 
 // Export for testing
 module.exports = app;
+// Vercel 함수 실행 상한 — AI 초안(Claude)은 사고+생성에 수십 초가 걸릴 수 있어
+// 플랜 기본값(10~15초)으로는 잘린다. 60초는 Hobby 상한이자 Pro 범위 안.
+// (module.exports = app 재할당 뒤에 붙여야 살아남는다.)
+module.exports.config = { maxDuration: 60 };
 module.exports.connectDB = connectDB; // Force redeploy Mon Jan 19 20:31:44 KST 2026
