@@ -223,8 +223,13 @@ const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ now, onFallback }) => {
     renderer.setClearColor(BG, 1);
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(30, 1, 10, 6000);
+    // 원반은 다섯 깊이 층(0 … −4×RING_DEPTH)의 **중간 깊이**가 원점에 오게 놓는다 —
+    // 기울였을 때 보이는 덩어리의 중심이 뷰포트 중앙에 서고, 앞·뒤 고리가 위아래로 대칭으로 밀린다.
     const disc = new THREE.Group();
-    scene.add(disc);
+    const pivot = new THREE.Group();
+    disc.position.z = RING_DEPTH * 2;
+    pivot.add(disc);
+    scene.add(pivot);
 
     const stat = { frames: 0, ms: 0, last: 0, draws: 0, tris: 0 };
     const state = { theta: 0, tilt: -0.34, px: 0, py: 0, tx: 0, ty: 0, readDeg: 0, readFrom: 0, readT0: 0, gakDeg: 0, gakFrom: 0, gakT0: 0, seedCur: 0, seedPrev: 0, seedT0: 0, lastIndex: -1 };
@@ -370,10 +375,10 @@ const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ now, onFallback }) => {
       const breathe = reduced ? 0 : Math.sin(sec / 23) * (12 * Math.PI) / 180;
       state.px += (state.tx - state.px) * 0.04;
       state.py += (state.ty - state.py) * 0.04;
-      disc.rotation.set(state.tilt + breathe * 0.6 + state.py * 0.05, state.px * 0.05 + breathe * 0.35, spin);
+      pivot.rotation.set(state.tilt + breathe * 0.6 + state.py * 0.05, state.px * 0.05 + breathe * 0.35, spin);
       camera.position.x = state.px * 40;
       camera.position.y = -state.py * 30;
-      camera.lookAt(0, 0, -RING_DEPTH * 2);
+      camera.lookAt(0, 0, 0);
       renderer.render(scene, camera);
       stat.frames += 1;
       if (stat.last) stat.ms += t - stat.last;
@@ -386,7 +391,7 @@ const DharaniClock3D: React.FC<DharaniClock3DProps> = ({ now, onFallback }) => {
 
     // 검증 손잡이(개발)
     if (process.env.NODE_ENV !== 'production') {
-      (window as any).__ntHero = { renderer, scene, camera, disc, stat, state, frameOnce: () => frame(performance.now()) };
+      (window as any).__ntHero = { renderer, scene, camera, disc, pivot, stat, state, frameOnce: () => frame(performance.now()) };
     }
 
     return () => {
