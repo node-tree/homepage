@@ -1,4 +1,5 @@
 import React from 'react';
+import { flipbookFit } from './flipbookVariants';
 
 interface Props {
   src: string;
@@ -66,15 +67,17 @@ const MotionCharacter: React.FC<Props> = ({ src, alt, className }) => {
       ].filter(Boolean).join(' ')}
       data-character={charId}
       data-motion={motion}
-      style={{ position: 'relative' }}
+      // [복원] 히어로와 같은 계수 — 정규화(최대 캔버스 통일)로 줄어든 표시 배율을 되돌린다.
+      style={{ position: 'relative', ...flipbookFit(`chars-v2/${charId}`) }}
     >
       {[1, 2, 3, 4, 5, 6].map((i) => (
         <img
           key={i}
-          src={`/kkumdarak/chars-v2/${charId}/frame-0${i}.svg`}
+          // [perf] chars-v2 의 .svg 는 base64 PNG 래퍼였다 → 무손실 WebP(픽셀 동일)로 교체.
+          //   변환기: scripts/svg-base64-to-webp.js · 원본 .svg 는 롤백용으로 보존.
+          src={`/kkumdarak/chars-v2/${charId}/frame-0${i}.webp`}
           alt={i === 1 ? (alt || '') : ''}
           className="kd-loop-frame"
-          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
         />
       ))}
     </div>

@@ -1,5 +1,15 @@
-/* DharaniClock3D — 검정 무대 위 3차원 봉안 원반. 크롬은 Mono 10~11px, 유채는 주서 하나. */
-.dclock3d { position: relative; width: 100%; height: 100%; min-height: 480px; background: #0B0B0E; overflow: hidden; color: #DCDDD3; --lab: rgba(220,221,211,.55); --lab2: rgba(220,221,211,.32); --ink: #DCDDD3; --cap: rgba(220,221,211,.7); }
+/* DharaniClock3D — 검정 무대 위 3차원 봉안 원반. 크롬은 Mono 10~11px, 유채는 주서 하나.
+   2026-08-31 〈이물〉 D18 정본 이식: 바탕 근흑 rgb(10,10,10) · 먹 크림 rgb(220,221,211) ·
+   봉인 먹 루마 116 / 개봉 먹 루마 204 · 주서 10R rgb(190,60,40). 글로우 0, 비적색 유채 0%. */
+.dclock3d {
+  position: relative; width: 100%; height: 100%; min-height: 480px; overflow: hidden;
+  background: rgb(10, 10, 10); color: rgb(220, 221, 211);
+  --cream: rgb(220, 221, 211);
+  --seal: rgb(116, 116, 116);
+  --unseal: rgb(204, 204, 204);
+  --juseo: rgb(190, 60, 40);
+  --lab: rgba(220,221,211,.55); --lab2: rgba(220,221,211,.32); --ink: #DCDDD3; --cap: rgba(220,221,211,.7);
+}
 /* 라이트(기본, 2026-08-30 사용자 "다크 말고 라이트") — 지(紙) 바탕 위 먹 */
 .dclock3d--light { background: #FAFAF9; color: #0F0F1A; --lab: rgba(15,15,26,.55); --lab2: rgba(15,15,26,.32); --ink: #0F0F1A; --cap: rgba(15,15,26,.72); }
 .dclock3d--light .dclock3d__grain { mix-blend-mode: multiply; opacity: .06; }
@@ -9,6 +19,85 @@
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .9 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
   background-size: 160px 160px;
 }
+/* ── 계측 레티클(정지) ─────────────────────────────────────────────────
+   D04: 극좌표 봉안(회전) 위에 정지한 계기 프레임이 덮인다. 캔버스는 돌고 이 층은 못박힌다.
+   전부 CSS 그라디언트·테두리 = 셰이더 패스 0, 리페인트 0(합성만). 주사선도 여기에 얹는다. */
+.dclock3d__reticle {
+  position: absolute; inset: 0; pointer-events: none;
+  /* 아날로그 열화: 수평 주사선(무채).
+     먹선은 **검정 곱연산이 아니라 바탕색(10,10,10)** 이다 — 검정으로 깔면 근흑 바탕이 루마 9 까지
+     내려가 D18 「검정은 빛이 없음, 순흑 금지」 취지를 침범한다(2026-08-31 검수). 바탕색으로 어둡히면
+     바닥이 10 에 걸려 그 아래로 못 내려가므로, 잃은 만큼 알파를 올려(.22→.38) 빛 있는 자리
+     (원반·획·크롬)에서의 주사선 진폭은 그대로 둔다 — 실측 disc 진폭 4.98 → 5.61. */
+  background-image: repeating-linear-gradient(to bottom, rgba(10, 10, 10, .38) 0 1px, transparent 1px 3px);
+}
+.dclock3d__reticle i { position: absolute; display: block; }
+/* 판의 네 귀 중 두 곳 — 내비 활성 표시와 같은 괄호 문법(한 시스템) */
+.dclock3d__reticle::before,
+.dclock3d__reticle::after {
+  content: ''; position: absolute; width: 16px; height: 16px;
+  border-color: rgba(220, 221, 211, .3); border-style: solid;
+}
+.dclock3d__reticle::before { top: 16px; left: 16px; border-width: 1px 0 0 1px; }
+.dclock3d__reticle::after { right: 16px; bottom: 16px; border-width: 0 1px 1px 0; }
+/* 십자선 — 중심은 비워 둔다(계기 레티클의 규칙). 원반 밖까지 뻗어 「덮어쓰는 층」임을 알린다. */
+.dclock3d__reticle .r-cross {
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(220,221,211,.13) 0 43%, transparent 43% 57%, rgba(220,221,211,.13) 57% 100%),
+    linear-gradient(to bottom, rgba(220,221,211,.13) 0 43%, transparent 43% 57%, rgba(220,221,211,.13) 57% 100%);
+  background-size: 100% 1px, 1px 100%;
+  background-position: 0 50%, 50% 0;
+  background-repeat: no-repeat;
+}
+/* 계측 호 — 봉안 원반 바깥을 도는 점선 원(정지) */
+.dclock3d__reticle .r-arc {
+  top: 50%; left: 50%; width: min(84%, 84vh); aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border: 1px dashed rgba(220, 221, 211, .16); border-radius: 50%;
+}
+/* 링 계측선 — 輪(원통 휠) 상태에서만 든다. 통은 돌고 이 동심원은 정지한다(D04).
+   반지름·간격은 카메라가 px 로 넘겨준다(--wd·--wstep) — 실제 링 자리에 겹쳐 앉는다. */
+.dclock3d__reticle .r-grid {
+  top: 50%; left: 50%; width: var(--wd, 0); height: var(--wd, 0);
+  transform: translate(-50%, -50%);
+  opacity: 0; transition: opacity 1.4s linear;
+  background-image: repeating-radial-gradient(
+    circle at 50% 50%,
+    transparent 0 calc(var(--wstep, 20px) - 1px),
+    rgba(220, 221, 211, .085) calc(var(--wstep, 20px) - 1px) var(--wstep, 20px)
+  );
+}
+.dclock3d[data-field="grid"] .dclock3d__reticle .r-grid { opacity: 1; }
+/* 스캔 중(천이)에는 주사선이 촘촘해진다 — R07 의 아날로그 질감. 무채만, 유채 0. */
+.dclock3d[data-field="scan"] .dclock3d__reticle {
+  background-image: repeating-linear-gradient(to bottom, rgba(10, 10, 10, .50) 0 1px, transparent 1px 2px);
+}
+.dclock3d[data-field="scan"] .dclock3d__grain { opacity: .10; }
+/* 중심 사각 — 지금 판독 중인 축(D04 중앙 사각) */
+.dclock3d__reticle .r-core {
+  top: 50%; left: 50%; width: 18px; height: 18px; transform: translate(-50%, -50%);
+  border: 1px solid rgba(220, 221, 211, .34);
+}
+@media (max-width: 767px) {
+  .dclock3d__reticle::before { top: 10px; left: 10px; }
+  .dclock3d__reticle::after { right: 10px; bottom: 10px; }
+  .dclock3d__reticle .r-arc { width: min(92%, 62vh); }
+  .dclock3d__reticle .r-core { width: 14px; height: 14px; }
+}
+/* 라이트 판(검수용 /clock 등)에서는 레티클도 먹으로 뒤집는다 */
+.dclock3d--light .dclock3d__reticle { background-image: repeating-linear-gradient(to bottom, rgba(15,15,26,.05) 0 1px, transparent 1px 3px); }
+.dclock3d--light .dclock3d__reticle::before,
+.dclock3d--light .dclock3d__reticle::after { border-color: rgba(15, 15, 26, .28); }
+.dclock3d--light .dclock3d__reticle .r-cross {
+  background-image:
+    linear-gradient(to right, rgba(15,15,26,.12) 0 43%, transparent 43% 57%, rgba(15,15,26,.12) 57% 100%),
+    linear-gradient(to bottom, rgba(15,15,26,.12) 0 43%, transparent 43% 57%, rgba(15,15,26,.12) 57% 100%);
+  background-size: 100% 1px, 1px 100%; background-position: 0 50%, 50% 0; background-repeat: no-repeat;
+}
+.dclock3d--light .dclock3d__reticle .r-arc { border-color: rgba(15, 15, 26, .14); }
+.dclock3d--light .dclock3d__reticle .r-core { border-color: rgba(15, 15, 26, .3); }
+
 .dclock3d__lab, .dclock3d__read, .dclock3d__cap {
   position: absolute; font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace; font-size: 10.5px; letter-spacing: .08em;
   color: var(--lab); pointer-events: none; opacity: 0; transition: opacity .6s ease .2s;

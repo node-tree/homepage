@@ -109,13 +109,6 @@
       "continue": true
     },
     {
-      "src": "/legacy(/.*)?",
-      "headers": {
-        "X-Robots-Tag": "noindex, follow"
-      },
-      "continue": true
-    },
-    {
       "src": "/(iso|kkumdarak)/?",
       "has": [
         {

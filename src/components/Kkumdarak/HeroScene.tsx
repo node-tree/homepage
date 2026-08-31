@@ -1,7 +1,66 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useFlipbookFrames } from './useDeferredFrames';
+import { flipbookSrcSet, flipbookFit, FLIPBOOK_VARIANTS } from './flipbookVariants';
 
 // ── 정적 이미지 베이스 ────────────────────────────────────────────
 const BASE = '/kkumdarak/hero/';
+
+// ── 히어로 플립북 프레임 베이스 ────────────────────────────────────
+//   [perf] chars-v2 / fireflies-fly / leaves-seeds-drift 의 .svg 는 벡터가 아니라
+//   `<svg><image href="data:image/png;base64,…"/></svg>` 래퍼였다(실측 138개).
+//   base64 는 원본 PNG 대비 +33% 이고 SVG 로 감싸는 순간 브라우저의 이미지 최적화가
+//   전부 무력화된다. → scripts/svg-base64-to-webp.js 로 무손실 WebP(픽셀 동일)를 떠 두고
+//   여기서 그쪽을 참조한다. 원본 .svg 는 롤백용으로 남겨 둔다.
+const LOOP_EXT = '.webp';
+// nature-loops 중 base64 래퍼였던(=WebP 가 존재하는) 폴더만 확장자를 바꾼다.
+// 나머지(field·mountain·night·river·village)는 진짜 벡터라 .svg 그대로 둔다.
+const RASTER_NATURE_LOOPS = new Set(['fireflies-fly', 'leaves-seeds-drift']);
+const natureFrame = (name: string, i: number) =>
+  `/kkumdarak/nature-loops/${name}/frame-0${i}${RASTER_NATURE_LOOPS.has(name) ? LOOP_EXT : '.svg'}`;
+
+// ── [perf] srcset/sizes ──────────────────────────────────────────
+//   히어로는 좌표·크기가 전부 px 로 확정된 캔버스라(CharSpot.w / style.width)
+//   표시 폭을 브라우저에 정확히 알려 줄 수 있다. 그러면 DPR1 데스크톱은 0.5배본을,
+//   DPR3 모바일은 원본을 스스로 고른다.
+//   ⚠️ sizes 를 안 주면 기본값이 100vw 라 항상 제일 큰 후보를 고른다(=역효과).
+//   ⚠️ sizes 는 컨테이너 폭이 아니라 **<img> 실제 폭**이어야 한다.
+//      복원 계수 fx 때문에 프레임 박스는 컨테이너보다 fx 배 넓다(kkumdarak.css .kd-loop-frame).
+const boxSizes = (style: React.CSSProperties | undefined, key: string): string | undefined => {
+  const w = style && style.width;
+  if (typeof w !== 'number') return undefined;
+  const fx = FLIPBOOK_VARIANTS[key] ? FLIPBOOK_VARIANTS[key].fx : 1;
+  return `${Math.round(w * fx)}px`;
+};
+
+// ── 데스크톱/모바일 히어로 분기 ────────────────────────────────────
+//   [perf] 지금까지 두 트리를 항상 렌더하고 CSS `display:none` 으로 한쪽만 숨겼다.
+//   그런데 브라우저는 display:none 서브트리의 <img> 도 그대로 내려받는다
+//   (실측: 데스크톱·모바일 전송량이 2,713KB 로 완전히 동일 = 안 보이는 절반도 다 받았다).
+//   matchMedia 로 실제로 보이는 트리만 마운트해 절반을 끊는다.
+//   ⚠️ 브레이크포인트는 kkumdarak.css 의 `@media (max-width: 900px)` 와 반드시 같아야 한다.
+const HERO_MOBILE_MQ = '(max-width: 900px)';
+
+function useHeroIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState<boolean>(() =>
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia(HERO_MOBILE_MQ).matches
+      : false,
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia(HERO_MOBILE_MQ);
+    const onChange = () => setIsMobile(mq.matches);
+    onChange(); // 마운트 시점 재동기(초기 상태 계산 이후 뷰포트가 바뀌었을 수 있다)
+    // Safari 14 미만 호환: addEventListener 가 없으면 addListener 로 폴백.
+    if (mq.addEventListener) mq.addEventListener('change', onChange);
+    else mq.addListener(onChange);
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', onChange);
+      else mq.removeListener(onChange);
+    };
+  }, []);
+  return isMobile;
+}
 
 // ── 해(sun)·달(night) 교차 루프 + 마을 창문 주야 토글 (데/모 공통) ──
 //
@@ -176,15 +235,26 @@ function NatureLoop({
   style?: React.CSSProperties;
   delay?: string;
 }) {
+  // [perf] 프레임 2~6 은 첫 화면 이후, 그리고 전부 디코드된 뒤에 한꺼번에 물린다.
+  //   래스터 루프(반딧불이·잎사귀)만 0.5배 축소본이 있어 srcSet 이 붙는다.
+  const sizes = boxSizes(style, `nature-loops/${name}`);
+  const frames = useFlipbookFrames(
+    [1, 2, 3, 4, 5, 6].map((i) => natureFrame(name, i)),
+    [1, 2, 3, 4, 5, 6].map((i) => flipbookSrcSet(`nature-loops/${name}`, i)),
+    sizes,
+  );
   return (
     <div
       className={`kd-hero-loop-layer kd-nature-loop kd-loop-${name}`}
-      style={style}
+      // [perf/복원] 정규화로 줄어든 표시 배율을 지배 캔버스 기준으로 되돌리는 계수.
+      style={{ ...style, ...flipbookFit(`nature-loops/${name}`) }}
     >
       {[1, 2, 3, 4, 5, 6].map((i) => (
         <img
           key={i}
-          src={`/kkumdarak/nature-loops/${name}/frame-0${i}.svg`}
+          src={frames[i - 1].src}
+          srcSet={frames[i - 1].srcSet}
+          sizes={frames[i - 1].srcSet ? sizes : undefined}
           alt=""
           className="kd-loop-frame"
           decoding="async"
@@ -215,21 +285,33 @@ function CharLoop({
   style?: React.CSSProperties;
   shadow?: boolean;
 }) {
+  // [perf] 프레임 2~6 은 첫 화면 이후, 그리고 전부 디코드된 뒤에 한꺼번에 물린다.
+  const sizes = boxSizes(style, `chars-v2/${charId}`);
+  const frames = useFlipbookFrames(
+    [1, 2, 3, 4, 5, 6].map((i) => `/kkumdarak/chars-v2/${charId}/frame-0${i}${LOOP_EXT}`),
+    [1, 2, 3, 4, 5, 6].map((i) => flipbookSrcSet(`chars-v2/${charId}`, i)),
+    sizes,
+  );
   return (
     <div
       className="kd-hero-loop-layer"
       style={{ ...style, position: 'absolute' }}
     >
       {shadow && <span className="kd-char-shadow" aria-hidden="true" />}
-      <div className="kd-char-loop" style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div
+        className="kd-char-loop"
+        // [복원] 프레임 박스를 지배 캔버스 기준으로 되돌리는 계수(위치·컨테이너 크기는 불변).
+        style={{ position: 'relative', width: '100%', height: '100%', ...flipbookFit(`chars-v2/${charId}`) }}
+      >
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <img
             key={i}
-            src={`/kkumdarak/chars-v2/${charId}/frame-0${i}.svg`}
+            src={frames[i - 1].src}
+            srcSet={frames[i - 1].srcSet}
+            sizes={frames[i - 1].srcSet ? sizes : undefined}
             alt=""
             className="kd-loop-frame"
             decoding="async"
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
           />
         ))}
       </div>
@@ -339,12 +421,15 @@ const MOBILE_NEAR: CharSpot[] = [
 ];
 
 const HeroScene: React.FC = () => {
+  // [perf] 보이는 쪽 트리만 마운트한다(안 보이는 트리의 <img> 도 다운로드되던 낭비 차단).
+  const isMobile = useHeroIsMobile();
   return (
     <>
       {/* 해·달 교차 루프 + 마을창문/반딧불이 주야 동기화 — 데/모 공통 */}
       <style>{SUN_RISE_CSS}</style>
 
       {/* ══ Desktop ══════════════════════════════════════════════ */}
+      {!isMobile && (
       <div className="kd-figma-hero-desktop" data-node-id="74:149">
         <div className="kd-hero-desktop-inner">
 
@@ -442,11 +527,13 @@ const HeroScene: React.FC = () => {
 
         </div>{/* kd-hero-desktop-inner */}
       </div>
+      )}
 
       {/* ══ Mobile ═══════════════════════════════════════════════ */}
       {/* 모바일 프레임: 390×796 (nav 66 포함), 컨테이너: 390×730
           텍스트 안전영역: kicker(top46) · title(top74, ~y74–236) · body(top≈594, x28–338)
           → 원근 토템은 제목 아래·본문 위 띠에 우측 세로(산<강<들판), 마을은 좌측. */}
+      {isMobile && (
       <div className="kd-figma-hero-mobile" data-node-id="18:3">
         <div className="kd-hero-mobile-inner">
 
@@ -543,6 +630,7 @@ const HeroScene: React.FC = () => {
 
         </div>{/* kd-hero-mobile-inner */}
       </div>
+      )}
     </>
   );
 };

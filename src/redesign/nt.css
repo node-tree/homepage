@@ -40,11 +40,17 @@
 .nt a { color: inherit; text-decoration: none; }
 .nt a:hover { color: var(--juseo); }
 
-/* ── 헤더 ── */
+/* ── 헤더 ──
+   내비 판식 = 〈이물〉 설계 D04(輪·봉안된 기도가 계측 레티클 아래에서 돈다) + D18(색·재질) 이식.
+   D18 정본값을 그대로 쓴다: 주서 10R rgb(190,60,40)=var(--juseo) · 봉인 먹 루마 116 · 개봉 먹 루마 204.
+   유채는 주서 하나뿐(활성 표시). 글로우 0. 열화는 무채 아날로그(그레인·스캔라인)만. */
 .nt header {
   position: fixed; top: 0; left: 0; right: 0; height: 56px; z-index: 50;
   display: grid; grid-template-columns: repeat(20, 1fr); grid-template-rows: 1fr 1fr; align-items: center;
   background: var(--bg);
+  /* D18 보조 무채 2단 — 헤더 안에서만 쓴다(전역 토큰 불변). */
+  --seal: rgb(116, 116, 116);    /* 봉인 먹 = 아직 판독되지 않은 항목 */
+  --unseal: rgb(204, 204, 204);  /* 개봉 먹 = 계측 눈금의 지선 */
 }
 .nt header .brand {
   grid-column: 1/5; grid-row: 1/3; padding-left: 24px;
@@ -53,11 +59,59 @@
 .nt header .brand span {
   font-family: var(--kr); font-weight: 300; color: var(--g2); margin-left: 10px; font-size: 13px;
 }
+/* 봉안(封安)의 리듬 — 계기 서체(Mono)·넓은 자간. 원반 크롬(讀誦 카운터·OCR 라벨)과 같은 활자다. */
 .nt header .nav {
-  grid-column: 5/16; grid-row: 1/3; display: flex; gap: clamp(14px, 1.6vw, 28px); justify-content: center;
-  align-items: center; font-family: var(--sans); font-size: 13px; color: var(--g2);
+  grid-column: 5/16; grid-row: 1/3; display: flex; gap: clamp(8px, 1vw, 18px); justify-content: center;
+  align-items: center; font-family: var(--mono); font-size: 11px; font-weight: 400;
+  letter-spacing: .14em; color: var(--seal);
 }
+.nt header .nav a {
+  position: relative; padding: 6px 9px 5px; color: inherit;
+  transition: color var(--tick) cubic-bezier(.16, 1, .3, 1),
+              transform var(--tick) cubic-bezier(.16, 1, .3, 1);
+}
+/* 계측 레티클 괄호 — 정지한 십자선이 봉안된 문자를 덮어쓴다(D04).
+   호버 = 무채 레티클(판독 시도) · 활성 = 주서 印(지금 판독 중인 자리).
+   틀은 항상 자리를 차지하되 opacity 로만 드나든다 → 리플로 0. */
+.nt header .nav a::before,
+.nt header .nav a::after {
+  content: ''; position: absolute; width: 5px; height: 5px; opacity: 0; pointer-events: none;
+  transition: opacity var(--tick) cubic-bezier(.16, 1, .3, 1);
+}
+.nt header .nav a::before { top: 0; left: 0; border-top: 1px solid currentColor; border-left: 1px solid currentColor; }
+.nt header .nav a::after { right: 0; bottom: 0; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; }
+/* 무채 호버 — 전역 a:hover(주서)를 여기서 되돌린다. 붉음은 활성 한 곳에만 남긴다. */
+.nt header .nav a:hover { color: var(--ink); transform: translateY(-1px); }
+.nt header .nav a:hover::before,
+.nt header .nav a:hover::after { opacity: .45; }
+.nt header .nav a:active { transform: translateY(.5px); }
 .nt header .nav a.on { color: var(--ink); }
+.nt header .nav a.on::before,
+.nt header .nav a.on::after { opacity: 1; border-color: var(--juseo); }
+
+/* 계측 자(尺) — 원반 둘레의 눈금 테를 직선으로 편 것. 정간(20/모바일 10)마다 大綱,
+   그 절반마다 소목(小目). 헤더 하단이 곧 판의 가장자리가 된다. */
+.nt header::before {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 7px;
+  pointer-events: none; opacity: .6;
+  background-image:
+    repeating-linear-gradient(to right, var(--seal) 0 1px, transparent 1px var(--jeong)),
+    repeating-linear-gradient(to right, var(--unseal) 0 1px, transparent 1px calc(var(--jeong) / 2)),
+    linear-gradient(var(--unseal), var(--unseal));
+  background-size: 100% 5px, 100% 3px, 100% 1px;
+  background-position: 0 calc(100% - 1px), 0 calc(100% - 1px), 0 100%;
+  background-repeat: repeat-x, repeat-x, repeat-x;
+}
+/* 아날로그 열화 — 그레인 + 수평 주사선. 원반(dclock)의 결 생성기를 그대로 쓴다.
+   고정 요소의 pointer-events:none 의사요소에만 얹어 스크롤 리페인트를 만들지 않는다. */
+.nt header::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  mix-blend-mode: multiply; opacity: .55;
+  background-image:
+    repeating-linear-gradient(to bottom, rgba(10, 10, 10, .05) 0 1px, transparent 1px 3px),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='nthdrgrain'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.86 0 0 0 0 0.87 0 0 0 0 0.83 0 0 0 .07 0'/></filter><rect width='100%' height='100%' filter='url(%23nthdrgrain)'/></svg>");
+  background-size: 100% 3px, 160px 160px;
+}
 .nt header .clock {
   grid-column: 16/21; grid-row: 1; align-self: end; padding-bottom: 3px;
   display: flex; justify-content: flex-end; align-items: center;
@@ -83,6 +137,39 @@
 .nt header .auth button:hover { color: var(--juseo); }
 .nt header .auth button.on { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 .nt main { padding-top: 56px; }
+
+/* ══════════════ 근흑 무대(奉安) — 홈 전용 ══════════════
+   body.nt-stage 는 Home 이 마운트되는 동안에만 걸린다(pages/Home.tsx).
+   판 전체를 〈이물〉 D18 값으로 뒤집는다: 바탕 근흑 10,10,10 · 먹 크림 220,221,211 ·
+   개봉 먹 204 · 봉인 먹 116. 판식·간격·문법은 하나도 바뀌지 않는다 — 지(紙)만 뒤집힌다.
+   나머지 라우트(About·Work·Commons·CV·Contact)는 지 위의 먹 그대로다. */
+body.nt-stage .nt {
+  --bg: rgb(10, 10, 10);
+  --ink: rgb(220, 221, 211);
+  --g1: rgb(220, 221, 211);
+  --g2: rgb(204, 204, 204);
+  --g3: rgb(116, 116, 116);
+  --line: rgba(220, 221, 211, .18);
+}
+/* 무대에서는 내비도 반전 — 판독되는 항목은 개봉 먹(204), 지금 자리는 크림 + 주서 괄호. */
+body.nt-stage .nt header .nav { color: var(--unseal); }
+body.nt-stage .nt header .nav a:hover,
+body.nt-stage .nt header .nav a.on { color: rgb(220, 221, 211); }
+/* 계측 자 — 어둠에서는 大綱이 밝고(개봉 먹) 小目·지선이 어둡다(봉인 먹). */
+body.nt-stage .nt header::before {
+  opacity: .5;
+  background-image:
+    repeating-linear-gradient(to right, var(--unseal) 0 1px, transparent 1px var(--jeong)),
+    repeating-linear-gradient(to right, var(--seal) 0 1px, transparent 1px calc(var(--jeong) / 2)),
+    linear-gradient(var(--seal), var(--seal));
+}
+/* 열화 층 — 검은 지 위에서는 곱하기(multiply)가 아무것도 남기지 않는다. 스크린으로 뒤집는다. */
+body.nt-stage .nt header::after {
+  mix-blend-mode: screen; opacity: .5;
+  background-image:
+    repeating-linear-gradient(to bottom, rgba(220, 221, 211, .05) 0 1px, transparent 1px 3px),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='nthdrgraind'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.86 0 0 0 0 0.87 0 0 0 0 0.83 0 0 0 .07 0'/></filter><rect width='100%' height='100%' filter='url(%23nthdrgraind)'/></svg>");
+}
 
 /* ── 페이지 표제 ── */
 .nt .pagehead {
@@ -438,8 +525,9 @@
   }
   .nt header .nav {
     grid-column: 1/11; grid-row: 2 / 3; justify-content: space-between; gap: clamp(14px, 1.6vw, 28px); padding: 0 16px;
-    font-size: 12px; border-top: 1px solid var(--line); height: 40px; align-items: center;
+    font-size: 10px; letter-spacing: .12em; border-top: 1px solid var(--line); height: 40px; align-items: center;
   }
+  .nt header .nav a { padding: 5px 6px 4px; }
   .nt main { padding-top: 92px; }
   .nt .hero-slot { margin-top: 92px; }
   .nt .hero-slot .dclock { min-height: 0; }
@@ -528,12 +616,25 @@
   .nt .plate { transition: none; }
   .nt .reveal,
   .nt .reveal.in { opacity: 1; transform: none; transition: none; }
+  .nt header .nav a,
+  .nt header .nav a::before,
+  .nt header .nav a::after { transition: none; }
+  .nt header .nav a:hover,
+  .nt header .nav a:active { transform: none; }
 }
 
-/* 내비 복원(7항목) — 모바일은 한 줄 가로 스크롤 */
+/* 내비 복원(7항목) — 모바일은 한 줄 가로 스크롤(햄버거 없음: 항목이 늘 노출된 계기 레일).
+   우단 결락 마스크 = 유채·그림자 없이 지(紙)로 스미어 사라지는 것으로 더 있음을 알린다. */
 @media (max-width: 767px) {
-  .nt header .nav { overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; gap: 18px; padding: 0 16px; justify-content: flex-start; }
+  .nt header .nav {
+    overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    gap: 12px; padding: 0 16px; justify-content: flex-start;
+    scroll-snap-type: x proximity;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 26px), transparent 100%);
+            mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 26px), transparent 100%);
+  }
   .nt header .nav::-webkit-scrollbar { display: none; }
+  .nt header .nav a { scroll-snap-align: center; }
 }
 .nt .nt-legacy-wrap { padding: 96px calc(var(--jeong) * 1) 0; }
 

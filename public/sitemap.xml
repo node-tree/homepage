@@ -4,7 +4,8 @@
   · v5 판식 + DB 내용: / · /about · /work · /work/:id · /commons · /commons/:id · /cv · /contact
   · /work/:id · /commons/:id 의 id = MongoDB 글 id(정본 = DB). 글이 늘면 여기도 갱신한다.
   · /index · /works-v5 · /about-v5 는 시안 URL — 라우터에서 /cv · /work · /about 로 넘긴다(미등재).
-  · /legacy 는 구 판식 편집기 — noindex(vercel.json X-Robots-Tag)라 미등재.
+  · /legacy(/…) 는 2026-08-31 제거한 구 판식 — 라우터가 대응 v5 페이지로 넘긴다(미등재).
+  · 미등록 경로는 v5 404(noindex)로 떨어진다.
 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 

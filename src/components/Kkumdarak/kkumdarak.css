@@ -5501,12 +5501,24 @@
   100%      { opacity: 0; }
 }
 
-/* 개별 프레임 — 공통 */
+/* 개별 프레임 — 공통
+   ── 표시 크기 복원(--kd-fx / --kd-fy) ─────────────────────────────
+   프레임 WebP 는 폴더별 "최대 캔버스"로 통일돼 있다(scripts/normalize-flipbook-frames.py).
+   그래야 프레임마다 object-fit:contain 배율이 달라지는 움찔거림이 사라진다.
+   그런데 최대 캔버스로 통일하면 배율이 min(box/최대캔버스)로 굳어
+   캐릭터가 정규화 전보다 1.9~17.8% 작아진다(= 의도치 않은 디자인 변경).
+   그래서 프레임 박스만 fx=최대W/지배W, fy=최대H/지배H 만큼 키워
+   min(box*fx/W, box*fy/H) = min(box/지배캔버스) 로 원래 체감 크기를 되돌린다.
+     · 박스를 중앙 기준으로 키우므로(left/top 이 절반씩 음수) 내용 중심은 그대로다.
+     · 기본값 1 이라 계수를 안 주는 루프(program-loops PNG 등)는 기존과 완전히 동일하다.
+     · 계수는 자동 생성물 src/components/Kkumdarak/flipbookVariants.ts 가 공급한다. */
 .kd-loop-frame {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  inset: auto;
+  left: calc(50% * (1 - var(--kd-fx, 1)));
+  top: calc(50% * (1 - var(--kd-fy, 1)));
+  width: calc(100% * var(--kd-fx, 1));
+  height: calc(100% * var(--kd-fy, 1));
   object-fit: contain;
   opacity: 0;
   display: block;
@@ -5695,9 +5707,12 @@
 }
 .kd-nav-walker-char img {
   position: absolute !important;
-  inset: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
+  /* 위 .kd-loop-frame 과 같은 복원 계수를 쓴다(계수 없으면 1 = 기존 inset:0 과 동일). */
+  inset: auto !important;
+  left: calc(50% * (1 - var(--kd-fx, 1))) !important;
+  top: calc(50% * (1 - var(--kd-fy, 1))) !important;
+  width: calc(100% * var(--kd-fx, 1)) !important;
+  height: calc(100% * var(--kd-fy, 1)) !important;
   object-fit: contain !important;
   opacity: 0;
   animation: none !important;

@@ -1,32 +1,24 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import React, { lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
+// App.css 는 이제 로그인 화면(.login-*·.form-*)·생산소 반응형(.sso-*)·
+// 레거시 본문 HTML 의 갤러리 훅(.bk-*)만 남긴 잔여 전역 판식이다.
+// (2026-08-31 레거시 판식 제거 — 구 홈·내비·편집기 스타일 5,000여 줄을 걷어냈다)
 import './App.css';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import SeoHead from './components/SeoHead';
+import { AuthProvider } from './contexts/AuthContext';
 import PageLoader from './components/PageLoader';
 import NtBoot from './redesign/components/NtBoot';
 // v5 내장 편집 모드 — 라우터 바로 안에 둔다(페이지 컴포넌트 자신이 useEditMode() 를 부른다).
-// DOM 을 그리지 않는 제공자라 레거시 라우트에는 아무 영향이 없다.
+// DOM 을 그리지 않는 제공자다.
 import { EditModeProvider } from './redesign/edit/EditModeContext';
-import { playHoverSound, playClickSound, playNavSound, initAudioContext } from './utils/sound';
-import { prefetchAPI } from './services/api';
 
 // [code-split] 페이지/스탠드얼론 라우트 컴포넌트는 React.lazy로 분리.
-// 무거운 의존성(three.js=Home/Work, p5=Work/Team, mermaid=WorkResearch)을
-// 메인 번들에서 떼어내 라우트 진입 시점에만 로드한다.
+// 무거운 의존성(three.js·p5·mermaid)을 메인 번들에서 떼어내 라우트 진입 시점에만 로드한다.
 const Login = lazy(() => import('./components/Login'));
-const Home = lazy(() => import('./components/Home'));
 const SaengsansoApp = lazy(() => import('./components/Saengsanso'));
 const OceanData = lazy(() => import('./components/OceanData'));
 const ClaudeMonitor = lazy(() => import('./components/ClaudeMonitor'));
-const Contact = lazy(() => import('./components/Contact'));
-const Commons = lazy(() => import('./components/Commons'));
-const CV = lazy(() => import('./components/CV'));
-const About = lazy(() => import('./components/About'));
 const Guestbook = lazy(() => import('./components/Guestbook'));
-const Work = lazy(() => import('./components/Work'));
 const WorkResearch = lazy(() => import('./components/WorkResearch'));
 const TeamEvent = lazy(() => import('./components/TeamEvent'));
 const Team = lazy(() => import('./components/Team'));
@@ -36,11 +28,9 @@ const MediaAdmin = lazy(() => import('./components/MediaAdmin'));
 // [임시] 다라니 시계 검수 라우트 — 홈 히어로 편입 전까지만 유지한다
 const DharaniClockPage = lazy(() => import('./components/DharaniClockPage'));
 
-// [v5 리디자인] 새 페이지 5종(src/redesign) — nt.css 를 자기 청크로 들고 오므로
-// 레거시 라우트에는 로드되지 않는다. 기존 홈은 /legacy 로 남는다(삭제 금지).
-// 2026-08-27: 5종 전부 **DB 내용 그대로 + v5 판식**으로 재조판(src/redesign/pages).
-//   정적 시안(Works/IndexPage/Legacy 래퍼)은 제거했고, 원래 컴포넌트(src/components/*)는
-//   /legacy 편집기에서 계속 쓰이므로 삭제하지 않는다.
+// [v5 판식] 판식 페이지 — nt.css 를 자기 청크로 들고 온다.
+// 2026-08-31: 구 판식(/legacy · 상태 기반 페이지 전환 홈 · 원형 노드 내비)은 전부 제거했다.
+//   미등록 경로는 이제 레거시 홈이 아니라 v5 404(NtNotFound)로 떨어진다.
 const NtHome = lazy(() => import('./redesign/pages/Home'));
 const NtWork = lazy(() => import('./redesign/pages/Work'));
 const NtWorkDetail = lazy(() => import('./redesign/pages/WorkDetail'));
@@ -49,13 +39,14 @@ const NtCommons = lazy(() => import('./redesign/pages/Commons'));
 const NtCommonsDetail = lazy(() => import('./redesign/pages/CommonsDetail'));
 const NtCV = lazy(() => import('./redesign/pages/CV'));
 const NtContact = lazy(() => import('./redesign/pages/Contact'));
+const NtNotFound = lazy(() => import('./redesign/pages/NotFound'));
 // v5 내장 편집 — 글 작성/수정 풀페이지(/work/new · /work/:id/edit · /commons/…).
 // 로그인하지 않았으면 컴포넌트 안에서 /login?next= 로 돌린다.
 const NtPostForm = lazy(() => import('./redesign/edit/PostForm'));
 // 삼베 대리 신체는 라우트 전환에도 언마운트되면 안 되므로 <Routes> 바깥에 둔다(설계 §4.3).
 const SambeWalker = lazy(() => import('./redesign/components/SambeWalker'));
 // v5 전용 로딩 자리(웹폰트 요청 0). 인라인 스타일만 쓰므로 메인 번들에 nt.css 를 끌어오지 않는다.
-const ntBoot = (el: React.ReactNode) => <Suspense fallback={<NtBoot />}>{el}</Suspense>;
+const ntBoot = (el: React.ReactNode, stage = false) => <Suspense fallback={<NtBoot stage={stage} />}>{el}</Suspense>;
 
 // /kkumdarak 리다이렉트 별칭 — hash(#admin/#intro 등)과 query를 보존한 채 /iso로 리다이렉트.
 // Kkumdarak가 window.location.hash를 직접 읽으므로 hash 유지가 필수(기존 발행 URL nodetree.kr/kkumdarak#intro 보존).
@@ -117,380 +108,6 @@ function maybeRedirectNodeTreeIsoToIsoArtLab(): boolean {
 // 모듈 평가 시점(최대한 이른 시점)에 1회 실행 — App() 렌더 전에 점프시켜 깜빡임 최소화.
 const didRedirectToIsoArtLab = maybeRedirectNodeTreeIsoToIsoArtLab();
 
-// 네비게이션 항목 타입
-interface NavItem {
-  id: number;
-  text: string;
-  page?: string;
-  href?: string;
-  external?: boolean;
-}
-
-// 네비게이션 항목
-const NAV_ITEMS: NavItem[] = [
-  { id: 1, text: 'NODE TREE', page: 'ABOUT' },
-  { id: 2, text: 'ART SPACE', href: 'https://saengsanso.com', external: true },
-  { id: 3, text: 'ART WORK', page: 'WORK' },
-  { id: 4, text: 'COMMONS', page: 'COMMONS' },
-  { id: 5, text: 'CV', page: 'CV' },
-  { id: 6, text: 'CONTACT', page: 'CONTACT' }
-];
-
-// 내부 페이지 전용 항목 (external 제외)
-const INTERNAL_NAV_ITEMS = NAV_ITEMS.filter(item => !item.external);
-
-// 데스크톱 네비게이션 컴포넌트 - 원형 노드 + 아래 텍스트
-function Navigation({ currentPage, onPageChange }: { currentPage: string; onPageChange: (page: string) => void }) {
-  const allNavItems: NavItem[] = [
-    { id: 0, text: 'HOME', page: 'HOME' },
-    ...NAV_ITEMS
-  ];
-
-  const handleClick = (item: NavItem) => {
-    if (item.external && item.href) {
-      window.open(item.href, '_blank', 'noopener,noreferrer');
-      return;
-    }
-    if (item.page) {
-      playNavSound(item.page);
-      onPageChange(item.page);
-    }
-  };
-
-  return (
-    <nav className="fixed-navigation desktop-nav">
-      <div className="nav-container">
-        {allNavItems.map((item) => (
-          <motion.div
-            key={item.id}
-            className={`nav-node ${item.page && currentPage === item.page ? 'active' : ''}`}
-            onMouseEnter={playHoverSound}
-            onClick={() => handleClick(item)}
-            whileTap={{ scale: 0.95 }}
-          >
-            <div className="nav-dot" />
-            <span className="nav-label">{item.text}</span>
-          </motion.div>
-        ))}
-      </div>
-    </nav>
-  );
-}
-
-// 모바일 햄버거 메뉴 컴포넌트
-function MobileNavigation({ currentPage, onPageChange }: { currentPage: string; onPageChange: (page: string) => void }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const allNavItems: NavItem[] = [
-    { id: 0, text: 'HOME', page: 'HOME' },
-    ...NAV_ITEMS
-  ];
-
-  const handleItemClick = (item: NavItem) => {
-    if (item.external && item.href) {
-      window.open(item.href, '_blank', 'noopener,noreferrer');
-      setIsOpen(false);
-      return;
-    }
-    if (item.page) {
-      playNavSound(item.page);
-      onPageChange(item.page);
-    }
-    setIsOpen(false);
-  };
-
-  return (
-    <>
-      {/* 햄버거 버튼 */}
-      <motion.button
-        className="hamburger-button"
-        onClick={() => {
-          playClickSound();
-          setIsOpen(!isOpen);
-        }}
-        whileTap={{ scale: 0.95 }}
-      >
-        <motion.div
-          className="hamburger-icon"
-          animate={isOpen ? "open" : "closed"}
-        >
-          <span className={`hamburger-line ${isOpen ? 'open' : ''}`} />
-          <span className={`hamburger-line ${isOpen ? 'open' : ''}`} />
-          <span className={`hamburger-line ${isOpen ? 'open' : ''}`} />
-        </motion.div>
-      </motion.button>
-
-      {/* 사이드바 오버레이 */}
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            <motion.div
-              className="sidebar-overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
-            />
-            <motion.nav
-              className="mobile-sidebar"
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'tween', duration: 0.3 }}
-            >
-              <div className="sidebar-header">
-                <span>MENU</span>
-              </div>
-              <div className="sidebar-items">
-                {allNavItems.map((item) => (
-                  <motion.div
-                    key={item.id}
-                    className={`sidebar-item ${item.page && currentPage === item.page ? 'active' : ''}`}
-                    onClick={() => handleItemClick(item)}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <div className="sidebar-dot" />
-                    <span>{item.text}</span>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.nav>
-          </>
-        )}
-      </AnimatePresence>
-    </>
-  );
-}
-
-
-// [async-parallel] 페이지별 프리페치 매핑
-const prefetchMap: Record<string, () => void> = {
-  HOME: prefetchAPI.home,
-  WORK: prefetchAPI.work,
-  FILED: prefetchAPI.filed,
-  ABOUT: prefetchAPI.about,
-  CV: prefetchAPI.cv,
-};
-
-// 메인 콘텐츠 컴포넌트
-function AppContent() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { isAuthenticated, logout, user } = useAuth();
-  const [currentPage, setCurrentPage] = useState<string>('HOME');
-
-  // [async-parallel] 앱 마운트 시 중요 데이터 프리페칭
-  useEffect(() => {
-    // 초기 로드 시 자주 사용하는 데이터 병렬 프리페칭
-    prefetchAPI.critical();
-  }, []);
-
-  // 모바일 브라우저를 위한 AudioContext 초기화
-  // iOS Safari: touchend 사용 필수 (touchstart는 작동 안 함)
-  useEffect(() => {
-    const handleFirstInteraction = () => {
-      initAudioContext();
-      // 모든 리스너 제거
-      document.removeEventListener('touchend', handleFirstInteraction);
-      document.removeEventListener('touchstart', handleFirstInteraction);
-      document.removeEventListener('mousedown', handleFirstInteraction);
-      document.removeEventListener('keydown', handleFirstInteraction);
-    };
-
-    // iOS 6-8: touchstart, iOS 9+: touchend
-    document.addEventListener('touchend', handleFirstInteraction, false);
-    document.addEventListener('touchstart', handleFirstInteraction, false);
-    document.addEventListener('mousedown', handleFirstInteraction, false);
-    document.addEventListener('keydown', handleFirstInteraction, false);
-
-    return () => {
-      document.removeEventListener('touchend', handleFirstInteraction);
-      document.removeEventListener('touchstart', handleFirstInteraction);
-      document.removeEventListener('mousedown', handleFirstInteraction);
-      document.removeEventListener('keydown', handleFirstInteraction);
-    };
-  }, []);
-
-  // URL 경로에 따라 페이지 설정
-  //   /legacy/<page> (레거시 편집기 라우트) 는 접두어를 벗겨 낸 뒤 같은 규칙으로 읽는다.
-  //   /legacy(접두어만) = HOME. 그래야 AdminLine 이 안내한 /legacy/work 가
-  //   레거시 Work 편집 화면으로 실제 도달한다(이전엔 전부 HOME 으로 떨어졌다).
-  useEffect(() => {
-    const segments = location.pathname.split('/').filter(Boolean);
-    const rest = segments[0]?.toUpperCase() === 'LEGACY' ? segments.slice(1) : segments;
-    const path = (rest[0] || '').toUpperCase();
-    if (path === '' || path === 'HOME') {
-      setCurrentPage('HOME');
-    } else if (path === 'LOGIN') {
-      // 로그인 페이지는 별도 처리
-    } else if (INTERNAL_NAV_ITEMS.some(item => item.page === path)) {
-      setCurrentPage(path);
-    } else {
-      // 알 수 없는 경로면 홈으로
-      setCurrentPage('HOME');
-    }
-  }, [location.pathname]);
-
-  // 페이지 변경 핸들러
-  const handlePageChange = useCallback((page: string) => {
-    // [async-parallel] 페이지 전환 전 해당 페이지 데이터 프리페칭
-    const prefetch = prefetchMap[page];
-    if (prefetch) {
-      prefetch();
-    }
-    setCurrentPage(page);
-    // 레거시 안(/legacy·/legacy/*)에서는 레거시 내비로 순환한다 —
-    // 여기서 /work 로 나가면 v5 읽기전용 페이지로 새어 편집 UI 에 못 돌아온다.
-    const inLegacy = /^\/legacy(\/|$)/i.test(location.pathname);
-    if (inLegacy) {
-      navigate(page === 'HOME' ? '/legacy' : `/legacy/${page.toLowerCase()}`);
-    } else {
-      navigate(page === 'HOME' ? '/' : `/${page.toLowerCase()}`);
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [navigate, location.pathname]);
-
-  // 로그인 페이지일 때는 별도 렌더링
-  if (location.pathname === '/login') {
-    return <Login />;
-  }
-
-  const NODE_TREE_BASE = 'https://nodetree.kr';
-  // [SEO] path 를 함께 보관해 canonical / og:url 을 라우트별로 분리한다.
-  // (이전에는 전 페이지가 canonical=https://nodetree.kr 로 나가 하위 페이지가
-  //  홈의 중복으로 처리됐다.)
-  const SEO_MAP: Record<string, { path: string; title: string; description: string; keywords?: string }> = {
-    HOME: {
-      path: '/',
-      title: 'NODE TREE — 도시기록 아티스트 듀오',
-      description: '이화영+정강현으로 구성된 도시기록 아티스트 듀오. 사운드, 영상, 설치를 통해 도시와 장소의 기억을 기록합니다.',
-      keywords: 'NODE TREE, 노드트리, 이화영, 정강현, 사운드아트, 미디어아트, 도시기록, 현대미술',
-    },
-    ABOUT: {
-      path: '/about',
-      title: 'NODE TREE | About — 소개',
-      description: 'NODE TREE(이화영+정강현)는 도시기록을 주제로 사운드, 영상, 설치 작업을 하는 아티스트 듀오입니다.',
-      keywords: 'NODE TREE 소개, 이화영, 정강현, 아티스트 듀오',
-    },
-    WORK: {
-      path: '/work',
-      title: 'NODE TREE | Work — 작품',
-      description: 'NODE TREE의 사운드, 영상, 설치 작품 목록. 위성악보, 에디아포닉, 낙원식당 등.',
-      keywords: 'NODE TREE 작품, 위성악보, 에디아포닉, 낙원식당, 사운드 설치',
-    },
-    COMMONS: {
-      path: '/commons',
-      title: 'NODE TREE | Commons — 공유지',
-      description: 'NODE TREE의 공유 자료 및 리소스.',
-    },
-    CV: {
-      path: '/cv',
-      title: 'NODE TREE | CV — 이력',
-      description: '이화영+정강현 NODE TREE의 전시 이력, 레지던시, 수상 내역.',
-      keywords: 'NODE TREE CV, 이화영 이력, 정강현 이력, 전시 이력',
-    },
-    CONTACT: {
-      path: '/contact',
-      title: 'NODE TREE | Contact — 연락처',
-      description: 'NODE TREE에 문의하기. 협업 및 전시 문의를 환영합니다.',
-    },
-  };
-
-  const seo = SEO_MAP[currentPage] || SEO_MAP.HOME;
-
-  const renderPageContent = () => {
-    switch (currentPage) {
-      case 'HOME':
-        return <Home />;
-      case 'CONTACT':
-        return <Contact />;
-      case 'ABOUT':
-        return <About />;
-      case 'WORK':
-        return <Work />;
-      case 'COMMONS':
-        return <Commons />;
-      case 'CV':
-        return <CV />;
-      default:
-        return <Home />;
-    }
-  };
-
-  return (
-    <div className="App">
-      <SeoHead
-        title={seo.title}
-        description={seo.description}
-        url={`${NODE_TREE_BASE}${seo.path === '/' ? '/' : seo.path}`}
-        keywords={seo.keywords}
-        /* AppContent 는 이제 /legacy 와 catch-all(*) 에서만 렌더된다.
-           둘 다 v5 홈의 중복이므로 색인에서 뺀다(링크는 따라가게 follow).
-           /legacy 는 vercel.json 의 X-Robots-Tag 로도 한 번 더 막는다. */
-        noindex
-      />
-      {/* 데스크톱 네비게이션 */}
-      <Navigation currentPage={currentPage} onPageChange={handlePageChange} />
-
-      {/* 모바일 햄버거 메뉴 */}
-      <MobileNavigation currentPage={currentPage} onPageChange={handlePageChange} />
-
-      {/* 로그인/로그아웃 링크 */}
-      <div className="auth-container">
-        {!isAuthenticated ? (
-          <motion.a
-            href="/login"
-            className="login-link"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.6 }}
-            whileHover={{ opacity: 1 }}
-          >
-            로그인
-          </motion.a>
-        ) : (
-          <motion.div
-            className="logout-container"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.6 }}
-            whileHover={{ opacity: 1 }}
-          >
-            <span className="user-info">{user?.username}님</span>
-            <a href="/buyeo/1" className="logout-button" style={{ textDecoration: 'none', marginRight: '4px' }}>
-              부여 가이드
-            </a>
-            <a href="/monitor" className="logout-button" style={{ textDecoration: 'none', marginRight: '4px' }}>
-              MONITOR
-            </a>
-            <a href="/admin/media" className="logout-button" style={{ textDecoration: 'none', marginRight: '4px' }}>
-              이미지호스팅
-            </a>
-            <button onClick={logout} className="logout-button">
-              로그아웃
-            </button>
-          </motion.div>
-        )}
-      </div>
-
-      {/* 페이지 콘텐츠 */}
-      <main className="main-content">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentPage}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-          >
-            {/* [code-split] lazy 페이지 로드 동안 로딩 표시 */}
-            <Suspense fallback={<PageLoader />}>
-              {renderPageContent()}
-            </Suspense>
-          </motion.div>
-        </AnimatePresence>
-      </main>
-    </div>
-  );
-}
-
 // App 컴포넌트
 function App() {
   // nodetree.kr/iso · /kkumdarak → isoartlab.com 리다이렉트가 모듈 평가 시점에 발동했다면,
@@ -549,10 +166,11 @@ function App() {
               <Route path="/clock" element={<DharaniClockPage />} />
               <Route path="/work/research/:postId" element={<WorkResearch />} />
 
-              {/* ── v5 리디자인 5종 (설계 §1.2 URL 유지) ──
+              {/* ── v5 판식 5종 (설계 §1.2 URL 유지) ──
                   각자 Suspense 경계를 따로 두는 이유: 공용 PageLoader 의 「불러오는 중…」이
                   body 의 S-CoreDream(168 KB)을 깨워 새 페이지에서 쓰지도 않는 폰트를 받는다(실측). */}
-              <Route path="/" element={ntBoot(<NtHome />)} />
+              {/* 홈만 근흑 무대(〈이물〉 D18) — 로딩 자리도 같은 지(紙)로 둔다 */}
+              <Route path="/" element={ntBoot(<NtHome />, true)} />
               <Route path="/about" element={ntBoot(<NtAbout />)} />
               {/* /work?post=<id> (구 상세 URL) 은 목록 컴포넌트가 /work/<id> 로 넘긴다 */}
               <Route path="/work" element={ntBoot(<NtWork />)} />
@@ -569,19 +187,23 @@ function App() {
               />
               <Route path="/cv" element={ntBoot(<NtCV />)} />
               <Route path="/contact" element={ntBoot(<NtContact />)} />
-              {/* ── 시안 URL 보존 리다이렉트 ──
-                  /works-v5 · /about-v5 · /index 는 v5 정적 시안이었다. 색인·외부 링크가
-                  남아 있으므로 404 대신 정식 페이지로 넘긴다(replace). */}
+              {/* ── 구 URL 보존 리다이렉트 ──
+                  /works-v5 · /about-v5 · /index 는 v5 정적 시안이었고, /legacy(/…) 는
+                  2026-08-31 걷어낸 구 판식이다. 색인·외부 링크·북마크가 남아 있으므로
+                  404 로 떨구지 않고 대응하는 정식 페이지로 넘긴다(replace). */}
               <Route path="/works-v5" element={<Navigate to="/work" replace />} />
               <Route path="/about-v5" element={<Navigate to="/about" replace />} />
               <Route path="/index" element={<Navigate to="/cv" replace />} />
-              {/* 기존 홈(three.js 파티클 + 상태 기반 페이지 전환)은 삭제하지 않고 /legacy 로.
-                  /legacy/<page>(about·work·commons·cv·contact)는 그 페이지의 레거시
-                  편집 UI(작성·수정·삭제·순서편집)로 곧장 들어가는 문이다. */}
-              <Route path="/legacy" element={<AppContent />} />
-              <Route path="/legacy/:page" element={<AppContent />} />
+              <Route path="/legacy" element={<Navigate to="/" replace />} />
+              <Route path="/legacy/about" element={<Navigate to="/about" replace />} />
+              <Route path="/legacy/work" element={<Navigate to="/work" replace />} />
+              <Route path="/legacy/commons" element={<Navigate to="/commons" replace />} />
+              <Route path="/legacy/cv" element={<Navigate to="/cv" replace />} />
+              <Route path="/legacy/contact" element={<Navigate to="/contact" replace />} />
+              <Route path="/legacy/*" element={<Navigate to="/" replace />} />
 
-              <Route path="*" element={<AppContent />} />
+              {/* 미등록 경로 — v5 판식 404(색인 제외). 예전에는 레거시 홈이 떴다. */}
+              <Route path="*" element={ntBoot(<NtNotFound />)} />
             </Routes>
           </Suspense>
           {/* 삼베 대리 신체 — Routes 밖이라 라우트가 바뀌어도 유지된다(v5 라우트에서만 보인다) */}

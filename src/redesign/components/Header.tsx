@@ -15,7 +15,7 @@ import { useEditMode } from '../edit/EditModeContext';
  */
 const NAV: { to: string; label: string; end?: boolean; external?: boolean }[] = [
   { to: '/', label: 'HOME', end: true },
-  { to: '/about', label: 'NODE TREE' },
+  { to: '/about', label: 'ABOUT' },
   { to: 'https://saengsanso.com', label: 'ART SPACE', external: true },
   { to: '/work', label: 'ART WORK' },
   { to: '/commons', label: 'COMMONS' },

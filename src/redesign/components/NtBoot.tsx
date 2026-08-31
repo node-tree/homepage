@@ -10,26 +10,33 @@ import React from 'react';
 // ════════════════════════════════════════════════════════════════════════
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace';
 
-const NtBoot: React.FC = () => (
-  <div style={{ background: '#FAFAF9', minHeight: '100vh' }} aria-busy="true">
-    <div
-      style={{
-        height: 56,
-        display: 'grid',
-        gridTemplateColumns: 'repeat(20, 1fr)',
-        alignItems: 'center',
-        borderBottom: '1px solid #E4E2DC',
-      }}
-    >
-      <div style={{ gridColumn: '1 / 5', paddingLeft: 24, fontFamily: MONO, fontSize: 13, letterSpacing: '.02em', color: '#0F0F1A' }}>
-        NODE TREE
+/** stage = 근흑 무대 라우트(홈). 판이 검은데 로딩 자리만 희면 흰 섬광이 한 번 친다. */
+const NtBoot: React.FC<{ stage?: boolean }> = ({ stage }) => {
+  const bg = stage ? 'rgb(10,10,10)' : '#FAFAF9';
+  const ink = stage ? 'rgb(220,221,211)' : '#0F0F1A';
+  const line = stage ? 'rgba(220,221,211,.18)' : '#E4E2DC';
+  const dim = stage ? 'rgb(116,116,116)' : '#B2B2B2';
+  return (
+    <div style={{ background: bg, minHeight: '100vh' }} aria-busy="true">
+      <div
+        style={{
+          height: 56,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(20, 1fr)',
+          alignItems: 'center',
+          borderBottom: `1px solid ${line}`,
+        }}
+      >
+        <div style={{ gridColumn: '1 / 5', paddingLeft: 24, fontFamily: MONO, fontSize: 13, letterSpacing: '.02em', color: ink }}>
+          NODE TREE
+        </div>
+        <div style={{ gridColumn: '16 / 21', paddingRight: 24, textAlign: 'right', fontFamily: MONO, fontSize: 11, letterSpacing: '.06em', color: dim }}>
+          讀誦 —— / 3029
+        </div>
       </div>
-      <div style={{ gridColumn: '16 / 21', paddingRight: 24, textAlign: 'right', fontFamily: MONO, fontSize: 11, letterSpacing: '.06em', color: '#B2B2B2' }}>
-        讀誦 —— / 3029
-      </div>
+      <div style={{ height: 1, background: line, margin: '128px calc(100vw / 20) 0' }} />
     </div>
-    <div style={{ height: 1, background: '#E4E2DC', margin: '128px calc(100vw / 20) 0' }} />
-  </div>
-);
+  );
+};
 
 export default NtBoot;

@@ -342,3 +342,50 @@
     font-size: 0.72rem;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────
+   2026-08-31 레거시 판식 제거 이관분.
+   아래 값들은 원래 App.css(레거시 About 페이지의 팀원 그리드)에 있었고,
+   App.css 가 전역이라 이 페이지의 .member-* 에도 그대로 얹혀 있었다.
+   App.css 를 걷어내면서 **이 페이지가 실제로 받고 있던 것만** 옮겨 왔다.
+   위 규칙이 이미 정하는 속성은 건드리지 않는다(원래도 이쪽이 이겼다) —
+   렌더 결과는 이전과 픽셀 동일이다(playwright 계산 스타일·스크린샷 대조).
+   ───────────────────────────────────────────────────────────────────── */
+.member-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.member-info {
+  width: 100%;
+  text-align: center;
+}
+
+.member-name {
+  line-height: 1.4;
+}
+
+.member-role {
+  margin: 0;
+  opacity: 0.6;
+  line-height: 1.4;
+}
+
+.member-bio {
+  opacity: 0.75;
+}
+
+@media (max-width: 768px) {
+  .member-card {
+    max-width: calc(50% - 1rem);
+  }
+}
+
+@media (max-width: 480px) {
+  .member-card {
+    max-width: 280px;
+  }
+}

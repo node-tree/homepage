@@ -39,9 +39,10 @@ export const State: React.FC<{ text: string; onRetry?: () => void }> = ({ text, 
 );
 
 /** 로그인 상태에서만 보이는 편집 줄.
- *  이제 편집은 **이 페이지 안에서** 한다(v5 판식·v5 헤더 그대로) — 레거시 앱으로 튕기지 않는다.
- *  /legacy 편집기는 백업으로 남아 있으므로 작은 보조 문으로만 걸어 둔다. */
-export const AdminLine: React.FC<{ page?: 'about' | 'work' | 'commons' | 'cv' | 'contact' }> = ({ page }) => {
+ *  편집은 **이 페이지 안에서** 한다(v5 판식·v5 헤더 그대로).
+ *  2026-08-31: 백업으로 걸어 두었던 레거시 편집기(/legacy) 문은 판식과 함께 제거했다.
+ *  `page` 인자는 호출부(각 v5 페이지)의 서명을 유지하려고 남겨 둔다. */
+export const AdminLine: React.FC<{ page?: 'about' | 'work' | 'commons' | 'cv' | 'contact' }> = () => {
   const { editing, canEdit, toggle } = useEditMode();
   if (!canEdit) return null;
   return (
@@ -49,8 +50,7 @@ export const AdminLine: React.FC<{ page?: 'about' | 'work' | 'commons' | 'cv' | 
       편집 ·{' '}
       <button type="button" className="nte-linkbtn" onClick={toggle} aria-pressed={editing}>
         {editing ? '편집 모드 끄기' : '이 페이지에서 편집'}
-      </button>{' '}
-      · <a href={page ? `/legacy/${page}` : '/legacy'}>레거시 편집기</a>(백업)
+      </button>
     </div>
   );
 };

@@ -5,6 +5,8 @@ import { SECTIONS, ANNOUNCE, MOTION } from './data';
 import MainHero from './MainHero';
 import { KkumdarakAuthProvider, useKkumdarakAuth } from './KkumdarakAuthContext';
 import { villageDiaryAPI } from '../../services/api';
+import { useFlipbookFrames } from './useDeferredFrames';
+import { flipbookSrcSet, flipbookFit, FLIPBOOK_VARIANTS } from './flipbookVariants';
 
 // ── 코드 스플리팅 ────────────────────────────────────────────────
 // 초기 진입(메인 히어로)에 필요 없는 섹션은 청크 분리해 초기 번들 축소.
@@ -42,6 +44,19 @@ const getInitialKkumdarakSection = () => {
 };
 
 // Google Fonts 로드: Figma 디자인 파일의 Jua / Gothic A1 / Fredoka 조합.
+//
+// [perf] 원래는 4종(Fredoka·Gothic A1·Jua·Noto Sans KR)을 한 요청으로 받았다.
+//   실측(fonts.googleapis.com, Chrome UA): 4종 합본 css = 122.7KB(gzip) / 356~463ms.
+//   그중 **Noto Sans KR 만 70.0KB** — 전체의 57% 다. 그런데 kkumdarak.css 의 모든
+//   font-family 선언에서 Noto Sans KR 은 Gothic A1 **뒤의 폴백**이라, Gothic A1 이
+//   커버하는 글자에서는 절대 렌더에 쓰이지 않는다(=초기 렌더 경로에 붙을 이유가 없다).
+//   → 실제로 그려지는 3종만 즉시 로드(52.7KB)하고, 희귀 글리프 보완용 Noto Sans KR 은
+//     load 이벤트 이후(유휴)로 미룬다. 커버리지는 그대로, 임계 경로만 70KB 가벼워진다.
+const KD_FONTS_PRIMARY =
+  'https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Gothic+A1:wght@400;700;800&family=Jua&display=swap';
+const KD_FONTS_DEFERRED =
+  'https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;800&display=swap';
+
 function useKkumdarakFonts() {
   useEffect(() => {
     const id = 'kkumdarak-fonts';
@@ -56,11 +71,37 @@ function useKkumdarakFonts() {
     const link = document.createElement('link');
     link.id = id;
     link.rel = 'stylesheet';
-    link.href =
-      'https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Gothic+A1:wght@400;700;800&family=Jua&family=Noto+Sans+KR:wght@400;700;800&display=swap';
+    link.href = KD_FONTS_PRIMARY;
     document.head.appendChild(pre1);
     document.head.appendChild(pre2);
     document.head.appendChild(link);
+
+    // ── 폴백 한글 폰트는 첫 화면이 끝난 뒤에 ────────────────────────
+    let idleId: number | undefined;
+    let timerId: number | undefined;
+    const deferredId = 'kkumdarak-fonts-fallback';
+    const loadDeferred = () => {
+      if (document.getElementById(deferredId)) return;
+      const l = document.createElement('link');
+      l.id = deferredId;
+      l.rel = 'stylesheet';
+      l.href = KD_FONTS_DEFERRED;
+      document.head.appendChild(l);
+    };
+    const schedule = () => {
+      const ric = (window as any).requestIdleCallback;
+      if (typeof ric === 'function') idleId = ric(loadDeferred, { timeout: 3000 });
+      else timerId = window.setTimeout(loadDeferred, 1200);
+    };
+    if (document.readyState === 'complete') schedule();
+    else window.addEventListener('load', schedule, { once: true });
+
+    return () => {
+      window.removeEventListener('load', schedule);
+      const cic = (window as any).cancelIdleCallback;
+      if (idleId !== undefined && typeof cic === 'function') cic(idleId);
+      if (timerId !== undefined) window.clearTimeout(timerId);
+    };
   }, []);
 }
 
@@ -212,15 +253,36 @@ const NAV_WALKER_MOBILE_CSS = `
 }
 `;
 
+/**
+ * 워커의 <img> 실제 표시 폭 — 컨테이너는 52px(데스크톱)·44px(모바일, NAV_WALKER_MOBILE_CSS)이고
+ * 프레임 박스는 복원 계수 fx 만큼 더 넓다(kkumdarak.css .kd-loop-frame). sizes 는 후자여야 한다.
+ */
+const NAV_WALKER_FX = FLIPBOOK_VARIANTS['chars-v2/character-12']
+  ? FLIPBOOK_VARIANTS['chars-v2/character-12'].fx
+  : 1;
+const NAV_WALKER_SIZES = `(max-width: 900px) ${Math.round(44 * NAV_WALKER_FX)}px, ${Math.round(52 * NAV_WALKER_FX)}px`;
+
 function NavWalker() {
+  // [perf] 헤더 워커도 6프레임 플립북이다 — 프레임 2~6 은 첫 화면 이후로 미룬다.
+  //   표시 폭은 CSS 로 확정돼 있다: 데스크톱 52px, 모바일(≤900px) 44px(NAV_WALKER_MOBILE_CSS).
+  //   그 값을 sizes 로 그대로 알려 줘야 브라우저가 0.5배본을 고를 수 있다.
+  const frames = useFlipbookFrames(
+    [1, 2, 3, 4, 5, 6].map((i) => `/kkumdarak/chars-v2/character-12/frame-0${i}.webp`),
+    [1, 2, 3, 4, 5, 6].map((i) => flipbookSrcSet('chars-v2/character-12', i)),
+    NAV_WALKER_SIZES,
+  );
   return (
     <div className="kd-nav-walker">
       <style>{NAV_WALKER_MOBILE_CSS}</style>
-      <div className="kd-nav-walker-char">
+      {/* [복원] 정규화로 줄어든 표시 배율을 지배 캔버스 기준으로 되돌리는 계수(박스 52/44px 는 불변). */}
+      <div className="kd-nav-walker-char" style={flipbookFit('chars-v2/character-12')}>
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <img
             key={i}
-            src={`/kkumdarak/chars-v2/character-12/frame-0${i}.svg`}
+            // [perf] base64 PNG 래퍼 .svg → WebP. scripts/svg-base64-to-webp.js → 캔버스 정규화 → q88.
+            src={frames[i - 1].src}
+            srcSet={frames[i - 1].srcSet}
+            sizes={frames[i - 1].srcSet ? NAV_WALKER_SIZES : undefined}
             alt=""
             className="kd-loop-frame"
             decoding="async"
@@ -383,7 +445,18 @@ const Kkumdarak: React.FC = () => {
 
         <header className="kd-header">
           <div className="kd-logo" onClick={() => go('main')} role="button" tabIndex={0}>
-            <img className="kd-logo-mark" src="/iso-favicon.png" alt="" aria-hidden="true" />
+            {/* [perf] 헤더 로고는 38px(모바일 34px)로 그려지는데 파비콘 원본(256px·68.4KB)을
+                그대로 받고 있었다 → 128px 무손실 WebP(14.2KB, DPR 3.3배 여유)로 교체.
+                파비콘 자체(/iso-favicon.png)는 그대로 둔다(브라우저 탭 아이콘 용도). */}
+            <img
+              className="kd-logo-mark"
+              src="/iso-logo-128.webp"
+              alt=""
+              aria-hidden="true"
+              width={38}
+              height={38}
+              decoding="async"
+            />
             <span className="kd-logo-word">이소異素</span>
           </div>
 

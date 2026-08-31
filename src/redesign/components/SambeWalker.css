@@ -17,6 +17,10 @@
 /* 레거시 라우트(/legacy·/iso·/ocean 등)에서는 나타나지 않는다 — 언마운트는 하지 않는다 */
 .ntwalker--off { display: none; }
 
+/* 근흑 무대(홈)에서는 먹으로 걸으면 보이지 않는다 — 개봉 먹(루마 204)으로 뒤집는다.
+   .ntwalker 는 .nt 바깥의 고정 레이어라 토큰 상속을 못 받는다(그래서 body 클래스로 잡는다). */
+body.nt-stage .ntwalker { color: rgb(204, 204, 204); }
+
 .ntwalker__fig,
 .ntwalker__fig svg {
   width: 44px;
