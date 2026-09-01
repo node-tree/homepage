@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════
-// Results.tsx — 마을의 기록 (/iso#results)
+// Results.tsx — 마을기록 (/iso#results)
 //   프로그램 7개가 낳은 산출물을 한데 모으는 허브. 상단 매체 필터(전체/지도/영상/기록).
 //   설계 정본: Figma 「웹지도 설계」 01 IA — 프로그램별 + 필터 하이브리드.
 //   ⚠️ 링크 없는 항목은 '준비 중'으로 남긴다(빈 카드를 만들지 않는다).
@@ -41,16 +41,16 @@ const RESULTS: ResultItem[] = [
   {
     id: 'jangam-book',
     programId: 'jangam-chaekjeong',
-    title: '장암 책정 — 마을 책의 정거장',
-    medium: 'archive',
-    desc: '마을 곳곳에 놓인 작은 책 정거장과 주민이 남긴 기록.',
+    title: '장암 책정',
+    medium: 'video',
+    desc: '마을 곳곳에 놓인 작은 책 정거장과 주민이 남긴 기록의 영상.',
   },
   {
     id: 'memory-station',
     programId: 'memory-station',
     title: '기억순환 정류장',
-    medium: 'archive',
-    desc: '정류장에서 주고받은 세대 간 이야기의 구술 아카이브.',
+    medium: 'video',
+    desc: '정류장에서 주고받은 세대 간 이야기를 담은 영상.',
   },
   {
     id: 'hand-memory',
@@ -86,7 +86,7 @@ const Results: React.FC = () => {
   return (
     <section className="kd-section kd-results">
       <header className="kd-results-head">
-        <h2>마을의 기록</h2>
+        <h2>마을기록</h2>
         <p>프로그램에서 만들어진 지도와 영상, 기록을 한자리에 모았습니다. 준비되는 대로 하나씩 열립니다.</p>
       </header>
 
