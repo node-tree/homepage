@@ -21,7 +21,7 @@
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }
 .kd-results-card > a,
-.kd-results-card > div {
+.kd-results-card > div:not(.kd-results-tools) {
   display: flex; flex-direction: column; gap: 6px; height: 100%;
   padding: 24px 24px 22px;
   background: #fffdf8;
@@ -32,6 +32,8 @@
 }
 .kd-results-card > a:hover { transform: translateY(-3px); box-shadow: 8px 10px 0 rgba(24, 18, 14, 0.12); }
 .kd-results-card > a:active { transform: translateY(-1px); }
+.kd-results-card:has(.kd-results-tools) > a,
+.kd-results-card:has(.kd-results-tools) > div:not(.kd-results-tools) { padding-top: 44px; }
 .kd-results-medium {
   align-self: flex-start;
   font: 700 11px/1 'Space Mono', monospace; letter-spacing: .1em;
@@ -42,7 +44,7 @@
 .kd-results-desc { margin: 4px 0 0; font-size: 14px; line-height: 1.65; color: #6b5f55; }
 .kd-results-cta { margin-top: auto; padding-top: 14px; font: 700 14px/1 'Gothic A1', sans-serif; color: #18120e; }
 
-.kd-results-card.is-pending > div { opacity: .55; box-shadow: none; border-style: dashed; }
+.kd-results-card.is-pending > div:not(.kd-results-tools) { opacity: .55; box-shadow: none; border-style: dashed; }
 .kd-results-card.is-pending .kd-results-cta { color: #9a8b7d; }
 
 @media (max-width: 640px) {
@@ -50,16 +52,22 @@
   .kd-results-grid { grid-template-columns: 1fr; }
 }
 
-/* ── 편집 도구(로그인 시) ── */
+/* ── 편집 도구(로그인 시) ──
+   카드 우상단에 겹쳐 띄운다(카드 본문 링크 위, absolute). 카드 흐름을 건드리지 않는다. */
 .kd-results-card { position: relative; }
-.kd-results-tools { display: flex; gap: 6px; margin-top: 8px; }
-.kd-results-tools button {
-  font: 700 12px/1 'Gothic A1', sans-serif;
-  color: #18120e; background: #fffdf8;
-  border: 1.5px solid #18120e; border-radius: 7px;
-  padding: 6px 12px; cursor: pointer;
+.kd-results-tools {
+  position: absolute; top: 10px; right: 10px; z-index: 2;
+  display: flex; flex-direction: row; gap: 6px; width: auto;
 }
-.kd-results-tools button.danger { color: #b3261e; border-color: #b3261e; }
+.kd-results-tools button {
+  display: inline-block; width: auto; flex: 0 0 auto;
+  font: 700 11px/1 'Gothic A1', sans-serif;
+  color: #9a8b7d; background: #fffdf8;
+  border: 1.5px solid #d9cfc2; border-radius: 6px;
+  padding: 5px 9px; cursor: pointer;
+}
+.kd-results-tools button:hover { color: #18120e; border-color: #18120e; }
+.kd-results-tools button.danger:hover { color: #b3261e; border-color: #b3261e; }
 .kd-results-chip--add { border-style: dashed; color: #d64f1e; border-color: #d64f1e; }
 
 .kd-results-card.is-editing .kd-results-form {
