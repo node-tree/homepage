@@ -394,6 +394,8 @@ function mergePrograms(saved: Record<string, DiaryCardData[]>): ProgramDiary[] {
 const PATH_TOP = 320;
 const FIRST_CARD_Y = 482;
 const CARD_GAP = 280;
+// 카드 아래 최소 여백(실측 높이가 CARD_GAP 을 넘길 때 이만큼 더 띄운다)
+const DESKTOP_CARD_MIN_SPACING = 76;
 const PATH_TAIL = 120;
 const AVATAR_TRAVEL_PAD = 40;
 
@@ -811,6 +813,22 @@ const VillageDiary: React.FC = () => {
     return program.cards;
   }, [isEditing, draftCards, selected, program.cards]);
 
+  // ── 모바일 카드 실측 높이 ────────────────────────────────────────
+  //   제목 줄 수에 따라 카드 높이가 187~203px 로 달라진다(폭 232 고정).
+  //   측정값이 없으면(초기 렌더·데스크톱에서 display:none) 0 → 기존 균일 gap 으로 폴백.
+  const [desktopCardHeights, setDesktopCardHeights] = useState<number[]>([]);
+  const cardTops = useMemo(() => {
+    const tops: number[] = [];
+    let y = FIRST_CARD_Y;
+    for (let i = 0; i < cards.length; i += 1) {
+      tops.push(y);
+      const h = desktopCardHeights[i] || 0;
+      y += h > 0 ? Math.max(CARD_GAP, Math.round(h) + DESKTOP_CARD_MIN_SPACING) : CARD_GAP;
+    }
+    return tops;
+  }, [cards.length, desktopCardHeights]);
+  const cardTopAt = useCallback((i: number) => cardTops[i] ?? FIRST_CARD_Y + i * CARD_GAP, [cardTops]);
+
   // 표시 가능한 내용 여부.
   //   · 편집 모드(authed+isEditing): 실제 내용 기준(비공개여도 편집 위해 내용·토글 노출).
   //   · 그 외(비로그인/비편집): 비공개(hidden)면 내용이 있어도 빈 상태로 렌더.
@@ -825,17 +843,21 @@ const VillageDiary: React.FC = () => {
   //   (사진 카드 ≈ 430px, 사진 없는 카드 ≈ 290px). 마지막 카드 하단 + 여유 패딩을 모두 덮도록 계산.
   const desktopHeight = useMemo(() => {
     if (!hasContent) return 760;
-    const lastTop = FIRST_CARD_Y + (cards.length - 1) * CARD_GAP - 80;
+    const lastTop = cardTopAt(cards.length - 1) - 80;
     const lastHasImage = !!cards[cards.length - 1]?.imageUrl;
     const lastCardHeight = lastHasImage ? 460 : 320; // 사진 카드 여유 포함
     const BOTTOM_PAD = 120; // 마지막 카드 아래 여백
     return lastTop + lastCardHeight + BOTTOM_PAD;
-  }, [hasContent, cards]);
+  }, [hasContent, cards, cardTopAt]);
 
-  // ── 모바일 카드 실측 높이 ────────────────────────────────────────
-  //   제목 줄 수에 따라 카드 높이가 187~203px 로 달라진다(폭 232 고정).
-  //   측정값이 없으면(초기 렌더·데스크톱에서 display:none) 0 → 기존 균일 gap 으로 폴백.
+
   const [mobileCardHeights, setMobileCardHeights] = useState<number[]>([]);
+
+  // 데스크톱 카드 높이 실측 → cardTops.
+  //   ⚠️ 종전엔 데스크톱만 CARD_GAP 고정이라 사진/긴 제목으로 카드가 280을 넘으면 아래 카드와 겹쳤다
+  //     (모바일은 이미 실측 기반). 같은 문법으로 통일한다.
+  // 지그재그는 순서에서 자동 파생한다(저장된 side 가 어긋나도 화면은 항상 좌우 교대).
+  const autoSide = (i: number): 'left' | 'right' => (i % 2 === 0 ? 'left' : 'right');
 
   // 모바일 카드 top 배열 — 카드 수·실측 높이에서 파생되는 단일 진실 소스.
   //   dot/connector/path/아바타 이동거리/컨테이너 높이가 모두 이 배열을 참조한다.
@@ -897,8 +919,8 @@ const VillageDiary: React.FC = () => {
   }, [hasContent, cards, mobileCardTops, mobileCardHeights, mobilePathHeight]);
 
   const pathHeight = useMemo(
-    () => (hasContent ? FIRST_CARD_Y + (cards.length - 1) * CARD_GAP - PATH_TOP + PATH_TAIL : 360),
-    [hasContent, cards.length],
+    () => (hasContent ? cardTopAt(cards.length - 1) - PATH_TOP + PATH_TAIL : 360),
+    [hasContent, cards.length, cardTopAt],
   );
   const avatarStart = PATH_TOP;
   const avatarEnd = PATH_TOP + pathHeight - AVATAR_TRAVEL_PAD - 112;
@@ -1004,11 +1026,11 @@ const VillageDiary: React.FC = () => {
   };
 
   // 카드 추가
+  // 카드 추가 — side 는 순서에서 자동 파생(아래 autoSide)이므로 여기서는 자리표시만 넣는다.
   const handleCardAdd = () => {
     setDraftCards((prev) => {
       const arr = [...(prev[selected] ?? cards)];
-      const lastSide = arr.length > 0 ? arr[arr.length - 1].side : 'right';
-      arr.push({ side: lastSide === 'left' ? 'right' : 'left', title: '', date: 'MM.DD', dot: program.accent });
+      arr.push({ side: arr.length % 2 === 0 ? 'left' : 'right', title: '', date: 'MM.DD', dot: program.accent });
       return { ...prev, [selected]: arr };
     });
   };
@@ -1046,7 +1068,7 @@ const VillageDiary: React.FC = () => {
       const desktopTravel = avatarEnd - avatarStart;
       const desktopReachY = avatarStart + progress * desktopTravel + DESKTOP_AVATAR_REACH;
       for (let i = 0; i < cardEls.current.length; i += 1) {
-        const dotY = FIRST_CARD_Y + i * CARD_GAP + 24;
+        const dotY = cardTopAt(i) + 24;
         const on = desktopReachY >= dotY;
         cardEls.current[i]?.classList.toggle('is-visible', on);
         dotEls.current[i]?.classList.toggle('is-visible', on);
@@ -1064,7 +1086,7 @@ const VillageDiary: React.FC = () => {
         mobileConnectorEls.current[i]?.classList.toggle('is-visible', on);
       }
     },
-    [avatarStart, avatarEnd, mobileAvatarTravel, mobileCardTops],
+    [avatarStart, avatarEnd, mobileAvatarTravel, mobileCardTops, cardTopAt],
   );
 
   const updateAvatar = useCallback(() => {
@@ -1165,6 +1187,27 @@ const VillageDiary: React.FC = () => {
     }
     const ro = new RO(measure);
     mobileCardEls.current.slice(0, cards.length).forEach((el) => el && ro.observe(el));
+    return () => ro.disconnect();
+  }, [cards, isEditing, hasContent, selected]);
+
+  // ── 데스크톱 카드 높이 실측 → cardTops 갱신 (모바일과 동일 패턴) ──
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (isEditing || !hasContent) return;
+    const measure = () => {
+      const next = cardEls.current.slice(0, cards.length).map((el) => (el ? el.offsetHeight : 0));
+      setDesktopCardHeights((prev) =>
+        prev.length === next.length && prev.every((v, i) => v === next[i]) ? prev : next,
+      );
+    };
+    measure();
+    const RO = (window as unknown as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
+    if (!RO) {
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }
+    const ro = new RO(measure);
+    cardEls.current.slice(0, cards.length).forEach((el) => el && ro.observe(el));
     return () => ro.disconnect();
   }, [cards, isEditing, hasContent, selected]);
 
@@ -1290,19 +1333,19 @@ const VillageDiary: React.FC = () => {
         {hasContent ? (
           <>
             {cards.map((card, index) => {
-              const y = FIRST_CARD_Y + index * CARD_GAP;
+              const y = cardTopAt(index);
               return (
                 <React.Fragment key={`${program.id}-${index}`}>
                   {!isEditing && (
                     <>
                       <i
                         ref={setDotRef(index)}
-                        className={`diary-dot ${card.side}`}
+                        className={`diary-dot ${autoSide(index)}`}
                         style={{ top: y + 24, background: card.dot }}
                       />
                       <i
                         ref={setConnectorRef(index)}
-                        className={`diary-connector ${card.side}`}
+                        className={`diary-connector ${autoSide(index)}`}
                         style={{ top: y + 35 }}
                       />
                     </>
@@ -1313,11 +1356,11 @@ const VillageDiary: React.FC = () => {
                     dot={card.dot}
                     accent={program.accent}
                     imageUrl={card.imageUrl}
-                    className={card.side}
+                    className={autoSide(index)}
                     style={isEditing ? undefined : { top: y - 80 }}
                     cardRef={setCardRef(index)}
                     isEditing={isEditing}
-                    side={card.side}
+                    side={autoSide(index)}
                     programId={program.id}
                     programName={program.name}
                     onUpdate={(field, value) => handleCardUpdate(index, field, value)}

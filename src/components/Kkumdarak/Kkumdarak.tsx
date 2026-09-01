@@ -23,6 +23,7 @@ const BusinessAdmin = lazy(() => import('./admin/BusinessAdmin'));
 // 마을의 신호 웹지도 — 전용 풀스크린 화면(#signal-map). 캔버스 엔진 포함이라 반드시 청크 분리.
 const SignalMap = lazy(() => import('./signalmap/SignalMap'));
 const SignalMap3D = lazy(() => import('./signalmap/3d/SignalMap3D'));
+const SoundMap = lazy(() => import('./soundmap/SoundMap'));
 
 // 섹션 청크 로딩 폴백 — 화면 점프 없이 최소 높이만 확보.
 const SectionFallback: React.FC = () => (
@@ -46,6 +47,7 @@ const getInitialKkumdarakSection = () => {
   const section = window.location.hash.replace('#', '');
   // 마을의 신호 웹지도 — SECTIONS(공개 nav) 밖의 전용 화면. 딥링크 #signal-map/<id> 포함.
   if (section === 'signal-map-3d') return 'signal-map-3d';
+  if (section === 'sound-map') return 'sound-map';
   if (section === 'signal-map' || section.startsWith('signal-map/')) return 'signal-map';
   return SECTIONS.some((item) => item.id === section) ? section : 'main';
 };
@@ -430,6 +432,16 @@ const Kkumdarak: React.FC = () => {
       <KkumdarakAuthProvider>
         <Suspense fallback={<SectionFallback />}>
           <SignalMap onBack={() => go('main')} />
+        </Suspense>
+      </KkumdarakAuthProvider>
+    );
+  }
+
+  if (section === 'sound-map') {
+    return (
+      <KkumdarakAuthProvider>
+        <Suspense fallback={<SectionFallback />}>
+          <SoundMap onBack={() => go('main')} />
         </Suspense>
       </KkumdarakAuthProvider>
     );
