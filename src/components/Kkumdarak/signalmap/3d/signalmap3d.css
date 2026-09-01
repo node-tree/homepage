@@ -1,0 +1,60 @@
+/* 3D 먹선 도시 — 2D signalmap.css 위에 얹는 보정 */
+.s3d { cursor: grab; }
+.s3d:active { cursor: grabbing; }
+.s3d canvas { position: absolute; inset: 0; touch-action: none; }
+.s3d-views {
+  position: absolute; top: 96px; left: 32px;
+  display: flex; flex-direction: column; gap: 6px; z-index: 5;
+}
+.s3d-views button {
+  font: 700 14px/1 'Gothic A1', sans-serif;
+  color: #8c8a82; background: #fcfbf9;
+  border: 1.5px solid #1f1e1c; border-radius: 9px;
+  padding: 8px 14px; cursor: pointer;
+}
+.s3d-views button.on { color: #fcfbf9; background: #1f1e1c; }
+.s3d-btn {
+  position: absolute; z-index: 4;
+  transform: translate(-50%, -50%);
+}
+.s3d-btn::after {
+  content: ''; position: absolute; inset: 50% auto auto 50%;
+  width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px;
+  border-radius: 50%;
+  background: #1f1e1c;              /* 태그는 전부 검정 동그라미 — 색은 3D LED가 말한다 */
+  border: 2.5px solid #fcfbf9;
+  box-shadow: 0 0 0 2px #1f1e1c, 0 0 0 6px rgba(31, 30, 28, 0.07);
+}
+.s3d-btn.is-open::after { box-shadow: 0 0 0 2px #1f1e1c, 0 0 0 9px rgba(31, 30, 28, 0.16); }
+@media (max-width: 760px) {
+  .s3d-views { top: auto; bottom: 90px; left: 20px; flex-direction: row; }
+}
+
+
+/* 로그인 편집 폼 */
+.smap-edit-btn {
+  margin-top: 14px;
+  font: 700 14px/1 'Gothic A1', sans-serif;
+  color: #fcfbf9; background: #1f1e1c;
+  border: 0; border-radius: 8px; padding: 9px 14px; cursor: pointer;
+}
+.smap-edit { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.smap-edit label { display: flex; flex-direction: column; gap: 4px; font: 700 12px/1.3 'Gothic A1', sans-serif; color: #8c8a82; }
+.smap-edit textarea, .smap-edit input {
+  font: 400 14px/1.5 'Gothic A1', sans-serif;
+  color: #1f1e1c; background: #fff;
+  border: 1.5px solid #1f1e1c; border-radius: 8px; padding: 8px 10px;
+}
+.smap-edit-row { display: flex; gap: 8px; }
+.smap-edit-row button {
+  font: 700 14px/1 'Gothic A1', sans-serif;
+  border: 1.5px solid #1f1e1c; border-radius: 8px;
+  padding: 8px 16px; cursor: pointer;
+  background: #1f1e1c; color: #fcfbf9;
+}
+.smap-edit-row button:last-child { background: #fcfbf9; color: #1f1e1c; }
+
+.smap-edit-thumb { width: 100%; border-radius: 8px; border: 1.5px solid #1f1e1c; }
+.smap-edit input[type='file'] { border: 1.5px dashed #8c8a82; background: #fcfbf9; }
+
+.smap-edit-btn--danger { background: #fcfbf9; color: #b3261e; border: 1.5px solid #b3261e; }

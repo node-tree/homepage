@@ -123,6 +123,7 @@ const villageDiaryRoutes = require('./routes/villageDiary');
 const villageNewsRoutes = require('./routes/villageNews');
 const kkumdarakBudgetRoutes = require('./routes/kkumdarakBudget');
 const kkumdarakSettingsRoutes = require('./routes/kkumdarakSettings');
+const signalMapRoutes = require('./routes/signalMap');
 const imagekitRoutes = require('./routes/imagekit');
 const aiRoutes = require('./routes/ai');
 
@@ -144,6 +145,7 @@ app.use('/api/village-diary', jsonContent, villageDiaryRoutes);
 app.use('/api/village-news', jsonContent, villageNewsRoutes);
 app.use('/api/kkumdarak', jsonUpload, kkumdarakBudgetRoutes);  // 증빙 base64 + 서식 사진
 app.use('/api/kkumdarak-settings', jsonContent, kkumdarakSettingsRoutes);
+app.use('/api/signal-map-content', jsonContent, signalMapRoutes);
 app.use('/api/imagekit', jsonSmall, imagekitRoutes);
 app.use('/api/ai', jsonContent, aiRoutes);
 

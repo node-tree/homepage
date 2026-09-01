@@ -1550,3 +1550,35 @@ export const utilAPI = {
 };
 
 export default api;
+
+// ── 마을의 신호 웹지도 콘텐츠 API ─────────────────────────────────────
+//   신호·장소의 소개글/만든 사람/소리 오버라이드. 저장은 꿈다락 편집 토큰
+//   (kkumdarak_token, /api/village-diary/login 공유) — villageDiaryAPI 관례 준수.
+export const signalMapAPI = {
+  get: async () => {
+    try {
+      const response = await fetchWithRetry(cdnBustUrl(`${API_BASE_URL}/signal-map-content`, 'signal_map_updated'));
+      if (!response.ok) return {};
+      const data = await response.json();
+      return data && data.success ? (data.data || {}) : {};
+    } catch (e) {
+      return {}; // 백엔드 미가동/콜드스타트여도 지도는 정적 기본값으로 동작
+    }
+  },
+  save: async (contentData) => {
+    const token = villageDiaryAPI.getKkumdarakToken();
+    if (!token) throw new Error('꿈다락 편집 인증이 필요합니다.');
+    const response = await fetch(`${API_BASE_URL}/signal-map-content`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(contentData || {})
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || '신호 콘텐츠 저장에 실패했습니다.');
+    }
+    markCdnDirty('signal_map_updated');
+    const data = await response.json();
+    return data.data || {};
+  }
+};

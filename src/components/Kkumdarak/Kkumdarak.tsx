@@ -19,6 +19,9 @@ const VillageDiary = lazy(() => import('./VillageDiary'));
 const VillageNews = lazy(() => import('./news/VillageNews'));
 const Directions = lazy(() => import('./Directions'));
 const BusinessAdmin = lazy(() => import('./admin/BusinessAdmin'));
+// 마을의 신호 웹지도 — 전용 풀스크린 화면(#signal-map). 캔버스 엔진 포함이라 반드시 청크 분리.
+const SignalMap = lazy(() => import('./signalmap/SignalMap'));
+const SignalMap3D = lazy(() => import('./signalmap/3d/SignalMap3D'));
 
 // 섹션 청크 로딩 폴백 — 화면 점프 없이 최소 높이만 확보.
 const SectionFallback: React.FC = () => (
@@ -40,6 +43,9 @@ const ADMIN_SECTION = 'admin';
 const getInitialKkumdarakSection = () => {
   if (typeof window === 'undefined') return 'main';
   const section = window.location.hash.replace('#', '');
+  // 마을의 신호 웹지도 — SECTIONS(공개 nav) 밖의 전용 화면. 딥링크 #signal-map/<id> 포함.
+  if (section === 'signal-map-3d') return 'signal-map-3d';
+  if (section === 'signal-map' || section.startsWith('signal-map/')) return 'signal-map';
   return SECTIONS.some((item) => item.id === section) ? section : 'main';
 };
 
@@ -414,6 +420,30 @@ const Kkumdarak: React.FC = () => {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  // 마을의 신호 웹지도: 일반 레이아웃(공지 띠·헤더) 없이 풀스크린 단독 렌더
+  // ⚠️ 전용 화면도 KkumdarakAuthProvider 안에서 렌더해야 한다 —
+  //    지도 카드의 편집 기능이 useKkumdarakAuth(authed)로 로그인 상태를 읽는다.
+  if (section === 'signal-map') {
+    return (
+      <KkumdarakAuthProvider>
+        <Suspense fallback={<SectionFallback />}>
+          <SignalMap onBack={() => go('main')} />
+        </Suspense>
+      </KkumdarakAuthProvider>
+    );
+  }
+
+  // 3D 먹선 도시(작은 부여) — 2D판과 병존
+  if (section === 'signal-map-3d') {
+    return (
+      <KkumdarakAuthProvider>
+        <Suspense fallback={<SectionFallback />}>
+          <SignalMap3D onBack={() => go('main')} />
+        </Suspense>
+      </KkumdarakAuthProvider>
+    );
+  }
 
   const renderSection = () => {
     switch (section) {

@@ -1,0 +1,95 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>3D 먹선 스파이크 — 마을의 신호</title>
+<style>
+  body { margin: 0; background: #fcfbf9; overflow: hidden; }
+  #tag { position: fixed; top: 14px; left: 18px; font: 700 15px/1.4 sans-serif; color: #1f1e1c; }
+  #tag small { display: block; font-weight: 400; color: #8c8a82; }
+</style>
+<div id="tag">마을의 신호 — 3D 먹선 스파이크<small id="view"></small></div>
+<script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }</script>
+<script type="module">
+import * as THREE from 'three';
+
+const INK = 0x1f1e1c, PAPER = 0xfcfbf9, ORANGE = 0xfe5000;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(PAPER);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// 흰 면(가림용) + 먹선 엣지 — SketchUp/레고 조립도 문법
+const white = new THREE.MeshBasicMaterial({ color: PAPER, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
+const inkLine = new THREE.LineBasicMaterial({ color: INK });
+const boilers = []; // {line, base}
+function inked(geo, x, y, z, ry = 0) {
+  const g = new THREE.Group();
+  const mesh = new THREE.Mesh(geo, white);
+  const edges = new THREE.EdgesGeometry(geo, 12);
+  const line = new THREE.LineSegments(edges, inkLine);
+  boilers.push({ line, base: edges.attributes.position.array.slice() });
+  g.add(mesh, line);
+  g.position.set(x, y, z); g.rotation.y = ry;
+  scene.add(g);
+  return g;
+}
+
+// ── 미니 마을 ──
+inked(new THREE.BoxGeometry(30, 0.4, 20), 0, -0.2, 0);                    // 바닥판(나무판)
+inked(new THREE.BoxGeometry(6, 3, 3), -8, 1.5, -4);                       // 상가 1
+inked(new THREE.BoxGeometry(4, 4.4, 3), -3.4, 2.2, -4);                   // 상가 2
+inked(new THREE.BoxGeometry(5, 2.6, 3), 1, 1.3, -4);                      // 상가 3
+// 집 3채 (몸통+지붕 프리즘)
+for (const [hx, hz] of [[-9, 5], [-4, 6.5], [1.5, 5.5]]) {
+  inked(new THREE.BoxGeometry(2.6, 1.8, 2.2), hx, 0.9, hz);
+  const roof = new THREE.CylinderGeometry(0, 1.9, 1.6, 4, 1);             // 사각뿔
+  inked(roof, hx, 2.6, hz, Math.PI / 4);
+}
+// 축운산 (로우폴리 언덕) + 정문 아치 기둥 + 회로 모터(원기둥)
+inked(new THREE.ConeGeometry(4.5, 5, 6), 10, 2.5, -5);
+inked(new THREE.BoxGeometry(0.5, 3.4, 0.5), 7.4, 1.7, 6);
+inked(new THREE.BoxGeometry(0.5, 3.4, 0.5), 10.6, 1.7, 6);
+inked(new THREE.BoxGeometry(3.8, 0.5, 0.5), 9, 3.4, 6);
+inked(new THREE.CylinderGeometry(1.2, 1.2, 1.6, 10), 5, 0.8, 0.5);
+// 도로 — 바닥 위 먹선 폴리라인
+const roadPts = [];
+for (let x = -15; x <= 15; x += 1.5) roadPts.push(new THREE.Vector3(x, 0.22, 2.2), new THREE.Vector3(x + 1.0, 0.22, 2.2));
+const roadGeo = new THREE.BufferGeometry().setFromPoints(roadPts);
+scene.add(new THREE.LineSegments(roadGeo, inkLine));
+// 신호점 — 유일한 색
+const sig = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 12), new THREE.MeshBasicMaterial({ color: ORANGE }));
+sig.position.set(-3.4, 4.9, -4); scene.add(sig);
+
+// ── 카메라: #top = 평면도(정사영 수직), #iso = 입면/아이소 ──
+const aspect = innerWidth / innerHeight, S = 14;
+const cam = new THREE.OrthographicCamera(-S * aspect, S * aspect, S, -S, 0.1, 200);
+const applyView = () => {
+  const v = location.hash.replace('#', '') || 'iso';
+  document.getElementById('view').textContent = v === 'top' ? 'TOP — 평면도' : v === 'side' ? 'SIDE — 입면' : 'ISO — 조감';
+  if (v === 'top') { cam.position.set(0, 60, 0.001); cam.zoom = 1.15; }
+  else if (v === 'side') { cam.position.set(0.001, 2.4, 60); cam.zoom = 1.25; }
+  else { cam.position.set(26, 20, 30); cam.zoom = 1; }
+  cam.lookAt(0, 0, 0); cam.updateProjectionMatrix();
+};
+applyView();
+addEventListener('hashchange', applyView);
+
+// ── 라인 보일 10fps — 엣지 정점 지터 ──
+let lastBoil = 0;
+function boil(t) {
+  if (t - lastBoil < 100) return;
+  lastBoil = t;
+  for (const { line, base } of boilers) {
+    const a = line.geometry.attributes.position;
+    for (let i = 0; i < a.array.length; i++) a.array[i] = base[i] + (Math.random() - 0.5) * 0.07;
+    a.needsUpdate = true;
+  }
+}
+// 신호 깜빡 + 렌더 루프
+renderer.setAnimationLoop((t) => {
+  boil(t);
+  sig.material.color.setHex(Math.floor(t / 500) % 2 ? ORANGE : 0xffb096);
+  renderer.render(scene, cam);
+});
+</script>
