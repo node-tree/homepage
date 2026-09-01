@@ -17,6 +17,7 @@ const Programs = lazy(() => import('./Programs'));
 const Schedule = lazy(() => import('./Schedule'));
 const VillageDiary = lazy(() => import('./VillageDiary'));
 const VillageNews = lazy(() => import('./news/VillageNews'));
+const Results = lazy(() => import('./Results'));
 const Directions = lazy(() => import('./Directions'));
 const BusinessAdmin = lazy(() => import('./admin/BusinessAdmin'));
 // 마을의 신호 웹지도 — 전용 풀스크린 화면(#signal-map). 캔버스 엔진 포함이라 반드시 청크 분리.
@@ -452,6 +453,7 @@ const Kkumdarak: React.FC = () => {
       case 'schedule': return <Schedule />;
       case 'diary': return <VillageDiary />;
       case 'news': return <VillageNews />;
+      case 'results': return <Results />;
       case 'directions': return <Directions />;
       // 사업관리 — 로그인 게이트는 BusinessAdmin 내부(authed)에서 처리.
       case ADMIN_SECTION: return <BusinessAdmin />;
