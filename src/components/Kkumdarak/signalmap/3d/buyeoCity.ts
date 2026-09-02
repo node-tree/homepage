@@ -378,7 +378,7 @@ export function buildCity(scene) {
     { id: 'ground',          px: [890, 640],  color: 0xfe5000, model: '작품·마을의 운동장', ry: 0,     h: 5.2, anchor: [-3.3, -1.9] },
     { id: 'shop-alley',      px: [540, 262],  color: 0xe2402f, model: '작품·상가 골목',     ry: 0,     h: 4.8 },
     { id: 'star-yard',       px: [360, 830],  color: 0xfe5000, model: '작품·별빛 마당',     ry: 0.15,  h: 4.6 },
-    { id: 'chugunsan',       px: [1215, 652], color: 0x3f9b4f, model: '작품·축운산',        ry: -0.3,  h: 5.0, anchor: [1.9, -1.45] },
+    { id: 'chugunsan',       px: [1214, 618], color: 0x3f9b4f, model: '작품·축운산',        ry: -0.3,  h: 5.0, anchor: [1.9, -1.45] },
     { id: 'baseball',        px: [980, 620],  color: 0xf5b52e, model: '작품·야구장',        ry: 0.35,  h: 4.6, anchor: [-1.85, -1.65] },
     { id: 'pond-field',      px: [636, 566],  color: 0xe2402f, model: '작품·연못 들판',     ry: -0.25, h: 4.8, anchor: [0.22, 0.42], anchorY: 0.86, pole: false },
     { id: 'frog-pond',       px: [560, 540],  color: 0x2f6fe4, model: '작품·개구리 연못',   ry: 0.1,   h: 6.8, anchor: [3.2, -1.55] },
