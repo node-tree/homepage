@@ -604,6 +604,443 @@ B['횡단보도 타일'] = () => { const g = new THREE.Group();
   for (let i = -2; i <= 2; i++) g.add(at(box(0.5, 0.02, 1.8), i * 0.95, 0.16, 0));
   return g; };
 
+// ═══════════════════════════════════════════════════════════════════════
+// 아이들 작품 미니어처 8종 — 나무판 디오라마 + 실제 DC 모터·LED 재현
+//   사진 대응: 마을회로(4) · 입대정문(3) · 연못들판(8,7) · 별빛마당(2)
+//              상가골목(6) · 운동장/야구장(10,9) · 축운산(5)
+//   · 모터 = 실제 회전하는 메시(userData.spin)
+//   · LED = 켜짐 원색 / 꺼짐 PAPER (ledString 문법 동일)
+//   · 대표 LED는 userData.mainLed — 도시가 신호 blink 리듬으로 덮어쓴다
+// ═══════════════════════════════════════════════════════════════════════
+const WOOD = 0xe6d3a8, GRASS = 0x3f9b4f, WATER = 0x4a90c4, SKY = 0x6fb7dd;
+const REDC = 0xe2402f, ORANGE = 0xfe5000, YELLOW = 0xf5b52e, PINK = 0xe8489a;
+const PURPLE = 0x6b3fa0, BLUE = 0x2f6fe4, SILVER = 0x9d9a92, DIRT = 0xa8663c;
+const paperLine = new THREE.LineBasicMaterial({ color: PAPER });
+
+const wire = (pts, color = 0xd8a520) => new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints(pts.map(p => new THREE.Vector3(...p))),
+  new THREE.LineBasicMaterial({ color }));
+const poly = (pts, mat = paperLine, loop = false) => {
+  const geo = new THREE.BufferGeometry().setFromPoints(pts.map(p => new THREE.Vector3(...p)));
+  return loop ? new THREE.LineLoop(geo, mat) : new THREE.Line(geo, mat);
+};
+const dashRoad = (pts, color = PAPER, ds = 0.26, gs = 0.22) => {
+  const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts.map(p => new THREE.Vector3(...p))),
+    new THREE.LineDashedMaterial({ color, dashSize: ds, gapSize: gs }));
+  l.computeLineDistances(); return l;
+};
+// 알갱이 무리(진주·별·꽃·체리) — 점 구름 1 드로우콜
+const dotField = (pts, color = 0xb9b5ab, size = 2.4) => {
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pts.flat(), 3));
+  return new THREE.Points(geo, new THREE.PointsMaterial({ color, size, sizeAttenuation: false }));
+};
+// LED — leds 배열에 등록하면 tickLeds가 점멸시킨다(대표 LED는 leds=null)
+const mkLed = (leds, color, x, y, z, period = 620, phase = 0, r = 0.19) => {
+  const b = ico(r, { fill: color });
+  b.position.set(x, y, z);
+  if (leds) leds.push({ b, color, period, phase });
+  return b;
+};
+const tickLeds = (leds, t) => { for (const L of leds)
+  L.b.userData.mesh.material.color.set(Math.floor(t / L.period + L.phase) % 2 === 0 ? L.color : PAPER); };
+// DC 모터 — 은색 몸통 + 실제 회전하는 축(userData.spin)
+const dcMotor = (dir = 'up') => {
+  const g = new THREE.Group();
+  const spin = new THREE.Group();
+  if (dir === 'up') {
+    g.add(at(cyl(0.24, 0.24, 0.5, 10, { fill: SILVER }), 0, 0.25, 0));
+    g.add(at(cyl(0.06, 0.06, 0.2, 6, { fill: SILVER }), 0, 0.6, 0));
+    spin.position.set(0, 0.68, 0);
+  } else {
+    const body = at(cyl(0.24, 0.24, 0.5, 10, { fill: SILVER }), 0, 0.24, 0);
+    body.rotation.z = Math.PI / 2; g.add(body);
+    const rod = at(cyl(0.06, 0.06, 0.22, 6, { fill: SILVER }), 0.36, 0.24, 0);
+    rod.rotation.z = Math.PI / 2; g.add(rod);
+    spin.position.set(0.5, 0.24, 0);
+  }
+  g.add(spin); g.userData.spin = spin;
+  return g;
+};
+const battBox = (x, y, z, ry = 0) => at(box(1.3, 0.4, 0.6, { fill: 'ink' }), x, y, z, ry);
+const toggle = (x, y, z, tilt = -0.55) => {
+  const g = new THREE.Group(); g.position.set(x, y, z);
+  g.add(at(box(0.42, 0.16, 0.34, { fill: SILVER }), 0, 0.08, 0));
+  const lev = at(cyl(0.05, 0.05, 0.34, 6, { fill: SILVER }), 0, 0.3, 0);
+  lev.rotation.z = tilt; g.add(lev);
+  return g;
+};
+const upright = (obj) => { obj.rotation.x = Math.PI / 2; return obj; };  // 세운 판에 붙일 원반
+const lcg = (seed) => { let s = seed; return () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648; };
+
+// ── ① 마을 회로 (사진 4) — 진주판 + 육각 링 7블록 + 중앙 모터 프로펠러 + LED 3 ──
+B['작품·마을 회로'] = () => { const g = new THREE.Group(); const leds = [];
+  const BW = 6.4, BD = 5.2;
+  g.add(at(box(BW, 0.3, BD), 0, 0.15, 0));                        // 진주 깔린 흰 판
+  const pearls = [];
+  for (let ix = 0; ix < 30; ix++) for (let iz = 0; iz < 22; iz++) {
+    const x = -BW / 2 + 0.14 + ix * ((BW - 0.28) / 29);
+    const z = -BD / 2 + 0.14 + iz * ((BD - 0.28) / 21);
+    if (Math.hypot(x, z) < 2.25) continue;                          // 링 안쪽은 흰 바닥
+    pearls.push([x, 0.31, z]);
+  }
+  g.add(dotField(pearls, 0xc0bcb2, 2.2));
+  const RING = [YELLOW, PINK, PURPLE, 0xf06a4a, ORANGE, REDC, SKY]; // 노랑·분홍·보라·다홍·주황·주황·하늘
+  RING.forEach((c, i) => {
+    const a = i / 7 * Math.PI * 2 + 0.35;
+    const bar = box(1.62, 0.36, 0.42, { fill: c });
+    bar.position.set(Math.cos(a) * 1.78, 0.48, Math.sin(a) * 1.78);
+    bar.rotation.y = -(a + Math.PI / 2);
+    g.add(bar);
+  });
+  const mot = dcMotor('up'); mot.position.set(0, 0.3, 0); g.add(mot);
+  mot.userData.spin.add(box(1.25, 0.04, 0.26));                    // 흰 종이 프로펠러
+  g.add(mkLed(leds, BLUE, -1.0, 0.5, 0.92, 300, 0, 0.21));         // 파랑(좌하)
+  g.add(mkLed(leds, 0xffffff, 1.1, 0.5, -1.0, 300, 1, 0.21));      // 흰(우상)
+  const main = mkLed(null, ORANGE, 1.45, 0.5, 0.42, 0, 0, 0.23);   // 주황(우) = 대표
+  g.add(main); g.userData.mainLed = main;
+  g.add(toggle(-2.75, 0.3, -2.2));                                 // 좌상 토글 스위치
+  g.add(battBox(2.3, 0.5, -2.3, -0.12));                         // 우상 검정 배터리박스
+  g.add(wire([[2.15, 0.7, -1.8], [1.3, 0.55, -1.0], [0.3, 0.78, -0.15]], 0xd23b2f));
+  g.add(wire([[-2.6, 0.46, -1.75], [-2.3, 0.34, -0.5], [-1.7, 0.34, 0.7], [-1.1, 0.44, 0.95]]));
+  g.add(wire([[3.05, 0.32, -0.4], [3.6, 0.32, 0.7], [2.9, 0.32, 1.7], [2.1, 0.32, 2.05]]));
+  g.userData.motors = [mot.userData.spin]; g.userData.leds = leds;
+  g.userData.tick = t => { mot.userData.spin.rotation.y = t / 95; tickLeds(leds, t); };
+  return g; };
+
+// ── ② 입대 정문 (사진 3) — 도로·나무블록 자동차 3 + 연못판 초록 LED + 모터 바퀴 ──
+B['작품·입대 정문'] = () => { const g = new THREE.Group(); const leds = [];
+  g.add(at(box(6.2, 0.3, 3.0, { fill: GRASS }), 0, 0.15, -1.4));   // 초록 판
+  g.add(at(box(6.2, 0.05, 1.1, { fill: 'ink' }), 0, 0.32, -1.5));  // 검정 도로
+  g.add(dashRoad([[-3.0, 0.36, -1.5], [3.0, 0.36, -1.5]]));        // 흰 점선
+  [[-2.0, REDC, -1.05], [0.2, GRASS, -1.9], [2.1, BLUE, -1.0]].forEach(([cx, c, cz]) => {
+    g.add(at(box(1.0, 0.5, 0.6, { fill: WOOD }), cx, 0.55, cz));   // 나무블록 자동차
+    g.add(at(box(0.66, 0.03, 0.32, { fill: c }), cx, 0.81, cz));   // 위에 그린 차
+  });
+  g.add(at(box(4.4, 0.28, 2.8, { fill: WATER }), 0.2, 0.14, 1.5)); // 파란 연못 판
+  const arcPts = [];
+  for (let i = 0; i <= 18; i++) { const a = Math.PI * (0.12 + 0.76 * i / 18);
+    arcPts.push([0.2 + Math.cos(a) * 1.75, 0.3, 1.65 - Math.sin(a) * 1.0]); }
+  g.add(poly(arcPts, inkLine));
+  g.add(at(box(1.15, 0.06, 0.5, { fill: YELLOW }), -0.15, 0.3, 1.9));   // 노란 「입대」 표지
+  const main = mkLed(null, GRASS, 0.8, 0.46, 2.0, 0, 0, 0.23);          // 초록 LED = 대표
+  g.add(main); g.userData.mainLed = main;
+  const mot = dcMotor('side'); mot.position.set(-1.9, 0.28, 2.45); mot.rotation.y = -0.5; g.add(mot);
+  const wheel = cyl(0.34, 0.34, 0.14, 10, { fill: 0x4c7d5a });
+  wheel.rotation.z = Math.PI / 2; mot.userData.spin.add(wheel);        // 좌하 모터+바퀴
+  g.add(toggle(2.3, 0.28, 2.6, 0.5));                                  // 우하 토글 스위치
+  const candy = new THREE.Group(); candy.position.set(-2.6, 0.3, 0.4);
+  candy.add(at(cyl(0.05, 0.05, 0.55, 5, { fill: WOOD }), 0, 0.27, 0));
+  candy.add(at(cyl(0.5, 0.5, 0.07, 14), 0, 0.58, 0));
+  const swirl = [];
+  for (let i = 0; i <= 44; i++) { const a = i / 44 * Math.PI * 4, r = 0.06 + i / 44 * 0.4;
+    swirl.push([Math.cos(a) * r, 0.63, Math.sin(a) * r]); }
+  candy.add(poly(swirl, new THREE.LineBasicMaterial({ color: PINK })));
+  g.add(candy);                                                        // 분홍 소용돌이 사탕
+  [[-1.25, 0.3], [-0.45, 0.55], [1.35, 0.35]].forEach(([mx, mz]) => {  // 빨간 괴물 3
+    const m = ico(0.26, { fill: REDC }); m.position.set(mx, 0.56, mz); g.add(m); });
+  g.userData.motors = [mot.userData.spin]; g.userData.leds = leds;
+  g.userData.tick = t => { mot.userData.spin.rotation.x = t / 110; tickLeds(leds, t); };
+  return g; };
+
+// ── ③ 개구리 연못 (r8 하단 연못 판) — 기둥 위 모터가 벌 큐브를 돌린다 + 흰 LED ──
+B['작품·개구리 연못'] = () => { const g = new THREE.Group(); const leds = [];
+  g.add(at(box(4.4, 0.3, 3.8, { fill: WATER }), -0.8, 0.15, 0.3));     // 파란 연못 판
+  g.add(at(box(2.4, 0.3, 3.8, { fill: GRASS }), 2.6, 0.15, 0.3));      // 초록 잔디 판
+  g.add(at(cyl(0.95, 0.95, 0.05, 14, { fill: GRASS }), -1.1, 0.32, 0.75)); // 연잎
+  g.add(dotField([[-2.4, 0.33, -0.6], [-2.0, 0.33, 1.2], [-0.2, 0.33, 1.6],
+                  [0.4, 0.33, -0.9], [-1.6, 0.33, -1.2]], PINK, 4));
+  g.add(at(box(3.6, 2.5, 0.12, { fill: WOOD }), -0.9, 1.25, -1.75));   // 세운 그림판
+  g.add(upright(at(cyl(0.85, 0.85, 0.06, 14, { fill: GRASS }), -0.9, 1.02, -1.66))); // 초록 개구리
+  g.add(upright(at(cyl(0.26, 0.26, 0.06, 10, { fill: SKY }), -1.25, 1.6, -1.63)));
+  g.add(upright(at(cyl(0.26, 0.26, 0.06, 10, { fill: SKY }), -0.55, 1.6, -1.63)));
+  g.add(dotField([[-1.25, 1.6, -1.57], [-0.55, 1.6, -1.57]], INK, 5));
+  g.add(at(box(1.3, 0.16, 0.06, { fill: YELLOW }), -0.9, 1.88, -1.66));    // 노란 왕관
+  [-1.35, -0.9, -0.45].forEach(cx => g.add(at(box(0.2, 0.4, 0.06, { fill: YELLOW }), cx, 2.06, -1.66)));
+  g.add(at(box(0.55, 3.3, 0.55, { fill: WOOD }), 1.6, 1.65, -1.1));    // 나무 기둥
+  const mot = dcMotor('up'); mot.position.set(1.6, 3.3, -1.1); g.add(mot);
+  const bee = new THREE.Group();                                        // 노랑·검정 벌 큐브
+  bee.add(at(box(1.05, 0.8, 0.8, { fill: YELLOW }), 0, 0.42, 0));
+  bee.add(at(box(1.07, 0.16, 0.82, { fill: 'ink' }), 0, 0.28, 0));
+  bee.add(at(box(1.07, 0.16, 0.82, { fill: 'ink' }), 0, 0.58, 0));
+  bee.add(at(box(1.5, 0.12, 1.05, { fill: SKY }), 0, 0.92, 0));
+  mot.userData.spin.add(bee);
+  const frog = new THREE.Group(); frog.position.set(-1.2, 0.3, 0.6);   // 검정 개구리 인형
+  frog.add(at(box(0.9, 0.55, 0.7, { fill: 'ink' }), 0, 0.3, 0));
+  frog.add(at(ico(0.34, { fill: 'ink' }), -0.1, 0.78, 0.05));
+  frog.add(at(ico(0.2, { fill: REDC }), 0.42, 0.5, 0.22));             // 빨간 입·모자
+  g.add(frog);
+  g.add(dotField([[-1.5, 1.06, 0.9], [-1.18, 1.06, 0.88]], PAPER, 6));
+  g.add(battBox(0.9, 0.48, 2.4, 0.25));                                // 배터리박스 2
+  g.add(battBox(2.7, 0.48, -0.5, -0.4));
+  g.add(mkLed(leds, 0xffffff, 0.15, 0.46, 1.85, 900, 0, 0.2));         // 흰 LED
+  g.add(at(ico(0.24, { fill: YELLOW }), -0.3, 0.46, 1.55));            // 노란 오리
+  const red = new THREE.Group(); red.position.set(3.0, 0.3, 1.2);
+  red.add(at(ico(0.3, { fill: REDC }), 0, 0.32, 0));
+  red.add(at(ico(0.22, { fill: REDC }), 0, 0.74, 0));
+  g.add(red);
+  g.userData.motors = [mot.userData.spin]; g.userData.leds = leds;
+  g.userData.tick = t => { mot.userData.spin.rotation.y = t / 130; tickLeds(leds, t); };
+  return g; };
+
+// ── ④ 별빛 마당 (사진 2) — 검정 밤하늘 판 + 큐브 탑 + 주황 LED 1 ──
+B['작품·별빛 마당'] = () => { const g = new THREE.Group();
+  g.add(at(box(4.6, 0.3, 3.4, { fill: 'ink' }), 0, 0.15, 0));         // 검정 밤하늘 판
+  const rnd = lcg(7); const sd = [], pd = [];
+  for (let i = 0; i < 84; i++) {
+    const p = [(rnd() - 0.5) * 4.3, 0.32, (rnd() - 0.5) * 3.1];
+    (i % 3 ? pd : sd).push(p);
+  }
+  g.add(dotField(sd, YELLOW, 3.2));                                    // 노란 별가루
+  g.add(dotField(pd, 0xdedad0, 2.4));                                  // 진주
+  const stars = [];
+  [[-1.5, -0.9], [0.3, 0.5], [1.5, -0.7], [-0.6, 1.0]].forEach(([sx, sz]) => {
+    const st = new THREE.Mesh(new THREE.OctahedronGeometry(0.2), new THREE.MeshBasicMaterial({ color: YELLOW }));
+    st.position.set(sx, 0.42, sz); g.add(st); stars.push(st);
+  });
+  const tower = new THREE.Group(); tower.position.set(1.55, 0.3, 1.35);
+  [SKY, PINK, BLUE, YELLOW].forEach((c, i) =>
+    tower.add(at(box(0.85, 0.7, 0.85, { fill: c }), 0, 0.35 + i * 0.7, 0)));
+  g.add(tower);                                                        // 큐브 탑
+  g.add(at(box(1.5, 0.8, 1.2, { fill: SILVER }), -1.85, 0.7, -1.25));  // 진주 은색 상자
+  const pb = [];
+  for (let i = 0; i < 20; i++) { const u = -0.72 + 1.44 * i / 19;
+    pb.push([-1.85 + u, 1.11, -1.85], [-1.85 + u, 1.11, -0.65]); }
+  g.add(dotField(pb, 0xf2eee4, 3));
+  g.add(at(box(1.6, 0.5, 0.8, { fill: ORANGE }), -0.5, 0.55, 2.0));    // 주황 블록
+  const main = mkLed(null, ORANGE, 0.34, 0.95, 1.92, 0, 0, 0.28);      // 주황 LED = 대표
+  g.add(main); g.userData.mainLed = main;
+  const peng = new THREE.Group(); peng.position.set(-1.5, 0.3, 2.15);  // 펭귄
+  peng.add(at(ico(0.28, { fill: 'ink' }), 0, 0.3, 0));
+  peng.add(at(ico(0.17, { fill: YELLOW }), 0.08, 0.62, 0.05));
+  g.add(peng);
+  const car = new THREE.Group(); car.position.set(2.15, 0.3, -1.45);   // 빨간 자동차
+  car.add(at(box(0.8, 0.35, 0.5, { fill: REDC }), 0, 0.2, 0));
+  car.add(at(box(0.4, 0.24, 0.42, { fill: BLUE }), -0.05, 0.46, 0));
+  g.add(car);
+  g.userData.tick = t => stars.forEach((s, i) => { s.rotation.y = t / 3400 + i; });
+  return g; };
+
+// ── ⑤ 상가 골목 (사진 6) — 알록달록 아파트 블록 + 나무 조형 빨간 LED ──
+B['작품·상가 골목'] = () => { const g = new THREE.Group();
+  g.add(at(box(5.6, 0.3, 3.2), 0, 0.15, 0));                           // 흰 판
+  const blocks = [
+    [-2.05, -0.55, 0.95, 2.2, 0.9, BLUE],
+    [-0.85, 0.75, 0.85, 1.8, 0.8, REDC],
+    [0.25, -0.85, 0.8, 1.25, 0.75, PINK],
+    [-2.3, 1.05, 0.8, 1.05, 0.8, GRASS],
+    [1.25, 0.85, 0.7, 1.5, 0.7, SILVER],
+    [2.3, -0.7, 0.8, 1.15, 0.8, YELLOW],
+  ];
+  blocks.forEach(([bx, bz, bw, bh, bd, c]) => g.add(at(box(bw, bh, bd, { fill: c }), bx, 0.3 + bh / 2, bz)));
+  const wins = [];
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++)
+    wins.push([-2.05 - 0.32 + c * 0.32, 0.7 + r * 0.42, -0.55 + 0.48]);
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++)
+    wins.push([-0.85 - 0.28 + c * 0.28, 0.8 + r * 0.4, 0.75 + 0.42]);
+  g.add(dotField(wins, SKY, 3.6));                                     // 하늘색 창
+  const star = new THREE.Mesh(new THREE.OctahedronGeometry(0.18), new THREE.MeshBasicMaterial({ color: BLUE }));
+  g.add(at(star, 1.25, 1.95, 0.85));                                   // 은색 블록 위 별
+  const tree = new THREE.Group(); tree.position.set(1.85, 0.3, 1.05);  // 갈색 나무 조형
+  tree.add(at(cyl(0.16, 0.24, 1.5, 7, { fill: 0x8a5a3b }), 0, 0.75, 0));
+  tree.add(at(ico(0.42, { fill: 0x6b3a2a }), -0.08, 1.6, 0.08));
+  tree.add(at(ico(0.28, { fill: GRASS }), 0.32, 1.48, -0.12));
+  g.add(tree);
+  const main = mkLed(null, REDC, 1.98, 2.45, 1.02, 0, 0, 0.3);         // 빨간 LED = 대표(수관 위)
+  g.add(main); g.userData.mainLed = main;
+  g.add(toggle(2.5, 0.3, -1.35, 0.5));                                 // 우상 토글 스위치
+  g.add(wire([[2.5, 0.5, -1.3], [2.6, 0.42, -0.2], [2.4, 0.9, 0.7], [2.02, 2.35, 1.02]], 0x8f3a52));
+  return g; };
+
+// ── ⑥ 마을의 운동장 (사진 10) — 축구장 2면 · 골대 · 검정 선수 · 도로 테이프 블록 ──
+B['작품·마을의 운동장'] = () => { const g = new THREE.Group();
+  g.add(at(box(7.0, 0.3, 4.4, { fill: GRASS }), 0, 0.15, 0));
+  const Y = 0.32;
+  g.add(poly([[-3.3, Y, -1.95], [3.3, Y, -1.95], [3.3, Y, 1.95], [-3.3, Y, 1.95]], paperLine, true));
+  g.add(poly([[0, Y, -1.95], [0, Y, 1.95]]));
+  g.add(poly(Array.from({ length: 25 }, (_, i) => { const a = i / 24 * Math.PI * 2;
+    return [Math.cos(a) * 0.7, Y, Math.sin(a) * 0.7]; }), paperLine, true));
+  for (const sx of [-1, 1])
+    g.add(poly([[sx * 3.3, Y, -0.95], [sx * 2.45, Y, -0.95], [sx * 2.45, Y, 0.95], [sx * 3.3, Y, 0.95]]));
+  for (const sx of [-1, 1]) {                                          // 골대(검정 + 흰 그물)
+    const go = new THREE.Group(); go.position.set(sx * 3.42, 0.3, 0);
+    go.add(at(box(0.14, 0.85, 1.5, { fill: 'ink' }), 0, 0.42, 0));
+    const net = [];
+    for (let i = 0; i <= 5; i++) for (let j = 0; j <= 7; j++)
+      net.push([0.085, 0.13 + i * 0.14, -0.68 + j * 0.195], [-0.085, 0.13 + i * 0.14, -0.68 + j * 0.195]);
+    go.add(dotField(net, PAPER, 2.6));
+    g.add(go);
+  }
+  [[-2.2, -1.2], [-1.4, 0.6], [-0.6, -0.4], [1.2, 1.1], [2.1, -0.8], [0.9, -1.35]]
+    .forEach(([px, pz]) => { const p = ico(0.16, { fill: 'ink' }); p.position.set(px, 0.47, pz); g.add(p); });
+  const ball = ico(0.2); ball.position.set(0.25, 0.5, 0.15); g.add(ball);
+  [[-2.6, 2.45, 0], [0.7, 2.45, 0], [3.05, 2.3, 0.4]].forEach(([bx, bz, br]) => {
+    g.add(at(box(1.1, 0.4, 0.65, { fill: 'ink' }), bx, 0.5, bz, br));  // 검정+노랑 도로 테이프
+    g.add(at(box(0.55, 0.06, 0.16, { fill: YELLOW }), bx, 0.71, bz, br));
+  });
+  g.add(at(cyl(0.03, 0.03, 0.5, 5), -3.2, 0.55, -1.85));               // 코너 깃발
+  g.add(at(box(0.3, 0.22, 0.03, { fill: REDC }), -3.04, 0.72, -1.85));
+  g.add(at(ico(0.22), -2.5, 0.48, -1.6));                              // 흰 강아지
+  g.add(at(box(0.9, 0.8, 0.7, { fill: WOOD }), -3.55, 0.7, 1.35));     // 관중 건물 블록
+  return g; };
+
+// ── ⑦ 야구장 (사진 10 좌하 · 9) — 갈색 흙 다이아몬드 + 흰 베이스 ──
+B['작품·야구장'] = () => { const g = new THREE.Group();
+  g.add(at(box(4.6, 0.3, 4.0, { fill: WOOD }), 0, 0.15, 0));
+  g.add(at(cyl(1.95, 1.95, 0.05, 20, { fill: GRASS }), 0.15, 0.32, 0.1));
+  g.add(at(cyl(1.45, 1.45, 0.05, 4, { fill: DIRT }), 0.15, 0.35, 0.1, Math.PI / 4));
+  g.add(at(cyl(0.8, 0.8, 0.05, 4, { fill: GRASS }), 0.15, 0.38, 0.1, Math.PI / 4));
+  [[0, -1.28], [1.28, 0], [0, 1.28], [-1.28, 0]].forEach(([bx, bz]) =>
+    g.add(at(box(0.3, 0.06, 0.3), 0.15 + bx, 0.41, 0.1 + bz, Math.PI / 4)));
+  g.add(poly([[0.15, 0.42, 1.4], [0.15 + 1.9, 0.42, 1.4 - 1.9]]));
+  g.add(poly([[0.15, 0.42, 1.4], [0.15 - 1.9, 0.42, 1.4 - 1.9]]));
+  g.add(at(ico(0.16, { fill: REDC }), 0.15, 0.45, 0.1));               // 타구
+  g.add(at(box(0.9, 0.42, 0.6, { fill: 'ink' }), 1.85, 0.51, -1.6, 0.3));
+  g.add(at(box(0.45, 0.06, 0.14, { fill: YELLOW }), 1.85, 0.73, -1.6, 0.3));
+  return g; };
+
+// ── ⑧ 연못 들판 (r5) — 꽃무늬 판 + 뻗은 막대 끝 곰 얼굴 판 = 신호등 LED 3(빨강·노랑·빨강 순차) ──
+B['작품·연못 들판'] = () => { const g = new THREE.Group(); const leds = [];
+  g.add(at(box(4.4, 0.3, 3.0, { fill: GRASS }), 0, 0.15, -0.6));       // 초록 꽃무늬 판
+  const rnd = lcg(11); const f1 = [], f2 = [];
+  for (let i = 0; i < 46; i++) { const p = [(rnd() - 0.5) * 4.1, 0.32, -0.6 + (rnd() - 0.5) * 2.7];
+    (i % 2 ? f1 : f2).push(p); }
+  g.add(dotField(f1, YELLOW, 3.4)); g.add(dotField(f2, PINK, 3.4));
+  const mon = new THREE.Group(); mon.position.set(1.55, 0.3, -1.35);   // 빨간 괴물
+  mon.add(at(ico(0.3, { fill: REDC }), 0, 0.34, 0));
+  mon.add(at(ico(0.2, { fill: REDC }), 0, 0.74, 0));
+  g.add(mon);
+  g.add(at(ico(0.26, { fill: GRASS }), 0.95, 0.58, 0.15));             // 초록 개구리
+  g.add(at(box(0.8, 0.3, 0.4, { fill: BLUE }), -1.5, 0.45, -0.75));    // 파란 인형
+  g.add(at(box(1.0, 0.5, 0.7, { fill: YELLOW }), -0.1, 0.55, 0.5));    // 노란 블록
+  g.add(at(box(0.42, 0.14, 2.3, { fill: WOOD }), -0.1, 0.6, 1.85));    // 뻗은 막대
+  const face = new THREE.Group(); face.position.set(-0.1, 0.34, 3.0);
+  face.rotation.x = -0.8;                                              // 위로 눕힌 곰 얼굴 판
+  face.add(at(box(2.2, 2.2, 0.14, { fill: WOOD }), 0, 1.1, 0));
+  face.add(upright(at(cyl(0.4, 0.4, 0.12, 10, { fill: WOOD }), -0.92, 2.1, 0)));
+  face.add(upright(at(cyl(0.4, 0.4, 0.12, 10, { fill: WOOD }), 0.92, 2.1, 0)));
+  face.add(at(box(1.95, 0.42, 0.06, { fill: SILVER }), 0, 1.62, 0.1));  // 회색 띠
+  face.add(upright(at(cyl(0.75, 0.75, 0.06, 12, { fill: SKY }), 0, 0.72, 0.1))); // 파란 얼굴
+  face.add(dotField([[-0.3, 1.12, 0.2], [0.3, 1.12, 0.2], [0, 0.92, 0.2]], INK, 6)); // 눈·코
+  face.add(mkLed(leds, REDC, -0.66, 1.62, 0.2, 0, 0, 0.22));           // 빨강(좌)
+  face.add(mkLed(leds, YELLOW, 0, 1.62, 0.2, 0, 0, 0.21));             // 노랑(중)
+  face.add(mkLed(leds, REDC, 0.66, 1.62, 0.2, 0, 0, 0.21));            // 빨강(우)
+  g.add(face);
+  g.userData.leds = leds;
+  // 신호등 순차 점등 — 빨강 → 노랑 → 빨강, 한 번에 하나만
+  g.userData.tick = t => { const slot = Math.floor(t / 520) % 3;
+    leds.forEach((L, i) => L.b.userData.mesh.material.color.set(i === slot ? L.color : PAPER)); };
+  return g; };
+
+// ── ⑨ 축운산 (r10 좌상 초록 언덕 보드) — 언덕·집 한 채·성묘객·반짝이 꽃. 정적 ──
+B['작품·축운산'] = () => { const g = new THREE.Group();
+  g.add(at(box(5.0, 0.3, 3.6, { fill: GRASS }), 0, 0.15, 0));          // 초록 판
+  const hill = at(ico(1.75, { fill: 0x2f8f45 }), -0.5, 0.3, -0.3);     // 초록 흙 언덕
+  hill.scale.set(1.15, 0.62, 1.0); g.add(hill);
+  g.add(at(box(0.95, 0.8, 0.85, { fill: WOOD }), -0.35, 1.32, 0.15));  // 집 블록
+  g.add(at(inked(prismGeo(1.15, 1.0, 0.4), { fill: REDC }), -0.35, 1.72, 0.15)); // 빨간 지붕
+  g.add(at(box(0.8, 0.65, 0.7, { fill: WOOD }), -1.45, 1.05, 0.55));   // 나무 블록 2
+  g.add(at(box(0.7, 0.55, 0.62, { fill: WOOD }), -0.6, 0.95, 0.9));
+  const chk = [];                                                      // 체크무늬 블록
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++)
+    if ((i + j) % 2 === 0) chk.push([-0.85 + i * 0.17, 1.05 + j * 0.16, 1.22]);
+  g.add(dotField(chk, INK, 4));
+  g.add(at(ico(0.34, { fill: 0x2f8f45 }), 1.05, 0.6, -0.15));          // 초록 나무
+  g.add(at(ico(0.3, { fill: 0x2f8f45 }), 1.35, 0.5, 0.75));
+  g.add(at(box(0.55, 0.35, 0.3, { fill: 0xf0b9ae }), -1.75, 0.9, -0.1)); // 분홍 손
+  // 흰검 성묘객 인형 · 흰 조각돌
+  [[-1.1, -1.05], [0.35, -1.15], [0.9, 0.35], [-1.9, 0.95], [0.15, 1.25], [1.6, -0.9]]
+    .forEach(([fx, fz], i) => { const f = ico(0.14, { fill: i % 2 ? 'ink' : PAPER });
+      f.position.set(fx, 0.52 + (i % 2) * 0.05, fz); g.add(f); });
+  g.add(dotField([[0.55, 0.95, -0.55], [0.75, 0.9, -0.35], [0.62, 0.86, -0.15],
+                  [-0.05, 0.62, 1.35], [0.25, 0.6, 1.5]], 0xbfe3ef, 4));  // 반짝이 꽃
+  // 검정+노랑 도로 테이프 블록 3 (운동장 세트 공통 문법)
+  [[-2.15, 1.5, 0.2], [1.35, 1.55, 0], [2.05, -1.35, 0.5]].forEach(([bx, bz, br]) => {
+    g.add(at(box(1.0, 0.38, 0.6, { fill: 'ink' }), bx, 0.49, bz, br));
+    g.add(at(box(0.5, 0.06, 0.15, { fill: YELLOW }), bx, 0.69, bz, br));
+  });
+  g.add(at(box(0.5, 0.32, 2.6, { fill: 'ink' }), -2.35, 0.46, -0.6));  // 검정 도로 띠
+  return g; };
+
+// ── ⑩ 카라스노 고교 (r2) — 주황 「카라스노(하이큐!!) 고교」 블록 + 주황 LED + 배구공 + 말풍선 ──
+B['작품·카라스노 고교'] = () => { const g = new THREE.Group();
+  g.add(at(box(5.4, 0.3, 3.8, { fill: WOOD }), 0, 0.15, 0));           // 원목 판
+  // 주황 블록(교사) + 검정 글씨 줄
+  g.add(at(box(2.1, 0.95, 1.15, { fill: ORANGE }), -0.75, 0.78, -1.0));
+  g.add(at(box(1.55, 0.05, 0.1, { fill: 'ink' }), -0.75, 0.9, -0.42));
+  g.add(at(box(1.35, 0.05, 0.1, { fill: 'ink' }), -0.8, 0.66, -0.42));
+  const main = mkLed(null, YELLOW, -0.55, 0.6, -0.3, 0, 0, 0.26);      // 주황 LED = 대표(블록 앞면)
+  g.add(main); g.userData.mainLed = main;
+  // 펭귄(노란 모자) · 회색 돌 · 주황 열매
+  const peng = new THREE.Group(); peng.position.set(-1.2, 1.26, -1.0);
+  peng.add(at(ico(0.26, { fill: 'ink' }), 0, 0.24, 0));
+  peng.add(at(ico(0.15, { fill: YELLOW }), 0, 0.55, 0));
+  g.add(peng);
+  const stone = at(ico(0.42, { fill: 0xb9b5ab }), 0.72, 1.4, -1.05);
+  stone.scale.set(1.2, 0.75, 0.9); g.add(stone);
+  g.add(at(ico(0.36, { fill: ORANGE }), -1.95, 0.62, -0.35));
+  // 폼보드 말풍선 2 — 흰 판에 먹 글씨 획
+  [[-1.05, 0.35, 0.35], [0.65, 0.25, -0.2]].forEach(([bx, bz, br], i) => {
+    const bub = at(box(1.5, 0.1, 0.42), bx, 0.75, bz, br);
+    bub.rotation.z = 0.16; g.add(bub);
+    const sc = [];
+    for (let k = 0; k < 7; k++) sc.push([bx - 0.55 + k * 0.18, 0.82, bz + (k % 2 ? 0.05 : -0.05)]);
+    g.add(dotField(sc, INK, 3.4));
+  });
+  // 진주 테두리 검정 상자 + 노랑·파랑 배구공
+  g.add(at(box(1.7, 0.55, 1.2, { fill: 'ink' }), 1.55, 0.58, 1.25));
+  const pb = [];
+  for (let i = 0; i < 16; i++) { const u = -0.78 + 1.56 * i / 15;
+    pb.push([1.55 + u, 0.86, 0.68], [1.55 + u, 0.86, 1.82]); }
+  g.add(dotField(pb, 0xf2eee4, 3));
+  const ballG = new THREE.Group(); ballG.position.set(1.55, 1.05, 1.25);
+  ballG.add(at(ico(0.3, { fill: YELLOW }), 0, 0.25, 0));
+  ballG.add(at(box(0.16, 0.5, 0.5, { fill: BLUE }), 0.16, 0.25, 0));
+  g.add(ballG);
+  g.add(at(box(0.8, 0.35, 0.5, { fill: REDC }), -1.9, 0.48, 0.75));    // 빨간 자동차
+  g.add(at(box(0.4, 0.22, 0.42, { fill: BLUE }), -1.95, 0.76, 0.75));
+  g.add(at(ico(0.3, { fill: 0xb9b5ab }), 2.15, 0.48, -0.9));           // 회색 돌 하나 더
+  g.add(wire([[-0.7, 1.3, -1.5], [-0.2, 2.0, -1.2], [0.5, 1.9, -0.8], [0.15, 0.75, -0.5]]));
+  return g; };
+
+// ── ⑪ 체리 가게 (r7) — 색종이 점 판 + 「체리」 회색 판 2 + 체리 블록·인형. 정적 ──
+B['작품·체리 가게'] = () => { const g = new THREE.Group();
+  g.add(at(box(4.6, 0.3, 3.4, { fill: WOOD }), 0, 0.15, 0));           // 원목 판
+  const rnd = lcg(23); const cf = [[], [], []];
+  for (let i = 0; i < 45; i++) cf[i % 3].push([(rnd() - 0.5) * 4.2, 0.32, (rnd() - 0.5) * 3.0]);
+  g.add(dotField(cf[0], PINK, 3.4)); g.add(dotField(cf[1], YELLOW, 3.4));
+  g.add(dotField(cf[2], SKY, 3.4));                                     // 색종이 점
+  // 세로 나무 블록 2 — 빨간 체리 얼굴(눈)
+  [[-0.55, -1.15], [0.5, -1.15]].forEach(([bx, bz], i) => {
+    g.add(at(box(1.0, 1.9, 0.55, { fill: WOOD }), bx, 1.25, bz));
+    g.add(at(upright(cyl(0.32, 0.32, 0.06, 12, { fill: REDC })), bx, 1.05, bz - 0.3));
+    g.add(dotField([[bx, 1.1, bz - 0.35]], INK, 5));
+    g.add(at(box(0.12, 0.55, 0.06, { fill: GRASS }), bx + (i ? -0.2 : 0.2), 1.9, bz - 0.3));
+  });
+  // 회색 「체리」 판 2 (빨간 글씨 = 붉은 점)
+  [[-0.05, 0.15], [0.1, 0.95]].forEach(([sx, sz]) => {
+    g.add(at(box(1.9, 0.14, 0.5, { fill: 0x55524d }), sx, 0.4, sz));
+    g.add(dotField([[sx - 0.45, 0.5, sz], [sx - 0.25, 0.5, sz], [sx - 0.05, 0.5, sz],
+                    [sx + 0.6, 0.5, sz], [sx + 0.75, 0.5, sz]], REDC, 4.2));
+  });
+  // 체리 무늬 초록 블록 2
+  [[-1.7, -0.2], [1.6, -0.35]].forEach(([bx, bz]) => {
+    g.add(at(box(0.85, 0.85, 0.8, { fill: WOOD }), bx, 0.72, bz));
+    g.add(at(box(0.89, 0.1, 0.84, { fill: GRASS }), bx, 1.19, bz));
+    g.add(dotField([[bx - 0.2, 0.9, bz + 0.42], [bx + 0.2, 0.75, bz + 0.42]], REDC, 4.5));
+  });
+  // 빨간 인형(팔 벌린 괴물) · 초록 체리 인형 · 꼭대기 체리
+  const mon = new THREE.Group(); mon.position.set(-1.75, 0.3, 1.15);
+  mon.add(at(ico(0.3, { fill: REDC }), 0, 0.34, 0));
+  const armL = at(box(0.9, 0.16, 0.16, { fill: REDC }), -0.5, 0.28, 0.1); armL.rotation.z = 0.3;
+  const armR = at(box(0.9, 0.16, 0.16, { fill: REDC }), 0.5, 0.28, 0.1); armR.rotation.z = -0.3;
+  mon.add(armL, armR); g.add(mon);
+  g.add(at(ico(0.22, { fill: GRASS }), 1.55, 1.42, -0.35));
+  g.add(at(ico(0.16, { fill: REDC }), 1.72, 1.5, -0.2));
+  g.add(at(ico(0.16, { fill: REDC }), -0.62, 2.35, -1.4));
+  g.add(at(ico(0.16, { fill: REDC }), -0.42, 2.35, -1.4));
+  return g; };
+
 
 export const BUILDERS = B;
 export const MODEL_NAMES = Object.keys(B);

@@ -22,11 +22,13 @@ const line = (pts3, mat = inkLine, dash) => {
 
 export function buildCity(scene) {
   const ticks = [];
+  const placed = [];                       // 배치 전수 감사용 기록(이름 + 오브젝트)
   const put = (name, x, z, ry = 0, scale = 1) => {
     const m = BUILDERS[name]();
     m.position.set(x, 0, z); m.rotation.y = ry;
     if (scale !== 1) m.scale.setScalar(scale);
     scene.add(m);
+    placed.push({ name, obj: m });
     if (m.userData.tick) ticks.push(m.userData.tick);
     return m;
   };
@@ -170,7 +172,7 @@ export function buildCity(scene) {
   put('작은 아파트', ...W(990, 180), 0);
   put('작은 아파트', ...W(1020, 250), Math.PI / 2, 0.9);
   // 상가: 가로1 북측·남측 도로에 면해 줄지어
-  const shopRow = [[480, 262, 0], [540, 262, 0], [600, 262, 0], [830, 262, 0], [900, 340, Math.PI], [830, 340, Math.PI], [600, 340, Math.PI], [540, 340, Math.PI]];
+  const shopRow = [[480, 262, 0], [600, 262, 0], [830, 262, 0], [900, 340, Math.PI], [830, 340, Math.PI], [600, 340, Math.PI], [540, 340, Math.PI]];
   shopRow.forEach(([sx, sz, ry], i) => put(i % 2 ? '상가 B·2층' : '상가 A', ...W(sx, sz), ry, 0.85));
   // 신호 상가골목 뒷골목 집들
   const houseGrid = [[470, 120], [520, 150], [575, 115], [640, 105], [500, 200], [575, 195]];
@@ -185,7 +187,7 @@ export function buildCity(scene) {
     put('전봇대', ex, ez, Math.PI / 2, 1);
   }
   // 가로수·주민
-  [[460, 380], [700, 90], [980, 330], [860, 120]].forEach(([tx, tz], i) => put(i % 2 ? '나무 A' : '나무 B·침엽', ...W(tx, tz), 0, 0.9));
+  [[460, 380], [672, 90], [980, 330], [860, 120]].forEach(([tx, tz], i) => put(i % 2 ? '나무 A' : '나무 B·침엽', ...W(tx, tz), 0, 0.9));
   [[600, 285], [850, 320], [770, 455]].forEach(([sx2, sz2], i) => put('사람(주민)', ...W(sx2, sz2), i, 0.8));
 
   // ── 군부대 (서남 — 장암길 서쪽 끝) ──
@@ -197,30 +199,22 @@ export function buildCity(scene) {
   // ── 궁남지 + 사랑나무 (읍 남단, 강 북안) ──
   put('궁남지', ...W(545, 600), 0, 1.15);
   put('사랑나무·평상', ...W(452, 578), 0);
+  // 연못 장식 — 원래 장암(280,820)에 있던 꽃을 궁남지 옆 두 연못 판 곁으로 이설
+  put('꽃', ...W(600, 512), 0.2);
+  put('꽃', ...W(676, 604), 0.6);
 
   // ── 학교 (강 북안 동측) ──
   put('학교 본관', ...W(870, 580), 0, 1.05);
-  put('운동장 판·공', ...W(890, 640), 0, 0.9);
-  put('골대', ...W(860, 640), Math.PI / 2, 0.8);
-  put('골대', ...W(920, 640), -Math.PI / 2, 0.8);
   put('깃발', ...W(838, 620), 0, 0.8);
-  put('야구장 판·타구', ...W(980, 620), 0.4, 0.9);
 
   // ── 장암 마을 (강 건너 남서) ──
   const jangamHouses = [[300, 940], [360, 915], [430, 945], [490, 915], [545, 945]];
   jangamHouses.forEach(([hx, hz], i) => put(i % 2 ? '집 A' : '집 B·굴뚝연기', ...W(hx, hz), (i % 3) * 0.9, 0.95));
-  put('별빛 판', ...W(360, 830), 0.2, 1.05);
-  put('모터·회전', ...W(660, 830), 0, 0.9);
-  put('전지', ...W(668, 856), 0.4, 0.9);
-  put('스위치·토글', ...W(645, 818), -0.3, 0.9);
-  put('연못·물결', ...W(280, 820), 0, 1.1);
-  put('꽃', ...W(255, 850), 0);
-  put('꽃', ...W(310, 855), 0.5);
-  put('솟대', ...W(230, 900), 0);
+  put('솟대', ...W(230, 900), 0);                 // 마당 솟대는 장암 장식으로 존치
   put('마당바위', ...W(490, 835), 0.7, 0.9);
   put('와요지 가마', ...W(814, 856), 0, 0.95);
-  put('사람(주민)', ...W(400, 880), 2, 0.8);
-  put('사람(주민)', ...W(640, 880), 4, 0.8);
+  put('사람(주민)', ...W(400, 862), 2, 0.8);
+  put('사람(주민)', ...W(640, 862), 4, 0.8);
 
   // ── 농경지 (남동) — 경지정리 격자: 논 2행×3열 · 밭 1행 · 비닐하우스 열 ──
   for (const gy of [792, 828]) for (const gx of [872, 920, 968])
@@ -264,15 +258,15 @@ export function buildCity(scene) {
   put('새·날갯짓', ...W(820, 700), 2.2);
   // 읍내 가로수·주민 증원
   [[520,330],[760,330],[950,250],[640,420],[900,455],[1010,120]].forEach(([tx,tz],i)=>put(i%2?'나무 B·침엽':'나무 A', ...W(tx,tz), 0, 0.8));
-  [[500,315],[690,250],[810,285],[930,430],[760,120],[1000,300]].forEach(([sx2,sz2],i)=>put('사람(주민)', ...W(sx2,sz2), i*1.1, 0.78));
+  [[500,315],[676,250],[810,285],[930,430],[760,120],[1000,316]].forEach(([sx2,sz2],i)=>put('사람(주민)', ...W(sx2,sz2), i*1.1, 0.78));
   // 장암 증원
-  [[330,862],[498,988],[560,862]].forEach(([hx,hz],i)=>put(i%2?'집 B·굴뚝연기':'집 A', ...W(hx,hz), i*0.7, 0.9));
+  [[318,850],[498,988],[560,850]].forEach(([hx,hz],i)=>put(i%2?'집 B·굴뚝연기':'집 A', ...W(hx,hz), i*0.7, 0.9));
   [[335,800],[420,810],[590,845]].forEach(([fx,fz],i)=>put('꽃', ...W(fx,fz), i));
   [[470,900],[560,865]].forEach(([sx2,sz2],i)=>put('사람(주민)', ...W(sx2,sz2), i*2, 0.78));
   // 전봇대 — 장암길 남측 열(스팬 연결 간격)
   for (let i = 0; i < 6; i++) put('전봇대', ...W(330 + i * 41.6, 908), 0, 0.95);
   // 농경 증원
-  put('밭·이랑', ...W(1000, 862), -0.1, 0.95);
+  put('밭·이랑', ...W(1120, 838), -0.1, 0.95);
   put('수박', ...W(1070, 900), 1);
   // 부소산·축운산 수목
   [[120,185],[176,308],[140,158]].forEach(([tx,tz],i)=>put(i%2?'나무 B·침엽':'나무 A', ...W(tx,tz), 0, 1.0));
@@ -283,8 +277,8 @@ export function buildCity(scene) {
     put('작은 아파트', ...W(ax, ay), 0, 0.95);
   for (const ay of [938, 986]) for (const ax of [752, 798])
     put('작은 아파트', ...W(ax, ay), 0, 0.95);
-  put('나무 A', ...W(700, 940), 0, 0.9);
-  put('나무 B·침엽', ...W(700, 990), 0, 0.9);
+  put('나무 A', ...W(672, 940), 0, 0.9);
+  put('나무 B·침엽', ...W(672, 990), 0, 0.9);
   put('사람(주민)', ...W(722, 962), 1.4, 0.78);
 
   // ── 회로 문법 가시화 ①: 군부대 차단봉 = 모터가 여닫는다 ──
@@ -294,8 +288,6 @@ export function buildCity(scene) {
     const [mx2, mz2] = W(226, 932);
     scene.add(line([[mx2, 0.35, mz2], [(mx2 + gx) / 2, 0.15, (mz2 + gz) / 2], [gx, 0.4, gz]], grayLine, [0.25, 0.8]));
   }
-  // 장암 회로존: 다색 LED 열 — 마을 회로의 심장부
-  put('LED 신호·다색', ...W(640, 848), 0.15, 0.85);
 
   // ── 회로 문법 가시화 ②: 화려한 곳의 장식 LED 스트링 ──
   const LED5 = [0xfe5000, 0xe2402f, 0xf5b52e, 0x3f9b4f, 0x2f6fe4];
@@ -377,26 +369,46 @@ export function buildCity(scene) {
   const riverWest = buildTrack(mid.slice(0, 6));               // 상류~선착장 앞
   vehicle('통통배', riverWest, 46000, 'shuttle', 0, 0);
 
-  // ── 신호 8: LED 기둥(작품별 색·리듬) — 콘텐츠는 scene.ts와 id 결합 ──
+  // ── 신호 11: 아이들 작품 미니어처(나무판 디오라마) — 모터는 돌고 LED는 깜빡인다 ──
+  //   피그마 정본 「07 신호 정의」 대조(2026-09-02): pond-field=r5 꽃무늬/신호등 판,
+  //   chugunsan=r10 초록 언덕 보드, frog-pond·karasuno·cherry 신설.
+  //   대표 LED(userData.mainLed)가 있으면 그것이 bulb — 도시 루프가 blink 리듬으로 색 갱신.
+  //   없으면 anchor 자리에 전구(pole:false면 기둥 없이 작품 위 구슬로).
   const SIGNALS_3D = [
-    { id: 'ground',          px: [890, 640],  color: 0xfe5000 },
-    { id: 'shop-alley',      px: [540, 262],  color: 0xe2402f },
-    { id: 'star-yard',       px: [360, 830],  color: 0x2f6fe4 },
-    { id: 'chugunsan',       px: [1280, 610], color: 0x3f9b4f },
-    { id: 'baseball',        px: [980, 620],  color: 0xf5b52e },
-    { id: 'pond-field',      px: [280, 820],  color: 0x3f9b4f },
-    { id: 'village-circuit', px: [685, 832],  color: 0xfe5000 },
-    { id: 'ipdae-gate',      px: [1150, 210], color: 0xe2402f },
+    { id: 'ground',          px: [890, 640],  color: 0xfe5000, model: '작품·마을의 운동장', ry: 0,     h: 5.2, anchor: [-3.3, -1.9] },
+    { id: 'shop-alley',      px: [540, 262],  color: 0xe2402f, model: '작품·상가 골목',     ry: 0,     h: 4.8 },
+    { id: 'star-yard',       px: [360, 830],  color: 0xfe5000, model: '작품·별빛 마당',     ry: 0.15,  h: 4.6 },
+    { id: 'chugunsan',       px: [1215, 652], color: 0x3f9b4f, model: '작품·축운산',        ry: -0.3,  h: 5.0, anchor: [1.9, -1.45] },
+    { id: 'baseball',        px: [980, 620],  color: 0xf5b52e, model: '작품·야구장',        ry: 0.35,  h: 4.6, anchor: [-1.85, -1.65] },
+    { id: 'pond-field',      px: [636, 566],  color: 0xe2402f, model: '작품·연못 들판',     ry: -0.25, h: 4.8, anchor: [0.22, 0.42], anchorY: 0.86, pole: false },
+    { id: 'frog-pond',       px: [560, 540],  color: 0x2f6fe4, model: '작품·개구리 연못',   ry: 0.1,   h: 6.8, anchor: [3.2, -1.55] },
+    { id: 'village-circuit', px: [655, 834],  color: 0xfe5000, model: '작품·마을 회로',     ry: -0.1,  h: 5.0 },
+    { id: 'ipdae-gate',      px: [1150, 210], color: 0x3f9b4f, model: '작품·입대 정문',     ry: 0.2,   h: 5.0 },
+    { id: 'karasuno',        px: [820, 530],  color: 0xf5b52e, model: '작품·카라스노 고교', ry: -0.15, h: 5.0 },
+    { id: 'cherry',          px: [1090, 430], color: 0xe2402f, model: '작품·체리 가게',     ry: 0.28,  h: 5.0, anchor: [-1.6, 1.35] },
   ];
-  const signals = SIGNALS_3D.map(({ id, px, color }) => {
+  const arts = {};
+  const signals = SIGNALS_3D.map(({ id, px, color, model, ry, h, anchor, anchorY, pole }) => {
     const [x, z] = W(...px);
     const g = new THREE.Group();
-    g.add(at(cyl(0.09, 0.09, 2.6, 6), 0, 1.3, 0));
-    const bulb = ico(0.42, { fill: color });
-    bulb.position.y = 3; g.add(bulb);
+    const art = BUILDERS[model]();
+    art.rotation.y = ry || 0;
+    arts[id] = art;
+    g.add(art);
+    if (art.userData.tick) ticks.push(art.userData.tick);
+    let bulb = art.userData.mainLed;
+    if (!bulb) {
+      const [ax, az] = anchor || [0, 0];
+      const ay = anchorY != null ? anchorY : 2.4;
+      if (pole !== false) art.add(at(cyl(0.06, 0.06, ay - 0.35, 6), ax, (ay - 0.35) / 2 + 0.3, az));
+      bulb = ico(pole === false ? 0.19 : 0.32, { fill: color });
+      bulb.position.set(ax, ay, az);
+      art.add(bulb);
+    }
     g.position.set(x, 0, z);
     scene.add(g);
-    return { id, obj: g, bulb, color, pos: new THREE.Vector3(x, 6.2, z) };
+    placed.push({ name: '신호·' + id, obj: g });
+    return { id, obj: g, bulb, color, pos: new THREE.Vector3(x, h, z) };
   });
 
   // ── 장소 앵커: 박물관·군부대 — 3D 표지판 없이 건물 위 높이 뜬 검정 원(DOM) ──
@@ -408,6 +420,10 @@ export function buildCity(scene) {
     const [x, z] = W(...px);
     return { id, pos: new THREE.Vector3(x, h, z) };
   });
+
+  // 검증 훅 — ?s3ddebug 쿼리일 때만 노출(상시 노출은 언마운트 후 씬 누수)
+  if (typeof window !== 'undefined' && /[?&]s3ddebug/.test(window.location.search))
+    window.__city3d = { signals, arts, placed, roads: roads.map(([a, b]) => [...W(...a), ...W(...b)]) };
 
   return { ticks, signals, places, riverTrack };
 }

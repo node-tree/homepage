@@ -4,7 +4,7 @@
 //   진입: /iso#signal-map-3d (2D판 #signal-map과 병존)
 //   조작: 드래그 = 궤도 회전(도시를 돌려 본다) · 휠/핀치 = 줌
 //         Shift+드래그 · 두 손가락 드래그 = 팬 · 버튼 = 시점 프리셋
-//   신호 8 = 다색 LED 기둥, 클릭 → 카드(콘텐츠는 2D scene.ts와 공유)
+//   신호 8 = 다색 LED 기둥, 클릭 → 카드(소개글 + 사진 갤러리, 콘텐츠는 2D scene.ts와 공유)
 // ═══════════════════════════════════════════════════════════════════════
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -15,6 +15,7 @@ import { SIGNALS, PLACES } from '../scene';
 import { signalMapAPI } from '../../../../services/api';
 import { imagekitAdminAPI } from '../../../../services/imagekitAdminApi';
 import { useKkumdarakAuth } from '../../KkumdarakAuthContext';
+import { ikUrl } from '../../../../utils/ikUrl';
 import '../signalmap.css';
 import './signalmap3d.css';
 
@@ -32,7 +33,7 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [openId, setOpenId] = useState(null);
   const [overrides, setOverrides] = useState({});
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: '', story: '', makers: '', audio: '', photo: '' });
+  const [form, setForm] = useState({ name: '', story: '', makers: '', photos: [] });
   const [saving, setSaving] = useState(false);
   const { authed } = useKkumdarakAuth();
   const customs = useMemo(() => (overrides._custom || []), [overrides]);
@@ -59,24 +60,33 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   useEffect(() => { signalMapAPI.get().then(setOverrides); }, []);
   useEffect(() => {                                              // 카드 전환 시 편집 폼 리셋
     setEditing(false);
-    if (open) setForm({ name: open.name || '', story: open.story || '', makers: open.makers || '', audio: open.audio || '', photo: (open.photos && open.photos[0]) || '' });
+    if (open) setForm({ name: open.name || '', story: open.story || '', makers: open.makers || '', photos: open.photos || [] });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openId]);
 
-  const [uploading, setUploading] = useState(null); // 'photo' | 'audio' | null
-  const uploadAsset = async (kind, file) => {
-    if (!file) return;
-    setUploading(kind);
+  const [uploading, setUploading] = useState(null);   // 업로드 진행 문구('1/3 …') | null
+  // 사진 다중 업로드 — 선택한 파일을 순차로 올려 form.photos 뒤에 붙인다
+  const uploadPhotos = async (fileList) => {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    const stamp = Date.now();
+    const done = [];
     try {
-      const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
-      const r = await imagekitAdminAPI.uploadFile(file, `${openId}-${kind}-${Date.now()}.${ext}`, { folder: '/signal-map' });
-      setForm(f => (kind === 'photo' ? { ...f, photo: r.url } : { ...f, audio: r.url }));
+      for (let i = 0; i < files.length; i += 1) {
+        setUploading(`${i + 1}/${files.length}`);
+        const file = files[i];
+        const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+        const r = await imagekitAdminAPI.uploadFile(file, `${openId}-${stamp}-${i}.${ext}`, { folder: '/signal-map' });
+        done.push(r.url);
+      }
     } catch (e) {
       alert(e.message || '업로드 실패');
     } finally {
+      if (done.length) setForm(f => ({ ...f, photos: [...f.photos, ...done] }));
       setUploading(null);
     }
   };
+  const removePhoto = (i) => setForm(f => ({ ...f, photos: f.photos.filter((_, k) => k !== i) }));
 
   const saveOverrides = async (next) => {
     await signalMapAPI.save(next);
@@ -101,10 +111,13 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     setSaving(true);
     try {
       const entry = { ...(overrides[openId] || {}),
-        story: form.story.trim(), makers: form.makers.trim(), audio: form.audio.trim() };
+        story: form.story.trim(), makers: form.makers.trim() };
+      delete entry.audio;                                     // 소리 기능 폐지 — 남은 키 정리
       if (form.name.trim()) entry.name = form.name.trim();   // 타이틀 오버라이드(비우면 기본 이름)
       else delete entry.name;
-      if (form.photo.trim()) entry.photos = [form.photo.trim()];
+      const photos = form.photos.map(u => (u || '').trim()).filter(Boolean);
+      if (photos.length) entry.photos = photos;
+      else delete entry.photos;
       const next = { ...overrides, [openId]: entry };
       await signalMapAPI.save(next);
       setOverrides(next);
@@ -334,23 +347,32 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         />
       ))}
       <footer className="smap-legend">
-        <span className="smap-legend-dot" style={{ background: '#1f1e1c' }} /> 동그라미 = 신호·장소 — 누르면 소개와 소리
+        <span className="smap-legend-dot" style={{ background: '#1f1e1c' }} /> 동그라미 = 신호·장소 — 누르면 소개와 사진
         <em>드래그로 도시를 돌려 보세요</em>
       </footer>
       {open && (
         <aside className="smap-card" role="dialog" aria-label={`${open.name} 소개`}>
-          <button className="smap-card-close" onClick={() => setOpenId(null)} aria-label="닫기">✕</button>
-          <span className="smap-card-tag">{isPlace ? 'PLACE' : 'SIGNAL'} · {open.id.toUpperCase()}</span>
-          <h2>{open.name}</h2>
-          {open.photos?.length ? <img src={open.photos[0]} alt={`${open.name} 실물 작품`} /> : null}
+          {/* 카드 머리 — 사진 갤러리로 카드가 길어져도 태그·제목·닫기가 상단에 붙어 있게(sticky) */}
+          <div className="smap-card-head">
+            <button className="smap-card-close" onClick={() => setOpenId(null)} aria-label="닫기">✕</button>
+            <span className="smap-card-tag">{isPlace ? 'PLACE' : 'SIGNAL'} · {open.id.toUpperCase()}</span>
+            <h2>{open.name}</h2>
+          </div>
+          {open.photos?.length ? (
+            <div className={`smap-gallery${open.photos.length > 1 ? ' smap-gallery--stack' : ''}`}>
+              {open.photos.map((src, i) => (
+                <img key={`${src}-${i}`} src={ikUrl(src, { w: 900, q: 80 })} loading="lazy"
+                  alt={`${open.name} 작품 사진 ${i + 1}`} />
+              ))}
+            </div>
+          ) : null}
           {open.makers && <p className="smap-card-makers">만든 사람 · {open.makers}</p>}
           {open.story
             ? <p className="smap-card-story">{open.story}</p>
-            : <p className="smap-card-draft">이 신호의 이야기와 소리는 프로그램이 끝나는 대로 채워집니다.</p>}
-          {open.audio && <audio className="smap-card-audio" controls preload="none" src={open.audio} />}
+            : <p className="smap-card-draft">이 신호의 이야기와 사진은 프로그램이 끝나는 대로 채워집니다.</p>}
           {authed && !editing && (
             <div className="smap-edit-row" style={{ marginTop: 14 }}>
-              <button className="smap-edit-btn" style={{ margin: 0 }} onClick={() => setEditing(true)}>소개·소리 편집</button>
+              <button className="smap-edit-btn" style={{ margin: 0 }} onClick={() => setEditing(true)}>소개·사진 편집</button>
               <button className="smap-edit-btn smap-edit-btn--danger" onClick={deleteMarker}>마커 삭제</button>
             </div>
           )}
@@ -368,16 +390,22 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 <input value={form.makers}
                   onChange={e => setForm(f => ({ ...f, makers: e.target.value }))} />
               </label>
-              <label>사진 {uploading === 'photo' ? '(업로드 중…)' : ''}
-                <input type="file" accept="image/*" disabled={!!uploading}
-                  onChange={e => uploadAsset('photo', e.target.files?.[0])} />
+              <label>사진 (여러 장 선택 가능) {uploading ? `— 업로드 중 ${uploading}…` : ''}
+                <input type="file" accept="image/*" multiple disabled={!!uploading}
+                  onChange={e => { uploadPhotos(e.target.files); e.target.value = ''; }} />
               </label>
-              {form.photo && <img className="smap-edit-thumb" src={form.photo} alt="업로드된 사진 미리보기" />}
-              <label>소리 URL
-                <input value={form.audio} placeholder="https://…mp3"
-                  onChange={e => setForm(f => ({ ...f, audio: e.target.value }))} />
-              </label>
-              {form.audio && <audio className="smap-card-audio" controls preload="none" src={form.audio} />}
+              {form.photos.length > 0 && (
+                <ul className="smap-edit-thumbs">
+                  {form.photos.map((src, i) => (
+                    <li key={`${src}-${i}`}>
+                      <img className="smap-edit-thumb" src={ikUrl(src, { w: 400, q: 70 })}
+                        alt={`업로드된 사진 ${i + 1} 미리보기`} />
+                      <button type="button" className="smap-thumb-x" onClick={() => removePhoto(i)}
+                        aria-label={`사진 ${i + 1} 제거`}>✕</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <div className="smap-edit-row">
                 <button onClick={saveEdit} disabled={saving || !!uploading}>{saving ? '저장 중…' : '저장'}</button>
                 <button onClick={() => setEditing(false)} disabled={saving}>취소</button>

@@ -58,3 +58,21 @@
 .smap-edit input[type='file'] { border: 1.5px dashed #8c8a82; background: #fcfbf9; }
 
 .smap-edit-btn--danger { background: #fcfbf9; color: #b3261e; border: 1.5px solid #b3261e; }
+
+/* 편집 폼 — 업로드된 사진 목록(각 항목 ✕ 제거) */
+.smap-edit-thumbs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.smap-edit-thumbs li { position: relative; }
+.smap-edit-thumbs .smap-edit-thumb { display: block; margin: 0; }
+.smap-thumb-x {
+  position: absolute; top: 6px; right: 6px;
+  width: 26px; height: 26px; padding: 0;
+  border: 1.5px solid #1f1e1c; border-radius: 50%;
+  background: #fcfbf9; color: #1f1e1c;
+  font: 700 12px/1 'Gothic A1', sans-serif; cursor: pointer;
+}
+.smap-thumb-x:hover { background: #1f1e1c; color: #fcfbf9; }
+
+/* 3D 카드(전용) — z-index: 마커(4)·시점 버튼(5) 위로 올려 갤러리가 가리지 않게.
+   padding-top: 0 → 상단 패딩을 sticky 머리(.smap-card-head)가 직접 가져야
+   머리가 테두리 바로 아래에 고정되고 패딩 띠로 본문이 비쳐 보이지 않는다. */
+.s3d .smap-card { z-index: 6; padding-top: 0; }

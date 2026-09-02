@@ -157,7 +157,8 @@ export const ACTORS: Actor[] = [
   { type: 'blink', at: [788, 322], r: 2.7, period: 4200, phase: 2000 },
 ];
 
-// ── 신호 8 — 콘텐츠 후입력(draft) ──────────────────────────────────────
+// ── 신호 11 — 콘텐츠 후입력(draft) ─────────────────────────────────────
+//   2026-09-02 피그마 정본 「07 신호 정의」 대조: frog-pond·karasuno·cherry 신설.
 export const SIGNALS: Signal[] = [
   { id: 'ground', name: '마을의 운동장', pos: [135, 269], blink: [800, 800], draft: true },
   { id: 'shop-alley', name: '상가 골목', pos: [675, 443], blink: [500, 900], draft: true },
@@ -167,6 +168,9 @@ export const SIGNALS: Signal[] = [
   { id: 'pond-field', name: '연못 들판', pos: [193, 729], blink: [1500, 1500], draft: true },
   { id: 'village-circuit', name: '마을 회로', pos: [1085, 363], blink: [300, 300], draft: true },
   { id: 'ipdae-gate', name: '입대 정문', pos: [1355, 567], blink: [400, 400], draft: true },
+  { id: 'frog-pond', name: '개구리 연못', pos: [296, 752], blink: [1500, 1500], draft: true },
+  { id: 'karasuno', name: '카라스노 고교', pos: [470, 250], blink: [600, 900], draft: true },
+  { id: 'cherry', name: '체리', pos: [1150, 520], blink: [1200, 1800], draft: true },
 ];
 
 // ── 장소(소개 전용 마커) — 신호(참여자 작품)와 구별. 콘텐츠 후입력 동일 ──
