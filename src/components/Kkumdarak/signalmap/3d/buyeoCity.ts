@@ -192,7 +192,6 @@ export function buildCity(scene) {
 
   // ── 군부대 (서남 — 장암길 서쪽 끝) ──
   put('군부대·차단봉', ...W(165, 950), 0.2, 1.5);
-  put('입대 정문', ...W(255, 908), Math.PI, 1.1);
   put('나무 B·침엽', ...W(120, 860), 0);
   put('나무 B·침엽', ...W(210, 1000), 0, 0.9);
 
@@ -283,9 +282,9 @@ export function buildCity(scene) {
 
   // ── 회로 문법 가시화 ①: 군부대 차단봉 = 모터가 여닫는다 ──
   {
-    put('모터·회전', ...W(226, 932), 0.9, 1.1);
-    const [gx, gz] = W(255, 908);
-    const [mx2, mz2] = W(226, 932);
+    put('모터·회전', ...W(210, 910), 0.9, 1.1);
+    const [gx, gz] = W(236, 940);                 // 작품 「입대 정문」 보드 앞
+    const [mx2, mz2] = W(210, 910);
     scene.add(line([[mx2, 0.35, mz2], [(mx2 + gx) / 2, 0.15, (mz2 + gz) / 2], [gx, 0.4, gz]], grayLine, [0.25, 0.8]));
   }
 
@@ -375,15 +374,15 @@ export function buildCity(scene) {
   //   대표 LED(userData.mainLed)가 있으면 그것이 bulb — 도시 루프가 blink 리듬으로 색 갱신.
   //   없으면 anchor 자리에 전구(pole:false면 기둥 없이 작품 위 구슬로).
   const SIGNALS_3D = [
-    { id: 'ground',          px: [890, 640],  color: 0xfe5000, model: '작품·마을의 운동장', ry: 0,     h: 5.2, anchor: [-3.3, -1.9] },
+    { id: 'ground',          px: [960, 658],  color: 0xfe5000, model: '작품·마을의 운동장', ry: 0,     h: 5.2, anchor: [-5.55, -1.95] },
     { id: 'shop-alley',      px: [540, 262],  color: 0xe2402f, model: '작품·상가 골목',     ry: 0,     h: 4.8 },
     { id: 'star-yard',       px: [360, 830],  color: 0xfe5000, model: '작품·별빛 마당',     ry: 0.15,  h: 4.6 },
-    { id: 'chugunsan',       px: [1214, 618], color: 0x3f9b4f, model: '작품·축운산',        ry: -0.3,  h: 5.0, anchor: [1.9, -1.45] },
-    { id: 'baseball',        px: [980, 620],  color: 0xf5b52e, model: '작품·야구장',        ry: 0.35,  h: 4.6, anchor: [-1.85, -1.65] },
+    { id: 'chugunsan',       px: [935, 617],  color: 0x3f9b4f, model: '작품·축운산',        ry: -0.03, h: 5.0, anchor: [2.15, -1.45] },
+    { id: 'baseball',        px: [982, 617],  color: 0xf5b52e, model: '작품·야구장',        ry: 0.03,  h: 4.6, anchor: [-1.9, -1.7] },
     { id: 'pond-field',      px: [636, 566],  color: 0xe2402f, model: '작품·연못 들판',     ry: -0.25, h: 4.8, anchor: [0.22, 0.42], anchorY: 0.86, pole: false },
     { id: 'frog-pond',       px: [560, 540],  color: 0x2f6fe4, model: '작품·개구리 연못',   ry: 0.1,   h: 6.8, anchor: [3.2, -1.55] },
     { id: 'village-circuit', px: [655, 834],  color: 0xfe5000, model: '작품·마을 회로',     ry: -0.1,  h: 5.0 },
-    { id: 'ipdae-gate',      px: [1150, 210], color: 0x3f9b4f, model: '작품·입대 정문',     ry: 0.2,   h: 5.0 },
+    { id: 'ipdae-gate',      px: [236, 964],  color: 0x3f9b4f, model: '작품·입대 정문',     ry: 0.2,   h: 5.6 },
     { id: 'karasuno',        px: [820, 530],  color: 0xf5b52e, model: '작품·카라스노 고교', ry: -0.15, h: 5.0 },
     { id: 'cherry',          px: [1090, 430], color: 0xe2402f, model: '작품·체리 가게',     ry: 0.28,  h: 5.0, anchor: [-1.6, 1.35] },
   ];
@@ -414,7 +413,7 @@ export function buildCity(scene) {
   // ── 장소 앵커: 박물관·군부대 — 3D 표지판 없이 건물 위 높이 뜬 검정 원(DOM) ──
   const PLACES_3D = [
     { id: 'museum', px: [640, 180], h: 7 },
-    { id: 'military', px: [180, 945], h: 6.4 },
+    { id: 'military', px: [168, 946], h: 6.4 },
   ];
   const places = PLACES_3D.map(({ id, px, h }) => {
     const [x, z] = W(...px);

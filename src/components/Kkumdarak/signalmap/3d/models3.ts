@@ -852,36 +852,69 @@ B['작품·상가 골목'] = () => { const g = new THREE.Group();
   g.add(wire([[2.5, 0.5, -1.3], [2.6, 0.42, -0.2], [2.4, 0.9, 0.7], [2.02, 2.35, 1.02]], 0x8f3a52));
   return g; };
 
-// ── ⑥ 마을의 운동장 (사진 10) — 축구장 2면 · 골대 · 검정 선수 · 도로 테이프 블록 ──
+// ── ⑥ 마을의 운동장 (r10 하단 두 판) — 축구장 2면 · 왼쪽 검정 그물 골대 / 오른쪽 원목 골대 ──
+//   두 판 사이 이음매를 검정+노랑 도로 테이프 블록이 잇는다(실물 문법).
 B['작품·마을의 운동장'] = () => { const g = new THREE.Group();
-  g.add(at(box(7.0, 0.3, 4.4, { fill: GRASS }), 0, 0.15, 0));
   const Y = 0.32;
-  g.add(poly([[-3.3, Y, -1.95], [3.3, Y, -1.95], [3.3, Y, 1.95], [-3.3, Y, 1.95]], paperLine, true));
-  g.add(poly([[0, Y, -1.95], [0, Y, 1.95]]));
-  g.add(poly(Array.from({ length: 25 }, (_, i) => { const a = i / 24 * Math.PI * 2;
-    return [Math.cos(a) * 0.7, Y, Math.sin(a) * 0.7]; }), paperLine, true));
-  for (const sx of [-1, 1])
-    g.add(poly([[sx * 3.3, Y, -0.95], [sx * 2.45, Y, -0.95], [sx * 2.45, Y, 0.95], [sx * 3.3, Y, 0.95]]));
-  for (const sx of [-1, 1]) {                                          // 골대(검정 + 흰 그물)
-    const go = new THREE.Group(); go.position.set(sx * 3.42, 0.3, 0);
-    go.add(at(box(0.14, 0.85, 1.5, { fill: 'ink' }), 0, 0.42, 0));
-    const net = [];
+  const tape = (bx, bz, br) => {                                      // 검정+노랑 도로 테이프
+    g.add(at(box(1.05, 0.38, 0.62, { fill: 'ink' }), bx, 0.49, bz, br));
+    g.add(at(box(0.5, 0.06, 0.15, { fill: YELLOW }), bx, 0.69, bz, br));
+  };
+  const pitch = (ox) => {                                             // 축구장 한 면(판 + 흰 라인)
+    const p = new THREE.Group(); p.position.x = ox;
+    p.add(at(box(5.6, 0.3, 4.2, { fill: GRASS }), 0, 0.15, 0));
+    p.add(poly([[-2.6, Y, -1.85], [2.6, Y, -1.85], [2.6, Y, 1.85], [-2.6, Y, 1.85]], paperLine, true));
+    p.add(poly([[0, Y, -1.85], [0, Y, 1.85]]));
+    p.add(poly(Array.from({ length: 25 }, (_, i) => { const a = i / 24 * Math.PI * 2;
+      return [Math.cos(a) * 0.66, Y, Math.sin(a) * 0.66]; }), paperLine, true));
+    for (const sx of [-1, 1])
+      p.add(poly([[sx * 2.6, Y, -0.9], [sx * 1.8, Y, -0.9], [sx * 1.8, Y, 0.9], [sx * 2.6, Y, 0.9]]));
+    g.add(p); return p;
+  };
+  const netDots = (yb = 0.14, h = 0.72, w = 1.4) => {                 // 흰 그물(양면 점그물, 1 드로우콜)
+    const n = [];
     for (let i = 0; i <= 5; i++) for (let j = 0; j <= 7; j++)
-      net.push([0.085, 0.13 + i * 0.14, -0.68 + j * 0.195], [-0.085, 0.13 + i * 0.14, -0.68 + j * 0.195]);
-    go.add(dotField(net, PAPER, 2.6));
-    g.add(go);
-  }
-  [[-2.2, -1.2], [-1.4, 0.6], [-0.6, -0.4], [1.2, 1.1], [2.1, -0.8], [0.9, -1.35]]
-    .forEach(([px, pz]) => { const p = ico(0.16, { fill: 'ink' }); p.position.set(px, 0.47, pz); g.add(p); });
-  const ball = ico(0.2); ball.position.set(0.25, 0.5, 0.15); g.add(ball);
-  [[-2.6, 2.45, 0], [0.7, 2.45, 0], [3.05, 2.3, 0.4]].forEach(([bx, bz, br]) => {
-    g.add(at(box(1.1, 0.4, 0.65, { fill: 'ink' }), bx, 0.5, bz, br));  // 검정+노랑 도로 테이프
-    g.add(at(box(0.55, 0.06, 0.16, { fill: YELLOW }), bx, 0.71, bz, br));
-  });
-  g.add(at(cyl(0.03, 0.03, 0.5, 5), -3.2, 0.55, -1.85));               // 코너 깃발
-  g.add(at(box(0.3, 0.22, 0.03, { fill: REDC }), -3.04, 0.72, -1.85));
-  g.add(at(ico(0.22), -2.5, 0.48, -1.6));                              // 흰 강아지
-  g.add(at(box(0.9, 0.8, 0.7, { fill: WOOD }), -3.55, 0.7, 1.35));     // 관중 건물 블록
+      n.push([0.085, yb + i * (h / 5), -w / 2 + j * (w / 7)], [-0.085, yb + i * (h / 5), -w / 2 + j * (w / 7)]);
+    return dotField(n, PAPER, 2.6);
+  };
+  const goalBlack = (p, sx) => {                                      // 검정 골대
+    const go = new THREE.Group(); go.position.set(sx * 2.72, 0.3, 0);
+    go.add(at(box(0.14, 0.85, 1.5, { fill: 'ink' }), 0, 0.42, 0));
+    go.add(netDots()); p.add(go);
+  };
+  const goalWood = (p, sx) => {                                       // 원목 프레임 골대
+    const go = new THREE.Group(); go.position.set(sx * 2.72, 0.3, 0);
+    go.add(at(box(0.16, 0.85, 1.5, { fill: WOOD }), 0, 0.42, 0));
+    go.add(netDots()); p.add(go);
+    p.add(at(box(0.22, 0.5, 1.3, { fill: WOOD }), sx * 2.2, 0.55, 0.15));  // 옆에 세운 널
+  };
+  // ── 왼쪽 판: 양끝 검정 그물 골대 + 흩뿌린 흰 종이 조각 ──
+  const L = pitch(-3.0);
+  goalBlack(L, -1); goalBlack(L, 1);
+  const rnd = lcg(31); const scraps = [];
+  for (let i = 0; i < 34; i++) scraps.push([(rnd() - 0.5) * 4.6, 0.36, (rnd() - 0.5) * 3.2]);
+  L.add(dotField(scraps, PAPER, 4.6));
+  L.add(at(ico(0.2, { fill: REDC }), 0, 0.5, 0));                     // 센터서클 빨간 공
+  // ── 오른쪽 판: 원목 골대 + 검정 선수 · 축구공 · 흰 강아지 · 코너 깃발 · 벽돌 건물 ──
+  const R = pitch(3.0);
+  goalBlack(R, -1); goalWood(R, 1);
+  [[-1.5, -1.25], [-0.55, 0.7], [0.35, -0.55], [1.05, 1.15], [1.7, -1.0], [0.15, 1.4]]
+    .forEach(([px2, pz]) => { const f = ico(0.16, { fill: 'ink' }); f.position.set(px2, 0.47, pz); R.add(f); });
+  R.add(at(ico(0.2), 1.35, 0.5, 0.55));                               // 축구공
+  R.add(at(ico(0.22), 1.05, 0.48, 1.5));                              // 흰 강아지
+  R.add(at(cyl(0.03, 0.03, 0.5, 5), 2.35, 0.55, 1.6));                // 코너 깃발(체크)
+  R.add(at(box(0.32, 0.24, 0.03, { fill: REDC }), 2.19, 0.72, 1.6));
+  R.add(at(box(0.95, 0.9, 0.8, { fill: WOOD }), 2.45, 0.75, -0.35));  // 벽돌 건물 블록
+  const brick = [];
+  for (let r = 0; r < 4; r++) for (let c2 = 0; c2 < 3; c2++)
+    brick.push([2.45 - 0.3 + c2 * 0.3, 0.45 + r * 0.2, 0.07]);
+  R.add(dotField(brick, INK, 3));
+  R.add(at(ico(0.2, { fill: REDC }), 3.05, 0.62, -0.9));              // 빨강·파랑 인형
+  R.add(at(ico(0.17, { fill: BLUE }), 3.05, 0.95, -0.9));
+  // ── 두 판 이음매·바깥 테두리의 도로 테이프 블록 ──
+  [[0, 1.95, 0], [0, -0.4, 0], [0, -2.3, 0], [-4.4, -2.35, 0], [-1.9, -2.35, 0.1], [5.5, -2.3, 0]]
+    .forEach(([bx, bz, br]) => tape(bx, bz, br));
+  g.add(at(box(1.5, 0.12, 0.35, { fill: WOOD }), -4.1, 0.37, -2.35)); // 원목 벤치
   return g; };
 
 // ── ⑦ 야구장 (사진 10 좌하 · 9) — 갈색 흙 다이아몬드 + 흰 베이스 ──
