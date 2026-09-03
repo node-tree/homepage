@@ -1,0 +1,167 @@
+[
+  {
+    "id": "ground",
+    "name": "마을의 운동장",
+    "glb": "/models/signal/ground.glb",
+    "meshes": 34,
+    "lines": 44,
+    "motors": 0,
+    "leds": 0,
+    "size_kb": 139.1,
+    "bbox": [
+      12.025,
+      1.2,
+      4.971
+    ]
+  },
+  {
+    "id": "baseball",
+    "name": "야구장",
+    "glb": "/models/signal/baseball.glb",
+    "meshes": 11,
+    "lines": 13,
+    "motors": 0,
+    "leds": 0,
+    "size_kb": 44.5,
+    "bbox": [
+      4.669,
+      0.76,
+      4.17
+    ]
+  },
+  {
+    "id": "chugunsan",
+    "name": "축운산",
+    "glb": "/models/signal/chugunsan.glb",
+    "meshes": 22,
+    "lines": 22,
+    "motors": 0,
+    "leds": 0,
+    "size_kb": 86.1,
+    "bbox": [
+      5.332,
+      2.743,
+      3.793
+    ]
+  },
+  {
+    "id": "shop-alley",
+    "name": "상가 골목",
+    "glb": "/models/signal/shop-alley.glb",
+    "meshes": 14,
+    "lines": 14,
+    "motors": 0,
+    "leds": 1,
+    "size_kb": 55.1,
+    "bbox": [
+      5.6,
+      2.705,
+      3.2
+    ]
+  },
+  {
+    "id": "star-yard",
+    "name": "별빛 마당",
+    "glb": "/models/signal/star-yard.glb",
+    "meshes": 16,
+    "lines": 12,
+    "motors": 0,
+    "leds": 1,
+    "size_kb": 56.8,
+    "bbox": [
+      5.15,
+      3.1,
+      4.25
+    ]
+  },
+  {
+    "id": "village-circuit",
+    "name": "마을 회로",
+    "glb": "/models/signal/village-circuit.glb",
+    "meshes": 17,
+    "lines": 20,
+    "motors": 1,
+    "leds": 3,
+    "size_kb": 82.9,
+    "bbox": [
+      6.8,
+      1,
+      5.276
+    ]
+  },
+  {
+    "id": "ipdae-gate",
+    "name": "입대 정문",
+    "glb": "/models/signal/ipdae-gate.glb",
+    "meshes": 21,
+    "lines": 24,
+    "motors": 1,
+    "leds": 1,
+    "size_kb": 94.8,
+    "bbox": [
+      6.2,
+      0.93,
+      5.922
+    ]
+  },
+  {
+    "id": "pond-field",
+    "name": "연못 들판",
+    "glb": "/models/signal/pond-field.glb",
+    "meshes": 15,
+    "lines": 15,
+    "motors": 0,
+    "leds": 3,
+    "size_kb": 74,
+    "bbox": [
+      4.4,
+      2.125,
+      5.212
+    ]
+  },
+  {
+    "id": "karasuno",
+    "name": "카라스노 고교",
+    "glb": "/models/signal/karasuno.glb",
+    "meshes": 17,
+    "lines": 18,
+    "motors": 0,
+    "leds": 1,
+    "size_kb": 70.9,
+    "bbox": [
+      5.4,
+      2,
+      3.8
+    ]
+  },
+  {
+    "id": "cherry",
+    "name": "체리",
+    "glb": "/models/signal/cherry.glb",
+    "meshes": 20,
+    "lines": 20,
+    "motors": 0,
+    "leds": 0,
+    "size_kb": 84.2,
+    "bbox": [
+      5.004,
+      2.486,
+      3.4
+    ]
+  },
+  {
+    "id": "frog-pond",
+    "name": "개구리 연못",
+    "glb": "/models/signal/frog-pond.glb",
+    "meshes": 27,
+    "lines": 27,
+    "motors": 1,
+    "leds": 1,
+    "size_kb": 131.8,
+    "bbox": [
+      6.8,
+      4.96,
+      4.661
+    ]
+  }
+]
