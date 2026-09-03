@@ -1,9 +1,11 @@
 // ═══════════════════════════════════════════════════════════════
 // ImageKitPicker — 에디터용 ImageKit 이미지 피커 모달
-//   · MediaAdmin 의 브라우징/업로드 로직을 피커 형태로 재사용.
 //   · 기존 이미지 검색·폴더 탐색 + 신규 업로드(장변 2400px 자동 리사이즈).
 //   · 선택 시 onSelect(url) — 단일/다중 선택 지원.
 //   · 삽입 URL 변환은 호출측(블록 직렬화)에서 ikUrl 규칙으로 처리.
+//   · 목록 페칭(useIkList)·경로 유틸(utils/ikPath)은 MediaAdmin 과 공유한다.
+//     예전에는 두 파일이 normalizePath/parentPath/isFolder/loadList 를 각자 복제하고
+//     있었다 — 한쪽만 고쳐지는 사고를 막기 위해 공용 모듈로 합쳤다.
 // ═══════════════════════════════════════════════════════════════
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -14,6 +16,8 @@ import {
 } from '../../services/imagekitAdminApi';
 import { prepareImageForUpload } from '../../utils/imageResize';
 import { ikUrl } from '../../utils/ikUrl';
+import { isFolder, normalizePath, parentPath, folderTargetPath } from '../../utils/ikPath';
+import { useIkList } from '../../hooks/useIkList';
 // 피커 스타일(.ikp-*)은 BlockEditor.css 에 정의됨. BlockEditor 가 렌더되지 않는
 // 화면(예: 꿈다락 마을일기)에서도 피커가 올바로 보이도록 직접 import 한다.
 import './BlockEditor.css';
@@ -36,24 +40,6 @@ function writeLastPath(path: string): void {
   } catch {
     /* sessionStorage 불가 환경 — 무시(기능만 비활성) */
   }
-}
-
-function isFolder(f: IkFile): boolean {
-  return f.type === 'folder' || (!f.url && !!(f.folderPath || f.folderId));
-}
-function normalizePath(p: string): string {
-  if (!p) return '/';
-  let out = p.trim();
-  if (!out.startsWith('/')) out = `/${out}`;
-  out = out.replace(/\/+/g, '/');
-  if (out.length > 1) out = out.replace(/\/+$/, '');
-  return out || '/';
-}
-function parentPath(path: string): string | null {
-  const norm = normalizePath(path);
-  if (norm === '/') return null;
-  const idx = norm.lastIndexOf('/');
-  return idx <= 0 ? '/' : norm.slice(0, idx);
 }
 
 interface UploadRow {
@@ -80,14 +66,11 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
   multiple = false,
   title = '이미지 선택',
 }) => {
-  const [files, setFiles] = useState<IkFile[]>([]);
   const [browsePath, setBrowsePath] = useState<string>(() => readLastPath());
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [skip, setSkip] = useState(0);
-  const [listLoading, setListLoading] = useState(false);
-  const [listError, setListError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
+  // 목록 페칭이 아닌 "동작"(폴더 생성·삭제) 실패 메시지 — 재조회로 지워지면 안 되므로 분리.
+  const [actionError, setActionError] = useState<string | null>(null);
   const [uploads, setUploads] = useState<UploadRow[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -102,51 +85,46 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
   const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadList = useCallback(
-    async (reset: boolean) => {
-      setListLoading(true);
-      setListError(null);
-      const nextSkip = reset ? 0 : skip;
-      try {
-        // 폴더 설정과 검색을 연동: 현재 폴더(browsePath)를 항상 path 로 보내 검색·목록을
-        // 같은 폴더로 스코프한다. 폴더를 바꾸면 검색 결과도 그 폴더 기준으로 갱신된다.
-        const scopePath = normalizePath(browsePath || '/');
-        const result = await imagekitAdminAPI.listFiles({
-          // 루트('/')는 path 미지정과 동치 → 전체. 하위 폴더면 그 폴더로 스코프.
-          path: scopePath !== '/' ? scopePath : undefined,
-          searchQuery: search
-            ? `name LIKE "%${search.replace(/["%\\]/g, '\\$&')}%"`
-            : undefined,
-          skip: nextSkip,
-          limit: PAGE_SIZE,
-        });
-        setHasMore(result.length === PAGE_SIZE);
-        setFiles((prev) => (reset ? result : [...prev, ...result]));
-        setSkip(nextSkip + result.length);
-      } catch (e: any) {
-        if (e?.code === 'AUTH_EXPIRED') {
-          setListError('인증이 만료되었습니다. 다시 로그인해주세요.');
-          return;
-        }
-        if (e?.code === 'FORBIDDEN') {
-          setListError('관리자 권한이 필요합니다.');
-          return;
-        }
-        // 복원/설정한 폴더가 삭제됐거나 목록 실패 → 루트로 graceful 폴백(비루트일 때).
-        // 검색도 폴더 스코프이므로 검색 중에도 동일하게 폴백한다.
-        if (browsePath && browsePath !== '/') {
-          writeLastPath('/');
-          setBrowsePath('/'); // browsePath 변경 → effect 가 루트로 재로드(검색어는 유지)
-          setListError(null);
-          return;
-        }
-        setListError(e?.message || '목록을 불러오지 못했습니다.');
-      } finally {
-        setListLoading(false);
-      }
-    },
-    [browsePath, search, skip]
-  );
+  // 목록 오류 처리 — 훅에 위임(true 반환 시 훅은 에러 표시를 하지 않는다).
+  //   · 복원/설정한 폴더가 삭제됐거나 조회 실패 → 루트로 graceful 폴백(비루트일 때).
+  //   · browsePath 는 ref 로 읽는다 — 콜백 아이덴티티가 바뀌면 재조회 루프가 된다.
+  const browsePathRef = useRef(browsePath);
+  browsePathRef.current = browsePath;
+  const handleListError = useCallback((e: any) => {
+    if (e?.code === 'AUTH_EXPIRED') {
+      setActionError('인증이 만료되었습니다. 다시 로그인해주세요.');
+      return true;
+    }
+    if (e?.code === 'FORBIDDEN') {
+      setActionError('관리자 권한이 필요합니다.');
+      return true;
+    }
+    const cur = browsePathRef.current;
+    if (cur && cur !== '/') {
+      writeLastPath('/');
+      setBrowsePath('/'); // browsePath 변경 → 훅이 루트로 재조회(검색어는 유지)
+      return true;
+    }
+    return false;
+  }, []);
+
+  // 폴더 설정과 검색을 연동: 현재 폴더(browsePath)를 항상 path 로 보내 검색·목록을
+  // 같은 폴더로 스코프한다. 폴더를 바꾸면 검색 결과도 그 폴더 기준으로 갱신된다.
+  const {
+    files,
+    setFiles,
+    loading: listLoading,
+    error: listError,
+    hasMore,
+    loadMore,
+    reload,
+  } = useIkList({
+    path: browsePath,
+    search,
+    enabled: open,
+    pageSize: PAGE_SIZE,
+    handleError: handleListError,
+  });
 
   // 열릴 때마다 마지막 사용 폴더(sessionStorage)를 복원 — 다른 마운트/페이지에서도 이어진다.
   //   검색어는 복원하지 않는다. 저장값과 현재 경로가 같으면 그대로 둔다(불필요한 재로드 방지).
@@ -160,12 +138,11 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // 목록 재조회는 useIkList 가 담당한다 — 여기서는 조건 변경에 따른 UI 상태만 정리.
   useEffect(() => {
     if (!open) return;
-    setSkip(0);
     setPendingDelete(null);
-    loadList(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setActionError(null);
   }, [open, browsePath, search]);
 
   useEffect(() => {
@@ -196,11 +173,11 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
     const name = newFolderName.trim();
     if (!name || creatingFolder) return;
     if (/[\\/]/.test(name) || name.includes('..')) {
-      setListError('폴더 이름에 / \\ .. 는 사용할 수 없습니다.');
+      setActionError('폴더 이름에 / \\ .. 는 사용할 수 없습니다.');
       return;
     }
     setCreatingFolder(true);
-    setListError(null);
+    setActionError(null);
     try {
       await imagekitAdminAPI.createFolder(name, browsePath || '/');
       setNewFolderOpen(false);
@@ -209,11 +186,11 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
       enterFolder(`${normalizePath(browsePath)}/${name}`);
     } catch (e: any) {
       if (e?.code === 'AUTH_EXPIRED') {
-        setListError('인증이 만료되었습니다. 다시 로그인해주세요.');
+        setActionError('인증이 만료되었습니다. 다시 로그인해주세요.');
       } else if (e?.code === 'FORBIDDEN') {
-        setListError('관리자 권한이 필요합니다.');
+        setActionError('관리자 권한이 필요합니다.');
       } else {
-        setListError(e?.message || '폴더 생성에 실패했습니다.');
+        setActionError(e?.message || '폴더 생성에 실패했습니다.');
       }
     } finally {
       setCreatingFolder(false);
@@ -238,7 +215,7 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
   const confirmDelete = useCallback(async () => {
     if (!pendingDelete || deleting) return;
     setDeleting(true);
-    setListError(null);
+    setActionError(null);
     try {
       if (pendingDelete.kind === 'file') {
         await imagekitAdminAPI.deleteFile(pendingDelete.id);
@@ -259,22 +236,22 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
           const up = parentPath(pendingDelete.path) || '/';
           enterFolder(up);
         } else {
-          loadList(true); // 목록에서만 제거 — 재조회로 갱신.
+          reload(); // 목록에서만 제거 — 재조회로 갱신.
         }
       }
       setPendingDelete(null);
     } catch (e: any) {
       if (e?.code === 'AUTH_EXPIRED') {
-        setListError('인증이 만료되었습니다. 다시 로그인해주세요.');
+        setActionError('인증이 만료되었습니다. 다시 로그인해주세요.');
       } else if (e?.code === 'FORBIDDEN') {
-        setListError('삭제 권한이 없습니다.');
+        setActionError('삭제 권한이 없습니다.');
       } else {
-        setListError(e?.message || '삭제에 실패했습니다.');
+        setActionError(e?.message || '삭제에 실패했습니다.');
       }
     } finally {
       setDeleting(false);
     }
-  }, [pendingDelete, deleting, files, browsePath, enterFolder, loadList]);
+  }, [pendingDelete, deleting, files, browsePath, enterFolder, reload, setFiles]);
 
   const processFiles = useCallback(
     async (fileList: FileList | File[]) => {
@@ -524,15 +501,15 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
             ))}
         </div>
 
-        {listError && <p className="ikp-error">{listError}</p>}
+        {(actionError || listError) && <p className="ikp-error">{actionError || listError}</p>}
 
         <div className="ikp-body">
           {/* 폴더 — 파일 그리드와 분리된 자체 섹션(줄바꿈·ellipsis로 겹침 방지) */}
           {!search && folders.length > 0 && (
             <div className="ikp-folders" role="list" aria-label="폴더">
               {folders.map((f) => {
-                const target = f.folderPath || `${normalizePath(browsePath)}/${f.name}`;
-                const norm = normalizePath(target);
+                const target = folderTargetPath(f, browsePath);
+                const norm = target;
                 const armed = pendingDelete?.kind === 'folder' && pendingDelete.path === norm;
                 return (
                   <div
@@ -678,7 +655,7 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
           )}
         </div>
 
-        {!listLoading && files.length === 0 && !listError && (
+        {!listLoading && files.length === 0 && !listError && !actionError && (
           <p className="ikp-empty">
             {search
               ? `‘${browsePath}’ 폴더에서 검색 결과가 없습니다.`
@@ -689,7 +666,7 @@ const ImageKitPicker: React.FC<ImageKitPickerProps> = ({
         <div className="ikp-foot">
           {listLoading && <span className="ikp-muted">불러오는 중…</span>}
           {!listLoading && hasMore && (
-            <button className="ikp-btn ghost" onClick={() => loadList(false)}>
+            <button className="ikp-btn ghost" onClick={loadMore}>
               더 보기
             </button>
           )}

@@ -1,7 +1,7 @@
 /* ImageKit 관리자 미디어 페이지 — 데스크톱/모바일 대응 */
 
 .media-admin {
-  max-width: 1100px;
+  max-width: 1240px;
   margin: 0 auto;
   padding: 32px 16px 80px;
   color: #1a1a1a;
@@ -129,11 +129,15 @@
   font-size: 14px;
   min-width: 200px;
 }
+/* 체크박스 라벨 — .ma-upload-options 밖(검색줄 '전체 폴더')에서도 동일하게 보이도록
+   display 를 여기서 직접 준다(예전엔 부모 셀렉터에만 있어 라벨이 붙어 나왔다). */
 .ma-checkbox {
+  display: inline-flex !important;
   flex-direction: row !important;
   align-items: center;
   gap: 6px !important;
   font-size: 13px !important;
+  white-space: nowrap;
 }
 .ma-checkbox input {
   width: 16px;
@@ -555,4 +559,760 @@ button.ma-crumb:hover {
   border: 1px solid #ddd;
   border-radius: 6px;
   font-size: 0.82rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   폴더 탐색 · 일괄 작업 · 상세 패널
+   기존 팔레트(#1a1a1a / #555 / #999 / #ececec / #4a7cff / #c0392b)만 사용.
+   ═══════════════════════════════════════════════════════════════ */
+
+.ma-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.ma-section-head h2 {
+  margin: 0;
+}
+/* 트리 토글은 모바일 전용 — 데스크톱은 사이드가 상시 노출된다. */
+.ma-tree-toggle {
+  display: none;
+}
+
+/* 좌: 폴더 트리 / 우: 목록 — Grid(플렉스 퍼센트 계산 금지) */
+.ma-lib {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.ma-lib-main {
+  min-width: 0;
+}
+.ma-lib-side {
+  border: 1px solid #ececec;
+  border-radius: 12px;
+  padding: 12px 10px;
+  background: #fcfcfc;
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+}
+.ma-side-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #999;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+/* 폴더 트리 */
+.ma-tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.mt-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 6px;
+}
+.mt-row:hover {
+  background: #f2f2f2;
+}
+.mt-row.current {
+  background: #f0f4ff;
+}
+.mt-row.current .mt-label {
+  color: #1a1a1a;
+  font-weight: 600;
+}
+.mt-row.disabled .mt-label {
+  color: #ccc;
+  cursor: not-allowed;
+}
+.mt-toggle {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: #999;
+}
+.mt-toggle-static {
+  cursor: default;
+}
+.mt-chev {
+  transition: transform 0.12s ease;
+}
+.mt-chev.open {
+  transform: rotate(90deg);
+}
+.mt-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: none;
+  padding: 3px 4px;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: #555;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.mt-folder-ic {
+  flex: 0 0 auto;
+  color: #aaa;
+}
+.mt-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mt-children {
+  margin: 0;
+  padding: 0;
+}
+.mt-hint {
+  padding: 2px 4px 2px 24px;
+  font-size: 11.5px;
+  color: #bbb;
+}
+.mt-error {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  color: #c0392b;
+}
+
+/* 최근 방문 폴더 */
+.ma-recent {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #ececec;
+}
+.ma-recent ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ma-recent-btn {
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 3px 4px;
+  font-family: inherit;
+  font-size: 12px;
+  color: #4a7cff;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* direction:rtl 은 선행 '/' 를 끝으로 재배치해 '/uploads' 가 'uploads/' 로 보인다(실측). */
+}
+.ma-recent-btn:hover {
+  background: #f0f4ff;
+}
+
+/* 정렬 선택 */
+.ma-sort {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #777;
+}
+.ma-sort select {
+  padding: 7px 8px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-family: inherit;
+  background: #fff;
+  color: #1a1a1a;
+}
+.ma-global-toggle {
+  align-self: center;
+  color: #777 !important;
+}
+
+/* 선택 도구막대 */
+.ma-selbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  border: 1px solid #ececec;
+  border-radius: 10px;
+  background: #fafafa;
+}
+.ma-selbar.active {
+  border-color: #c8d4ff;
+  background: #f7f9ff;
+}
+.ma-selbar-count {
+  flex: 1 1 auto;
+  font-size: 12.5px;
+  color: #777;
+}
+.ma-selbar.active .ma-selbar-count {
+  color: #1a1a1a;
+  font-weight: 600;
+}
+.ma-selbar-warn {
+  font-size: 12.5px;
+  color: #c0392b;
+  font-weight: 600;
+}
+
+/* 작업 결과 알림 */
+.ma-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #f2f6ff;
+  border: 1px solid #d9e3ff;
+  font-size: 12.5px;
+  color: #33415c;
+  line-height: 1.45;
+}
+.ma-notice-x {
+  margin-left: auto;
+  border: none;
+  background: none;
+  font-size: 16px;
+  line-height: 1;
+  color: #8a95ad;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+/* 파일 카드 — 선택 체크박스 / 썸네일 버튼 */
+.ma-card {
+  position: relative;
+}
+.ma-card.selected {
+  border-color: #4a7cff;
+  box-shadow: inset 0 0 0 1px #4a7cff;
+}
+.ma-select {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.ma-select input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  cursor: pointer;
+}
+.ma-thumb-btn {
+  width: 100%;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+.ma-jump {
+  margin-top: 4px;
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 11px;
+  color: #4a7cff;
+  cursor: pointer;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  text-align: left;
+}
+.ma-jump:hover {
+  text-decoration: underline;
+}
+/* 폴더 카드 액션(이동/이름변경) */
+.ma-folder-actions {
+  padding-top: 0;
+}
+.ma-folder-thumb {
+  color: #b8c4e0;
+}
+
+/* ── 모달(이동 대상 선택 · 이름변경) ─────────────────────────── */
+.ma-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(26, 26, 26, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.ma-modal {
+  width: min(560px, 100%);
+  max-height: min(84vh, 720px);
+  overflow: auto;
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 18px 48px rgba(26, 26, 26, 0.22);
+}
+.ma-modal-narrow {
+  width: min(440px, 100%);
+}
+.ma-modal-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ma-modal-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+.ma-modal-subject {
+  font-size: 12.5px;
+  color: #777;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ma-modal-warn {
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: #fdf3f2;
+  border: 1px solid #f3dada;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #8c4038;
+  word-break: keep-all;
+}
+.ma-modal-warn strong {
+  color: #c0392b;
+}
+.ma-modal-tree {
+  border: 1px solid #ececec;
+  border-radius: 10px;
+  padding: 10px;
+  max-height: 280px;
+  overflow: auto;
+  background: #fcfcfc;
+}
+.ma-modal-manual {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ma-modal-manual label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #999;
+  text-transform: uppercase;
+}
+.ma-modal-manual-row {
+  display: flex;
+  gap: 6px;
+}
+.ma-modal-manual input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-family: inherit;
+}
+.ma-modal-hint {
+  margin: 0;
+  font-size: 11.5px;
+  color: #999;
+  line-height: 1.45;
+}
+.ma-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ma-btn.primary {
+  border-color: #4a7cff;
+  background: #4a7cff;
+  color: #fff;
+}
+.ma-btn.primary:hover {
+  background: #3a6ae8;
+}
+/* 터치 피드백 — transform 만 애니메이션 */
+.ma-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* ── 상세 드로어 ─────────────────────────────────────────────── */
+.ma-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(26, 26, 26, 0.35);
+  display: flex;
+  justify-content: flex-end;
+}
+.ma-drawer {
+  width: min(380px, 100%);
+  height: 100%;
+  overflow: auto;
+  background: #fff;
+  padding: 18px 18px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: -8px 0 32px rgba(26, 26, 26, 0.16);
+}
+.ma-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ma-drawer-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+.ma-drawer-x {
+  border: none;
+  background: none;
+  font-size: 22px;
+  line-height: 1;
+  color: #999;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.ma-drawer-thumb {
+  border: 1px solid #ececec;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f3f3f3;
+}
+.ma-drawer-thumb img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.ma-detail {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 6px 10px;
+  margin: 0;
+  font-size: 12.5px;
+}
+.ma-detail dt {
+  color: #999;
+}
+.ma-detail dd {
+  margin: 0;
+  color: #1a1a1a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-all;
+}
+.ma-detail-urls {
+  border-top: 1px solid #ececec;
+  padding-top: 12px;
+}
+.ma-detail-url-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+/* ── 편집 패널(비파괴 URL 변환 / 파괴 원본 교체) ───────────────── */
+.ma-edit-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #ececec;
+}
+.ma-drawer-tabs {
+  margin-bottom: 2px;
+}
+.ma-edit-tab {
+  border: none;
+  background: none;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: #999;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.ma-edit-tab.on {
+  color: #1a1a1a;
+  font-weight: 700;
+  border-bottom-color: #1a1a1a;
+}
+.ma-edit-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+}
+.ma-edit-note {
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: #f7f7f7;
+  border: 1px solid #ececec;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #555;
+  word-break: keep-all;
+}
+.ma-edit-warn {
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: #fdf3f2;
+  border: 1px solid #f3dada;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #8c4038;
+  word-break: keep-all;
+}
+.ma-edit-warn strong {
+  color: #c0392b;
+}
+.ma-edit-preview {
+  border: 1px solid #ececec;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f3f3f3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  max-height: 320px;
+}
+.ma-edit-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+.ma-edit-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+.ma-edit-label {
+  flex: 0 0 56px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #999;
+  text-transform: uppercase;
+}
+.ma-edit-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ma-btn.on {
+  border-color: #1a1a1a;
+  background: #1a1a1a;
+  color: #fff;
+}
+.ma-btn.on:hover {
+  background: #333;
+}
+.ma-edit-cur {
+  font-size: 12px;
+  color: #777;
+  align-self: center;
+}
+.ma-edit-urlbox {
+  border-top: 1px solid #ececec;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ma-edit-tr {
+  display: block;
+  padding: 7px 9px;
+  border-radius: 6px;
+  background: #f3f3f3;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  color: #444;
+  word-break: break-all;
+}
+.ma-edit-size {
+  grid-template-columns: 42px minmax(0, 1fr);
+}
+
+/* 크롭 오버레이 */
+.ma-crop-stage {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+}
+.ma-crop-stage img {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+}
+.ma-cropwrap {
+  position: absolute;
+  inset: 0;
+  touch-action: none; /* 드래그 중 페이지 스크롤 방지(모바일 필수) */
+  cursor: crosshair;
+}
+.ma-crop-mask {
+  position: absolute;
+  background: rgba(26, 26, 26, 0.5);
+  pointer-events: none;
+}
+.ma-crop-rect {
+  position: absolute;
+  border: 1px solid #fff;
+  box-shadow: 0 0 0 1px rgba(26, 26, 26, 0.6);
+  cursor: move;
+}
+.ma-crop-handle {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border: 1px solid #1a1a1a;
+  border-radius: 2px;
+}
+.ma-crop-handle.nw {
+  left: -8px;
+  top: -8px;
+  cursor: nwse-resize;
+}
+.ma-crop-handle.ne {
+  right: -8px;
+  top: -8px;
+  cursor: nesw-resize;
+}
+.ma-crop-handle.sw {
+  left: -8px;
+  bottom: -8px;
+  cursor: nesw-resize;
+}
+.ma-crop-handle.se {
+  right: -8px;
+  bottom: -8px;
+  cursor: nwse-resize;
+}
+
+/* ── 모바일 ──────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .ma-lib {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ma-tree-toggle {
+    display: inline-block;
+  }
+  /* 모바일 트리는 접이식 — 열었을 때만 흐름에 등장한다. */
+  .ma-lib-side {
+    display: none;
+    position: static;
+    max-height: 46vh;
+    margin-bottom: 14px;
+  }
+  .ma-lib-side.open {
+    display: block;
+  }
+}
+
+@media (max-width: 600px) {
+  .ma-selbar {
+    gap: 6px;
+  }
+  .ma-selbar-count {
+    flex-basis: 100%;
+  }
+  .ma-sort {
+    width: 100%;
+  }
+  .ma-sort select {
+    flex: 1;
+    min-width: 0;
+  }
+  /* 모달은 하단 시트로 */
+  .ma-modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .ma-modal {
+    width: 100%;
+    max-height: 88vh;
+    border-radius: 14px 14px 0 0;
+  }
+  .ma-modal-tree {
+    max-height: 200px;
+  }
+  /* 상세도 하단 시트 */
+  .ma-drawer-overlay {
+    align-items: flex-end;
+  }
+  .ma-drawer {
+    width: 100%;
+    height: auto;
+    max-height: 86vh;
+    border-radius: 14px 14px 0 0;
+    padding-bottom: 24px;
+  }
+  .ma-select {
+    width: 26px;
+    height: 26px;
+  }
 }
