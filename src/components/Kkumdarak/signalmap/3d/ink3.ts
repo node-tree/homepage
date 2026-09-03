@@ -28,6 +28,9 @@ export const boilTick = (amp = 0.045) => {
   }
 };
 export const boilerCount = () => boilers.length;
+const boilerSet = () => new Set(boilers.map(b => b.line));
+const dropBoilers = set => { boilers = boilers.filter(b => !set.has(b.line)); };
+const addBoiler = line => { boilers.push({ line, base: line.geometry.attributes.position.array.slice() }); };
 
 export function inked(geo, opts = {}) {
   const g = new THREE.Group();
@@ -74,4 +77,110 @@ export function trackAt(tr, dist) {
   const [x0, z0] = tr.pts[i - 1];
   const [x1, z1] = tr.pts[i];
   return { x: x0 + (x1 - x0) * t, z: z0 + (z1 - z0) * t, ang: Math.atan2(-(z1 - z0), x1 - x0) };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// 정적 지오메트리 병합 — 드로우콜 절감(같은 그림, 적은 호출)
+//   '정적'은 코드 추측이 아니라 실측이다: ticks를 여러 t로 돌려 world 행렬·머티리얼 색·
+//   visible이 한 번이라도 변한 오브젝트를 동적으로 판정하고, 나머지만 묶는다.
+//   프로브가 남긴 포즈·색은 원상복구한다(reduced-motion 화면이 달라지면 안 된다).
+//   원본은 씬에 남기되 visible=false — placed 기반 감사·디버그 리그가 그대로 동작한다.
+//   먹선(EdgesGeometry LineSegments)도 병합하고, 보일링은 원본에서 떼어 병합본에 재등록한다.
+// ═══════════════════════════════════════════════════════════════════════
+const MERGE_T = [0, 137, 411, 900, 1733, 2600, 3700, 5300, 7900, 11300, 15100, 21000, 33000];
+
+// 병합 가능한 머티리얼만 서명을 돌려준다(파선·투명·텍스처는 제외 — 위상/정렬이 깨진다)
+const mergeKey = m => {
+  if (!m || m.isLineDashedMaterial || m.transparent || m.opacity < 1) return null;
+  if (!(m.isMeshBasicMaterial || m.isLineBasicMaterial)) return null;
+  if (m.map || m.vertexColors || m.alphaMap) return null;
+  return [m.type, m.color.getHexString(), m.side, m.depthTest, m.depthWrite, m.blending,
+    m.polygonOffset, m.polygonOffsetFactor, m.polygonOffsetUnits, m.toneMapped].join('|');
+};
+
+//   keep = 병합 금지 오브젝트(자손 포함). ticks 밖에서 색·포즈가 바뀌는 것들 — 신호 전구는
+//   도시 루프(SignalMap3D)가 blink 리듬으로 색을 갈아끼우므로 프로브가 볼 수 없다. 반드시 제외.
+export function mergeStatics(scene, ticks, keep) {
+  const t0 = (typeof performance !== 'undefined' ? performance.now() : 0);
+  scene.updateMatrixWorld(true);
+  const objs = [];
+  scene.traverse(o => { if (o.isMesh || o.isLine || o.isLineSegments || o.isLineLoop || o.isPoints) objs.push(o); });
+
+  // ① 원상복구 스냅샷(트랜스폼 + 머티리얼 색)
+  const nodes = [];
+  scene.traverse(o => nodes.push([o, o.position.clone(), o.quaternion.clone(), o.scale.clone(), o.visible]));
+  const mats = new Map();
+  for (const o of objs) if (o.material && o.material.color && !mats.has(o.material)) mats.set(o.material, o.material.color.getHex());
+
+  // ② 동적 판정 — ticks를 샘플 t로 돌려 변화를 관찰
+  const sig = () => objs.map(o => {
+    const e = o.matrixWorld.elements; let s = '';
+    for (let i = 0; i < 16; i++) s += Math.round(e[i] * 1e4) + ',';
+    return s + (o.material && o.material.color ? o.material.color.getHex() : 0) + (o.visible ? 1 : 0);
+  });
+  const base = sig();
+  const dyn = new Uint8Array(objs.length);
+  for (const t of MERGE_T) {
+    for (const fn of ticks) { try { fn(t); } catch (e) { /* 프로브 실패는 보수적으로 무시 */ } }
+    scene.updateMatrixWorld(true);
+    const s = sig();
+    for (let i = 0; i < objs.length; i++) if (s[i] !== base[i]) dyn[i] = 1;
+  }
+  for (const [o, p, q, sc, v] of nodes) { o.position.copy(p); o.quaternion.copy(q); o.scale.copy(sc); o.visible = v; }
+  for (const [m, hex] of mats) m.color.setHex(hex);
+  scene.updateMatrixWorld(true);
+
+  // ③ 버킷 수집 — (타입 × 머티리얼 서명 × 보일링 여부)
+  const boilSet = boilerSet();
+  const banned = new Set();
+  if (keep) for (const k of keep) k && k.traverse(o => banned.add(o));
+  const buckets = new Map();
+  for (let i = 0; i < objs.length; i++) {
+    const o = objs[i];
+    if (dyn[i] || banned.has(o) || o.isPoints || !o.geometry || !o.geometry.attributes.position) continue;
+    const k = mergeKey(o.material);
+    if (!k) continue;
+    const kind = o.isMesh ? 'mesh' : 'line';
+    const boil = kind === 'line' && boilSet.has(o);
+    const key = `${kind}|${k}|${boil ? 'boil' : 'flat'}`;
+    let rec = buckets.get(key);
+    if (!rec) buckets.set(key, rec = { kind, boil, mat: o.material, src: [], arr: [] });
+    rec.src.push(o);
+  }
+
+  // ④ world 좌표로 구워 한 덩어리로
+  const v = new THREE.Vector3();
+  const bake = (rec, o) => {
+    const g = o.geometry, pos = g.attributes.position, idx = g.index, mw = o.matrixWorld;
+    const n = idx ? idx.count : pos.count;
+    const at3 = i => v.fromBufferAttribute(pos, idx ? idx.getX(i) : i).applyMatrix4(mw);
+    if (rec.kind === 'mesh') {
+      for (let i = 0; i < n; i++) { at3(i); rec.arr.push(v.x, v.y, v.z); }
+    } else if (o.isLineSegments) {
+      for (let i = 0; i + 1 < n; i += 2) { at3(i); rec.arr.push(v.x, v.y, v.z); at3(i + 1); rec.arr.push(v.x, v.y, v.z); }
+    } else {                                        // Line(스트립) · LineLoop → 세그먼트로 변환
+      const cnt = o.isLineLoop ? n : n - 1;
+      for (let i = 0; i < cnt; i++) { at3(i); rec.arr.push(v.x, v.y, v.z); at3((i + 1) % n); rec.arr.push(v.x, v.y, v.z); }
+    }
+  };
+  const merged = [], dropped = new Set();
+  let saved = 0;
+  for (const [key, rec] of buckets) {
+    if (rec.src.length < 2) continue;               // 하나짜리는 병합 이득이 없다
+    for (const o of rec.src) bake(rec, o);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(rec.arr, 3));
+    const m = rec.kind === 'mesh' ? new THREE.Mesh(g, rec.mat) : new THREE.LineSegments(g, rec.mat);
+    m.name = '__merged:' + key;
+    m.matrixAutoUpdate = false;
+    m.frustumCulled = false;                        // 도시 전체 크기 — 컬링 이득 없음
+    scene.add(m);
+    for (const o of rec.src) { o.visible = false; if (rec.boil) dropped.add(o); }
+    if (rec.boil) addBoiler(m);                     // 보일링 승계 — 먹선 지터가 끊기지 않게
+    saved += rec.src.length - 1;
+    merged.push({ key, n: rec.src.length, verts: rec.arr.length / 3 });
+  }
+  if (dropped.size) dropBoilers(dropped);
+  return { merged, saved, objs: objs.length, dyn: dyn.reduce((a, b) => a + b, 0),
+    ms: Math.round(((typeof performance !== 'undefined' ? performance.now() : 0) - t0)) };
 }

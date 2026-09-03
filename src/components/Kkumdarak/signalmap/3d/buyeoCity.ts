@@ -5,7 +5,7 @@
 //   심시티 문법: 건물은 도로에 면해 반복 배치, 교통은 도로망을 실제로 순환.
 // ═══════════════════════════════════════════════════════════════════════
 import * as THREE from 'three';
-import { inkLine, grayLine, cyl, ico, at, buildTrack, trackAt, inked } from './ink3';
+import { inkLine, grayLine, cyl, ico, at, buildTrack, trackAt, inked, mergeStatics } from './ink3';
 import { BUILDERS } from './models3';
 
 // 배치도(1440×1040) px → 월드: /8, 중심 원점
@@ -208,7 +208,7 @@ export function buildCity(scene) {
   [[600, 285], [850, 320], [770, 455]].forEach(([sx2, sz2], i) => put('사람(주민)', ...W(sx2, sz2), i, 0.8));
 
   // ── 군부대 (서남 — 장암길 서쪽 끝) ──
-  put('군부대·차단봉', ...W(165, 950), 0.2, 1.5);
+  const guardPost = put('군부대·차단봉', ...W(165, 950), 0.2, 1.5);   // 전선 잇기용 참조(회로 문법 ①)
   put('나무 B·침엽', ...W(120, 860), 0);
   put('나무 B·침엽', ...W(210, 1000), 0, 0.9);
 
@@ -452,6 +452,11 @@ export function buildCity(scene) {
     const [gx, gz] = W(236, 940);                 // 작품 「입대 정문」 보드 앞
     const [mx2, mz2] = W(210, 910);
     scene.add(line([[mx2, 0.35, mz2], [(mx2 + gx) / 2, 0.15, (mz2 + gz) / 2], [gx, 0.4, gz]], grayLine, [0.25, 0.8]));
+    // 같은 모터축이 차단봉 지주로도 이어진다 — 모터가 돌 때 봉이 열리는 것으로 읽히게.
+    guardPost.updateMatrixWorld(true);
+    const gp = guardPost.localToWorld(new THREE.Vector3(0.9, 0.95, 1.4));   // 봉 피벗(스케일·회전 반영)
+    scene.add(line([[mx2, 0.4, mz2], [(mx2 + gp.x) / 2, 0.12, (mz2 + gp.z) / 2], [gp.x, gp.y - 0.1, gp.z]],
+      grayLine, [0.25, 0.8]));
   }
 
   // ── 회로 문법 가시화 ②: 화려한 곳의 장식 LED 스트링 ──
@@ -586,9 +591,28 @@ export function buildCity(scene) {
     return { id, pos: new THREE.Vector3(x, h, z) };
   });
 
+  // ── 프레이밍용 콘텐츠 경계 ──
+  //   배치물 world AABB + 마커 dot 위치. 카메라가 이 점들을 프레임 안에 넣도록 줌을 산출한다.
+  //   (병합 전에 재야 한다 — 병합은 원본을 visible=false로 내린다)
+  scene.updateMatrixWorld(true);
+  const bb = new THREE.Box3(), fit = [];
+  for (const { obj } of placed) {
+    bb.setFromObject(obj);
+    if (bb.isEmpty() || !isFinite(bb.min.x)) continue;
+    fit.push([bb.min.x, bb.min.y, bb.min.z, bb.max.x, bb.max.y, bb.max.z]);
+  }
+  for (const s of signals) fit.push([s.pos.x, s.pos.y, s.pos.z, s.pos.x, s.pos.y, s.pos.z]);
+  for (const pl of places) fit.push([pl.pos.x, pl.pos.y, pl.pos.z, pl.pos.x, pl.pos.y, pl.pos.z]);
+
+  // ── 드로우콜 절감: 정적 지오메트리 병합(?s3dnomerge 로 끄고 A/B 비교) ──
+  const noMerge = typeof window !== 'undefined' && /[?&]s3dnomerge/.test(window.location.search);
+  //   신호 전구는 ticks가 아니라 도시 루프가 색을 바꾼다 — 프로브가 못 보므로 명시 제외.
+  const mergeInfo = noMerge ? null : mergeStatics(scene, ticks, signals.map(s => s.bulb));
+
   // 검증 훅 — ?s3ddebug 쿼리일 때만 노출(상시 노출은 언마운트 후 씬 누수)
   if (typeof window !== 'undefined' && /[?&]s3ddebug/.test(window.location.search))
-    window.__city3d = { signals, arts, placed, roads: roads.map(([a, b]) => [...W(...a), ...W(...b)]) };
+    window.__city3d = { signals, arts, placed, mergeInfo, fit,
+      roads: roads.map(([a, b]) => [...W(...a), ...W(...b)]) };
 
-  return { ticks, signals, places, riverTrack };
+  return { ticks, signals, places, riverTrack, fit };
 }

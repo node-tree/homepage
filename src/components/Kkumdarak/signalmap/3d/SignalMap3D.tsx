@@ -149,13 +149,50 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(PAPER);
     resetBoilers();
-    const { ticks, signals, places } = buildCity(scene);
+    const { ticks, signals, places, fit } = buildCity(scene);
 
     const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 700);
+    const S0 = 72, R = 260, FIT_PAD = 40;
+    //   FIT_PAD = fit 대상 점이 프레임에서 떨어질 최소 거리(px). dot은 점이 아니라 지름 18px 원 +
+    //   반경 15px 헤일로다 — 요구치 24px를 헤일로 기준으로도 만족시키려면 40이 필요하다(실측).
+    // 프리셋 뷰에서 도시(배치물 AABB + 마커 dot)가 화면축으로 갖는 최대 반경(월드).
+    const fitRadius = (v) => {
+      const { az, el: ev } = VIEWS[v] || VIEWS.iso;
+      const ca = Math.cos(az), sa = Math.sin(az), ce = Math.cos(ev), se = Math.sin(ev);
+      let hx = 1, hy = 1;
+      for (const [x0, y0, z0, x1, y1, z1] of fit) for (let i = 0; i < 8; i++) {
+        const x = (i & 1) ? x1 : x0, y = (i & 2) ? y1 : y0, z = (i & 4) ? z1 : z0;
+        const sx = x * ca - z * sa, sy = y * ce - se * (x * sa + z * ca);
+        if (Math.abs(sx) > hx) hx = Math.abs(sx);
+        if (Math.abs(sy) > hy) hy = Math.abs(sy);
+      }
+      return [hx, hy];
+    };
+    const clampZoom = (z) => Math.max(0.1, Math.min(4.5, z));
+    // 도시 전체가 프레임에 들어오는 줌. 뷰포트 종횡비에 따라 폭 또는 높이가 기준이 된다.
+    const fitZoom = (v) => {
+      const [hx, hy] = fitRadius(v);
+      const w = el.clientWidth || 1400, h = el.clientHeight || 900;
+      return clampZoom(Math.min((w / 2 - FIT_PAD) / hx, (h / 2 - FIT_PAD) / hy) * S0 / (h / 2));
+    };
+    // 세로 화면 조감은 폭 기준 fit이면 도시가 손톱만 해진다(390×844에서 약 320×200).
+    //   → 도시 투영 높이가 뷰포트의 PORTRAIT_H가 되는 줌을 하한으로 두고, 중앙 블록을 잡아
+    //     나머지는 팬으로 탐색하게 한다. 가로 화면·평면도·입면은 손대지 않는다(fit 그대로).
+    //   PORTRAIT_H 줌은 뷰포트 높이와 무관하다: zoom = PORTRAIT_H · S0 / hy.
+    const PORTRAIT_H = 0.55;
+    const CENTER = [880 / 8 - 90, 560 / 8 - 65];   // 중앙 블록(학교·운동장 세트) 배치도 px 880,560
+    const startCam = (v) => {
+      const z = fitZoom(v);
+      if (v !== 'iso' || el.clientWidth >= el.clientHeight) return { zoom: z, cx: 0, cz: 0 };
+      const floor = clampZoom(PORTRAIT_H * S0 / fitRadius(v)[1]);
+      return floor > z ? { zoom: floor, cx: CENTER[0], cz: CENTER[1] } : { zoom: z, cx: 0, cz: 0 };
+    };
+    let userZoomed = false, preset = 'iso';        // 사용자가 줌을 만졌으면 리사이즈 refit 금지
     // 궤도 상태 — 목표값으로 부드럽게 수렴(스프링 없는 지수 추적)
-    const st = { az: VIEWS.iso.az, el: VIEWS.iso.el, zoom: 1.25, cx: 0, cz: 0 };
-    const target = { az: st.az, el: st.el, zoom: st.zoom, cx: 0, cz: 0 };
-    const S0 = 72, R = 260;
+    const cam0 = startCam('iso');
+    const st = { az: VIEWS.iso.az, el: VIEWS.iso.el, zoom: cam0.zoom, cx: cam0.cx, cz: cam0.cz };
+    const target = { az: st.az, el: st.el, zoom: st.zoom, cx: st.cx, cz: st.cz };
+    const zoomMin = () => Math.min(0.7, fitZoom(preset));   // 세로 화면 fit 줌이 0.7보다 작아도 갇히지 않게
     const applyCam = () => {
       const ce = Math.cos(st.el), se = Math.sin(st.el);
       cam.position.set(
@@ -171,7 +208,9 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       cam.updateProjectionMatrix();
     };
     apiRef.current = {
-      toView: (v) => { target.az = VIEWS[v].az; target.el = VIEWS[v].el; },
+      toView: (v) => { preset = v; target.az = VIEWS[v].az; target.el = VIEWS[v].el;
+        // 프리셋 버튼 = 프레이밍 리셋(줌 + 중심). 사용자가 줌을 만졌으면 그대로 둔다.
+        if (!userZoomed) { const c = startCam(v); target.zoom = c.zoom; target.cx = c.cx; target.cz = c.cz; } },
       addCustom: null, stopAdding: null,   // 컴포넌트 본문에서 채운다(오버라이드 상태 접근)
     };
     applyCam();
@@ -217,7 +256,7 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         ptrs.set(e.pointerId, cur);
         const pts2 = [...ptrs.values()];
         const d1 = Math.hypot(pts2[0].x - pts2[1].x, pts2[0].y - pts2[1].y);
-        if (pinch0) target.zoom = Math.max(0.7, Math.min(4.5, zoom0 * (d1 / pinch0)));
+        if (pinch0) { userZoomed = true; target.zoom = Math.max(zoomMin(), Math.min(4.5, zoom0 * (d1 / pinch0))); }
         const mx0 = (pts[0].x + pts[1].x) / 2, my0 = (pts[0].y + pts[1].y) / 2;
         const mx1 = (pts2[0].x + pts2[1].x) / 2, my1 = (pts2[0].y + pts2[1].y) / 2;
         panBy(mx1 - mx0, my1 - my0);
@@ -248,7 +287,8 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     };
     const wheel = (e) => {
       e.preventDefault();
-      target.zoom = Math.max(0.7, Math.min(4.5, target.zoom * Math.exp(-e.deltaY * 0.0014)));
+      userZoomed = true;
+      target.zoom = Math.max(zoomMin(), Math.min(4.5, target.zoom * Math.exp(-e.deltaY * 0.0014)));
     };
     el.addEventListener('pointerdown', down);
     el.addEventListener('pointermove', move);
@@ -256,7 +296,14 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     el.addEventListener('pointercancel', up);
     el.addEventListener('wheel', wheel, { passive: false });
 
-    const onResize = () => { renderer.setSize(el.clientWidth, el.clientHeight); applyCam(); };
+    const onResize = () => {
+      renderer.setSize(el.clientWidth, el.clientHeight);
+      if (!userZoomed) {                                         // 종횡비 바뀌면 다시 fit
+        const c = startCam(preset);
+        st.zoom = target.zoom = c.zoom; st.cx = target.cx = c.cx; st.cz = target.cz = c.cz;
+      }
+      applyCam();
+    };
     const ro = new ResizeObserver(onResize);
     ro.observe(el);
 
