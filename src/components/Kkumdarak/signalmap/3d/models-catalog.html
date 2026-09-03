@@ -1,6 +1,6 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>마을의 신호 — 3D 모델 도감 v6</title>
+<title>마을의 신호 — 3D 모델 도감 v7</title>
 <style>
   body { margin: 0; background: #fcfbf9; overflow: hidden; }
   #tag { position: fixed; top: 14px; left: 18px; font: 700 15px/1.4 sans-serif; color: #1f1e1c; z-index: 2; }
@@ -9,7 +9,7 @@
   .lbl { position: absolute; transform: translate(-50%, 0); font: 700 13px/1 sans-serif; color: #1f1e1c; z-index: 3;
          background: #fcfbf9; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
 </style>
-<div id="tag">마을의 신호 — 3D 모델 도감 v6 · 마을 소품 <b id="n-base">–</b> + 작품 <b id="n-art">–</b> = <b id="n-all">–</b>종 — 작은 부여<small>모델별 모션 · 다색 LED · 보일링 · <code>?sec=base|art</code>로 섹션만</small></div>
+<div id="tag">마을의 신호 — 3D 모델 도감 v7 · 마을 소품 <b id="n-base">–</b> + 작품 <b id="n-art">–</b> = <b id="n-all">–</b>종 — 작은 부여<small>모델별 모션 · 다색 LED · 보일링 · <code>?sec=base|art</code>로 섹션만</small></div>
 <script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }</script>
 <script type="module">
 import * as THREE from 'three';
@@ -623,6 +623,139 @@ B['도로 타일'] = () => { const g = new THREE.Group();
 B['횡단보도 타일'] = () => { const g = new THREE.Group();
   g.add(at(box(5, 0.14, 2.4), 0, 0.07, 0));
   for (let i = -2; i <= 2; i++) g.add(at(box(0.5, 0.02, 1.8), i * 0.95, 0.16, 0));
+  return g; };
+
+// ═══════════════════════════════════════════════════════════════════════
+// 참여자 브레인스토밍 장소 빌더 9종 (2026-09-03)
+//   아이들이 적어 낸 「부여 장소」를 도시에 앉히기 위한 최소 세트.
+//   기존 마을 소품 문법 유지 — 흰 면 + 먹선만, 색은 쓰지 않는다(색은 작품 LED 몫).
+// ═══════════════════════════════════════════════════════════════════════
+B['종합운동장 트랙'] = () => { const g = new THREE.Group();
+  g.add(at(box(7, 0.24, 4.9), 0, 0.12, 0));                              // 부지
+  const oval = (rx, rz, y) => new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(
+    Array.from({ length: 44 }, (_, i) => { const a = i / 44 * Math.PI * 2;
+      return new THREE.Vector3(Math.cos(a) * rx, y, Math.sin(a) * rz); })), inkLine);
+  for (let k = 0; k < 3; k++) g.add(oval(3.05 - k * 0.31, 2.0 - k * 0.31, 0.26));   // 트랙 레인 3
+  g.add(at(box(3.1, 0.06, 1.7), 0, 0.27, 0));                            // 필드
+  g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(
+    [new THREE.Vector3(0, 0.31, -0.85), new THREE.Vector3(0, 0.31, 0.85)]), inkLine));
+  for (const s of [-1, 1]) {                                             // 골대 2
+    g.add(at(box(0.08, 0.58, 0.08), s * 1.45, 0.55, -0.62));
+    g.add(at(box(0.08, 0.58, 0.08), s * 1.45, 0.55, 0.62));
+    g.add(at(box(0.08, 0.08, 1.32), s * 1.45, 0.83, 0));
+  }
+  for (let i = 0; i < 3; i++) g.add(at(box(5.4, 0.22, 0.42), 0, 0.23 + i * 0.2, -2.62 - i * 0.36));  // 관중석 3단
+  for (const s of [-1, 1]) {                                             // 조명탑 2
+    g.add(at(cyl(0.05, 0.05, 2.4, 5), s * 3.1, 1.2, -2.1));
+    g.add(at(box(0.62, 0.28, 0.1), s * 3.1, 2.5, -2.1));
+  }
+  const run = [0, 1, 2].map(() => { const r = ico(0.14); g.add(r); return r; });
+  g.userData.tick = t => run.forEach((r, i) => {                         // 트랙을 도는 주자 3
+    const a = (t / 6400 + i * 0.13) * Math.PI * 2;
+    r.position.set(Math.cos(a) * 2.9, 0.4, Math.sin(a) * 1.85);
+  });
+  return g; };
+B['체육관'] = () => { const g = new THREE.Group();
+  g.add(at(box(4.4, 2.1, 2.9), 0, 1.05, 0));
+  g.add(at(inked(prismGeo(4.8, 3.2, 0.95)), 0, 2.1, 0));                 // 박공 지붕
+  for (let i = 0; i < 4; i++) g.add(at(box(0.6, 0.75, 0.06), -1.5 + i * 1.0, 1.35, 1.48));
+  g.add(at(box(1.1, 1.25, 0.32), 0, 0.62, 1.6));                         // 현관
+  g.add(at(box(1.9, 0.4, 0.08), 0, 2.55, 1.35));                         // 이름판
+  return g; };
+B['수영장'] = () => { const g = new THREE.Group();
+  g.add(at(box(4.2, 0.34, 3.0), 0, 0.17, 0));                            // 데크
+  g.add(at(box(3.3, 0.08, 2.1), 0, 0.36, 0));                            // 수면
+  for (let i = -2; i <= 2; i++) g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(
+    [new THREE.Vector3(-1.62, 0.42, i * 0.42), new THREE.Vector3(1.62, 0.42, i * 0.42)]), inkLine));
+  for (const s of [-1, 1]) g.add(at(box(0.45, 0.14, 0.34), s * 1.35, 0.45, -1.22));   // 스타팅 블록
+  for (const s of [-1, 1]) {                                             // 난간
+    g.add(at(cyl(0.04, 0.04, 0.5, 5), s * 2.0, 0.55, 1.4));
+    g.add(at(box(0.06, 0.06, 2.8), s * 2.0, 0.78, 0));
+  }
+  g.add(at(box(1.3, 0.9, 0.8), -2.35, 0.62, 1.05));                      // 탈의동
+  const sw = ico(0.13); g.add(sw);
+  g.userData.tick = t => { const u = Math.abs(((t / 3800) % 2) - 1);     // 왕복하는 수영자
+    sw.position.set(-1.45 + u * 2.9, 0.45, -0.42); };
+  return g; };
+B['농구장'] = () => { const g = new THREE.Group();
+  g.add(at(box(4.0, 0.2, 2.6), 0, 0.1, 0));
+  g.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-1.85, 0.22, -1.15), new THREE.Vector3(1.85, 0.22, -1.15),
+    new THREE.Vector3(1.85, 0.22, 1.15), new THREE.Vector3(-1.85, 0.22, 1.15)]), inkLine));
+  g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(
+    [new THREE.Vector3(0, 0.22, -1.15), new THREE.Vector3(0, 0.22, 1.15)]), inkLine));
+  g.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(
+    Array.from({ length: 18 }, (_, i) => { const a = i / 18 * Math.PI * 2;
+      return new THREE.Vector3(Math.cos(a) * 0.5, 0.22, Math.sin(a) * 0.5); })), inkLine));
+  for (const s of [-1, 1]) {                                             // 백보드·링
+    g.add(at(cyl(0.06, 0.06, 1.5, 5), s * 1.75, 0.85, 0));
+    g.add(at(box(0.08, 0.5, 0.72), s * 1.62, 1.55, 0));
+    const ring = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(
+      Array.from({ length: 12 }, (_, i) => { const a = i / 12 * Math.PI * 2;
+        return new THREE.Vector3(Math.cos(a) * 0.17, 0, Math.sin(a) * 0.17); })), inkLine);
+    ring.position.set(s * 1.44, 1.34, 0); g.add(ring);
+  }
+  const ball = ico(0.12); g.add(ball);
+  g.userData.tick = t => { const u = (t % 2600) / 2600;                  // 튀는 공
+    ball.position.set(-1.0 + u * 2.0, 0.25 + Math.abs(Math.sin(u * Math.PI * 3)) * 0.9, 0.2); };
+  return g; };
+B['놀이터'] = () => { const g = new THREE.Group();
+  g.add(at(cyl(1.5, 1.5, 0.16, 12), 0, 0.08, 0));                        // 모래판
+  for (const s of [-1, 1]) {                                             // 그네 프레임
+    g.add(at(box(0.07, 1.5, 0.07), -0.72, 0.75, s * 0.4));
+    g.add(at(box(0.07, 1.5, 0.07), 0.12, 0.75, s * 0.4));
+  }
+  g.add(at(box(1.1, 0.07, 0.07), -0.3, 1.5, 0));
+  const sw = new THREE.Group(); sw.position.set(-0.3, 1.5, 0); g.add(sw);
+  sw.add(at(box(0.04, 0.9, 0.04), -0.16, -0.45, 0));
+  sw.add(at(box(0.04, 0.9, 0.04), 0.16, -0.45, 0));
+  sw.add(at(box(0.42, 0.06, 0.24), 0, -0.9, 0));
+  g.add(at(box(0.62, 1.1, 0.62), 1.0, 0.55, -0.5));                      // 미끄럼틀 탑
+  const slide = at(box(0.42, 0.06, 1.5), 1.0, 0.74, 0.32); slide.rotation.x = 0.55; g.add(slide);
+  for (const s of [-1, 1]) g.add(at(box(0.06, 0.5, 0.06), 1.0 + s * 0.22, 1.35, -0.5));
+  g.userData.tick = t => { sw.rotation.x = osc(t, 2300, 0.5); };
+  return g; };
+B['누각·기와'] = () => { const g = new THREE.Group();
+  g.add(at(box(4.2, 0.5, 3.0), 0, 0.25, 0));                             // 석축 기단
+  for (const cx of [-1.6, 0, 1.6]) for (const cz of [-1.05, 1.05])
+    g.add(at(cyl(0.11, 0.13, 1.5, 6), cx, 1.25, cz));                    // 기둥 6
+  g.add(at(box(3.9, 0.2, 2.7), 0, 2.1, 0));                              // 창방
+  g.add(at(inked(prismGeo(4.9, 3.6, 0.8)), 0, 2.2, 0));                  // 1층 지붕
+  g.add(at(box(2.2, 0.95, 1.5), 0, 3.48, 0));                            // 2층 몸
+  g.add(at(inked(prismGeo(3.1, 2.3, 0.62)), 0, 3.95, 0));                // 2층 지붕
+  g.add(at(cyl(0.07, 0.07, 0.45, 5), 0, 4.75, 0));                       // 절병통
+  g.add(at(box(6.2, 0.55, 0.2), 0, 0.27, 2.4));                          // 담장 ㄱ자
+  g.add(at(box(0.2, 0.55, 2.6), -3.0, 0.27, 1.2));
+  g.add(at(inked(prismGeo(6.4, 0.4, 0.16)), 0, 0.55, 2.4));              // 담장 기와
+  return g; };
+B['강의동'] = () => { const g = new THREE.Group();
+  g.add(at(box(4.0, 2.4, 1.7), 0, 1.2, 0));
+  for (let i = 0; i < 5; i++) for (let f = 0; f < 2; f++)
+    g.add(at(box(0.46, 0.4, 0.06), -1.7 + i * 0.85, 0.85 + f * 0.8, 0.88));
+  g.add(at(inked(prismGeo(4.4, 2.1, 0.55)), 0, 2.4, 0));                 // 기와 박공
+  g.add(at(box(1.0, 1.3, 0.42), 0, 0.65, 1.0));                          // 현관
+  g.add(at(box(1.4, 0.1, 0.5), 0, 0.06, 1.42));                          // 계단 판
+  g.add(at(box(1.6, 0.35, 0.08), 0, 2.16, 0.9));                         // 이름판
+  return g; };
+B['야외무대'] = () => { const g = new THREE.Group();
+  g.add(at(cyl(2.2, 2.4, 0.3, 14), 0, 0.15, 0));                         // 무대 판
+  g.add(at(inked(new THREE.CylinderGeometry(1.9, 2.2, 2.1, 14, 1, true, Math.PI * 0.06, Math.PI * 0.88),
+    { thresh: 22 }), 0, 1.35, 0));                                       // 반원 배경막
+  for (let i = 0; i < 3; i++) g.add(at(box(4.0, 0.2, 0.5), 0, 0.1 + i * 0.18, 2.9 + i * 0.62));  // 객석 3단
+  for (const s of [-1, 1]) {                                             // 조명탑
+    g.add(at(cyl(0.05, 0.05, 2.6, 5), s * 2.45, 1.3, 1.5));
+    g.add(at(box(0.4, 0.22, 0.16), s * 2.45, 2.7, 1.5));
+  }
+  const perf = ico(0.16); g.add(perf);
+  g.userData.tick = t => { perf.position.set(osc(t, 5200, 0.9), 0.46, osc(t, 4100, 0.4, 0.3)); };
+  return g; };
+B['조각·덩어리'] = () => { const g = new THREE.Group();
+  g.add(at(box(1.0, 0.24, 1.0), 0, 0.12, 0));                            // 좌대
+  const m = new THREE.Group(); m.position.y = 0.24; g.add(m);
+  m.add(at(ico(0.4), 0, 0.55, 0));
+  const bar = at(box(0.24, 1.05, 0.24), 0.26, 0.78, -0.08); bar.rotation.z = 0.42; m.add(bar);
+  m.add(at(cyl(0.16, 0.3, 0.55, 6), -0.32, 0.32, 0.16));
+  g.userData.tick = t => { m.rotation.y = osc(t, 11000, 0.14); };
   return g; };
 
 // ═══════════════════════════════════════════════════════════════════════
