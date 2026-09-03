@@ -163,6 +163,35 @@ http
       const file = all.find((f) => f.fileId === fm[1]) || all[0];
       return json(res, 200, { success: true, file });
     }
+    // 참조 조회 스텁 — 폴더면 참조 많음, /uploads/2026 은 참조 0(안전) 케이스로 흉내낸다.
+    if (p === '/refs' && req.method === 'POST') {
+      let body = '';
+      req.on('data', (d) => (body += d));
+      return req.on('end', () => {
+        const { paths = [], kinds = {} } = JSON.parse(body || '{}');
+        const items = paths.map((path) => {
+          const kind = kinds[path] || 'auto';
+          const safe = /2026|nowhere/.test(path);
+          const dbCount = safe ? 0 : kind === 'folder' ? 45 : 3;
+          const byCollection = safe ? {} : kind === 'folder' ? { workshop: 40, sso_slides: 5 } : { work: 2, workshop: 1 };
+          const codeRefs = safe ? [] : [
+            { file: 'src/data/saengsansoFallback.ts', line: 451, path },
+            { file: 'src/redesign/nt.css', line: 812, path },
+          ];
+          return {
+            path, kind,
+            db: { count: dbCount, byCollection, refs: Object.entries(byCollection).flatMap(([c, n]) => Array.from({ length: Math.min(n, 3) }, (_, i) => ({ collection: c, _id: 'id' + i, field: 'contents' }))) },
+            code: { count: codeRefs.length, refs: codeRefs },
+          };
+        });
+        json(res, 200, {
+          success: true, items,
+          totalDb: items.reduce((s2, i) => s2 + i.db.count, 0),
+          totalCode: items.reduce((s2, i) => s2 + i.code.count, 0),
+          codeRefsGeneratedAt: new Date().toISOString(),
+        });
+      });
+    }
     if (p === '/purge' && req.method === 'POST') {
       let body='';req.on('data',d=>body+=d);
       return req.on('end',()=>json(res,200,{success:true,message:'stub purge',requestId:'stub-purge-req-1',url:JSON.parse(body||'{}').url}));

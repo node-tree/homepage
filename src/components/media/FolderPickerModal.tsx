@@ -7,6 +7,7 @@
 
 import React, { useEffect, useState } from 'react';
 import FolderTree from './FolderTree';
+import RefsNotice, { RefsNoticeProps } from './RefsNotice';
 import { normalizePath } from '../../utils/ikPath';
 
 export interface FolderPickerModalProps {
@@ -23,6 +24,8 @@ export interface FolderPickerModalProps {
   error?: string | null;
   onCancel: () => void;
   onConfirm: (destinationPath: string) => void;
+  /** 대상 경로를 참조하는 곳 안내(DB 자동 갱신 / 코드 수동) */
+  refs?: RefsNoticeProps;
 }
 
 const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
@@ -36,6 +39,7 @@ const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
   error = null,
   onCancel,
   onConfirm,
+  refs,
 }) => {
   const [dest, setDest] = useState(normalizePath(initialPath));
   const [manual, setManual] = useState(normalizePath(initialPath));
@@ -81,9 +85,11 @@ const FolderPickerModal: React.FC<FolderPickerModalProps> = ({
         </div>
 
         <p className="ma-modal-warn">
-          이동하면 <strong>기존 URL이 즉시 바뀝니다.</strong> 이미 게시된 글·페이지가 예전 URL을
-          참조하고 있으면 이미지가 깨질 수 있습니다.
+          이동하면 <strong>기존 URL이 즉시 바뀝니다.</strong> 사이트 게시물의 참조는 자동으로
+          갱신하지만, 외부에 공유된 URL은 되살릴 수 없습니다.
         </p>
+
+        {refs && <RefsNotice {...refs} action={confirmLabel} />}
 
         <div className="ma-modal-tree">
           <FolderTree currentPath={dest} onSelect={pick} disabledRoot={disabledRoot} />

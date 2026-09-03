@@ -88,6 +88,34 @@ export interface IkBulkMoveResult {
   message: string;
   destinationPath: string;
   results: { sourceFilePath: string; ok: boolean; error?: string }[];
+  refs?: IkRefsUpdate;
+}
+
+// 이동/이름변경 대상 경로를 참조하는 곳 — 자체 DB(자동 치환) + 소스코드(수동).
+export interface IkRefItem {
+  path: string;
+  kind: string;
+  db: { count: number; byCollection: Record<string, number>; refs: { collection: string; _id: string; field: string }[] };
+  code: { count: number; refs: { file: string; line: number; path: string }[] };
+}
+
+export interface IkRefsResult {
+  items: IkRefItem[];
+  totalDb: number;
+  totalCode: number;
+  codeRefsGeneratedAt: string | null;
+}
+
+// 이동/이름변경 응답에 실린 DB 참조 갱신 결과.
+export interface IkRefsUpdate {
+  updated: boolean;
+  skipped?: boolean;
+  reason?: string;
+  error?: string;
+  batchId?: string;
+  documents?: number;
+  refsUpdated?: Record<string, number>;
+  failures?: { collection: string; _id: string; error: string }[];
 }
 
 // moveFolder/renameFolder 는 비동기 작업(jobId) — 상태를 폴링해 완료를 확인한다.
@@ -319,8 +347,12 @@ export const imagekitAdminAPI = {
   //      호출측 UI 에서 반드시 경고를 노출할 것.
 
   // 파일 1건 이동 (destinationPath 는 "폴더" 경로)
-  moveFile: async (sourceFilePath: string, destinationPath: string, signal?: AbortSignal): Promise<void> => {
-    await requestJson(
+  moveFile: async (
+    sourceFilePath: string,
+    destinationPath: string,
+    signal?: AbortSignal
+  ): Promise<{ refs?: IkRefsUpdate }> => {
+    return await requestJson<{ refs?: IkRefsUpdate }>(
       '/imagekit/file/move',
       { method: 'POST', body: { sourceFilePath, destinationPath }, signal },
       '파일 이동 실패'
@@ -342,8 +374,8 @@ export const imagekitAdminAPI = {
     newFileName: string,
     opts: { purgeCache?: boolean } = {},
     signal?: AbortSignal
-  ): Promise<{ purgeRequestId?: string }> => {
-    return await requestJson<{ purgeRequestId?: string }>(
+  ): Promise<{ purgeRequestId?: string; refs?: IkRefsUpdate }> => {
+    return await requestJson<{ purgeRequestId?: string; refs?: IkRefsUpdate }>(
       '/imagekit/file/rename',
       {
         method: 'PUT',
@@ -382,8 +414,8 @@ export const imagekitAdminAPI = {
     sourceFolderPath: string,
     destinationPath: string,
     signal?: AbortSignal
-  ): Promise<{ jobId: string | null }> => {
-    return await requestJson<{ jobId: string | null }>(
+  ): Promise<{ jobId: string | null; jobCompleted?: boolean; refs?: IkRefsUpdate }> => {
+    return await requestJson<{ jobId: string | null; jobCompleted?: boolean; refs?: IkRefsUpdate }>(
       '/imagekit/folder/move',
       { method: 'POST', body: { sourceFolderPath, destinationPath }, signal },
       '폴더 이동 실패'
@@ -396,8 +428,8 @@ export const imagekitAdminAPI = {
     newFolderName: string,
     opts: { purgeCache?: boolean } = {},
     signal?: AbortSignal
-  ): Promise<{ jobId: string | null }> => {
-    return await requestJson<{ jobId: string | null }>(
+  ): Promise<{ jobId: string | null; jobCompleted?: boolean; refs?: IkRefsUpdate }> => {
+    return await requestJson<{ jobId: string | null; jobCompleted?: boolean; refs?: IkRefsUpdate }>(
       '/imagekit/folder/rename',
       {
         method: 'POST',
@@ -405,6 +437,32 @@ export const imagekitAdminAPI = {
         signal,
       },
       '폴더 이름 변경 실패'
+    );
+  },
+
+  // 경로를 참조하는 곳 조회(이동 전 미리보기). 폴더면 하위까지 합산된다.
+  //   ImageKit 키가 없어도 동작한다(자체 DB 만 읽는다).
+  getRefs: async (
+    paths: string[],
+    kinds: Record<string, 'file' | 'folder'> = {},
+    signal?: AbortSignal
+  ): Promise<IkRefsResult> => {
+    return await requestJson<IkRefsResult>(
+      '/imagekit/refs',
+      { method: 'POST', body: { paths, kinds }, signal },
+      '참조 조회 실패'
+    );
+  },
+
+  // 치환 로그 되돌리기(문서 단위 또는 배치 단위)
+  rollbackRefs: async (
+    target: { logId?: string; batchId?: string },
+    signal?: AbortSignal
+  ): Promise<{ entries: number; restored: Record<string, number> }> => {
+    return await requestJson<{ entries: number; restored: Record<string, number> }>(
+      '/imagekit/refs/rollback',
+      { method: 'POST', body: target, signal },
+      '롤백 실패'
     );
   },
 

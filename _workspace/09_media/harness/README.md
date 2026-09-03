@@ -53,6 +53,16 @@ node _workspace/09_media/harness/shoot-edit.js    # edit-*-{1..5}.png  + 회전/
 node _workspace/09_media/harness/shoot-exif.js    # edit-*-{6,7}.png   + EXIF orientation 6 판정
 node _workspace/09_media/harness/shoot-picker.js  # picker-*.png (ImageKitPicker 회귀)
 node _workspace/09_media/harness/shoot-blocked.js # edit-desktop-8-avif-blocked.png (미지원 확장자 차단)
+node _workspace/09_media/harness/shoot-refs.js    # refs-*.png (이동/이름변경 전 참조 안내)
+
+# 6) DB 참조 치환 — 순수 로직 + 실 DB 왕복
+node --test backend/lib/ikRefs.test.js                  # 순수 로직 21건(네트워크 불필요)
+node _workspace/09_media/harness/refs-roundtrip.js      # 실 DB: 치환 → 검증 → 롤백 → 원상복구
+
+# 7) 대량 재정리 CLI (기본 dry-run — 아무것도 바꾸지 않는다)
+node backend/scripts/scanCodeRefs.js                    # 소스 하드코딩 목록 갱신
+printf '/mcwjd/workshop\t/archive/2026/workshop\n' > /tmp/m.tsv
+node backend/scripts/ikReorganize.js /tmp/m.tsv --dry-run
 
 # 4) 재인코딩 품질 근거 (dev 서버·스텁 불필요)
 node _workspace/09_media/harness/quality-bench.js  # → quality-bench.log
@@ -75,8 +85,25 @@ CI=true npx react-scripts test --watchAll=false --testPathPattern="imageEdit"
 | `shoot-exif.js` | EXIF Orientation=6 반영 여부 PASS/FAIL 판정 |
 | `shoot-picker.js` | 에디터용 `ImageKitPicker` 회귀(공용 훅 리팩터 영향) |
 | `shoot-blocked.js` | 미지원 확장자(.avif)가 파괴 편집에서 차단되는지 UI 로 확인 |
+| `shoot-refs.js` | 이동/이름변경 모달의 참조 안내(참조 있음 / 없음) 스크린샷 |
+| `refs-roundtrip.js` | 실 DB 치환→롤백 왕복. **쓰기는 `imagekit_ref_test`·`imagekit_ref_log` 두 컬렉션뿐** |
 | `quality-bench.js` | 같은 입력·같은 변환으로 quality 1.0/0.95/0.9/0.85/0.82/0.8/0.7 출력 바이트 비교 |
 | `fixtures/exif6.jpg` | 위 EXIF 픽스처(커밋됨 — 네트워크 없이도 재현 가능) |
+
+## DB 참조 치환 — 테스트 환경 선택 근거
+
+로컬 `mongod` 도 `mongodb-memory-server` 도 설치돼 있지 않다(새 의존성을 추가하지 않기로 했다).
+그래서 `refs-roundtrip.js` 는 **운영 DB에 붙되 쓰기 범위를 두 컬렉션으로 못박는다**:
+
+- `imagekit_ref_test` — 이 스크립트가 만들고 마지막에 `drop` 하는 임시 컬렉션
+- `imagekit_ref_log` — 치환 감사 로그(롤백 근거). 종료 시 `actor:'harness'` 항목만 삭제
+
+`applyMappings(db, mappings, { only: [TEST_COLLECTION] })` 로 **스캔·쓰기 대상 컬렉션을 인자로
+고정**하기 때문에, 로직상 다른 컬렉션에는 접근조차 하지 않는다.
+운영 데이터에 대한 검증(`verify-index` 계열)은 전부 **읽기 전용**이다.
+
+`imagekit_ref_test` / `imagekit_ref_log` 는 `listScannableCollections()` 의 기본 스캔 대상에서
+제외되므로, 임시 데이터가 실제 참조 집계를 오염시키지 않는다(테스트로 확인).
 
 ## tsconfig 관련 메모
 

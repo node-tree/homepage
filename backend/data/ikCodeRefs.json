@@ -1,0 +1,161 @@
+{
+  "generatedAt": "2026-09-03T04:33:45.468Z",
+  "note": "소스 하드코딩 ImageKit URL. 이동/이름변경 시 자동 치환되지 않으므로 수동 수정이 필요하다.",
+  "total": 25,
+  "byFile": {
+    "src/data/saengsansoFallback.ts": 24,
+    "src/redesign/nt.css": 1
+  },
+  "byPath": {
+    "/mcwjd/생산소/포스터/talkv_high_4.gif": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 451
+      }
+    ],
+    "/mcwjd/생산소/포스터/IMG_2091.PNG": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 457
+      }
+    ],
+    "/mcwjd/생산소/포스터/talkv_output8.gif": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 465
+      }
+    ],
+    "/mcwjd/생산소/포스터/IMG_5605.PNG": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 471
+      }
+    ],
+    "/mcwjd/생산소/포스터/IMG_9909.PNG": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 478
+      }
+    ],
+    "/mcwjd/생산소/포스터/IMG_9109.PNG": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 485
+      }
+    ],
+    "/mcwjd/생산소/포스터/talkv_high.gif": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 493
+      }
+    ],
+    "/mcwjd/생산소/포스터/talkv_output4.gif": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 500
+      }
+    ],
+    "/mcwjd/생산소/포스터/talkv_output2.gif": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 507
+      }
+    ],
+    "/mcwjd/생산소/포스터/talkv_output3.gif": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 514
+      }
+    ],
+    "/mcwjd/생산소/포스터/talkv_output.gif": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 521
+      }
+    ],
+    "/mcwjd/생산소/포스터/IMG_6472.PNG": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 527
+      }
+    ],
+    "/mcwjd/생산소/포스터/talkv_high_2.gif": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 535
+      }
+    ],
+    "/mcwjd/생산소/포스터/talkv_high_3.gif": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 542
+      }
+    ],
+    "/mcwjd/생산소/포스터/IMG_5748.PNG": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 548
+      }
+    ],
+    "/mcwjd/생산소/포스터/IMG_5219_output.gif": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 556
+      }
+    ],
+    "/mcwjd/생산소/포스터/video.gif": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 563
+      }
+    ],
+    "/mcwjd/생산소/포스터/video_1_911f6389_output.gif": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 570
+      }
+    ],
+    "/mcwjd/workshop/퍼레이드빵빵/IMG_4034.JPG": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 579
+      }
+    ],
+    "/mcwjd/노디/13.jpeg": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 585
+      }
+    ],
+    "/mcwjd/workshop/사운드오케스트라/IMG_0084.PNG": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 591
+      }
+    ],
+    "/mcwjd/workshop/유아사운드스케이프/IMG_9415.JPG": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 597
+      }
+    ],
+    "/mcwjd/workshop/사운드키박스/DSC08162.JPG": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 603
+      }
+    ],
+    "/mcwjd/workshop/꿈의비행/03.png": [
+      {
+        "file": "src/data/saengsansoFallback.ts",
+        "line": 609
+      }
+    ],
+    "/...": [
+      {
+        "file": "src/redesign/nt.css",
+        "line": 21
+      }
+    ]
+  }
+}

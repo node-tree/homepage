@@ -19,6 +19,8 @@ import {
   IkFile,
   IkFileDetail,
   IkFolder,
+  IkRefsResult,
+  IkRefsUpdate,
   IkUploadResult,
   IkUsage,
 } from '../services/imagekitAdminApi';
@@ -38,6 +40,7 @@ import { useIkList } from '../hooks/useIkList';
 import FolderTree, { invalidateFolderCache, cachedFolderPaths } from './media/FolderTree';
 import FolderPickerModal from './media/FolderPickerModal';
 import ImageEditPanel from './media/ImageEditPanel';
+import RefsNotice from './media/RefsNotice';
 import { withCacheBuster } from '../utils/ikTransform';
 import './MediaAdmin.css';
 
@@ -140,6 +143,19 @@ const IconUp: React.FC = () => (
   </svg>
 );
 
+// 참조 갱신 결과를 완료 알림에 덧붙일 문장으로 만든다.
+function describeRefsUpdate(refs?: IkRefsUpdate): string {
+  if (!refs) return '';
+  if (refs.skipped) return ' · 게시물 참조는 갱신하지 않았습니다.';
+  if (refs.error) return ` · ⚠️ 게시물 참조 갱신 실패(${refs.error})`;
+  const entries = Object.entries(refs.refsUpdated || {});
+  const total = entries.reduce((s, [, v]) => s + v, 0);
+  if (total === 0) return ' · 갱신할 게시물 참조 없음';
+  const detail = entries.map(([k, v]) => `${k} ${v}`).join(', ');
+  const failed = refs.failures && refs.failures.length ? ` (실패 ${refs.failures.length}건)` : '';
+  return ` · 게시물 참조 ${total}곳 자동 갱신(${detail})${failed}`;
+}
+
 const MediaAdmin: React.FC = () => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -191,6 +207,11 @@ const MediaAdmin: React.FC = () => {
   >(null);
   const [moveBusy, setMoveBusy] = useState(false);
   const [moveError, setMoveError] = useState<string | null>(null);
+
+  // 이동/이름변경 대상의 참조 현황(DB 자동 갱신 / 코드 수동)
+  const [refs, setRefs] = useState<IkRefsResult | null>(null);
+  const [refsLoading, setRefsLoading] = useState(false);
+  const [refsError, setRefsError] = useState<string | null>(null);
 
   // 이름변경
   const [renameTarget, setRenameTarget] = useState<
@@ -306,6 +327,57 @@ const MediaAdmin: React.FC = () => {
     setDetailId(null);
     setDetail(null);
   }, [browsePath, search, globalSearch]);
+
+  // 이동/이름변경 모달이 열리면 대상 경로의 참조를 조회한다.
+  //   폴더면 하위 전체를 합산해서 보여준다(백엔드가 접두사로 집계).
+  useEffect(() => {
+    const targets: { paths: string[]; kinds: Record<string, 'file' | 'folder'> } | null = moveState
+      ? moveState.kind === 'folder'
+        ? { paths: [moveState.path], kinds: { [moveState.path]: 'folder' } }
+        : { paths: moveState.paths, kinds: Object.fromEntries(moveState.paths.map((p) => [p, 'file' as const])) }
+      : renameTarget
+      ? renameTarget.kind === 'folder'
+        ? { paths: [renameTarget.path], kinds: { [renameTarget.path]: 'folder' } }
+        : { paths: [renameTarget.filePath], kinds: { [renameTarget.filePath]: 'file' } }
+      : null;
+
+    if (!targets || targets.paths.length === 0) {
+      setRefs(null);
+      setRefsError(null);
+      return;
+    }
+    // 복사는 원본이 그대로 남으므로 참조가 깨지지 않는다 → 조회하지 않는다.
+    if (moveState && moveState.kind === 'files' && moveState.mode === 'copy') {
+      setRefs(null);
+      setRefsError(null);
+      return;
+    }
+
+    let alive = true;
+    setRefsLoading(true);
+    setRefsError(null);
+    imagekitAdminAPI
+      .getRefs(targets.paths, targets.kinds)
+      .then((r) => {
+        if (alive) setRefs(r);
+      })
+      .catch((e: any) => {
+        if (e?.code === 'AUTH_EXPIRED') {
+          goLogin();
+          return;
+        }
+        if (alive) {
+          setRefs(null);
+          setRefsError(e?.message || '참조 조회 실패');
+        }
+      })
+      .finally(() => {
+        if (alive) setRefsLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [moveState, renameTarget]);
 
   // 상세 패널 로드 — 새 파일을 열면 항상 「정보」 탭부터.
   useEffect(() => {
@@ -532,9 +604,10 @@ const MediaAdmin: React.FC = () => {
             const res = await imagekitAdminAPI.bulkMoveFiles(moveState.paths, destination);
             const failed = res.results.filter((r) => !r.ok);
             setNotice(
-              failed.length === 0
-                ? `${res.results.length}개를 ${destination} 으로 이동했습니다. 기존 URL은 더 이상 동작하지 않습니다.`
-                : `${res.message} · 실패: ${failed.map((f) => baseName(f.sourceFilePath)).join(', ')}`
+              (failed.length === 0
+                ? `${res.results.length}개를 ${destination} 으로 이동했습니다.`
+                : `${res.message} · 실패: ${failed.map((f) => baseName(f.sourceFilePath)).join(', ')}`) +
+                describeRefsUpdate(res.refs)
             );
           }
           setSelected(new Set());
@@ -543,18 +616,14 @@ const MediaAdmin: React.FC = () => {
           loadUsage();
         } else {
           // 폴더 이동 — 비동기 작업(jobId) 완료까지 폴링.
-          const { jobId } = await imagekitAdminAPI.moveFolder(moveState.path, destination);
-          if (jobId) {
-            setMoveBusy(true);
-            const done = await imagekitAdminAPI.waitForJob(jobId);
-            setNotice(
-              done
-                ? `${moveState.name} 폴더를 ${destination} 으로 이동했습니다. 기존 URL은 더 이상 동작하지 않습니다.`
-                : `${moveState.name} 폴더 이동을 요청했습니다(진행 중). 잠시 후 새로고침해 확인해주세요.`
-            );
-          } else {
-            setNotice(`${moveState.name} 폴더 이동을 요청했습니다.`);
-          }
+          // 백엔드가 작업 완료를 기다렸다가 DB 참조까지 갱신해 응답한다.
+          const res = await imagekitAdminAPI.moveFolder(moveState.path, destination);
+          setNotice(
+            (res.jobCompleted === false
+              ? `${moveState.name} 폴더 이동을 요청했습니다(진행 중).`
+              : `${moveState.name} 폴더를 ${destination} 으로 이동했습니다.`) +
+              describeRefsUpdate(res.refs)
+          );
           invalidateFolderCache();
           setTreeRefresh((n) => n + 1);
           setMoveState(null);
@@ -590,15 +659,18 @@ const MediaAdmin: React.FC = () => {
     setRenameError(null);
     try {
       if (renameTarget.kind === 'file') {
-        await imagekitAdminAPI.renameFile(renameTarget.filePath, name);
-        setNotice(`이름을 ${name} 으로 바꿨습니다. 기존 URL은 더 이상 동작하지 않습니다.`);
+        const res = await imagekitAdminAPI.renameFile(renameTarget.filePath, name);
+        setNotice(`이름을 ${name} 으로 바꿨습니다.` + describeRefsUpdate(res.refs));
         setRenameTarget(null);
         setDetailId(null);
         reload();
       } else {
-        const { jobId } = await imagekitAdminAPI.renameFolder(renameTarget.path, name);
-        if (jobId) await imagekitAdminAPI.waitForJob(jobId);
-        setNotice(`폴더 이름을 ${name} 으로 바꿨습니다. 폴더 안 파일의 기존 URL은 모두 바뀝니다.`);
+        const res = await imagekitAdminAPI.renameFolder(renameTarget.path, name);
+        setNotice(
+          (res.jobCompleted === false
+            ? `폴더 이름 변경을 요청했습니다(진행 중).`
+            : `폴더 이름을 ${name} 으로 바꿨습니다.`) + describeRefsUpdate(res.refs)
+        );
         invalidateFolderCache();
         setTreeRefresh((n) => n + 1);
         const renamedTo = joinPath(parentPath(renameTarget.path) || '/', name);
@@ -616,6 +688,16 @@ const MediaAdmin: React.FC = () => {
       setRenameBusy(false);
     }
   }, [renameTarget, renameValue, renameBusy, browsePath, reload, enterFolder]);
+
+  // 이름변경 모달도 ESC 로 닫는다(이동 모달과 동작 일치 — 없으면 키보드로 빠져나올 수 없다).
+  useEffect(() => {
+    if (!renameTarget) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !renameBusy) setRenameTarget(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [renameTarget, renameBusy]);
 
   const openRename = useCallback(
     (target: NonNullable<typeof renameTarget>) => {
@@ -1367,6 +1449,7 @@ const MediaAdmin: React.FC = () => {
         confirmLabel={moveState?.kind === 'files' && moveState.mode === 'copy' ? '복사' : '이동'}
         busy={moveBusy}
         error={moveError}
+        refs={{ loading: refsLoading, data: refs, error: refsError }}
         onCancel={() => {
           if (!moveBusy) {
             setMoveState(null);
@@ -1393,8 +1476,9 @@ const MediaAdmin: React.FC = () => {
             <p className="ma-modal-warn">
               이름을 바꾸면 <strong>기존 URL이 즉시 바뀝니다.</strong>
               {renameTarget.kind === 'folder' && ' 폴더 안 모든 파일의 URL이 함께 바뀝니다.'} 이미
-              게시된 글이 예전 URL을 참조하고 있으면 이미지가 깨질 수 있습니다.
+              사이트 게시물의 참조는 자동으로 갱신하지만, 외부에 공유된 URL은 되살릴 수 없습니다.
             </p>
+            <RefsNotice loading={refsLoading} data={refs} error={refsError} action="이름 변경" />
             <form
               className="ma-modal-manual"
               onSubmit={(e) => {

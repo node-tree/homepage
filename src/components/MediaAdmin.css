@@ -1065,6 +1065,62 @@ button.ma-crumb:hover {
   margin-bottom: 6px;
 }
 
+/* ── 참조 안내(이동/이름변경 전) ───────────────────────────────── */
+.ma-refs {
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.55;
+  word-break: keep-all;
+  border: 1px solid #ececec;
+  background: #fafafa;
+  color: #555;
+}
+.ma-refs-loading {
+  color: #999;
+}
+.ma-refs-safe {
+  border-color: #d8e6dd;
+  background: #f4faf6;
+  color: #2f6b4a;
+}
+.ma-refs-info {
+  border-color: #d9e3ff;
+  background: #f2f6ff;
+  color: #33415c;
+}
+.ma-refs-warn {
+  border-color: #f3dada;
+  background: #fdf3f2;
+  color: #8c4038;
+}
+.ma-refs-line {
+  margin: 0 0 4px;
+}
+.ma-refs-line:last-child {
+  margin-bottom: 0;
+}
+.ma-refs-detail {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #7b849b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  word-break: break-all;
+}
+.ma-refs-manual {
+  color: #8c4038;
+}
+.ma-refs-manual .ma-refs-detail {
+  color: #a8756d;
+}
+.ma-refs-external {
+  padding-top: 4px;
+  border-top: 1px dashed rgba(26, 26, 26, 0.12);
+  color: #777;
+}
+
 /* ── 편집 패널(비파괴 URL 변환 / 파괴 원본 교체) ───────────────── */
 .ma-edit-tabs {
   display: flex;

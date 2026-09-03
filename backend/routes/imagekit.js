@@ -10,7 +10,11 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
+const mongoose = require('mongoose');
 const ImageKit = require('imagekit');
+
+const ikRefs = require('../lib/ikRefs');
+const ikRefsDb = require('../lib/ikRefsDb');
 
 const router = express.Router();
 
@@ -74,8 +78,11 @@ const requireImagekitAccess = (req, res, next) => {
 router.use(requireImagekitAccess);
 
 // SDK 미초기화(환경변수 누락) 가드
+//   예외: /refs* 는 ImageKit 을 전혀 호출하지 않고 자체 DB 만 읽고 쓴다.
+//   키가 비어 있어도 "어디서 참조 중인지" 조회와 롤백은 동작해야 하므로 통과시킨다.
+const REFS_ONLY = /^\/refs(\/|$)/;
 router.use((req, res, next) => {
-  if (!imagekit) {
+  if (!imagekit && !REFS_ONLY.test(req.path)) {
     return res.status(503).json({
       success: false,
       message: 'ImageKit 환경변수가 서버에 설정되지 않았습니다.',
@@ -169,6 +176,100 @@ function pickSort(raw, fallback = 'DESC_CREATED') {
 // SDK 미지원 엔드포인트용 Basic 인증 헤더(private key). 응답에 절대 싣지 않는다.
 function ikBasicAuthHeader() {
   return `Basic ${Buffer.from(`${PRIVATE_KEY}:`).toString('base64')}`;
+}
+
+// ═══ DB 참조 자동 치환 ═══════════════════════════════════════════
+//   ImageKit 은 경로 기반 URL 이라 이동/이름변경 즉시 기존 URL 이 죽는다.
+//   자체 DB(356건 실측)에 그 URL 이 문자열로 박혀 있으므로 함께 갱신해야 글이 안 깨진다.
+
+/** mongoose 연결에서 native Db 를 얻는다. 연결이 없으면 null. */
+function getDb() {
+  return mongoose.connection && mongoose.connection.readyState === 1
+    ? mongoose.connection.db
+    : null;
+}
+
+function actorOf(req) {
+  if (req.user) return `admin:${req.user.username || req.user.id || 'unknown'}`;
+  if (req.kkumdarak) return 'kkumdarak';
+  return 'unknown';
+}
+
+/**
+ * ImageKit 이동이 성공한 뒤 DB 참조를 갱신한다.
+ *   · updateRefs 가 false 면 건너뛴다(응답에 skipped 표시).
+ *   · DB 미연결이면 실패로 보고하되 이동 자체는 성공으로 둔다(호출측이 판단).
+ *   반환: { updated, skipped?, error?, batchId, refsUpdated, documents, failures }
+ */
+async function updateRefsAfterMove(req, mappings) {
+  if (req.body?.updateRefs === false) {
+    return { updated: false, skipped: true, reason: 'updateRefs=false 로 요청됨' };
+  }
+  const db = getDb();
+  if (!db) {
+    return { updated: false, error: 'DB 에 연결되어 있지 않아 참조를 갱신하지 못했습니다.' };
+  }
+  const r = await ikRefsDb.applyMappings(db, mappings, { actor: actorOf(req) });
+  return {
+    updated: true,
+    batchId: r.batchId,
+    refsUpdated: r.refsUpdated,
+    documents: r.documents,
+    failures: r.failures,
+  };
+}
+
+/**
+ * ImageKit 이동은 됐는데 DB 치환이 터진 경우의 보상 이동(되돌리기).
+ *   revert 는 실제 ImageKit 호출을 수행하는 함수. 실패해도 예외를 밖으로 던지지 않는다.
+ */
+/**
+ * 폴더 이동/이름변경(bulkJob) 완료 대기.
+ *   DB 참조를 고치기 전에 실제 파일 이동이 끝났는지 확인하기 위함.
+ *   타임아웃이면 false — 호출측이 "작업은 진행 중" 임을 응답에 담는다.
+ */
+async function waitForBulkJob(jobId, timeoutMs = 20000, intervalMs = 1200) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const job = await imagekit.getBulkJobStatus(jobId);
+      if (String(job?.status || '').toLowerCase() === 'completed') return true;
+    } catch {
+      /* 폴링 실패는 무시하고 재시도 — 작업 자체는 ImageKit 에서 계속 진행된다. */
+    }
+    // eslint-disable-next-line no-await-in-loop
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  return false;
+}
+
+async function compensate(revert) {
+  try {
+    await revert();
+    return { compensated: true };
+  } catch (e) {
+    return { compensated: false, compensateError: safeMessage(e) };
+  }
+}
+
+// 소스 하드코딩 참조 목록(빌드 시점 grep 결과). 없으면 빈 값으로 동작.
+let CODE_REFS = { total: 0, byPath: {}, byFile: {}, generatedAt: null };
+try {
+  // eslint-disable-next-line global-require
+  CODE_REFS = require('../data/ikCodeRefs.json');
+} catch {
+  console.warn('⚠️ backend/data/ikCodeRefs.json 없음 — 코드 참조 안내가 비활성화됩니다. `node backend/scripts/scanCodeRefs.js` 로 생성하세요.');
+}
+
+/** 경로(파일/폴더)에 걸리는 코드 하드코딩 참조 */
+function codeRefsFor(canon, kind) {
+  const out = [];
+  for (const [p, list] of Object.entries(CODE_REFS.byPath || {})) {
+    const hit = kind === 'file' ? p === canon : p === canon || p.startsWith(`${canon}/`);
+    if (hit) out.push(...list.map((l) => ({ ...l, path: p })));
+  }
+  return out;
 }
 
 // GET /api/imagekit/auth
@@ -400,6 +501,91 @@ router.post('/folder', async (req, res) => {
   }
 });
 
+// ═══ DB/코드 참조 조회 · 롤백 ════════════════════════════════════
+
+// POST /api/imagekit/refs  { paths: [], kinds?: {path:'file'|'folder'} }
+//   이동/이름변경 전에 "이 경로를 참조하는 곳이 몇 군데인가"를 보여주기 위한 조회.
+//   · DB: 전 컬렉션 재귀 스캔 인덱스(60초 캐시)에서 조회. 폴더면 하위까지 합산.
+//   · 코드: 빌드 시점 grep 결과(ikCodeRefs.json) — 자동 치환 불가, 수동 안내용.
+router.post('/refs', async (req, res) => {
+  const paths = Array.isArray(req.body?.paths) ? req.body.paths.filter((p) => typeof p === 'string') : [];
+  if (paths.length === 0) {
+    return res.status(400).json({ success: false, message: '조회할 경로가 필요합니다.' });
+  }
+  if (paths.length > 200) {
+    return res.status(400).json({ success: false, message: '한 번에 최대 200개까지 조회할 수 있습니다.' });
+  }
+  const kinds = req.body?.kinds && typeof req.body.kinds === 'object' ? req.body.kinds : {};
+  const db = getDb();
+  if (!db) {
+    return res.status(503).json({ success: false, message: 'DB 에 연결되어 있지 않습니다.' });
+  }
+  try {
+    const rows = await ikRefsDb.findRefs(db, paths, { kinds, force: req.body?.force === true });
+    const items = rows.map((r) => {
+      const code = codeRefsFor(r.path, r.kind === 'folder' ? 'folder' : 'file');
+      return {
+        path: r.path,
+        kind: r.kind,
+        db: { count: r.count, byCollection: r.byCollection, refs: r.refs.slice(0, 200) },
+        code: { count: code.length, refs: code.slice(0, 50) },
+      };
+    });
+    const totalDb = items.reduce((s, i) => s + i.db.count, 0);
+    const totalCode = items.reduce((s, i) => s + i.code.count, 0);
+    res.json({
+      success: true,
+      items,
+      totalDb,
+      totalCode,
+      codeRefsGeneratedAt: CODE_REFS.generatedAt || null,
+    });
+  } catch (error) {
+    console.error('ImageKit refs 조회 오류:', error.message);
+    res.status(500).json({ success: false, message: '참조 조회에 실패했습니다.' });
+  }
+});
+
+// GET /api/imagekit/refs/logs?limit=&batchId= — 치환 로그 목록(롤백 대상 확인)
+router.get('/refs/logs', async (req, res) => {
+  const db = getDb();
+  if (!db) return res.status(503).json({ success: false, message: 'DB 에 연결되어 있지 않습니다.' });
+  try {
+    const logs = await ikRefsDb.listLogs(db, {
+      limit: parseInt(req.query.limit, 10) || 50,
+      batchId: req.query.batchId,
+    });
+    res.json({ success: true, logs });
+  } catch (error) {
+    console.error('ImageKit refs 로그 조회 오류:', error.message);
+    res.status(500).json({ success: false, message: '로그 조회에 실패했습니다.' });
+  }
+});
+
+// POST /api/imagekit/refs/rollback  { logId } 또는 { batchId }
+//   치환 전 원본 문서를 그대로 복원한다. ImageKit 파일 자체는 되돌리지 않는다(안내 문구 참고).
+router.post('/refs/rollback', async (req, res) => {
+  const db = getDb();
+  if (!db) return res.status(503).json({ success: false, message: 'DB 에 연결되어 있지 않습니다.' });
+  const { logId, batchId } = req.body || {};
+  if (!logId && !batchId) {
+    return res.status(400).json({ success: false, message: 'logId 또는 batchId 가 필요합니다.' });
+  }
+  try {
+    const r = await ikRefsDb.rollback(db, { logId, batchId });
+    res.json({
+      success: true,
+      message: `${r.entries}건의 문서를 치환 이전 상태로 복원했습니다.`,
+      ...r,
+      note: 'DB 참조만 복원했습니다. ImageKit 파일 위치는 그대로이므로 필요하면 파일도 되돌려야 합니다.',
+    });
+  } catch (error) {
+    const status = error.status || 500;
+    console.error('ImageKit refs 롤백 오류:', error.message);
+    res.status(status).json({ success: false, message: error.message || '롤백에 실패했습니다.' });
+  }
+});
+
 // ═══ 이동 · 이름변경 · 일괄 작업 ═════════════════════════════════
 //   ⚠️ 이동/이름변경은 ImageKit 의 URL(경로 기반)을 즉시 바꾼다. 기존 URL 을 참조하는
 //      게시물은 깨질 수 있으므로 프론트에서 경고를 반드시 노출한다.
@@ -419,7 +605,28 @@ router.post('/file/move', async (req, res) => {
   }
   try {
     await imagekit.moveFile({ sourceFilePath: src.path, destinationPath: dst.path });
-    res.json({ success: true, message: '이동되었습니다.', sourceFilePath: src.path, destinationPath: dst.path });
+    // ImageKit 이동 성공 → DB 참조 갱신. 실패 시 파일을 원위치로 되돌린다(보상).
+    const mappings = [ikRefs.fileMoveMapping(src.path, dst.path)];
+    let refs;
+    try {
+      refs = await updateRefsAfterMove(req, mappings);
+    } catch (dbErr) {
+      const comp = await compensate(() =>
+        imagekit.moveFile({ sourceFilePath: mappings[0].to, destinationPath: srcParent })
+      );
+      return res.status(500).json({
+        success: false,
+        message: `파일은 이동했지만 DB 참조 갱신에 실패했습니다: ${safeMessage(dbErr)}`,
+        ...comp,
+      });
+    }
+    res.json({
+      success: true,
+      message: '이동되었습니다.',
+      sourceFilePath: src.path,
+      destinationPath: dst.path,
+      refs,
+    });
   } catch (error) {
     return sendIkError(res, error, '파일 이동 실패');
   }
@@ -463,11 +670,26 @@ router.put('/file/rename', async (req, res) => {
       newFileName: nm.name,
       purgeCache: req.body?.purgeCache === true,
     });
+    const mappings = [ikRefs.fileRenameMapping(src.path, nm.name)];
+    let refs;
+    try {
+      refs = await updateRefsAfterMove(req, mappings);
+    } catch (dbErr) {
+      const comp = await compensate(() =>
+        imagekit.renameFile({ filePath: mappings[0].to, newFileName: currentName })
+      );
+      return res.status(500).json({
+        success: false,
+        message: `이름은 변경했지만 DB 참조 갱신에 실패했습니다: ${safeMessage(dbErr)}`,
+        ...comp,
+      });
+    }
     res.json({
       success: true,
       message: '이름이 변경되었습니다.',
       newFileName: nm.name,
       purgeRequestId: (result && result.purgeRequestId) || undefined,
+      refs,
     });
   } catch (error) {
     return sendIkError(res, error, '파일 이름 변경 실패');
@@ -531,12 +753,27 @@ router.post('/files/bulk-move', async (req, res) => {
   }
   const moved = results.filter((r) => r.ok).length;
   const firstError = results.find((r) => !r.ok)?.error;
+
+  // 실제로 옮겨진 파일만 매핑에 넣는다(실패한 건 URL 이 그대로이므로 치환하면 안 된다).
+  let refs = { updated: false, reason: '이동된 파일이 없습니다.' };
+  if (moved > 0) {
+    const mappings = results
+      .filter((r) => r.ok)
+      .map((r) => ikRefs.fileMoveMapping(r.sourceFilePath, dst.path));
+    try {
+      refs = await updateRefsAfterMove(req, mappings);
+    } catch (dbErr) {
+      refs = { updated: false, error: safeMessage(dbErr) };
+    }
+  }
+
   res.json({
     success: moved > 0,
     // 전부 실패했으면 프론트가 그대로 오류로 띄우므로 사유를 메시지에 담는다.
     message: moved === 0 ? `이동 실패: ${firstError || '알 수 없는 오류'}` : `${moved}/${results.length}개 이동 완료`,
     destinationPath: dst.path,
     results,
+    refs,
   });
 });
 
@@ -559,12 +796,25 @@ router.post('/folder/move', async (req, res) => {
   }
   try {
     const result = await imagekit.moveFolder({ sourceFolderPath: src.path, destinationPath: dst.path });
+    const jobId = (result && result.jobId) || null;
+    // 비동기 작업이라 완료를 기다렸다가 DB 를 고쳐야 한다.
+    // 시간 내 완료를 못 봐도 참조는 갱신하되(작업은 서버에서 계속 진행) 그 사실을 알린다.
+    const jobCompleted = jobId ? await waitForBulkJob(jobId) : true;
+    const mappings = [ikRefs.folderMoveMapping(src.path, dst.path)];
+    let refs;
+    try {
+      refs = await updateRefsAfterMove(req, mappings);
+    } catch (dbErr) {
+      refs = { updated: false, error: safeMessage(dbErr) };
+    }
     res.json({
       success: true,
       message: '폴더 이동을 시작했습니다.',
-      jobId: (result && result.jobId) || null,
+      jobId,
+      jobCompleted,
       sourceFolderPath: src.path,
       destinationPath: dst.path,
+      refs,
     });
   } catch (error) {
     return sendIkError(res, error, '폴더 이동 실패');
@@ -597,12 +847,23 @@ router.post('/folder/rename', async (req, res) => {
         timeout: 20000,
       }
     );
+    const jobId = (data && data.jobId) || null;
+    const jobCompleted = jobId ? await waitForBulkJob(jobId) : true;
+    const mappings = [ikRefs.folderRenameMapping(src.path, nm.name)];
+    let refs;
+    try {
+      refs = await updateRefsAfterMove(req, mappings);
+    } catch (dbErr) {
+      refs = { updated: false, error: safeMessage(dbErr) };
+    }
     res.json({
       success: true,
       message: '폴더 이름 변경을 시작했습니다.',
-      jobId: (data && data.jobId) || null,
+      jobId,
+      jobCompleted,
       folderPath: src.path,
       newFolderName: nm.name,
+      refs,
     });
   } catch (error) {
     // axios 오류는 ImageKit 본문 메시지를 우선 노출한다(키는 마스킹).
