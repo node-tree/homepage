@@ -218,9 +218,61 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     // ── 조작: 드래그=궤도, Shift/두손가락=팬, 휠/핀치=줌 ──
     const ptrs = new Map();
     let pinch0 = 0, zoom0 = 1;
+    // ── 팬 클램프: 콘텐츠가 화면에서 사라지지 않게 ──
+    //   직교 카메라라 화면축을 지면(XZ)으로 정확히 역투영할 수 있다.
+    //   화면 좌우 = 월드 XZ를 az만큼 돌린 u축, 화면 상하 = 같은 프레임의 w축(고도각 때문에 1/sin(el)로 늘어난다).
+    //     u = x·cos az − z·sin az  (|u| ≤ S·asp)
+    //     w = x·sin az + z·cos az  (|w| ≤ S/sin el)   ← 화면 y = −sin(el)·w 이므로
+    //   허용 중심은 콘텐츠 상자를 (뷰포트 반범위 − PAN_M)만큼 안으로 줄인 상자.
+    //   줄여서 뒤집히면(뷰포트가 콘텐츠보다 크면) 같은 두 수가 자리를 바꿔 '콘텐츠가 프레임 안에
+    //   PAN_M 여백을 두고 다 들어오는' 범위가 된다 — 한 식으로 두 경우가 모두 처리된다.
+    const PAN_M = 6;                                    // 콘텐츠 밖으로 허용할 여백(world)
+    let panAz = NaN, panU = [0, 0], panW = [0, 0];      // az별 콘텐츠 회전 AABB 캐시(회전 중에만 재계산)
+    const panX = [Infinity, -Infinity], panZ = [Infinity, -Infinity];   // 월드 XZ AABB(고정)
+    for (const [x0, , z0, x1, , z1] of fit) {
+      if (x0 < panX[0]) panX[0] = x0; if (x1 > panX[1]) panX[1] = x1;
+      if (z0 < panZ[0]) panZ[0] = z0; if (z1 > panZ[1]) panZ[1] = z1;
+    }
+    const contentBox = (az) => {
+      if (Math.abs(az - panAz) < 1e-4) return;
+      panAz = az;
+      const ca = Math.cos(az), sa = Math.sin(az);
+      let u0 = Infinity, u1 = -Infinity, w0 = Infinity, w1 = -Infinity;
+      for (const [x0, , z0, x1, , z1] of fit) for (let i = 0; i < 4; i++) {
+        const x = (i & 1) ? x1 : x0, z = (i & 2) ? z1 : z0;
+        const u = x * ca - z * sa, w = x * sa + z * ca;
+        if (u < u0) u0 = u; if (u > u1) u1 = u;
+        if (w < w0) w0 = w; if (w > w1) w1 = w;
+      }
+      panU = [u0, u1]; panW = [w0, w1];
+    };
+    const span1 = (v, a0, a1, half) => {
+      const lo = a0 + half - PAN_M, hi = a1 - half + PAN_M;
+      return lo <= hi ? Math.max(lo, Math.min(hi, v))    // 뷰포트 < 콘텐츠 — 콘텐츠가 화면을 덮게
+                      : Math.max(hi, Math.min(lo, v));   // 뷰포트 > 콘텐츠 — 콘텐츠가 화면 안에 다 들어오게
+    };
     const clampPan = () => {
-      target.cx = Math.max(-95, Math.min(95, target.cx));
-      target.cz = Math.max(-70, Math.min(70, target.cz));
+      const az = target.az, ev = Math.max(0.06, target.el);
+      contentBox(az);
+      const S = S0 / target.zoom;
+      const asp = (el.clientWidth || 1400) / (el.clientHeight || 900);
+      const ca = Math.cos(az), sa = Math.sin(az);
+      const hu = S * asp;
+      // 화면 세로 반범위는 고도각이 낮을수록 1/sin(el)로 발산한다(지평선). 하지만 실제로 보이는
+      // 거리는 카메라 깊이 범위(near .1 ~ far 700, 카메라 거리 R)가 먼저 자른다 —
+      // 캡을 씌우지 않으면 입면 뷰에서 목표가 far 밖으로 밀려 화면이 빈다(실측으로 잡은 결함).
+      const hw = Math.min(S / Math.sin(ev), R * 0.9);
+      // ① 화면축(u,w)에서 클램프
+      const u = span1(target.cx * ca - target.cz * sa, panU[0], panU[1], hu);
+      const w = span1(target.cx * sa + target.cz * ca, panW[0], panW[1], hw);
+      target.cx = u * ca + w * sa;                       // 역회전
+      target.cz = -u * sa + w * ca;
+      // ② 월드 XZ에서 한 번 더. ①만으로는 회전 AABB의 '모서리'(콘텐츠가 없는 대각 구석)로
+      //    빠져나갈 수 있다 — 실측으로 잡은 결함(줌 4.5에서 대각 드래그 시 빈 화면).
+      //    뷰포트 사각형의 XZ 방향 반범위 = |hu·cos az| + |hw·sin az| (그 반대도 동일).
+      const hx = Math.abs(hu * ca) + Math.abs(hw * sa), hz = Math.abs(hu * sa) + Math.abs(hw * ca);
+      target.cx = span1(target.cx, panX[0], panX[1], hx);
+      target.cz = span1(target.cz, panZ[0], panZ[1], hz);
     };
     const panBy = (dx, dy) => {
       const S = S0 / target.zoom;
@@ -248,6 +300,7 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         else {                                                    // 궤도 회전
           target.az -= dx * 0.0052;
           target.el = Math.max(0.06, Math.min(1.53, target.el + dy * 0.004));
+          clampPan();                                             // 시야가 돌면 허용 중심도 바뀐다
           setView('custom');
         }
       } else if (ptrs.size === 2) {
@@ -256,7 +309,7 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         ptrs.set(e.pointerId, cur);
         const pts2 = [...ptrs.values()];
         const d1 = Math.hypot(pts2[0].x - pts2[1].x, pts2[0].y - pts2[1].y);
-        if (pinch0) { userZoomed = true; target.zoom = Math.max(zoomMin(), Math.min(4.5, zoom0 * (d1 / pinch0))); }
+        if (pinch0) { userZoomed = true; target.zoom = Math.max(zoomMin(), Math.min(4.5, zoom0 * (d1 / pinch0))); clampPan(); }
         const mx0 = (pts[0].x + pts[1].x) / 2, my0 = (pts[0].y + pts[1].y) / 2;
         const mx1 = (pts2[0].x + pts2[1].x) / 2, my1 = (pts2[0].y + pts2[1].y) / 2;
         panBy(mx1 - mx0, my1 - my0);
@@ -289,6 +342,7 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       e.preventDefault();
       userZoomed = true;
       target.zoom = Math.max(zoomMin(), Math.min(4.5, target.zoom * Math.exp(-e.deltaY * 0.0014)));
+      clampPan();                                                 // 줌이 바뀌면 뷰포트 반범위가 바뀐다 — 즉시 재클램프
     };
     el.addEventListener('pointerdown', down);
     el.addEventListener('pointermove', move);
