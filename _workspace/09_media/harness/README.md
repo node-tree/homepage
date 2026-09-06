@@ -3,22 +3,21 @@
 `_workspace/09_media/shots/` 의 스크린샷과 보고서의 실측 수치를 **그대로 재현**하기 위한 도구 모음.
 저장소 코드는 건드리지 않고, 로컬에서만 도는 스텁·스크립트다.
 
-## 왜 스텁이 필요한가 (중요)
+## 검증 층 구성
 
-`backend/.env` 와 Vercel 운영 env 모두 `IMAGEKIT_PUBLIC_KEY` / `IMAGEKIT_PRIVATE_KEY` 가 **빈 값**이다
-(`IMAGEKIT_URL_ENDPOINT` 만 설정됨). 따라서 `/api/imagekit/*` 는 전부 **503** 을 반환하고
-실제 ImageKit 데이터를 받을 수 없다.
+`backend/.env` 에 ImageKit 실키가 들어온 뒤(2026-09-04)로는 **실계정 검증이 가능**하다.
+다만 UI 스크린샷까지 실계정으로 찍으면 운영 라이브러리를 건드리게 되므로 층을 나눠 둔다.
 
-그래서 검증을 세 층으로 나눴다.
-
-| 층 | 도구 | 무엇을 실제로 확인하나 | 확인 못 하는 것 |
+| 층 | 도구 | 무엇을 실제로 확인하나 | 쓰기 범위 |
 |---|---|---|---|
-| 백엔드 라우트 | `backend-checks.sh` | 실제 `routes/imagekit.js` 를 마운트해 인증(401/403)·키 가드(503)·입력검증(400)·상류 오류 매핑·키 비노출 | ImageKit 실호출 결과 |
-| 프론트 UI | `stub-api.js` + `shoot-*.js` | 실렌더·상호작용·콘솔 에러·레이아웃(데스크톱/모바일) | 실데이터 |
-| 이미지 파이프라인 | `shoot-edit.js`·`shoot-exif.js`·`quality-bench.js` | canvas 편집 결과의 **실제 픽셀 치수·바이트**, 업로드 FormData 필드, EXIF 반영 | ImageKit `overwriteFile` 이 정말 URL 을 유지하는지, purge 응답 원문 |
+| 순수 로직 | `node --test backend/lib/*.test.js` | 경로 정규화·치환·전송 실패/보상 분기 | 없음 |
+| 백엔드 라우트 | `backend-checks.sh` | 인증(401/403)·키 가드(503)·입력검증(400)·오류 매핑·키 비노출 | 없음 |
+| 실계정 왕복 | `transfer-live.js` | 무료 플랜 제약, 복제 이동/복사, 409, 한글 NFC/NFD, 일괄, DB 결합, 실패 보상 | **`/_ik-test` 하위만** (끝나면 폴더째 삭제) |
+| DB 참조 | `refs-roundtrip.js` | 치환·롤백 왕복 | **`imagekit_ref_test`·`imagekit_ref_log` 만** |
+| 프론트 UI | `stub-api.js` + `shoot-*.js` | 실렌더·상호작용·콘솔 에러·레이아웃(데스크톱/모바일) | 없음(스텁) |
 
-**미검증으로 남는 것**: 실계정 왕복(업로드→이동→이름변경→덮어쓰기→같은 URL 재요청→퍼지).
-키가 채워지면 `/_ik-test/` 폴더로 수행해야 한다.
+⚠️ `imagekit_ref_log` 에는 **리드가 실제로 수행한 정리 기록**(`actor: lead-reorg-*`)이 들어 있다.
+롤백 근거이므로 하네스 정리 시 **actor 로 범위를 좁혀** 삭제할 것(전체 삭제 금지).
 
 ## 사전 준비
 
@@ -54,6 +53,11 @@ node _workspace/09_media/harness/shoot-exif.js    # edit-*-{6,7}.png   + EXIF or
 node _workspace/09_media/harness/shoot-picker.js  # picker-*.png (ImageKitPicker 회귀)
 node _workspace/09_media/harness/shoot-blocked.js # edit-desktop-8-avif-blocked.png (미지원 확장자 차단)
 node _workspace/09_media/harness/shoot-refs.js    # refs-*.png (이동/이름변경 전 참조 안내)
+node _workspace/09_media/harness/shoot-xfer.js    # xfer-*.png (복제 이동/복사 완료 알림)
+
+# 5-1) 복제 방식 이동/복사 (실 ImageKit — /_ik-test 안에서만, 끝나면 폴더째 삭제)
+node --test backend/lib/ikTransfer.test.js              # 가짜 SDK 로 실패/보상 분기 14건
+node _workspace/09_media/harness/transfer-live.js       # 실계정 왕복(무료 플랜 제약 재확인 포함)
 
 # 6) DB 참조 치환 — 순수 로직 + 실 DB 왕복
 node --test backend/lib/ikRefs.test.js                  # 순수 로직 21건(네트워크 불필요)
@@ -87,6 +91,9 @@ CI=true npx react-scripts test --watchAll=false --testPathPattern="imageEdit"
 | `shoot-blocked.js` | 미지원 확장자(.avif)가 파괴 편집에서 차단되는지 UI 로 확인 |
 | `shoot-refs.js` | 이동/이름변경 모달의 참조 안내(참조 있음 / 없음) 스크린샷 |
 | `refs-roundtrip.js` | 실 DB 치환→롤백 왕복. **쓰기는 `imagekit_ref_test`·`imagekit_ref_log` 두 컬렉션뿐** |
+| `transfer-live.js` | 복제 방식 이동/복사 실계정 검증. **ImageKit 쓰기는 `/_ik-test` 하위뿐**, 끝나면 폴더째 삭제 |
+| `nfd-folder-live.js` | 폴더 이름변경 후 하위 **NFD 파일명 보존**을 실계정으로 확인(`/_ik-test-nfd`) |
+| `shoot-xfer.js` | 복제 이동/복사 완료 알림(검증 결과·부분 실패) 스크린샷 |
 | `quality-bench.js` | 같은 입력·같은 변환으로 quality 1.0/0.95/0.9/0.85/0.82/0.8/0.7 출력 바이트 비교 |
 | `fixtures/exif6.jpg` | 위 EXIF 픽스처(커밋됨 — 네트워크 없이도 재현 가능) |
 
@@ -104,6 +111,44 @@ CI=true npx react-scripts test --watchAll=false --testPathPattern="imageEdit"
 
 `imagekit_ref_test` / `imagekit_ref_log` 는 `listScannableCollections()` 의 기본 스캔 대상에서
 제외되므로, 임시 데이터가 실제 참조 집계를 오염시키지 않는다(테스트로 확인).
+
+## 무료 플랜 제약 (2026-09-04 실측)
+
+`files/move`·`files/copy` 는 **항상** 실패한다.
+```
+POST /v1/files/move → 400 Versions Limit Exceeded. Limit: 0, Actual: 1
+POST /v1/files/copy → 400 (동일)
+```
+`rename`·`bulkJobs(moveFolder/renameFolder)`·`upload`·`delete` 는 정상.
+→ 파일 단위 이동/복사는 `backend/lib/ikTransfer.js` 의 **복제 방식**
+(`?tr=orig-true` 다운로드 → 업로드 → size/해상도 대조 → DB 참조 갱신 → 원본 삭제)으로 처리한다.
+
+한글 파일명은 **정규화하면 안 된다**: ImageKit 은 NFD 이름을 NFD 그대로 보관하고
+NFC 로 바꾼 URL 은 404 다(실측). 그래서 `ikRefs.targetPath()` 는 NFC 정규화를 하지 않는다.
+
+## 하네스 assertion 원칙 (허위 통과 방지)
+
+`transfer-live.js` [7] 단계에서 **"아무 에러나 나면 PASS"** 로 세다가 허위 통과가 났다.
+업로드 직후 경로로 호출하면 목록(검색 인덱스) 미반영으로 404 가 먼저 나는데,
+그 404 를 "주입한 DB 실패"로 오탐한 것이다.
+
+그래서 두 가지를 강제한다.
+1. 실계정 호출에는 **업로드 응답의 `fileId` 를 넘긴다**(경로 검색 의존 제거).
+   경로 해석 경로 자체를 검증할 때만 `waitIndexed()` 로 반영을 기다린 뒤 호출한다.
+2. 실패 검증은 **기대한 status·메시지·플래그를 모두 매칭**한다.
+   (`e.status===500 && e.compensated===true && /DB 참조 갱신 실패로 이동을 취소했습니다/`)
+   추가로 주입 함수가 실제로 호출됐는지(`injected`)까지 확인한다.
+
+보고 시에는 하네스의 마지막 줄(`결과: 실패 N건`)을 **그대로 인용**한다.
+
+## dev 서버가 안 뜰 때
+
+`package.json` 에 `"proxy"` 가 있고 머신에 LAN IP 가 없으면 CRA 가
+`allowedHosts: [undefined]` 를 넘겨 다음 오류로 죽는다.
+```
+Invalid options object. Dev Server ... options.allowedHosts[0] should be a non-empty string.
+```
+→ `DANGEROUSLY_DISABLE_HOST_CHECK=true npx react-scripts start` 로 실행한다(로컬 전용).
 
 ## tsconfig 관련 메모
 

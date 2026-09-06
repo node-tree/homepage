@@ -21,6 +21,8 @@ import {
   IkFolder,
   IkRefsResult,
   IkRefsUpdate,
+  IkTransferSource,
+  IkVerified,
   IkUploadResult,
   IkUsage,
 } from '../services/imagekitAdminApi';
@@ -143,6 +145,25 @@ const IconUp: React.FC = () => (
   </svg>
 );
 
+// 복제 검증 결과를 사람이 읽는 문장으로.
+//   무료 플랜에서는 ImageKit move/copy API 를 못 쓰므로 "다운로드→업로드→대조→원본 삭제"로
+//   옮긴다. 관리자에게 "정말 같은 파일이 옮겨졌는가"를 숫자로 보여준다.
+//   originalDeleted 를 넘기지 않으면(복사처럼 삭제 개념이 없는 동작) 삭제 문구를 붙이지 않는다.
+//   false 를 넘기면 "이동인데 원본 삭제에 실패" 라는 뜻이다 — 둘을 섞으면 복사에도
+//   "원본 삭제 실패" 경고가 뜬다(실측으로 드러난 오표기).
+function describeVerified(v?: IkVerified, originalDeleted?: boolean): string {
+  if (!v) return '';
+  const dims = v.width && v.height ? `, ${v.width}×${v.height}` : '';
+  const same =
+    v.size === v.sourceSize &&
+    v.width === v.sourceWidth &&
+    v.height === v.sourceHeight;
+  const head = same ? '복제 검증 통과' : '⚠️ 복제 검증 불일치';
+  const tail =
+    originalDeleted === false ? ' · ⚠️ 원본 삭제 실패(수동 정리 필요)' : originalDeleted ? ' 후 원본 삭제' : '';
+  return ` · ${head}(${formatBytes(v.size)}${dims})${tail}`;
+}
+
 // 참조 갱신 결과를 완료 알림에 덧붙일 문장으로 만든다.
 function describeRefsUpdate(refs?: IkRefsUpdate): string {
   if (!refs) return '';
@@ -201,7 +222,7 @@ const MediaAdmin: React.FC = () => {
 
   // 이동 모달 — 파일 다중 이동/복사 또는 폴더 이동
   const [moveState, setMoveState] = useState<
-    | { kind: 'files'; mode: 'move' | 'copy'; paths: string[] }
+    | { kind: 'files'; mode: 'move' | 'copy'; paths: IkTransferSource[] }
     | { kind: 'folder'; path: string; name: string }
     | null
   >(null);
@@ -334,7 +355,10 @@ const MediaAdmin: React.FC = () => {
     const targets: { paths: string[]; kinds: Record<string, 'file' | 'folder'> } | null = moveState
       ? moveState.kind === 'folder'
         ? { paths: [moveState.path], kinds: { [moveState.path]: 'folder' } }
-        : { paths: moveState.paths, kinds: Object.fromEntries(moveState.paths.map((p) => [p, 'file' as const])) }
+        : {
+            paths: moveState.paths.map((p) => p.filePath),
+            kinds: Object.fromEntries(moveState.paths.map((p) => [p.filePath, 'file' as const])),
+          }
       : renameTarget
       ? renameTarget.kind === 'folder'
         ? { paths: [renameTarget.path], kinds: { [renameTarget.path]: 'folder' } }
@@ -590,23 +614,47 @@ const MediaAdmin: React.FC = () => {
           if (moveState.mode === 'copy') {
             // 복사는 건별 API — 개별 실패는 건너뛰고 나머지를 계속 진행한 뒤 수치로 보고한다.
             let ok = 0;
+            let lastVerified: IkVerified | undefined;
+            const failed: string[] = [];
             for (const p of moveState.paths) {
+              setBulkBusy(`복사 중… (${ok + failed.length + 1}/${moveState.paths.length})`);
               try {
                 // eslint-disable-next-line no-await-in-loop
-                await imagekitAdminAPI.copyFile(p, destination);
+                const r = await imagekitAdminAPI.copyFile(p.filePath, destination, p.fileId);
+                lastVerified = r.verified;
                 ok += 1;
-              } catch {
-                /* 개별 실패 — 아래 요약에 반영된다. */
+              } catch (e: any) {
+                failed.push(`${baseName(p.filePath)}(${e?.message || '실패'})`);
               }
             }
-            setNotice(`${ok}/${moveState.paths.length}개를 ${destination} 으로 복사했습니다.`);
+            setBulkBusy(null);
+            setNotice(
+              `${ok}/${moveState.paths.length}개를 ${destination} 으로 복사했습니다.` +
+                (ok === 1 ? describeVerified(lastVerified) : '') +
+                (failed.length ? ` · 실패: ${failed.join(', ')}` : '')
+            );
           } else {
+            setBulkBusy(`${moveState.paths.length}개 이동 중… (복제 → 검증 → 원본 삭제)`);
             const res = await imagekitAdminAPI.bulkMoveFiles(moveState.paths, destination);
+            setBulkBusy(null);
             const failed = res.results.filter((r) => !r.ok);
+            const okRows = res.results.filter((r) => r.ok);
+            const verifiedAll = okRows.every(
+              (r) => r.verified && r.verified.size === r.verified.sourceSize
+            );
+            const leftovers = okRows.filter((r) => r.originalDeleted === false);
             setNotice(
               (failed.length === 0
                 ? `${res.results.length}개를 ${destination} 으로 이동했습니다.`
-                : `${res.message} · 실패: ${failed.map((f) => baseName(f.sourceFilePath)).join(', ')}`) +
+                : `${res.message} · 실패: ${failed
+                    .map((f) => `${baseName(f.sourceFilePath)}(${f.error || '오류'})`)
+                    .join(', ')}`) +
+                (okRows.length
+                  ? ` · ${verifiedAll ? '복제 검증 통과' : '⚠️ 일부 복제 검증 불일치'}(크기·해상도) 후 원본 삭제`
+                  : '') +
+                (leftovers.length
+                  ? ` · ⚠️ 원본 삭제 실패 ${leftovers.length}건(수동 정리 필요)`
+                  : '') +
                 describeRefsUpdate(res.refs)
             );
           }
@@ -642,6 +690,9 @@ const MediaAdmin: React.FC = () => {
         setMoveError(e?.message || '이동에 실패했습니다.');
       } finally {
         setMoveBusy(false);
+        // 진행률 표시는 반드시 여기서 푼다. 예외 경로에서 남겨두면 일괄 버튼(이동·복사·삭제)이
+        // 영구히 비활성 상태로 잠긴다(실측으로 드러난 결함).
+        setBulkBusy(null);
       }
     },
     [moveState, moveBusy, browsePath, reload, loadUsage, enterFolder]
@@ -1140,7 +1191,7 @@ const MediaAdmin: React.FC = () => {
                     setMoveState({
                       kind: 'files',
                       mode: 'move',
-                      paths: selectedFiles.map((f) => f.filePath),
+                      paths: selectedFiles.map((f) => ({ filePath: f.filePath, fileId: f.fileId })),
                     });
                   }}
                 >
@@ -1155,7 +1206,7 @@ const MediaAdmin: React.FC = () => {
                     setMoveState({
                       kind: 'files',
                       mode: 'copy',
-                      paths: selectedFiles.map((f) => f.filePath),
+                      paths: selectedFiles.map((f) => ({ filePath: f.filePath, fileId: f.fileId })),
                     });
                   }}
                 >
@@ -1628,7 +1679,11 @@ const MediaAdmin: React.FC = () => {
                     className="ma-btn"
                     onClick={() => {
                       setMoveError(null);
-                      setMoveState({ kind: 'files', mode: 'move', paths: [detail.filePath] });
+                      setMoveState({
+                        kind: 'files',
+                        mode: 'move',
+                        paths: [{ filePath: detail.filePath, fileId: detail.fileId }],
+                      });
                     }}
                   >
                     이동

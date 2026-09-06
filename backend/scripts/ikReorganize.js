@@ -33,6 +33,7 @@ const mongoose = require('mongoose');
 const ImageKit = require('imagekit');
 const ikRefs = require('../lib/ikRefs');
 const ikRefsDb = require('../lib/ikRefsDb');
+const ikTransfer = require('../lib/ikTransfer');
 
 // ── 인자 파싱 ──────────────────────────────────────────────────
 function parseArgs(argv) {
@@ -148,20 +149,35 @@ async function existsOnImageKit(ik, row) {
   return Array.isArray(list);
 }
 
-async function moveOne(ik, row) {
+async function moveOne(ik, row, ctx = {}) {
   if (row.kind === 'file') {
+    // ⚠️ 무료 플랜은 files/move 가 항상 실패한다(Versions Limit Exceeded, Limit:0).
+    //    → 복제 방식(ikTransfer)으로 옮긴다. DB 참조 갱신까지 이 안에서 처리된다.
     const destFolder = row.to.slice(0, row.to.lastIndexOf('/')) || '/';
     const fromName = row.from.slice(row.from.lastIndexOf('/') + 1);
     const toName = row.to.slice(row.to.lastIndexOf('/') + 1);
-    const srcFolder = row.from.slice(0, row.from.lastIndexOf('/')) || '/';
-    if (srcFolder !== destFolder) {
-      await ik.moveFile({ sourceFilePath: row.from, destinationPath: destFolder });
-    }
+    const r = await ikTransfer.transferFile({
+      ik,
+      db: ctx.db || null,
+      sourceFilePath: row.from,
+      destinationFolder: destFolder,
+      mode: 'move',
+      updateRefs: !!ctx.db,
+      actor: 'cli:ikReorganize',
+    });
+    // 이름까지 바뀌는 경우 복제 후 rename(무료 플랜에서도 rename 은 동작).
     if (fromName !== toName) {
-      const afterMove = destFolder === '/' ? `/${fromName}` : `${destFolder}/${fromName}`;
-      await ik.renameFile({ filePath: afterMove, newFileName: toName });
+      await ik.renameFile({ filePath: r.destinationPath, newFileName: toName });
+      if (ctx.db) {
+        const renamed = destFolder === '/' ? `/${toName}` : `${destFolder}/${toName}`;
+        await ikRefsDb.applyMappings(
+          ctx.db,
+          [{ from: r.destinationPath, to: renamed, kind: 'file' }],
+          { actor: 'cli:ikReorganize' }
+        );
+      }
     }
-    return { jobId: null, jobCompleted: true };
+    return { jobId: null, jobCompleted: true, transfer: r };
   }
   // 폴더: 부모가 바뀌면 move, 이름이 바뀌면 rename (둘 다면 move 후 rename)
   const srcParent = row.from.slice(0, row.from.lastIndexOf('/')) || '/';
@@ -241,6 +257,8 @@ async function main() {
   const text = fs.readFileSync(opts.file, 'utf8');
   const { rows, errors } = parseTsv(text);
   const outDir = opts.out || path.dirname(path.resolve(opts.file));
+  // 지정한 출력 폴더가 없으면 만든다(없으면 plan/report 저장에서 ENOENT).
+  fs.mkdirSync(outDir, { recursive: true });
 
   console.log(`매핑 파일: ${opts.file}`);
   console.log(`유효 항목 ${rows.length}건 · 형식 오류 ${errors.length}건\n`);
@@ -363,9 +381,12 @@ async function main() {
     }
     process.stdout.write(`${prefix} ${row.kind} ${row.from} → ${row.to} … `);
     try {
-      const mv = await moveOne(ik, row);
+      const mv = await moveOne(ik, row, { db });
       let refs = { updated: false, skipped: true };
-      if (db) {
+      if (mv.transfer) {
+        // 파일 항목은 ikTransfer 안에서 이미 참조를 갱신했다(중복 적용 금지).
+        refs = mv.transfer.refs || { updated: false, skipped: true };
+      } else if (db) {
         const mapping = [{ from: row.from, to: row.to, kind: row.kind }];
         refs = await ikRefsDb.applyMappings(db, mapping, { actor: 'cli:ikReorganize' });
       }
@@ -417,7 +438,7 @@ async function doRollback(opts) {
     const rev = { kind: r.kind, from: r.to, to: r.from };
     process.stdout.write(`[${done.length - i}/${done.length}] ${rev.from} → ${rev.to} … `);
     try {
-      if (ik) await moveOne(ik, rev);
+      if (ik) await moveOne(ik, rev, { db: null });
       if (db && r.batchId) await ikRefsDb.rollback(db, { batchId: r.batchId });
       console.log('OK');
       okCount += 1;

@@ -247,3 +247,62 @@ test('왕복: 치환 후 역매핑으로 원상복구된다', () => {
   const back = replaceDeep(fwd.value, buildMapper(invertMappings(mappings)), EP);
   assert.deepEqual(back.value, doc);
 });
+
+// ── NFD 보존(폴더 분기) ────────────────────────────────────────
+//   ImageKit 은 NFD 파일명을 NFD 로 보관하고 NFC URL 은 404 다(실측 2026-09-04).
+//   폴더 이동/이름변경에서 접미사를 NFC canonical 에서 잘라 붙이면 파일명이 NFC 로 바뀌어
+//   URL 이 죽는다. 아래는 그 회귀를 막는다.
+const NFD_NAME = '사진'.normalize('NFD');
+const NFC_NAME = '사진'.normalize('NFC');
+
+test('폴더 이동: 하위 NFD 파일명이 NFD 그대로 유지된다', () => {
+  const map = buildMapper([{ from: '/old', to: '/new', kind: 'folder' }]);
+  const stored = `${EP}/old/${NFD_NAME}.jpg`;
+  const r = replaceInString(stored, map, EP);
+  assert.equal(r.count, 1);
+  assert.equal(r.out, `${EP}/new/${NFD_NAME}.jpg`);
+  assert.notEqual(r.out, `${EP}/new/${NFC_NAME}.jpg`, 'NFC 로 바뀌면 404 가 된다');
+});
+
+test('폴더 이름변경: 하위 NFD 파일명 유지 (folderRenameMapping)', () => {
+  const m = folderRenameMapping('/mcwjd/old', 'renamed');
+  const map = buildMapper([m]);
+  const stored = `${EP}/mcwjd/old/${NFD_NAME}.png`;
+  const r = replaceInString(stored, map, EP);
+  assert.equal(r.count, 1);
+  assert.equal(r.out, `${EP}/mcwjd/renamed/${NFD_NAME}.png`);
+});
+
+test('폴더 이동: 깊은 하위 경로의 각 세그먼트 형태가 모두 보존된다', () => {
+  const map = buildMapper([{ from: '/a', to: '/b', kind: 'folder' }]);
+  const deep = `${EP}/a/${NFD_NAME}/${NFC_NAME}/${NFD_NAME}.jpg`;
+  const r = replaceInString(deep, map, EP);
+  assert.equal(r.out, `${EP}/b/${NFD_NAME}/${NFC_NAME}/${NFD_NAME}.jpg`);
+});
+
+test('폴더 이동: NFD 로 저장된 폴더명도 NFC 매핑으로 매칭되고 접미사는 원문 유지', () => {
+  // 매핑은 NFC 로 주고, 저장값은 폴더명이 NFD
+  const map = buildMapper([{ from: `/${NFC_NAME}`, to: '/moved', kind: 'folder' }]);
+  const stored = `${EP}/${NFD_NAME}/${NFD_NAME}.jpg`;
+  const r = replaceInString(stored, map, EP);
+  assert.equal(r.count, 1, 'NFD 폴더명이 NFC 매핑에 걸려야 한다');
+  assert.equal(r.out, `${EP}/moved/${NFD_NAME}.jpg`, '파일명은 NFD 그대로');
+});
+
+test('폴더 이동: 퍼센트 인코딩 저장값도 NFD 를 보존한다', () => {
+  const map = buildMapper([{ from: '/old', to: '/new', kind: 'folder' }]);
+  const stored = `${EP}/old/${encodeURIComponent(NFD_NAME)}.jpg`;
+  const r = replaceInString(stored, map, EP);
+  assert.equal(r.count, 1);
+  assert.ok(/%/.test(r.out), '인코딩 형태 유지');
+  assert.equal(decodeURIComponent(r.out), `${EP}/new/${NFD_NAME}.jpg`);
+  assert.notEqual(decodeURIComponent(r.out), `${EP}/new/${NFC_NAME}.jpg`);
+});
+
+test('폴더 이동 왕복: NFD 파일이 원상복구된다', () => {
+  const mappings = [{ from: '/x', to: '/y', kind: 'folder' }];
+  const doc = { a: `${EP}/x/${NFD_NAME}.jpg` };
+  const fwd = replaceDeep(doc, buildMapper(mappings), EP);
+  const back = replaceDeep(fwd.value, buildMapper(invertMappings(mappings)), EP);
+  assert.deepEqual(back.value, doc);
+});

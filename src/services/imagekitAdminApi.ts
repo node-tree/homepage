@@ -83,11 +83,46 @@ export interface IkFileDetail extends IkFile {
   versionInfo?: { id: string; name: string };
 }
 
+// 이동/복사 대상 — 경로와 함께 fileId 를 넘겨 목록 인덱스 지연에 흔들리지 않게 한다.
+export interface IkTransferSource {
+  filePath: string;
+  fileId?: string;
+}
+
+// 복제 방식 이동/복사의 무결성 대조 결과(원본 ↔ 복제본).
+export interface IkVerified {
+  size: number;
+  width: number | null;
+  height: number | null;
+  sourceSize: number;
+  sourceWidth: number | null;
+  sourceHeight: number | null;
+}
+
+export interface IkTransferResult {
+  mode: 'move' | 'copy';
+  sourceFilePath: string;
+  destinationPath: string;
+  newFileId: string;
+  verified: IkVerified;
+  refs?: IkRefsUpdate;
+  originalDeleted: boolean;
+  warning?: string;
+}
+
 // 일괄 이동 결과 — 부분 성공을 허용하므로 항목별 결과를 그대로 돌려받는다.
 export interface IkBulkMoveResult {
   message: string;
   destinationPath: string;
-  results: { sourceFilePath: string; ok: boolean; error?: string }[];
+  results: {
+    sourceFilePath: string;
+    destinationPath?: string;
+    ok: boolean;
+    error?: string;
+    verified?: IkVerified;
+    originalDeleted?: boolean;
+    warning?: string;
+  }[];
   refs?: IkRefsUpdate;
 }
 
@@ -347,23 +382,30 @@ export const imagekitAdminAPI = {
   //      호출측 UI 에서 반드시 경고를 노출할 것.
 
   // 파일 1건 이동 (destinationPath 는 "폴더" 경로)
+  //   fileId 를 함께 보내면 백엔드가 목록 검색 없이 메타를 바로 읽는다(인덱스 지연 회피).
   moveFile: async (
     sourceFilePath: string,
     destinationPath: string,
+    fileId?: string,
     signal?: AbortSignal
-  ): Promise<{ refs?: IkRefsUpdate }> => {
-    return await requestJson<{ refs?: IkRefsUpdate }>(
+  ): Promise<IkTransferResult> => {
+    return await requestJson<IkTransferResult>(
       '/imagekit/file/move',
-      { method: 'POST', body: { sourceFilePath, destinationPath }, signal },
+      { method: 'POST', body: { sourceFilePath, destinationPath, fileId }, signal },
       '파일 이동 실패'
     );
   },
 
   // 파일 1건 복사 (원본 유지 — 용량 증가)
-  copyFile: async (sourceFilePath: string, destinationPath: string, signal?: AbortSignal): Promise<void> => {
-    await requestJson(
+  copyFile: async (
+    sourceFilePath: string,
+    destinationPath: string,
+    fileId?: string,
+    signal?: AbortSignal
+  ): Promise<IkTransferResult> => {
+    return await requestJson<IkTransferResult>(
       '/imagekit/file/copy',
-      { method: 'POST', body: { sourceFilePath, destinationPath }, signal },
+      { method: 'POST', body: { sourceFilePath, destinationPath, fileId }, signal },
       '파일 복사 실패'
     );
   },
@@ -397,14 +439,15 @@ export const imagekitAdminAPI = {
   },
 
   // 일괄 이동 — 백엔드가 순차 처리하고 항목별 결과를 한 번에 돌려준다(부분 성공 허용).
+  //   항목마다 fileId 를 함께 보낸다 — 백엔드가 경로 검색(목록 인덱스)에 의존하지 않게.
   bulkMoveFiles: async (
-    sourceFilePaths: string[],
+    sourceFiles: IkTransferSource[],
     destinationPath: string,
     signal?: AbortSignal
   ): Promise<IkBulkMoveResult> => {
     return await requestJson<IkBulkMoveResult>(
       '/imagekit/files/bulk-move',
-      { method: 'POST', body: { sourceFilePaths, destinationPath }, signal },
+      { method: 'POST', body: { sourceFiles, destinationPath }, signal },
       '일괄 이동 실패'
     );
   },

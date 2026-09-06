@@ -15,6 +15,7 @@ const ImageKit = require('imagekit');
 
 const ikRefs = require('../lib/ikRefs');
 const ikRefsDb = require('../lib/ikRefsDb');
+const ikTransfer = require('../lib/ikTransfer');
 
 const router = express.Router();
 
@@ -157,6 +158,20 @@ function sendIkError(res, error, fallback) {
   else if (/invalid|already exists|not allowed|character|missing/i.test(msg)) status = 400;
   console.error(`ImageKit 오류(${fallback}):`, msg);
   return res.status(status).json({ success: false, message: msg || fallback });
+}
+
+// ikTransfer 오류 → HTTP. TransferError 는 자기 status 를 들고 온다(409/502 등).
+function sendTransferError(res, error, fallback) {
+  const msg = safeMessage(error);
+  const status = Number(error && error.status) >= 400 && Number(error.status) < 600 ? Number(error.status) : null;
+  if (status) {
+    console.error(`ImageKit 전송 오류(${fallback}) [${status}]:`, msg);
+    const extra = {};
+    if (error.existingFilePath) extra.existingFilePath = error.existingFilePath;
+    if (error.compensated) extra.compensated = true;
+    return res.status(status).json({ success: false, message: msg || fallback, ...extra });
+  }
+  return sendIkError(res, error, fallback);
 }
 
 // listFiles sort 화이트리스트 — 임의 문자열을 그대로 넘기지 않는다.
@@ -599,36 +614,20 @@ router.post('/file/move', async (req, res) => {
   const dst = normFolderPath(req.body?.destinationPath, { allowRoot: true });
   if (dst.error) return res.status(400).json({ success: false, message: `대상 ${dst.error}` });
 
-  const srcParent = src.path.slice(0, src.path.lastIndexOf('/')) || '/';
-  if (srcParent === dst.path) {
-    return res.status(400).json({ success: false, message: '이미 같은 폴더에 있는 파일입니다.' });
-  }
   try {
-    await imagekit.moveFile({ sourceFilePath: src.path, destinationPath: dst.path });
-    // ImageKit 이동 성공 → DB 참조 갱신. 실패 시 파일을 원위치로 되돌린다(보상).
-    const mappings = [ikRefs.fileMoveMapping(src.path, dst.path)];
-    let refs;
-    try {
-      refs = await updateRefsAfterMove(req, mappings);
-    } catch (dbErr) {
-      const comp = await compensate(() =>
-        imagekit.moveFile({ sourceFilePath: mappings[0].to, destinationPath: srcParent })
-      );
-      return res.status(500).json({
-        success: false,
-        message: `파일은 이동했지만 DB 참조 갱신에 실패했습니다: ${safeMessage(dbErr)}`,
-        ...comp,
-      });
-    }
-    res.json({
-      success: true,
-      message: '이동되었습니다.',
+    const r = await ikTransfer.transferFile({
+      ik: imagekit,
+      db: getDb(),
       sourceFilePath: src.path,
-      destinationPath: dst.path,
-      refs,
+      fileId: typeof req.body?.fileId === 'string' ? req.body.fileId : null,
+      destinationFolder: dst.path,
+      mode: 'move',
+      updateRefs: req.body?.updateRefs !== false,
+      actor: actorOf(req),
     });
+    res.json({ success: true, message: '이동되었습니다.', ...r });
   } catch (error) {
-    return sendIkError(res, error, '파일 이동 실패');
+    return sendTransferError(res, error, '파일 이동 실패');
   }
 });
 
@@ -639,15 +638,20 @@ router.post('/file/copy', async (req, res) => {
   if (src.error) return res.status(400).json({ success: false, message: `원본 ${src.error}` });
   const dst = normFolderPath(req.body?.destinationPath, { allowRoot: true });
   if (dst.error) return res.status(400).json({ success: false, message: `대상 ${dst.error}` });
+
   try {
-    await imagekit.copyFile({
+    const r = await ikTransfer.transferFile({
+      ik: imagekit,
+      db: getDb(),
       sourceFilePath: src.path,
-      destinationPath: dst.path,
-      includeFileVersions: req.body?.includeVersions === true,
+      fileId: typeof req.body?.fileId === 'string' ? req.body.fileId : null,
+      destinationFolder: dst.path,
+      mode: 'copy',
+      actor: actorOf(req),
     });
-    res.json({ success: true, message: '복사되었습니다.', sourceFilePath: src.path, destinationPath: dst.path });
+    res.json({ success: true, message: '복사되었습니다.', ...r });
   } catch (error) {
-    return sendIkError(res, error, '파일 복사 실패');
+    return sendTransferError(res, error, '파일 복사 실패');
   }
 });
 
@@ -727,7 +731,18 @@ router.post('/files/bulk-delete', async (req, res) => {
 //   한 번의 응답으로 돌려준다(프론트가 N번 왕복하지 않도록. Render 콜드스타트 고려).
 //   부분 성공을 허용하며 실패 항목은 results[].error 로 전달한다.
 router.post('/files/bulk-move', async (req, res) => {
-  const rawPaths = Array.isArray(req.body?.sourceFilePaths) ? req.body.sourceFilePaths : [];
+  // 프런트는 목록에서 이미 fileId 를 알고 있으므로 함께 보낸다(경로 검색 의존 제거).
+  //   sourceFiles: [{filePath, fileId}]  — 신규
+  //   sourceFilePaths: string[]          — 구버전 호환
+  const rawItems = Array.isArray(req.body?.sourceFiles)
+    ? req.body.sourceFiles
+        .filter((x) => x && typeof x.filePath === 'string')
+        .map((x) => ({ filePath: x.filePath, fileId: typeof x.fileId === 'string' ? x.fileId : null }))
+    : (Array.isArray(req.body?.sourceFilePaths) ? req.body.sourceFilePaths : []).map((p) => ({
+        filePath: p,
+        fileId: null,
+      }));
+  const rawPaths = rawItems;
   if (rawPaths.length === 0) {
     return res.status(400).json({ success: false, message: '이동할 파일을 선택해주세요.' });
   }
@@ -737,43 +752,67 @@ router.post('/files/bulk-move', async (req, res) => {
   const dst = normFolderPath(req.body?.destinationPath, { allowRoot: true });
   if (dst.error) return res.status(400).json({ success: false, message: `대상 ${dst.error}` });
 
+  const db = getDb();
+  const actor = actorOf(req);
+  const updateRefs = req.body?.updateRefs !== false;
+
+  // 항목별로 "복제 → 검증 → 참조 갱신 → 원본 삭제"를 끝까지 수행한다.
+  // 한 건이 실패해도 나머지는 계속 진행하고, 결과를 항목별로 돌려준다.
   const results = [];
-  for (const raw of rawPaths) {
-    const src = normFilePath(raw);
+  for (const item of rawPaths) {
+    const src = normFilePath(item.filePath);
     if (src.error) {
-      results.push({ sourceFilePath: String(raw), ok: false, error: src.error });
+      results.push({ sourceFilePath: String(item.filePath), ok: false, error: src.error });
       continue;
     }
     try {
-      await imagekit.moveFile({ sourceFilePath: src.path, destinationPath: dst.path });
-      results.push({ sourceFilePath: src.path, ok: true });
-    } catch (error) {
-      results.push({ sourceFilePath: src.path, ok: false, error: safeMessage(error) || '이동 실패' });
+      // eslint-disable-next-line no-await-in-loop
+      const r = await ikTransfer.transferFile({
+        ik: imagekit,
+        db,
+        sourceFilePath: src.path,
+        fileId: item.fileId,
+        destinationFolder: dst.path,
+        mode: 'move',
+        updateRefs,
+        actor,
+      });
+      results.push({
+        sourceFilePath: r.sourceFilePath,
+        destinationPath: r.destinationPath,
+        ok: true,
+        newFileId: r.newFileId,
+        verified: r.verified,
+        refs: r.refs,
+        originalDeleted: r.originalDeleted,
+        warning: r.warning,
+      });
+    } catch (e) {
+      results.push({ sourceFilePath: src.path, ok: false, error: safeMessage(e), status: e.status || null });
     }
   }
+
   const moved = results.filter((r) => r.ok).length;
   const firstError = results.find((r) => !r.ok)?.error;
-
-  // 실제로 옮겨진 파일만 매핑에 넣는다(실패한 건 URL 이 그대로이므로 치환하면 안 된다).
-  let refs = { updated: false, reason: '이동된 파일이 없습니다.' };
-  if (moved > 0) {
-    const mappings = results
-      .filter((r) => r.ok)
-      .map((r) => ikRefs.fileMoveMapping(r.sourceFilePath, dst.path));
-    try {
-      refs = await updateRefsAfterMove(req, mappings);
-    } catch (dbErr) {
-      refs = { updated: false, error: safeMessage(dbErr) };
+  // 항목별 참조 갱신 결과를 컬렉션 단위로 합산해 요약한다.
+  const refsUpdated = {};
+  let documents = 0;
+  const batchIds = [];
+  for (const r of results) {
+    if (!r.ok || !r.refs || !r.refs.updated) continue;
+    documents += r.refs.documents || 0;
+    if (r.refs.batchId) batchIds.push(r.refs.batchId);
+    for (const [k, v] of Object.entries(r.refs.refsUpdated || {})) {
+      refsUpdated[k] = (refsUpdated[k] || 0) + v;
     }
   }
 
   res.json({
     success: moved > 0,
-    // 전부 실패했으면 프론트가 그대로 오류로 띄우므로 사유를 메시지에 담는다.
     message: moved === 0 ? `이동 실패: ${firstError || '알 수 없는 오류'}` : `${moved}/${results.length}개 이동 완료`,
     destinationPath: dst.path,
     results,
-    refs,
+    refs: { updated: batchIds.length > 0, refsUpdated, documents, batchIds },
   });
 });
 

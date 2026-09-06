@@ -164,6 +164,56 @@ http
       return json(res, 200, { success: true, file });
     }
     // 참조 조회 스텁 — 폴더면 참조 많음, /uploads/2026 은 참조 0(안전) 케이스로 흉내낸다.
+    // 복제 방식 이동/복사 스텁 — 무결성 대조 결과와 참조 갱신 요약을 흉내낸다.
+    const verified = { size: 1677, width: 400, height: 240, sourceSize: 1677, sourceWidth: 400, sourceHeight: 240 };
+    if ((p === '/file/move' || p === '/file/copy') && req.method === 'POST') {
+      let body = '';
+      req.on('data', (d) => (body += d));
+      return req.on('end', () => {
+        const b = JSON.parse(body || '{}');
+        const name = String(b.sourceFilePath || '/x.jpg').split('/').pop();
+        json(res, 200, {
+          success: true, message: p === '/file/move' ? '이동되었습니다.' : '복사되었습니다.',
+          mode: p === '/file/move' ? 'move' : 'copy',
+          sourceFilePath: b.sourceFilePath,
+          destinationPath: `${b.destinationPath}/${name}`.replace(/\/+/g, '/'),
+          newFileId: 'stub-new', verified, originalDeleted: p === '/file/move',
+          refs: p === '/file/move'
+            ? { updated: true, batchId: 'stub-batch', documents: 3, refsUpdated: { work: 2, workshop: 1 }, failures: [] }
+            : { updated: false, skipped: true },
+        });
+      });
+    }
+    if (p === '/files/bulk-move' && req.method === 'POST') {
+      let body = '';
+      req.on('data', (d) => (body += d));
+      return req.on('end', () => {
+        const b = JSON.parse(body || '{}');
+        // 신규 스키마(sourceFiles: [{filePath, fileId}]) 우선, 구버전(sourceFilePaths) 호환.
+        const paths = Array.isArray(b.sourceFiles)
+          ? b.sourceFiles.map((x) => x.filePath)
+          : b.sourceFilePaths || [];
+        const results = paths.map((sp, i) => {
+          const name = String(sp).split('/').pop();
+          // 마지막 한 건은 실패로 만들어 부분 실패 표시를 확인한다.
+          if (i === paths.length - 1 && paths.length > 2) {
+            return { sourceFilePath: sp, ok: false, error: '대상에 같은 이름의 파일이 이미 있습니다', status: 409 };
+          }
+          return {
+            sourceFilePath: sp, destinationPath: `${b.destinationPath}/${name}`.replace(/\/+/g, '/'),
+            ok: true, newFileId: 'stub-' + i, verified, originalDeleted: true,
+            refs: { updated: true, batchId: 'stub-b' + i, documents: 1, refsUpdated: { work: 1 }, failures: [] },
+          };
+        });
+        const moved = results.filter((r) => r.ok).length;
+        json(res, 200, {
+          success: moved > 0,
+          message: moved === paths.length ? `${moved}/${paths.length}개 이동 완료` : `${moved}/${paths.length}개 이동 완료`,
+          destinationPath: b.destinationPath, results,
+          refs: { updated: true, refsUpdated: { work: moved }, documents: moved, batchIds: ['stub'] },
+        });
+      });
+    }
     if (p === '/refs' && req.method === 'POST') {
       let body = '';
       req.on('data', (d) => (body += d));

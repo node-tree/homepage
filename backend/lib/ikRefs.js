@@ -58,6 +58,29 @@ function canonPath(p) {
 }
 
 /**
+ * 목적지 경로 정규화 — canonPath 와 달리 **유니코드 정규화를 하지 않는다.**
+ *
+ *   실측(2026-09-04): ImageKit 은 NFD(자모 분리) 파일명을 NFD 그대로 보관하고,
+ *   같은 글자를 NFC 로 바꾼 URL 은 404 를 돌려준다.
+ *     업로드 '한글'(NFD) → filePath 도 NFD → NFC URL 404 / NFD URL 200
+ *   따라서 "어디로 바뀌는가"(to)는 호출측이 준 문자열 형태를 그대로 보존해야 한다.
+ *   비교 기준(from)만 NFC 로 모아 매칭한다.
+ */
+function targetPath(p) {
+  if (!p && p !== '') return '';
+  let s = String(p).split('#')[0].split('?')[0];
+  try {
+    s = decodeURIComponent(s);
+  } catch {
+    /* 깨진 인코딩은 원문 유지 */
+  }
+  if (!s.startsWith('/')) s = `/${s}`;
+  s = s.replace(/\/+/g, '/');
+  if (s.length > 1) s = s.replace(/\/+$/, '');
+  return s;
+}
+
+/**
  * 새 경로를 "원본과 같은 인코딩 스타일"로 직렬화한다.
  *   원본이 퍼센트 인코딩이었으면 인코딩해서, 아니면 원문(한글 그대로) 그대로.
  *   → 불필요한 문자열 변경(diff 소음)을 줄인다. 둘 다 브라우저에서 동일하게 동작한다.
@@ -83,18 +106,32 @@ function buildMapper(mappings) {
   const folders = [];
   for (const m of mappings || []) {
     const from = canonPath(m.from);
-    const to = canonPath(m.to);
-    if (!from || !to || from === to || from === '/') continue;
+    // 목적지는 형태 보존(NFC 정규화 금지) — targetPath 주석 참고.
+    const to = targetPath(m.to);
+    if (!from || !to || from === canonPath(m.to) || from === '/') continue;
     if (m.kind === 'folder') folders.push({ from, to });
     else files.set(from, to);
   }
   folders.sort((a, b) => b.from.length - a.from.length);
 
-  return function map(canon) {
+  /**
+   * canon  : 비교용 NFC 정규화 경로
+   * decoded: 원문(디코딩만, 정규화 없음). 폴더 접미사를 여기서 잘라 붙인다.
+   *
+   *   ⚠️ 접미사를 canon 에서 잘라 붙이면 NFD 파일명이 NFC 로 바뀌어 URL 이 404 가 된다.
+   *      게다가 NFC/NFD 는 길이가 달라 인덱스 산술(slice(from.length))이 아예 성립하지 않는다.
+   *      → 세그먼트 개수로 자른다(경로 구분자는 정규화의 영향을 받지 않는다).
+   */
+  return function map(canon, decoded) {
     if (files.has(canon)) return files.get(canon);
     for (const f of folders) {
       if (canon === f.from) return f.to;
-      if (canon.startsWith(`${f.from}/`)) return f.to + canon.slice(f.from.length);
+      if (canon.startsWith(`${f.from}/`)) {
+        const fromSegs = f.from.split('/').filter(Boolean).length;
+        const src = typeof decoded === 'string' && decoded ? decoded : canon;
+        const tail = src.split('/').filter(Boolean).slice(fromSegs).join('/');
+        return tail ? `${f.to}/${tail}` : f.to;
+      }
     }
     return null;
   };
@@ -116,7 +153,8 @@ function replaceInString(str, mapper, ep = endpoint()) {
     const rawPath = qIdx >= 0 ? rawTail.slice(0, qIdx) : rawTail;
     const suffix = qIdx >= 0 ? rawTail.slice(qIdx) : '';
     const canon = canonPath(rawPath);
-    const to = mapper(canon);
+    // 원문(디코딩만) 도 함께 넘긴다 — 폴더 접미사의 유니코드 형태를 보존하기 위함.
+    const to = mapper(canon, targetPath(rawPath));
     if (!to) return full;
     hits.push({ from: canon, to });
     return ep + encodePathLike(rawPath, to) + suffix;
@@ -210,32 +248,42 @@ function scanDeep(value, cb, ep = endpoint()) {
 }
 
 /** 파일 이동/이름변경/폴더 이동을 매핑 항목으로 만들어 주는 헬퍼 */
+//   ⚠️ to 는 targetPath(형태 보존)로 만든다. 원본 이름은 ImageKit 이 준 문자열을 그대로
+//      써야 하므로 NFC 정규화를 거치지 않는다.
 function fileMoveMapping(sourceFilePath, destinationFolder) {
-  const from = canonPath(sourceFilePath);
-  const name = from.slice(from.lastIndexOf('/') + 1);
-  const dst = canonPath(destinationFolder);
+  const raw = targetPath(sourceFilePath);
+  const name = raw.slice(raw.lastIndexOf('/') + 1);
+  const dst = targetPath(destinationFolder);
   const to = dst === '/' ? `/${name}` : `${dst}/${name}`;
-  return { from, to, kind: 'file' };
+  return { from: canonPath(sourceFilePath), to, kind: 'file' };
 }
 
 function fileRenameMapping(filePath, newFileName) {
-  const from = canonPath(filePath);
-  const parent = from.slice(0, from.lastIndexOf('/')) || '';
-  return { from, to: `${parent}/${canonPath(newFileName).replace(/^\//, '')}`, kind: 'file' };
+  const raw = targetPath(filePath);
+  const parent = raw.slice(0, raw.lastIndexOf('/')) || '';
+  return {
+    from: canonPath(filePath),
+    to: `${parent}/${targetPath(newFileName).replace(/^\//, '')}`,
+    kind: 'file',
+  };
 }
 
 function folderMoveMapping(sourceFolderPath, destinationFolder) {
-  const from = canonPath(sourceFolderPath);
-  const name = from.slice(from.lastIndexOf('/') + 1);
-  const dst = canonPath(destinationFolder);
+  const raw = targetPath(sourceFolderPath);
+  const name = raw.slice(raw.lastIndexOf('/') + 1);
+  const dst = targetPath(destinationFolder);
   const to = dst === '/' ? `/${name}` : `${dst}/${name}`;
-  return { from, to, kind: 'folder' };
+  return { from: canonPath(sourceFolderPath), to, kind: 'folder' };
 }
 
 function folderRenameMapping(folderPath, newFolderName) {
-  const from = canonPath(folderPath);
-  const parent = from.slice(0, from.lastIndexOf('/')) || '';
-  return { from, to: `${parent}/${canonPath(newFolderName).replace(/^\//, '')}`, kind: 'folder' };
+  const raw = targetPath(folderPath);
+  const parent = raw.slice(0, raw.lastIndexOf('/')) || '';
+  return {
+    from: canonPath(folderPath),
+    to: `${parent}/${targetPath(newFolderName).replace(/^\//, '')}`,
+    kind: 'folder',
+  };
 }
 
 /** 매핑을 뒤집는다(보상 이동·롤백용) */
@@ -248,6 +296,7 @@ module.exports = {
   endpoint,
   urlRegex,
   canonPath,
+  targetPath,
   encodePathLike,
   buildMapper,
   replaceInString,
