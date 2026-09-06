@@ -93,6 +93,8 @@ CI=true npx react-scripts test --watchAll=false --testPathPattern="imageEdit"
 | `refs-roundtrip.js` | 실 DB 치환→롤백 왕복. **쓰기는 `imagekit_ref_test`·`imagekit_ref_log` 두 컬렉션뿐** |
 | `transfer-live.js` | 복제 방식 이동/복사 실계정 검증. **ImageKit 쓰기는 `/_ik-test` 하위뿐**, 끝나면 폴더째 삭제 |
 | `nfd-folder-live.js` | 폴더 이름변경 후 하위 **NFD 파일명 보존**을 실계정으로 확인(`/_ik-test-nfd`) |
+| `cli-resume-live.js` | CLI `--apply`(충돌 중단) → `--resume` → `--rollback` 실계정 재현(참조 0건 경로) |
+| `cli-dbrollback-live.js` | CLI 롤백에서 **DB 배치가 실제로 있는** 경우 검증(임시 컬렉션 `_ikcli_probe_tmp`). 정리는 try/finally, 로그는 **이 실행이 만든 batchId 만** 삭제 |
 | `shoot-xfer.js` | 복제 이동/복사 완료 알림(검증 결과·부분 실패) 스크린샷 |
 | `quality-bench.js` | 같은 입력·같은 변환으로 quality 1.0/0.95/0.9/0.85/0.82/0.8/0.7 출력 바이트 비교 |
 | `fixtures/exif6.jpg` | 위 EXIF 픽스처(커밋됨 — 네트워크 없이도 재현 가능) |
@@ -140,6 +142,42 @@ NFC 로 바꾼 URL 은 404 다(실측). 그래서 `ikRefs.targetPath()` 는 NFC 
    추가로 주입 함수가 실제로 호출됐는지(`injected`)까지 확인한다.
 
 보고 시에는 하네스의 마지막 줄(`결과: 실패 N건`)을 **그대로 인용**한다.
+
+## 롤백 순서 원칙
+
+`--rollback` 은 **파일 복원을 먼저** 하고, 성공했을 때만 DB 를 되돌린다.
+반대로 하면 파일 복원이 실패했을 때 "DB 는 옛 경로 · 파일은 새 경로" 로 불일치가 남는다
+(실측 사고: `파일 복원 실패(원본을 찾지 못했습니다) · DB 롤백 ok(1건)`).
+파일 복원이 실패하면 DB 는 손대지 않고 `DB 롤백 보류` 로 표시한다.
+
+되돌릴 파일은 보고서의 `newFileId` 로 찾는다. 경로로만 찾으면 방금 옮긴 직후
+목록(검색 인덱스) 반영 전이라 404 가 난다.
+
+⚠️ 하네스 정리 시 `imagekit_ref_log` 를 **actor 로 싹 지우지 말 것** —
+운영 CLI(`cli:ikReorganize`) 감사 로그까지 사라진다. 그 실행이 만든 batchId 로만 좁힌다.
+
+## CLI 를 테스트할 때 흔한 함정
+
+- `imagekit_ref_test` 는 `listScannableCollections()` 의 **기본 스캔에서 제외**된다.
+  이 컬렉션에 참조를 넣고 CLI 를 돌리면 항상 "DB 0건"이 나온다 — CLI 버그가 아니다.
+  CLI 경로를 검증하려면 스캔 대상이 되는 다른 임시 컬렉션 이름을 쓸 것(`cli-dbrollback-live.js` 참고).
+- CLI 의 **존재 검사도 `listFiles` 기반**이라 업로드/삭제 직후 오판한다.
+  `existsWithRetry()` 가 총 10초 이상(3회) 재시도하고, 재시도했다는 사실을 출력한다.
+- ImageKit `listFiles` 는 **삭제된 파일을 몇 초간 계속 돌려준다.**
+  방금 비운 폴더로 되돌릴 때 가짜 409 가 나므로, `findAtDestination()` 은 충돌 후보를
+  `getFileDetails` 로 한 번 더 확인한다(유령 항목이면 무시).
+- **CDN 이 같은 경로의 이전 파일 바이트를 계속 내준다**(실측 2026-09-06).
+  ```
+  upload A(1667B) → ?tr=orig-true → 1667 (캐시 채움)
+  delete A → upload B(2127B) 같은 경로
+  ?tr=orig-true            → 1667   ← 스테일
+  ?tr=orig-true&_=<now>    → 2127
+  (파라미터 없음)           →  828   ← 최적화본, 원본이 아님
+  ```
+  그래서 `ikTransfer` 는 원본 다운로드에 **항상 고유 `ik-cb`** 를 붙이고,
+  크기가 어긋나면 **캐시버스터 값만 바꿔** 1회 재시도한다.
+  (무파라미터 재시도는 최적화본이 와서 절대 검증을 통과할 수 없다 — 그래서 제거했다.)
+  `transfer-live.js` [8] 이 이 상황을 실제로 재현해 회귀를 막는다.
 
 ## dev 서버가 안 뜰 때
 

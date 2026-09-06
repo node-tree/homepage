@@ -86,6 +86,20 @@ async function waitIndexed(filePath, tries = 10, waitMs = 1500) {
   return false;
 }
 
+/**
+ * 같은 그림이지만 **바이트 크기가 다른** JPEG 를 만든다.
+ *   SOI 직후에 COM(주석, 0xFFFE) 세그먼트를 끼운다 — 디코더는 무시하므로 해상도는 그대로고
+ *   파일 크기만 늘어난다. CDN 스테일 재현에 필요한 "같은 경로 · 다른 크기" 를 만들기 위함.
+ */
+function withComment(buf, padBytes) {
+  const len = padBytes + 2;
+  const seg = Buffer.concat([
+    Buffer.from([0xff, 0xfe, (len >> 8) & 0xff, len & 0xff]),
+    Buffer.alloc(padBytes, 0x20),
+  ]);
+  return Buffer.concat([buf.slice(0, 2), seg, buf.slice(2)]);
+}
+
 async function upload(name, folder) {
   return ik.upload({ file: FIXTURE, fileName: name, folder, useUniqueFileName: false });
 }
@@ -245,6 +259,44 @@ async function upload(name, folder) {
   check('대상 폴더에 새 파일이 남지 않음', faildst.length === 0, `남은 ${faildst.length}건`);
   const newGone = await head(`${enc(`${TEST}/faildst/failcase.jpg`)}?tr=orig-true`);
   console.log(`   (참고) 되돌린 새 URL HTTP=${newGone.status} — 200 이면 CDN 캐시 잔존`);
+
+  // ── 8) CDN 스테일 재현 ─────────────────────────────────────
+  //   같은 경로에 A → 삭제 → B(다른 크기). CDN 에는 A 의 바이트가 남아 있다.
+  //   캐시버스터 없이 ?tr=orig-true 만 붙이면 A 가 오고, transferFile 은
+  //   "원본 크기가 메타데이터와 다릅니다" 로 실패한다(리드 실측 2026-09-06).
+  console.log('\n[8] CDN 스테일(같은 경로 재업로드) — 캐시버스터로 회피하는지');
+  const stalePath = `${TEST}/stale/p.jpg`;
+  const A = await upload('p.jpg', `${TEST}/stale`);
+  const aUrl = `${enc(stalePath)}?tr=orig-true`;
+  const dlLen = (u) =>
+    new Promise((r) =>
+      https.get(u, (s2) => { const c = []; s2.on('data', (d) => c.push(d)); s2.on('end', () => r(Buffer.concat(c).length)); })
+    );
+  const aGot = await dlLen(aUrl);
+  check('A 다운로드로 CDN 캐시를 채움', aGot === A.size, `${aGot} vs ${A.size}`);
+
+  await ik.deleteFile(A.fileId);
+  const B = await ik.upload({
+    file: withComment(FIXTURE, 4096), fileName: 'p.jpg', folder: `${TEST}/stale`, useUniqueFileName: false,
+  });
+  check('B 는 A 와 크기가 다름', B.size !== A.size, `A=${A.size} B=${B.size}`);
+
+  const staleGot = await dlLen(aUrl);
+  console.log(`   (관찰) 캐시버스터 없는 ?tr=orig-true → ${staleGot}B   (A=${A.size} / B=${B.size})`);
+  console.log(`   → CDN 스테일 ${staleGot === A.size ? '재현됨' : '이번엔 재현 안 됨(캐시 만료)'}`);
+  const bustGot = await dlLen(`${aUrl}&ik-cb=${B.fileId}-${Date.now()}`);
+  check('캐시버스터를 붙이면 B 가 온다', bustGot === B.size, `${bustGot} vs ${B.size}`);
+
+  const sMove = await ikTransfer.transferFile({
+    ik, db, sourceFilePath: B.filePath, fileId: B.fileId,
+    destinationFolder: `${TEST}/stale2`, mode: 'move', updateRefs: true, actor: 'harness', only: [TESTCOL],
+  });
+  check('스테일 상황에서도 이동 성공', !!sMove.destinationPath, sMove.destinationPath);
+  check('복제된 크기가 B 와 일치(A 가 아님)', sMove.verified.size === B.size,
+    `옮긴 크기=${sMove.verified.size} / A=${A.size} / B=${B.size}`);
+  check('해상도 보존', sMove.verified.width === B.width && sMove.verified.height === B.height,
+    `${B.width}x${B.height} → ${sMove.verified.width}x${sMove.verified.height}`);
+
 
   // ── 정리 ───────────────────────────────────────────────────────
   console.log('\n[정리]');

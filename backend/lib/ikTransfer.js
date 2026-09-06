@@ -19,6 +19,15 @@
 //     · 이동일 때 순서는 "업로드 → DB 참조 갱신 → 원본 삭제".
 //       DB 갱신이 실패하면 원본을 **지우지 않고** 새 파일을 지운다(원상 복구).
 //     · 한글 파일명은 ImageKit 이 준 문자열을 그대로 쓴다. NFD 를 NFC 로 바꾸면 404 다(실측).
+//     · 원본 다운로드에는 **항상 고유 캐시버스터**를 붙인다. CDN 이 같은 경로의 이전 파일
+//       바이트를 계속 내주기 때문이다(실측 2026-09-06, /_ik-cb/p.jpg):
+//         upload A(1667B) → ?tr=orig-true → 1667 (캐시 채움)
+//         delete A → upload B(2127B) 같은 경로
+//         ?tr=orig-true            → 1667   ← 스테일
+//         ?tr=orig-true&_=<now>    → 2127
+//         (파라미터 없음)           →  828   ← 최적화본, 원본이 아님
+//       그래서 "무파라미터로 재시도"는 검증을 통과할 수 없어 제거했고,
+//       대신 캐시버스터 값을 바꿔 1회 재시도한다. 관리 작업이라 CDN 미스 비용은 무시한다.
 // ═══════════════════════════════════════════════════════════════
 
 const https = require('https');
@@ -106,6 +115,16 @@ function download(url, { maxBytes = MAX_BYTES, redirects = 1 } = {}) {
   });
 }
 
+/**
+ * 원본 다운로드 URL. `?tr=orig-true` 로 변환 없는 원본을 받고,
+ * `ik-cb`(고유값)로 CDN 캐시를 반드시 우회한다.
+ *   attempt 를 넣어 재시도 때 URL 이 확실히 달라지게 한다(같은 ms 에 두 번 호출돼도 안전).
+ */
+function originalUrl(base, fileId, attempt = 0) {
+  const token = `${fileId || 'nofid'}-${Date.now()}-${attempt}`;
+  return `${base}?tr=orig-true&ik-cb=${encodeURIComponent(token)}`;
+}
+
 /** 부모 폴더 경로(루트면 '/') */
 function parentOf(filePath) {
   const i = filePath.lastIndexOf('/');
@@ -139,7 +158,15 @@ async function resolveSource(ik, { fileId, sourceFilePath }) {
   throw new TransferError(404, `원본을 찾지 못했습니다: ${sourceFilePath}`);
 }
 
-/** 대상 폴더에 같은 이름의 파일이 있는가 */
+/**
+ * 대상 폴더에 같은 이름의 파일이 있는가.
+ *
+ *   ⚠️ listFiles 는 검색 인덱스라 **삭제된 파일이 몇 초간 남아 있다**.
+ *      그대로 믿으면 방금 비운 폴더로 되돌릴 때 가짜 409 가 난다(롤백 실측 실패).
+ *      → 후보를 찾으면 getFileDetails 로 "정말 살아 있는지" 한 번 더 확인한다.
+ *        (충돌이 있을 때만 1콜 추가 — 평소 비용 없음)
+ *      진짜 경쟁 상태는 업로드의 overwriteFile:false 가 막는다.
+ */
 async function findAtDestination(ik, destFolder, name) {
   const rows = await ik.listFiles({
     path: destFolder === '/' ? undefined : destFolder,
@@ -147,7 +174,20 @@ async function findAtDestination(ik, destFolder, name) {
     limit: 1000,
   });
   const wantCanon = ikRefs.canonPath(`${destFolder === '/' ? '' : destFolder}/${name}`);
-  return rows.find((f) => f.name === name || ikRefs.canonPath(f.filePath) === wantCanon) || null;
+  const candidate = rows.find((f) => f.name === name || ikRefs.canonPath(f.filePath) === wantCanon);
+  if (!candidate) return null;
+  if (!candidate.fileId) return candidate;
+  try {
+    await ik.getFileDetails(candidate.fileId);
+    return candidate; // 실제로 존재 → 진짜 충돌
+  } catch (e) {
+    const msg = (e && e.message) || '';
+    const status = e && e.$ResponseMetadata && e.$ResponseMetadata.statusCode;
+    if (status === 404 || /not\s*found|does\s*not\s*exist|no\s*such/i.test(msg)) {
+      return null; // 인덱스에만 남은 유령 항목
+    }
+    throw e;
+  }
 }
 
 /**
@@ -207,15 +247,16 @@ async function transferFile(opts) {
     });
   }
 
-  // 3) 원본 바이트 다운로드 — ?tr=orig-true 로 변환 없는 원본을 받는다
-  const url = `${endpoint()}${encodePathForUrl(srcPath)}`;
-  let got = await downloadFn(`${url}?tr=orig-true`, { maxBytes });
-  if (typeof src.size === 'number' && src.size > 0 && got.buf.length !== src.size) {
-    // 변환이 끼어든 경우 대비 — 파라미터 없는 원본으로 한 번 더 시도
-    const plain = await downloadFn(url, { maxBytes });
-    if (plain.buf.length === src.size) got = plain;
+  // 3) 원본 바이트 다운로드 — ?tr=orig-true + 고유 캐시버스터(CDN 스테일 회피)
+  const base = `${endpoint()}${encodePathForUrl(srcPath)}`;
+  const expectSize = typeof src.size === 'number' && src.size > 0 ? src.size : null;
+  let got = await downloadFn(originalUrl(base, src.fileId, 0), { maxBytes });
+  if (expectSize !== null && got.buf.length !== expectSize) {
+    // 캐시버스터 값을 바꿔 1회만 재시도한다.
+    //   (파라미터를 빼고 받으면 CDN 최적화본이 와서 절대 크기가 맞지 않는다 — 실측)
+    got = await downloadFn(originalUrl(base, src.fileId, 1), { maxBytes });
   }
-  if (typeof src.size === 'number' && src.size > 0 && got.buf.length !== src.size) {
+  if (expectSize !== null && got.buf.length !== expectSize) {
     throw new TransferError(
       502,
       `원본 크기가 메타데이터와 다릅니다(메타 ${src.size} / 받은 ${got.buf.length}). 안전을 위해 중단했습니다.`
@@ -339,4 +380,13 @@ async function transferFile(opts) {
   };
 }
 
-module.exports = { transferFile, TransferError, MAX_BYTES, download, encodePathForUrl, resolveSource, findAtDestination };
+module.exports = {
+  transferFile,
+  TransferError,
+  MAX_BYTES,
+  download,
+  encodePathForUrl,
+  originalUrl,
+  resolveSource,
+  findAtDestination,
+};

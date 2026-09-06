@@ -55,6 +55,54 @@ function parseArgs(argv) {
   return o;
 }
 
+/**
+ * --resume: 이전 report.json 에서 **이미 완료된 항목을 계획에서 통째로 제외**한다.
+ *   예전에는 실행 직전에만 걸러서, 이미 옮겨진 원본이 존재검사에 걸려
+ *   "문제 있는 항목 N건 → 중단" 으로 재개 자체가 막혔다(실측 결함).
+ *   완료 항목의 dbBatchId 는 함께 물려받아 이후 롤백에서 DB 단계를 되돌릴 수 있게 한다.
+ */
+function filterResume(rows, report) {
+  const doneMap = new Map();
+  for (const r of (report && report.results) || []) {
+    if (r.ok) doneMap.set(`${r.kind}:${r.from}`, r);
+  }
+  const remaining = [];
+  const skipped = [];
+  for (const row of rows) {
+    const prev = doneMap.get(`${row.kind}:${row.from}`);
+    if (prev) {
+      skipped.push({
+        ...row,
+        prevDbBatchId: prev.dbBatchId ?? null,
+        prevNewFileId: prev.newFileId ?? null,
+      });
+    }
+    else remaining.push(row);
+  }
+  return { remaining, skipped };
+}
+
+/**
+ * --rollback 계획: 실제로 수행된 항목을 역순으로, 파일/DB 단계를 분리해 준비한다.
+ *   dbBatchId 가 null 이면 "DB 참조가 0건이라 되돌릴 것이 없음" 이지 실패가 아니다.
+ */
+function planRollback(report) {
+  const done = ((report && report.results) || []).filter((r) => r.ok);
+  return done
+    .slice()
+    .reverse()
+    .map((r) => ({
+      kind: r.kind,
+      from: r.to, // 역방향
+      to: r.from,
+      // 되돌릴 파일의 fileId. 이게 없으면 listFiles(검색 인덱스) 로 찾아야 해서
+      // 방금 옮긴 직후에는 404 가 난다(실측: "원본을 찾지 못했습니다").
+      fileId: r.newFileId ?? null,
+      dbBatchId: r.dbBatchId ?? null,
+      wasSkipped: !!r.skipped,
+    }));
+}
+
 function looksLikeFile(p) {
   const base = p.slice(p.lastIndexOf('/') + 1);
   return /\.[A-Za-z0-9]{1,8}$/.test(base);
@@ -136,6 +184,26 @@ async function waitJob(ik, jobId, timeoutMs = 60000) {
   return false;
 }
 
+/**
+ * 존재 확인에 재시도를 건다.
+ *   존재 검사는 listFiles(검색 인덱스) 기반인데, 방금 업로드/삭제한 직후에는 반영이 늦어
+ *   멀쩡한 파일을 "원본 없음" 으로 오판한다(실측). 매핑에는 fileId 가 없어 getFileDetails 를
+ *   쓸 수 없으므로, 못 찾으면 간격을 두고 총 10초 이상 다시 확인한다.
+ *   반환: { exists, attempts }
+ */
+async function existsWithRetry(ik, row, tries = 3, waitMs = 5000) {
+  for (let i = 1; i <= tries; i++) {
+    // eslint-disable-next-line no-await-in-loop
+    const ok = await existsOnImageKit(ik, row);
+    if (ok) return { exists: true, attempts: i };
+    if (i < tries) {
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+  }
+  return { exists: false, attempts: tries };
+}
+
 /** 존재 확인: 파일은 filePath 검색, 폴더는 하위 목록 조회 */
 async function existsOnImageKit(ik, row) {
   if (row.kind === 'file') {
@@ -160,6 +228,8 @@ async function moveOne(ik, row, ctx = {}) {
       ik,
       db: ctx.db || null,
       sourceFilePath: row.from,
+      // 알고 있으면 fileId 로 바로 찾는다(목록 인덱스 지연 회피).
+      fileId: row.fileId || null,
       destinationFolder: destFolder,
       mode: 'move',
       updateRefs: !!ctx.db,
@@ -255,8 +325,22 @@ async function main() {
     process.exit(2);
   }
   const text = fs.readFileSync(opts.file, 'utf8');
-  const { rows, errors } = parseTsv(text);
+  const parsed = parseTsv(text);
+  const errors = parsed.errors;
+  let rows = parsed.rows;
   const outDir = opts.out || path.dirname(path.resolve(opts.file));
+
+  // --resume 은 계획을 세우기 전에 적용해야 한다(이미 옮긴 원본을 존재검사에 넣지 않기 위해).
+  let resumeSkipped = [];
+  if (opts.resume) {
+    const prevReport = JSON.parse(fs.readFileSync(opts.resume, 'utf8'));
+    const f = filterResume(rows, prevReport);
+    rows = f.remaining;
+    resumeSkipped = f.skipped;
+    console.log(`재개: 이전 보고서에서 완료된 ${resumeSkipped.length}건은 건너뜁니다.`);
+    resumeSkipped.forEach((r) => console.log(`  건너뜀  ${r.kind} ${r.from} → ${r.to}`));
+    console.log('');
+  }
   // 지정한 출력 폴더가 없으면 만든다(없으면 plan/report 저장에서 ENOENT).
   fs.mkdirSync(outDir, { recursive: true });
 
@@ -272,6 +356,11 @@ async function main() {
     console.log('');
   }
   if (rows.length === 0) {
+    if (resumeSkipped.length) {
+      console.log('재개할 남은 항목이 없습니다 — 모두 완료된 상태입니다.');
+      writeReport(outDir, resumeSkipped.map((r) => ({ ...r, ok: true, skipped: true, dbBatchId: r.prevDbBatchId })), []);
+      process.exit(0);
+    }
     console.error('처리할 항목이 없습니다.');
     process.exit(errors.length ? 1 : 0);
   }
@@ -288,8 +377,17 @@ async function main() {
     const entry = { ...row, exists: null, dbRefs: 0, byCollection: {}, codeRefs: codeRefsFor(codeRefs, row), issues: [] };
     if (ik) {
       try {
-        entry.exists = await existsOnImageKit(ik, row);
-        if (!entry.exists) entry.issues.push('ImageKit 에서 원본을 찾지 못함');
+        const ex = await existsWithRetry(ik, row);
+        entry.exists = ex.exists;
+        entry.existsAttempts = ex.attempts;
+        if (ex.attempts > 1) {
+          console.log(
+            `    (목록 인덱스 지연) ${row.from} — ${ex.attempts}회 재시도 후 ${ex.exists ? '발견' : '미발견'}`
+          );
+        }
+        if (!entry.exists) {
+          entry.issues.push('ImageKit 에서 원본을 찾지 못함(목록 인덱스 재시도 후에도)');
+        }
       } catch (e) {
         entry.issues.push(`존재 확인 실패: ${e.message}`);
       }
@@ -352,13 +450,6 @@ async function main() {
     process.exit(1);
   }
 
-  let done = new Set();
-  if (opts.resume) {
-    const prev = JSON.parse(fs.readFileSync(opts.resume, 'utf8'));
-    done = new Set((prev.results || []).filter((r) => r.ok).map((r) => `${r.kind}:${r.from}`));
-    console.log(`\n재개: 이미 완료된 ${done.size}건은 건너뜁니다.`);
-  }
-
   if (!opts.yes) {
     const ok = await confirm(`\n${plan.length}건을 실제로 이동하고 DB 참조 ${totalDb}건을 갱신합니다. 진행할까요? (y/N) `);
     if (!ok) {
@@ -368,17 +459,17 @@ async function main() {
     }
   }
 
-  const results = [];
+  // 재개로 건너뛴 항목도 보고서에는 남긴다(롤백 계획이 이어지도록 dbBatchId 포함).
+  const results = resumeSkipped.map((r) => ({
+    kind: r.kind, from: r.from, to: r.to, line: r.line,
+    ok: true, skipped: true,
+    newFileId: r.prevNewFileId ?? null,
+    dbBatchId: r.prevDbBatchId ?? null,
+  }));
   let idx = 0;
   for (const row of plan) {
     idx += 1;
-    const key = `${row.kind}:${row.from}`;
     const prefix = `[${idx}/${plan.length}]`;
-    if (done.has(key)) {
-      console.log(`${prefix} 건너뜀(완료됨) ${row.from}`);
-      results.push({ ...row, ok: true, skipped: true });
-      continue;
-    }
     process.stdout.write(`${prefix} ${row.kind} ${row.from} → ${row.to} … `);
     try {
       const mv = await moveOne(ik, row, { db });
@@ -391,8 +482,16 @@ async function main() {
         refs = await ikRefsDb.applyMappings(db, mapping, { actor: 'cli:ikReorganize' });
       }
       const n = refs.refsUpdated ? Object.values(refs.refsUpdated).reduce((a, b) => a + b, 0) : 0;
-      console.log(`OK (DB ${n}건, batch ${refs.batchId || '-'})`);
-      results.push({ ...row, ok: true, jobId: mv.jobId, batchId: refs.batchId || null, refsUpdated: refs.refsUpdated || {} });
+      // 참조가 0건이면 로그 배치가 만들어지지 않는다 → dbBatchId 를 null 로 기록해야
+      // 롤백에서 "되돌릴 로그가 없습니다" 를 실패로 오인하지 않는다(실측 결함).
+      const dbBatchId = refs.documents > 0 && refs.batchId ? refs.batchId : null;
+      console.log(`OK (DB ${n}건, batch ${dbBatchId || '해당 없음'})`);
+      results.push({
+        ...row, ok: true, jobId: mv.jobId,
+        // 롤백에서 이 파일을 fileId 로 되찾기 위해 반드시 남긴다.
+        newFileId: (mv.transfer && mv.transfer.newFileId) || null,
+        dbBatchId, dbDocuments: refs.documents || 0, refsUpdated: refs.refsUpdated || {},
+      });
     } catch (e) {
       console.log(`실패: ${e.message}`);
       results.push({ ...row, ok: false, error: e.message });
@@ -409,7 +508,14 @@ async function main() {
     (s, r) => s + Object.values(r.refsUpdated || {}).reduce((a, b) => a + b, 0),
     0
   );
-  console.log(`\n완료: ${results.filter((r) => r.ok).length}/${plan.length}건 · DB 참조 ${totalUpdated}건 갱신`);
+  // 건너뛴(재개) 항목을 실행 건수에 합산하면 "2/1건" 같은 엉뚱한 요약이 나온다 — 분리해 센다.
+  const executedOk = results.filter((r) => r.ok && !r.skipped).length;
+  const skippedN = results.filter((r) => r.skipped).length;
+  console.log(
+    `\n완료: ${executedOk}/${plan.length}건 실행` +
+      (skippedN ? ` · 건너뜀 ${skippedN}건(이전 실행에서 완료)` : '') +
+      ` · DB 참조 ${totalUpdated}건 갱신`
+  );
   console.log(`보고서: ${report}`);
   console.log(`되돌리기: node backend/scripts/ikReorganize.js --rollback ${report}`);
   await cleanup(db);
@@ -423,30 +529,89 @@ function writeReport(outDir, results, plan) {
 
 async function doRollback(opts) {
   const report = JSON.parse(fs.readFileSync(opts.rollback, 'utf8'));
-  const done = (report.results || []).filter((r) => r.ok && !r.skipped);
-  if (done.length === 0) {
+  const items = planRollback(report);
+  if (items.length === 0) {
     console.log('되돌릴 항목이 없습니다.');
     return;
   }
   const ik = makeImageKit();
   const db = opts.useDb ? await connectDb() : null;
 
-  console.log(`역순으로 ${done.length}건을 되돌립니다.\n`);
+  console.log(`역순으로 ${items.length}건을 되돌립니다.\n`);
   let okCount = 0;
-  for (let i = done.length - 1; i >= 0; i--) {
-    const r = done[i];
-    const rev = { kind: r.kind, from: r.to, to: r.from };
-    process.stdout.write(`[${done.length - i}/${done.length}] ${rev.from} → ${rev.to} … `);
-    try {
-      if (ik) await moveOne(ik, rev, { db: null });
-      if (db && r.batchId) await ikRefsDb.rollback(db, { batchId: r.batchId });
-      console.log('OK');
-      okCount += 1;
-    } catch (e) {
-      console.log(`실패: ${e.message}`);
+  const failures = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const r = items[i];
+    process.stdout.write(`[${i + 1}/${items.length}] ${r.from} → ${r.to} … `);
+
+    // 순서가 중요하다: **파일 복원을 먼저** 하고, 성공했을 때만 DB 를 되돌린다.
+    //   DB 를 먼저 되돌리고 파일 복원이 실패하면 "DB 는 옛 경로 · 파일은 새 경로" 로
+    //   불일치가 남는다(실측 사고). 파일이 안 돌아왔으면 DB 도 건드리지 않는 편이 안전하다.
+    let fileState = 'skip';
+    let fileErr = null;
+    if (ik) {
+      try {
+        await moveOne(ik, r, { db: null });
+        fileState = 'ok';
+      } catch (e) {
+        fileState = 'fail';
+        fileErr = e.message;
+      }
     }
+
+    let dbState = 'n/a';
+    let dbErr = null;
+    if (fileState !== 'ok') {
+      // 파일이 제자리로 안 갔으면 DB 는 그대로 둔다(불일치 방지).
+      dbState = r.dbBatchId ? 'blocked' : 'n/a';
+    } else if (!r.dbBatchId) {
+      dbState = 'n/a'; // 갱신된 참조가 없었음 → 되돌릴 것도 없음(실패 아님)
+    } else if (!db) {
+      dbState = 'skip';
+    } else {
+      try {
+        const rb = await ikRefsDb.rollback(db, { batchId: r.dbBatchId });
+        dbState = `ok(${rb.entries}건)`;
+      } catch (e) {
+        // 이미 롤백된 배치(404)는 사실상 되돌아간 상태다 — 실패로 세지 않는다.
+        if (e.status === 404) dbState = '이미 롤백됨';
+        else {
+          dbState = 'fail';
+          dbErr = e.message;
+        }
+      }
+    }
+
+    const failed = fileState === 'fail' || dbState === 'fail';
+    const label = {
+      ok: '파일 복원 OK',
+      fail: `파일 복원 실패(${fileErr})`,
+      skip: '파일 복원 건너뜀(ImageKit 키 없음)',
+    }[fileState];
+    const dbLabel =
+      dbState === 'n/a'
+        ? 'DB 롤백 해당 없음(갱신된 참조 0건)'
+        : dbState === 'blocked'
+        ? 'DB 롤백 보류(파일 복원이 안 돼 불일치 방지 — DB 는 그대로 둠)'
+        : dbState === 'skip'
+        ? 'DB 롤백 건너뜀(--no-db)'
+        : dbState === 'fail'
+        ? `DB 롤백 실패(${dbErr})`
+        : `DB 롤백 ${dbState}`;
+    console.log(`${failed ? '실패' : 'OK'} — ${label} · ${dbLabel}`);
+    if (r.wasSkipped && !r.dbBatchId) {
+      console.log('    ↳ 이 항목은 이전 실행에서 처리된 건이라 DB 배치 정보가 없을 수 있습니다(이전 report 확인).');
+    }
+    if (failed) failures.push({ ...r, fileErr, dbErr });
+    else okCount += 1;
   }
-  console.log(`\n되돌리기 완료: ${okCount}/${done.length}`);
+
+  console.log(`\n되돌리기 완료: ${okCount}/${items.length}`);
+  if (failures.length) {
+    console.log('실패 항목:');
+    failures.forEach((f) => console.log(`  ${f.from} → ${f.to} — ${f.fileErr || f.dbErr}`));
+  }
   await cleanup(db);
 }
 
@@ -454,7 +619,12 @@ async function cleanup(db) {
   if (db) await mongoose.disconnect().catch(() => {});
 }
 
-main().catch((e) => {
-  console.error('오류:', e.message);
-  process.exit(1);
-});
+// 스크립트로 실행할 때만 main 을 돌린다(단위 테스트에서 require 가능하도록).
+if (require.main === module) {
+  main().catch((e) => {
+    console.error('오류:', e.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { parseTsv, filterResume, planRollback, looksLikeFile };

@@ -218,3 +218,113 @@ test('mode 가 잘못되면 400', async () => {
     (e) => e.status === 400
   );
 });
+
+// ── 목록 인덱스 지연으로 인한 가짜 충돌 ─────────────────────────
+//   listFiles 는 삭제된 파일을 몇 초간 계속 돌려준다. 그대로 믿으면
+//   방금 비운 폴더로 되돌릴 때 409 가 나서 롤백이 실패한다(실측).
+test('대상 목록에 유령 항목만 있으면 충돌이 아니다(getFileDetails 404)', async () => {
+  const ghost = { fileId: 'ghost', name: 'a.jpg', filePath: '/new/a.jpg', size: 1, fileType: 'image' };
+  const ik = fakeIk({ files: [SRC, ghost] });
+  // 목록에는 남아 있지만 실제 조회는 404 인 상태를 만든다
+  ik.getFileDetails = async (id) => {
+    if (id === 'ghost') {
+      const e = new Error('The requested asset does not exist.');
+      e.$ResponseMetadata = { statusCode: 404 };
+      throw e;
+    }
+    return SRC;
+  };
+  const r = await transferFile({
+    ik, db: {}, sourceFilePath: '/old/a.jpg', destinationFolder: '/new', mode: 'move', downloadFn: dl,
+    onRefsUpdate: async () => ({ batchId: 'b', documents: 0, refsUpdated: {}, failures: [] }),
+  });
+  assert.equal(r.destinationPath, '/new/a.jpg', '유령 항목은 무시하고 진행해야 한다');
+});
+
+test('대상에 실제로 살아 있는 파일이면 여전히 409', async () => {
+  const real = { fileId: 'real', name: 'a.jpg', filePath: '/new/a.jpg', size: 1, fileType: 'image' };
+  const ik = fakeIk({ files: [SRC, real] });
+  await assert.rejects(
+    () => transferFile({ ik, db: {}, sourceFilePath: '/old/a.jpg', destinationFolder: '/new', mode: 'move', downloadFn: dl }),
+    (e) => e.status === 409
+  );
+});
+
+test('존재 확인이 404 이외의 오류면 그대로 전파(조용히 덮어쓰지 않는다)', async () => {
+  const ghost = { fileId: 'boom', name: 'a.jpg', filePath: '/new/a.jpg', size: 1, fileType: 'image' };
+  const ik = fakeIk({ files: [SRC, ghost] });
+  ik.getFileDetails = async () => { throw new Error('서버 오류'); };
+  await assert.rejects(
+    () => transferFile({ ik, db: {}, sourceFilePath: '/old/a.jpg', destinationFolder: '/new', mode: 'move', downloadFn: dl }),
+    (e) => /서버 오류/.test(e.message)
+  );
+  assert.equal(ik.calls.uploads.length, 0);
+});
+
+// ── CDN 스테일 회피(캐시버스터) ─────────────────────────────────
+//   실측 2026-09-06: 같은 경로에 A 삭제 → B 업로드 후 `?tr=orig-true` 만 붙이면
+//   CDN 이 A 의 바이트를 계속 내준다. 파라미터를 빼면 최적화본(원본 아님)이 온다.
+//   → 다운로드 URL 에 항상 고유 ik-cb 를 붙이고, 불일치 시 값만 바꿔 1회 재시도한다.
+const { originalUrl } = require('./ikTransfer');
+
+test('originalUrl: tr=orig-true 와 고유 ik-cb 를 함께 붙인다', () => {
+  const u = originalUrl('https://ik.imagekit.io/acct/a/b.jpg', 'fid123', 0);
+  assert.ok(u.includes('?tr=orig-true'), u);
+  assert.ok(/[?&]ik-cb=/.test(u), u);
+  assert.ok(u.includes('fid123'), u);
+});
+
+test('originalUrl: attempt 가 다르면 URL 이 반드시 달라진다(같은 ms 여도)', () => {
+  const a0 = originalUrl('https://x/y.jpg', 'f', 0);
+  const a1 = originalUrl('https://x/y.jpg', 'f', 1);
+  assert.notEqual(a0, a1);
+});
+
+test('originalUrl: fileId 가 없어도 안전하다', () => {
+  assert.ok(/ik-cb=nofid-/.test(originalUrl('https://x/y.jpg', null, 0)));
+});
+
+test('다운로드 URL 에 캐시버스터가 붙고, 무파라미터 재시도는 하지 않는다', async () => {
+  const ik = fakeIk({ files: [SRC] });
+  const urls = [];
+  await transferFile({
+    ik, db: {}, sourceFilePath: '/old/a.jpg', destinationFolder: '/new', mode: 'move',
+    downloadFn: async (u) => { urls.push(u); return { buf: Buffer.alloc(100) }; },
+    onRefsUpdate: async () => ({ batchId: 'b', documents: 0, refsUpdated: {}, failures: [] }),
+  });
+  assert.equal(urls.length, 1, '크기가 맞으면 1회만 받는다');
+  assert.ok(/tr=orig-true/.test(urls[0]) && /ik-cb=/.test(urls[0]), urls[0]);
+});
+
+test('스테일로 크기가 어긋나면 캐시버스터를 바꿔 1회 재시도하고, 맞으면 진행한다', async () => {
+  const ik = fakeIk({ files: [SRC] }); // 메타 size = 100
+  const urls = [];
+  let call = 0;
+  const r = await transferFile({
+    ik, db: {}, sourceFilePath: '/old/a.jpg', destinationFolder: '/new', mode: 'move',
+    downloadFn: async (u) => {
+      urls.push(u);
+      call += 1;
+      // 1회차: CDN 스테일(이전 파일 바이트) / 2회차: 진짜 원본
+      return { buf: Buffer.alloc(call === 1 ? 55 : 100) };
+    },
+    onRefsUpdate: async () => ({ batchId: 'b', documents: 0, refsUpdated: {}, failures: [] }),
+  });
+  assert.equal(urls.length, 2);
+  assert.notEqual(urls[0], urls[1], '재시도 URL 이 달라야 캐시를 우회한다');
+  urls.forEach((u) => assert.ok(/tr=orig-true/.test(u), `무파라미터 재시도 금지: ${u}`));
+  assert.equal(r.verified.size, 100);
+});
+
+test('재시도해도 크기가 어긋나면 502 (업로드하지 않는다)', async () => {
+  const ik = fakeIk({ files: [SRC] });
+  await assert.rejects(
+    () =>
+      transferFile({
+        ik, db: {}, sourceFilePath: '/old/a.jpg', destinationFolder: '/new', mode: 'move',
+        downloadFn: async () => ({ buf: Buffer.alloc(55) }),
+      }),
+    (e) => e.status === 502 && /원본 크기가 메타데이터와 다릅니다/.test(e.message)
+  );
+  assert.equal(ik.calls.uploads.length, 0);
+});
