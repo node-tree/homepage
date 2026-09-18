@@ -17,6 +17,8 @@ import { EditModeProvider } from './redesign/edit/EditModeContext';
 const Login = lazy(() => import('./components/Login'));
 const SaengsansoApp = lazy(() => import('./components/Saengsanso'));
 const OceanData = lazy(() => import('./components/OceanData'));
+// 〈역류〉 사운드 산책(/yeokryu/walk) · QR 전용 단독 화면, 색인 제외(noindex) · 메뉴·sitemap 에 넣지 않는다
+const YeokryuWalk = lazy(() => import('./components/YeokryuWalk/YeokryuWalk'));
 const ClaudeMonitor = lazy(() => import('./components/ClaudeMonitor'));
 const Guestbook = lazy(() => import('./components/Guestbook'));
 const WorkResearch = lazy(() => import('./components/WorkResearch'));
@@ -155,6 +157,7 @@ function App() {
               <Route path="/guestbook" element={<Guestbook />} />
               <Route path="/team-event" element={<TeamEvent />} />
               <Route path="/NODETREECorpus" element={<Team />} />
+              <Route path="/yeokryu/walk" element={<Suspense fallback={<div style={{ minHeight: '100vh', background: '#F5F2EC' }} />}><YeokryuWalk /></Suspense>} />
               <Route path="/ocean" element={<OceanData />} />
               <Route path="/iso" element={<Kkumdarak />} />
               {/* /kkumdarak — 구 발행 URL 호환 별칭. hash 보존해 /iso로 리다이렉트 */}

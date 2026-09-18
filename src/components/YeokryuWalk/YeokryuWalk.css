@@ -1,0 +1,313 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   YeokryuWalk.css — 〈역류〉 사운드 산책 (/yeokryu/walk)
+   역류 국문 조판 토큰: paper #F5F2EC · ink #0F0F1A · signal #FF2400(재생 중 표시 한 곳) · gray #6B6B6B
+   모바일 우선 한 열. 데스크톱은 가운데 좁은 열(440px). 헤더 없음 → 고정 헤더 가림 함정 해당 없음.
+   서체는 페이지 전용 이름(YW …)으로 선언해 v5 fonts.css 의 같은 이름 서브셋과 섞이지 않게 한다.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@font-face {
+  font-family: 'YW Noto Sans KR';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/NotoSansKR-walk-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'YW Noto Sans KR';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./fonts/NotoSansKR-walk-500.woff2') format('woff2');
+}
+/* Plex Mono 는 v5 가 이미 self-host 하는 파일을 그대로 쓴다(같은 해시 URL 로 방출) */
+@font-face {
+  font-family: 'YW Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../../assets/fonts/redesign/PlexMono-400.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+2000-206F;
+}
+
+.yw {
+  --paper: #f5f2ec;
+  --ink: #0f0f1a;
+  --signal: #ff2400;
+  --gray: #6b6b6b;
+  --rule: rgba(15, 15, 26, 0.14);
+  --kr: 'YW Noto Sans KR', 'Noto Sans KR', 'Apple SD Gothic Neo', system-ui, sans-serif;
+  --mono: 'YW Plex Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --pad-x: 24px;
+
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--kr);
+  font-weight: 400;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+.yw *,
+.yw *::before,
+.yw *::after {
+  box-sizing: border-box;
+}
+
+.yw__col {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding: calc(32px + env(safe-area-inset-top, 0px)) calc(var(--pad-x) + env(safe-area-inset-right, 0px))
+    calc(24px + env(safe-area-inset-bottom, 0px)) calc(var(--pad-x) + env(safe-area-inset-left, 0px));
+}
+
+/* ── 머리 */
+.yw__head {
+  margin: 0 0 36px;
+}
+.yw__title {
+  margin: 0;
+  font-weight: 500;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.yw__series {
+  display: block;
+  font-size: 15px;
+  line-height: 1.5;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+}
+.yw__work {
+  display: block;
+  margin-top: 2px;
+  font-size: 26px;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+.yw__sub {
+  margin: 12px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--gray);
+  word-break: keep-all;
+}
+
+/* ── 재생 */
+.yw__player {
+  margin: 0 0 40px;
+}
+.yw__play {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 152px;
+  margin: 0;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: var(--ink);
+  color: var(--paper);
+  font: inherit;
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.yw__play:active:not(:disabled) {
+  transform: scale(0.985);
+}
+.yw__play:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+.yw__play:disabled {
+  background: transparent;
+  border-color: var(--rule);
+  color: var(--gray);
+  cursor: not-allowed;
+}
+.yw__play:disabled .yw__glyph {
+  opacity: 0.45;
+}
+.yw__glyph {
+  display: inline-flex;
+  flex: none;
+  width: 28px;
+  height: 28px;
+}
+.yw__glyph svg {
+  display: block;
+}
+
+.yw__track {
+  position: relative;
+  height: 2px;
+  margin-top: 16px;
+  background: var(--rule);
+  overflow: hidden;
+}
+.yw__fill {
+  position: absolute;
+  inset: 0;
+  background: var(--ink);
+  transform-origin: 0 50%;
+  transition: transform 0.3s linear;
+}
+
+.yw__status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.yw__now {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.yw__dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: var(--rule);
+}
+.yw__dot[data-on='true'] {
+  background: var(--signal);
+}
+.yw__time--total {
+  color: var(--gray);
+}
+
+.yw__notice {
+  margin: 12px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+/* 이어 듣기 안내 — 3초 뒤 사라진다. 시각만 mono */
+.yw__resume {
+  margin: 12px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+.yw__resume-time {
+  font-family: var(--mono);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 길 · 도착 · 안전 */
+.yw__info {
+  border-top: 1px solid var(--rule);
+  padding-top: 24px;
+}
+.yw__route {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.65;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.yw__dest {
+  margin: 20px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--gray);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.yw__place {
+  color: var(--ink);
+  font-weight: 500;
+}
+.yw__safety {
+  list-style: none;
+  margin: 24px 0 0;
+  padding: 20px 0 0;
+  border-top: 1px solid var(--rule);
+  display: grid;
+  gap: 10px;
+  font-size: 15px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+.yw__safety li {
+  margin: 0;
+}
+
+/* ── 바닥 */
+.yw__foot {
+  margin-top: auto;
+  padding-top: 48px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: var(--gray);
+}
+
+/* ── 데스크톱: 가운데 좁은 열, 위 여백만 넓힌다 */
+@media (min-width: 768px) {
+  .yw__col {
+    max-width: 440px;
+    padding-top: clamp(56px, 11vh, 120px);
+    padding-bottom: 40px;
+  }
+  .yw__work {
+    font-size: 28px;
+  }
+}
+/* 마우스가 있는 환경에서만 — 터치 태블릿에서 hover 가 눌린 채 남지 않게.
+   색을 새로 만들지 않고 ink 가는 선 한 겹으로만 표시한다.
+   키보드 포커스 중에는 hover 가 끼어들지 않는다(:focus-visible 2px 외곽선이 그대로 남는다) */
+@media (min-width: 768px) and (hover: hover) {
+  .yw__play:hover:not(:disabled):not(:focus-visible) {
+    outline: 1px solid var(--ink);
+    outline-offset: 4px;
+  }
+}
+
+/* 좁은 폰(320~359px) — 머리 글자 한 단계 줄임 */
+@media (max-width: 359px) {
+  .yw {
+    --pad-x: 18px;
+  }
+  .yw__work {
+    font-size: 23px;
+  }
+  .yw__play {
+    height: 136px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yw__play,
+  .yw__fill {
+    transition: none;
+  }
+}
