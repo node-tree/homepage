@@ -41,3 +41,8 @@ cafe24-db-backup-*/
 # 담당자 서명 이미지 — 이 리포는 public 이라 실제 서명을 커밋하지 않는다.
 #   운영은 env KKUMDARAK_SIGNATURE_PNG_B64(base64) 로 주입, 로컬만 이 파일을 둔다.
 backend/templates/forms/signature_*.png
+
+# Local comparison server, verification captures and backups
+/_comp/
+/output/
+/_workspace/

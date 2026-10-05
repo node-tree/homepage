@@ -31,7 +31,7 @@ function ensureHook() {
     const el = node as HTMLElement;
     const inContract = !!(el.getAttribute && (el.getAttribute('data-nt') || el.closest?.('[data-nt]')));
     if (ev.attrName === 'class') {
-      const ok = String(ev.attrValue).split(/\s+/).filter(Boolean).every((c) => c.startsWith('nt-'));
+      const ok = String(ev.attrValue).split(/\s+/).filter(Boolean).every((c) => c.startsWith('nt-') || ['about-lead', 'about-roles', 'about-links'].includes(c));
       if (ok && ev.attrValue) ev.forceKeepAttr = true;
     } else if (ev.attrName === 'style') {
       if (inContract && SAFE_STYLE.test(String(ev.attrValue))) ev.forceKeepAttr = true;
@@ -43,7 +43,7 @@ function ensureHook() {
 function prune(root: HTMLElement) {
   for (let pass = 0; pass < 4; pass += 1) {
     let removed = 0;
-    root.querySelectorAll('p, div, span, section, article, center, b, strong, em, i, u, h1, h2, h3, h4').forEach((el) => {
+    root.querySelectorAll('p, div, span, section, article, center, b, strong, em, i, u, h1, h2, h3, h4, figure').forEach((el) => {
       if (el.hasAttribute('data-nt') || el.closest('[data-nt]')) return;
       if (el.querySelector('img, iframe, video, figure, hr, table')) return;
       if ((el.textContent || '').replace(/[ \s]/g, '')) return;
@@ -76,8 +76,16 @@ function liftMedia(root: HTMLElement, doc: Document) {
     while (top.parentElement && top.parentElement !== root) top = top.parentElement;
     const fig = doc.createElement('figure');
     fig.className = 'rfig';
+    // Preserve prose before an image inside the same legacy wrapper.
+    if (top !== img) {
+      const before = doc.createRange(); before.setStartBefore(top); before.setEndBefore(img);
+      root.insertBefore(before.extractContents(), top);
+    }
+    const caption = img.closest('figure')?.querySelector('figcaption');
     root.insertBefore(fig, top);
     fig.appendChild(img);
+    if (caption) fig.appendChild(caption);
+    if (top !== img && !top.textContent?.trim() && !top.querySelector('img, iframe, video')) top.remove();
   });
 
   root.querySelectorAll('iframe').forEach((frame) => {
@@ -86,6 +94,10 @@ function liftMedia(root: HTMLElement, doc: Document) {
     while (top.parentElement && top.parentElement !== root) top = top.parentElement;
     const box = doc.createElement('div');
     box.className = 'vwrap';
+    if (top !== frame) {
+      const before = doc.createRange(); before.setStartBefore(top); before.setEndBefore(frame);
+      root.insertBefore(before.extractContents(), top);
+    }
     root.insertBefore(box, top);
     box.appendChild(frame);
   });
@@ -124,6 +136,25 @@ export function imagesIn(html: string): string[] {
     .map((tag) => (tag.match(/src="([^"]+)"/) || [])[1])
     .filter(Boolean)
     .map((src) => (src.startsWith('//') ? `https:${src}` : src));
+}
+
+/** 첫 미디어만 대표 자리로 옮긴다. 캡션·편집기 미디어 묶음은 함께 보존한다. */
+export function splitLeadMedia(html: string, lede?: string): { hero: string; body: string; images: string[] } {
+  const clean = DOMPurify.sanitize(html || '', PURIFY) as unknown as string;
+  const doc = new DOMParser().parseFromString(clean, 'text/html');
+  const images = Array.from(doc.body.querySelectorAll('img')).map((el) => el.getAttribute('src') || '');
+  const normalize = (text: string) => text.replace(/\s+/g, ' ').trim();
+  const firstParagraph = doc.body.querySelector('p');
+  if (lede && firstParagraph && !firstParagraph.querySelector('img, iframe, video') &&
+      normalize(firstParagraph.textContent || '') === normalize(lede)) firstParagraph.remove();
+  const first = doc.body.querySelector('img[src], iframe[src], video');
+  if (!first) return { hero: '', body: doc.body.innerHTML, images };
+  // 다중 이미지 묶음이나 figure의 의미/캡션을 임의로 해체하지 않는다.
+  const media = first.closest('[data-nt="group"], [data-nt="figure"], figure') || first;
+  const hero = media.outerHTML;
+  media.remove();
+  prune(doc.body);
+  return { hero, body: doc.body.innerHTML, images };
 }
 
 /** 본문에서 이미지를 뺀 나머지(문단만) — About 좌단 소개글용. */

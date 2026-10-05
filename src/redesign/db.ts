@@ -18,6 +18,19 @@ export interface DbPost {
   category?: string;
   sortOrder?: number;
   imageLayout?: unknown[];
+  yearStart?: string;
+  yearEnd?: string;
+  status?: 'done' | 'ongoing' | 'unknown';
+  venue?: string;
+  city?: string;
+  medium?: string;
+  summary?: string;
+  lede?: string;
+  artistNote?: { text: string; by?: string };
+  quote?: { text: string; author?: string; title?: string; source?: string; year?: string; excerpt?: boolean };
+  credits?: { k: string; v: string }[];
+  audience?: string;
+  partners?: { name: string; role?: string }[];
 }
 
 export interface DbHeader {
@@ -67,7 +80,7 @@ export function usePosts(kind: Kind): Async<DbPost[]> {
   return useAsync<DbPost[]>(async () => {
     const res = await apiOf(kind).getAllPosts();
     if (!res.success) throw new Error(res.message || '글을 불러오는데 실패했습니다.');
-    return res.data as DbPost[];
+    return sortPosts(res.data as DbPost[]);
   }, [kind]);
 }
 
@@ -190,3 +203,17 @@ export function monoDate(date?: string): string {
 }
 
 export { workAPI, filedAPI };
+
+/** 작품 연도는 등록일과 독립적이다. 미상은 항상 맨 끝. */
+export function postYear(post: DbPost): string {
+  return /^\d{4}$/.test(post.yearStart?.trim() || '') ? post.yearStart!.trim() : '';
+}
+export function yearLabel(post: DbPost): string {
+  const start = postYear(post);
+  if (!start) return '';
+  if (post.status === 'ongoing') return `${start}–`;
+  return post.yearEnd && post.yearEnd !== start ? `${start}–${post.yearEnd}` : start;
+}
+export function sortPosts(posts: DbPost[]): DbPost[] {
+  return [...posts].sort((a, b) => Number(postYear(b)) - Number(postYear(a)) || (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+}

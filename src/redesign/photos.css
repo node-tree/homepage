@@ -1,0 +1,59 @@
+.nt .photo-open { display: block; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; cursor: zoom-in; text-align: left; }
+.nt .photo-open:focus-visible { outline: 2px solid var(--ink); outline-offset: 5px; }
+.nt .photo-open:focus-visible img { filter: brightness(1); }
+.nt .photo-unavailable::after { content: '사진을 불러오지 못했습니다'; display: block; padding: 24px; font-size: 12px; }
+.nt .rich .photo-group { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 22px; max-width: none; margin: 34px 0; align-items: start; }
+.nt .photo-group figure.rfig { grid-column: span var(--photo-span, 6); margin: 0; min-width: 0; }
+.nt .photo-group figure.rfig img { width: 100%; height: auto; max-height: min(60vh, 600px); object-fit: contain; object-position: center; }
+.nt .photos-split .photo-group figure.rfig[data-landscape="true"] img { max-height: none; }
+.nt .photo-group figcaption { font-size: 12px; line-height: 1.6; margin-top: 8px; }
+.nt .rich .photo-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.65fr); gap: 32px; max-width: none; margin: 34px 0; align-items: start; }
+.nt .photo-split .photo-prose {
+  --prose-start: calc(var(--photo-header-bottom, 0px) + 24px);
+  --prose-available: calc(100dvh - var(--prose-start));
+  /* Tall prose first flows below the header, then docks with its end visible.
+     Only the excess over the header-cleared reading area can move above it. */
+  position: sticky;
+  top: calc(var(--prose-start) - max(0px, var(--prose-height, 0px) - var(--prose-available)));
+  align-self: start;
+}
+.nt .photo-split .photo-group { margin: 0; gap: 16px; }
+.photo-dialog { box-sizing: border-box; position: fixed; inset: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 20px 28px; border: 0; background: #151515; color: #f6f5f0; font: 14px/1.6 sans-serif; }
+.photo-dialog[open] { display: flex; flex-direction: column; gap: 12px; }
+.photo-dialog::backdrop { background: #151515; }
+.photo-dialog button { min-height: 44px; padding: 8px 14px; border: 1px solid #777; background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.photo-dialog button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.photo-toolbar, .photo-navigation { display: flex; justify-content: space-between; align-items: center; flex: 0 0 auto; }
+.photo-stage { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; touch-action: pan-y pinch-zoom; }
+.photo-stage img { width: 100%; height: 100%; object-fit: contain; }
+.photo-caption { margin: 0; font-size: 12px; }
+@media (max-width: 767px) {
+  .nt .rich .photo-group { gap: 12px; margin: 24px 0; }
+  .nt .photo-group figure.rfig { grid-column: span max(3, var(--photo-span, 6)); }
+  .nt .rich .photo-split { display: contents; }
+  .nt .photo-split .photo-prose { display: contents; position: static; }
+  .nt .photo-split .photo-group { margin: 24px 0; gap: 12px; }
+  .photo-dialog { padding: 12px; }
+}
+
+/* Reading order: lead → prose/photos → video → publication → credits. */
+.nt .detail-jumps { display: flex; flex-wrap: wrap; align-items: center; margin-top: 18px; font: 11px/1.8 var(--mono); }
+.nt .detail-jumps a { display: inline-flex; align-items: center; min-height: 44px; }
+.nt .detail-jumps a + a::before { content: '·'; padding: 0 12px; color: var(--g2); }
+.nt .detail-jumps a:focus-visible { outline: 1px solid currentColor; outline-offset: 3px; }
+.nt #detail-photos, .nt #detail-videos, .nt #detail-publications { scroll-margin-top: 96px; }
+@media (max-width: 767px) {
+  .nt #detail-photos, .nt #detail-videos, .nt #detail-publications { scroll-margin-top: 132px; }
+}
+.nt .detail-videos { margin: 48px 0; }
+.nt .detail-videos.lead-video { margin-top: 0; }
+.nt .detail-videos h2 { margin: 0 0 24px; font: 11px/1.8 var(--mono); color: var(--g2); }
+.nt .detail-video-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 36px 24px; }
+.nt .detail-video { min-width: 0; }
+.nt .detail-video h3 { margin: 10px 0 0; font: 11px/1.7 var(--mono); font-weight: 400; overflow-wrap: anywhere; color: var(--g2); }
+.nt .detail-video .vwrap { margin: 0; }
+@media (min-width: 768px) {
+  .nt .detail-video-list.is-multiple { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .nt .detail-video-list.is-multiple:not(.has-lead) > .detail-video:first-child { grid-column: 1 / -1; }
+}
+.nt .photo-prose-tail:empty { display: none; }

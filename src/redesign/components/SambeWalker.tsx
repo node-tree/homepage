@@ -4,50 +4,67 @@ import { BEAT_SEC } from '../../components/DharaniClock/beat';
 import { emitArrive } from '../walkerBus';
 import './SambeWalker.css';
 
-// ════════════════════════════════════════════════════════════════════════
-// SambeWalker — 삼베 대리 신체(설계 §4)
-//   · 전역 fixed 레이어. z-index 40 = 고정 헤더(50) **아래**
-//     (reference_nodetreehome_fixed_header — 상단 오버레이가 헤더를 가리지 않게).
-//   · 이동은 rAF + transform:translate3d 만. top/left 애니 금지. React 렌더 사이클 밖.
-//   · 속도 1정간 / 9.508 s(= 1박). 절대 뛰지 않는다. 커서를 따라가지 않는다.
-//   · 라우트가 바뀌어도 언마운트되지 않도록 <Routes> **바깥**에 둔다.
-//     (설계 §4.3 은 "BrowserRouter 바깥"이라 적었지만 그러면 useLocation 을 못 쓴다.
-//      Router 안 · Routes 밖이면 라우트 전환에도 이 컴포넌트는 유지된다 — 같은 목적.)
-//   · prefers-reduced-motion = 정면 정지 · 320px 이하 비표시(CSS).
-// ════════════════════════════════════════════════════════════════════════
-
 const SPRITE_URL = '/redesign/sambe-sprite.svg';
 const ROUTES_URL = '/redesign/walker-routes.json';
 const WALK_FRAMES = ['walk-01', 'walk-02', 'walk-03', 'walk-04', 'walk-05', 'walk-06', 'walk-07', 'walk-08'];
-const CYCLE_MS = 1200;             // 8프레임 보행 사이클
+const CYCLE_MS = 1200;
 const STORAGE_KEY = 'nt.sambe.v1';
-/** 라우트 진입 보행 = 1정간을 박/16(≈594 ms)에. 그 이상은 걸어서 못 가므로 한 정간만 들어간다.
- *  (평소 산책은 1정간/1박 = 9.508 s — 절대 뛰지 않는다는 규칙은 그대로.) */
 const ENTER_SEC = 0.594;
-
 interface RouteSpec { entry: number; patrol: [number, number]; bottom: number }
 interface RoutesFile { routes: Record<string, RouteSpec>; default: RouteSpec }
+interface Lane { min: number; max: number; top: number; width: number; height: number; placement: string }
 
-/** v5 리디자인 라우트에서만 걷는다(레거시 홈·/iso·/ocean 에는 나타나지 않는다). */
 export function isRedesignPath(pathname: string): boolean {
-  // v5 판식을 쓰는 모든 라우트(편집 라우트 /work/new·/:id/edit 포함). 2026-08-30 사용자 "모든 페이지에서".
   if (['/', '/index', '/about', '/cv', '/contact', '/work', '/commons'].includes(pathname)) return true;
-  if (/^\/work\/research\//.test(pathname)) return false;   // 레거시 리서치 뷰어
+  if (/^\/work\/research\//.test(pathname)) return false;
   return /^\/(work|commons)\/[^/]+(\/edit)?$/.test(pathname);
 }
 
-/** 라우트 패턴 선택 — /work/:slug 는 파라미터 자리를 하나로 본다. */
 function specFor(file: RoutesFile | null, pathname: string): RouteSpec {
   const fallback: RouteSpec = { entry: 7, patrol: [2, 18], bottom: 28 };
   if (!file) return fallback;
-  const key = file.routes[pathname]
-    ? pathname
+  const key = file.routes[pathname] ? pathname
     : /^\/work\/[^/]+/.test(pathname) ? '/work/:slug'
-    : /^\/commons\/[^/]+/.test(pathname) ? '/commons/:slug'
-    : pathname;
+    : /^\/commons\/[^/]+/.test(pathname) ? '/commons/:slug' : pathname;
   return file.routes[key] ?? file.default ?? fallback;
 }
+const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
 
+/** Subtract occupied rectangles before allowing a whole sprite to enter a lane.
+ *  Coordinates are sprite centres, so turning cannot cross a lane boundary. */
+function freeLane(left: number, right: number, top: number, width: number, height: number,
+  obstacles: DOMRect[], preferred: number, placement: string): Lane | null {
+  let gaps = [[left, right]];
+  for (const r of obstacles) {
+    if (!r.width || !r.height || r.bottom <= top || r.top >= top + height) continue;
+    gaps = gaps.flatMap(([a, b]) => r.right + 6 <= a || r.left - 6 >= b ? [[a, b]]
+      : [[a, Math.min(b, r.left - 6)], [Math.max(a, r.right + 6), b]].filter(([x, y]) => y > x));
+  }
+  const lanes = gaps.filter(([a, b]) => b - a >= width).map(([a, b]) => ({
+    min: a + width / 2, max: b - width / 2, top, width, height, placement,
+  }));
+  // Prefer a useful walking span, then the nearest safe segment. Never traverse menu text.
+  lanes.sort((a, b) => {
+    const usefulA = a.max - a.min >= 12, usefulB = b.max - b.min >= 12;
+    return Number(usefulB) - Number(usefulA)
+      || Math.abs(clamp(preferred, a.min, a.max) - preferred) - Math.abs(clamp(preferred, b.min, b.max) - preferred);
+  });
+  return lanes[0] || null;
+}
+
+function measureLane(header: HTMLElement, preferred: number): Lane | null {
+  const mobile = window.innerWidth <= 767;
+  const height = mobile ? 30 : 40;
+  const width = height * 180 / 320;
+  const bottom = header.getBoundingClientRect().bottom;
+  const obstacles = Array.from(header.querySelectorAll<HTMLElement>('.brand a, .nav a, .clock > *, .auth a, .auth button, .menu-button, .menu-close'))
+    .filter(el => getComputedStyle(el).visibility !== 'hidden')
+    .map(el => el.getBoundingClientRect());
+  return freeLane(8, window.innerWidth - 8, bottom - height - 1, width, height, obstacles, preferred, 'ruler');
+}
+
+/** Persistent across routes; rAF writes transforms outside React's render cycle.
+ *  The ruler uses measured header gaps. */
 const SambeWalker: React.FC = () => {
   const { pathname } = useLocation();
   const hostRef = useRef<HTMLDivElement>(null);
@@ -56,154 +73,143 @@ const SambeWalker: React.FC = () => {
   const loadedRef = useRef(false);
   const pathRef = useRef(pathname);
   pathRef.current = pathname;
+  const st = useRef({ x: -1, dir: 1 as 1 | -1, target: null as number | null,
+    arrived: false, pending: true, lastFrame: '', lastSave: 0 });
 
-  // rAF 루프가 읽고 쓰는 가변 상태 — 리렌더를 유발하지 않는다.
-  const st = useRef({
-    x: -1,            // px, 화면 좌표
-    dir: 1 as 1 | -1, // 1 = 오른쪽
-    target: null as number | null,
-    goal: 0,          // 순찰 목표(px)
-    arrived: true,
-    lastFrame: '',
-    lastSave: 0,
-  });
-
-  // ── 스프라이트 1회 로드 + 마지막 위치 복원 (v5 라우트에 처음 들어올 때만)
-  //   ⚠ StrictMode(dev)는 effect 를 즉시 두 번 돌린다. `let alive` 로 비동기 결과를 버리면
-  //     첫 실행의 응답이 cleanup 에 막히고 두 번째 실행은 loadedRef 때문에 건너뛰어
-  //     스프라이트가 영영 안 붙는다(실측). 그래서 취소 플래그 대신 **ref 존재**로만 가른다.
   useEffect(() => {
     if (!isRedesignPath(pathname) || loadedRef.current) return;
     loadedRef.current = true;
     (async () => {
       try {
         const [svg, routes] = await Promise.all([
-          fetch(SPRITE_URL).then((r) => r.text()),
-          fetch(ROUTES_URL).then((r) => r.json() as Promise<RoutesFile>),
+          fetch(SPRITE_URL).then(r => { if (!r.ok) throw Error('sprite'); return r.text(); }),
+          fetch(ROUTES_URL).then(r => { if (!r.ok) throw Error('routes'); return r.json() as Promise<RoutesFile>; }),
         ]);
-        if (!figRef.current) {
-          loadedRef.current = false;                 // 다음 진입에서 다시 시도
-          return;
-        }
+        if (!figRef.current) { loadedRef.current = false; return; }
         figRef.current.innerHTML = svg;
         routesRef.current = routes;
+        st.current.lastFrame = '';
         try {
           const saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || 'null');
-          if (saved && typeof saved.x === 'number') {
+          if (saved && Number.isFinite(saved.x)) {
             st.current.x = saved.x;
             st.current.dir = saved.dir === -1 ? -1 : 1;
           }
-        } catch {
-          /* 세션 저장은 없어도 그만 */
-        }
-      } catch {
-        /* 스프라이트를 못 받으면 삼베는 나타나지 않는다 — 페이지는 그대로 동작 */
-        loadedRef.current = false;
-      }
+        } catch { /* session storage is optional */ }
+      } catch { loadedRef.current = false; /* useReveal retains its 594ms cap */ }
     })();
   }, [pathname]);
 
-  // ── 라우트 전환: 새 페이지 진입점으로 걸어간다
   useEffect(() => {
-    if (!isRedesignPath(pathname)) return;
-    const jeong = (window.innerWidth <= 767 ? window.innerWidth / 10 : window.innerWidth / 20);
-    const spec = specFor(routesRef.current, pathname);
-    const entry = spec.entry * jeong;
-    if (st.current.x < 0) st.current.x = entry;       // 첫 방문 = 이미 도착해 기다리고 있다
-    // 진입 보행은 한 정간까지만 — 나머지 거리는 도착 후 평소 걸음으로 좁힌다.
-    const target = Math.max(st.current.x - jeong, Math.min(st.current.x + jeong, entry));
-    st.current.target = target;
+    st.current.pending = true;
     st.current.arrived = false;
-    // 높이는 CSS 단일 규칙(헤더 계선 아래 top) — 페이지별 bottom(walker-routes.json)은 더 쓰지 않는다.
   }, [pathname]);
 
-  // ── rAF 루프
   useEffect(() => {
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let dirty = true, header: HTMLElement | null = null, lane: Lane | null = null;
+    const invalidate = () => { dirty = true; };
+    const resize = new ResizeObserver(invalidate);
+    const mutations = new MutationObserver(invalidate);
+    window.addEventListener('resize', invalidate);
+    window.addEventListener('scroll', invalidate, { passive: true });
+    media.addEventListener('change', invalidate);
+    document.fonts.addEventListener('loadingdone', invalidate);
     const setFrame = (id: string) => {
       if (st.current.lastFrame === id || !figRef.current) return;
-      const prev = figRef.current.querySelector('g.on');
-      if (prev) prev.classList.remove('on');
       const next = figRef.current.querySelector(`#${id}`);
-      if (next) next.classList.add('on');
-      st.current.lastFrame = id;
+      if (!next) return;
+      figRef.current.querySelector('g.on')?.classList.remove('on');
+      next.classList.add('on'); st.current.lastFrame = id;
     };
-
-    if (reduced) {
-      // 정면 정지 포즈로 고정 — 걷지 않는다.
-      const id = window.setTimeout(() => {
-        setFrame('stand-front');
-        const jeong = window.innerWidth <= 767 ? window.innerWidth / 10 : window.innerWidth / 20;
-        const spec = specFor(routesRef.current, pathRef.current);
-        st.current.x = spec.entry * jeong;
-        if (hostRef.current) hostRef.current.style.transform = `translate3d(${st.current.x}px,0,0)`;
+    const arrive = () => {
+      st.current.target = null;
+      if (!st.current.arrived) {
+        st.current.arrived = true;
         emitArrive(pathRef.current);
-      }, 120);
-      return () => window.clearTimeout(id);
-    }
-
-    let raf = 0;
-    let prev = performance.now();
+      }
+    };
+    let raf = 0, prev = performance.now();
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
-      const dt = Math.min((now - prev) / 1000, 0.1);
-      prev = now;
+      const dt = Math.min((now - prev) / 1000, 0.1); prev = now;
       const host = hostRef.current;
-      if (!host || !routesRef.current) return;
-
-      const jeong = window.innerWidth <= 767 ? window.innerWidth / 10 : window.innerWidth / 20;
-      const spec = specFor(routesRef.current, pathRef.current);
-      const s = st.current;
-      if (s.x < 0) s.x = spec.entry * jeong;
-      const speed = s.target !== null ? jeong / ENTER_SEC : jeong / BEAT_SEC;
-
-      // 목표: 라우트 진입점 → 도착하면 순찰
-      let goal: number;
-      if (s.target !== null) {
-        goal = s.target;
-      } else {
-        const [a, b] = spec.patrol;
-        goal = (s.dir === 1 ? Math.max(a, b) : Math.min(a, b)) * jeong;
-      }
-
-      const d = goal - s.x;
-      if (Math.abs(d) < 1.2) {
-        if (s.target !== null) {
-          s.target = null;
-          if (!s.arrived) {
-            s.arrived = true;
-            emitArrive(pathRef.current);
-          }
-        } else {
-          s.dir = s.dir === 1 ? -1 : 1;                 // 끝에서 돌아선다
-          setFrame('turn-02');
+      if (!host || !routesRef.current || !isRedesignPath(pathRef.current)) return;
+      const nextHeader = document.querySelector<HTMLElement>('.nt header');
+      if (header !== nextHeader) {
+        resize.disconnect(); mutations.disconnect(); header = nextHeader; dirty = true;
+        if (header) {
+          resize.observe(header);
+          header.querySelectorAll('.brand, .nav, .clock, .auth').forEach(el => resize.observe(el));
+          mutations.observe(header, { subtree: true, childList: true, attributes: true, characterData: true });
         }
-      } else {
-        s.dir = d > 0 ? 1 : -1;
-        s.x += Math.sign(d) * speed * dt;
-        setFrame(WALK_FRAMES[Math.floor((now / (CYCLE_MS / WALK_FRAMES.length)) % WALK_FRAMES.length)]);
       }
+      const mobile = window.innerWidth <= 767;
+      const jeong = window.innerWidth / (mobile ? 10 : 20);
+      const spec = specFor(routesRef.current, pathRef.current);
+      // Routes are authored on a 20-cell score.
+      const unit = window.innerWidth / 20;
+      const s = st.current;
+      if (dirty || s.pending) {
+        const preferred = s.x < 0 ? spec.entry * unit : s.x;
+        lane = header ? measureLane(header, preferred) : null;
+        dirty = false;
+        if (lane) {
+          host.style.width = `${lane.width}px`; host.style.height = `${lane.height}px`;
+          host.style.top = `${lane.top}px`;
+          host.dataset.placement = lane.placement;
+          host.dataset.laneMin = String(lane.min); host.dataset.laneMax = String(lane.max);
+        }
+      }
+      host.style.visibility = lane ? 'visible' : 'hidden';
+      if (!lane) { arrive(); return; }
+      s.x = s.x < 0 ? clamp(spec.entry * unit, lane.min, lane.max) : clamp(s.x, lane.min, lane.max);
+      if (s.target !== null) s.target = clamp(s.target, lane.min, lane.max);
+      if (s.pending) {
+        const entry = clamp(spec.entry * unit, lane.min, lane.max);
+        if (s.x < 0) s.x = entry;
+        s.target = clamp(entry, s.x - jeong, s.x + jeong);
+        s.pending = false;
+      }
+      if (media.matches || window.innerWidth <= 320) {
+        if (s.target !== null) s.x = s.target;
+        s.dir = 1; setFrame('stand-front'); arrive();
 
-      host.style.transform = `translate3d(${s.x.toFixed(2)}px,0,0) scaleX(${s.dir})`;
-
+      } else {
+        const min = lane.min;
+        const max = lane.max;
+        const goal = s.target ?? (s.dir === 1 ? max : min);
+        const d = goal - s.x;
+        const step = (s.target !== null ? jeong / ENTER_SEC : jeong / BEAT_SEC) * dt;
+        if (Math.abs(d) <= Math.max(0.01, step)) {
+          s.x = goal;
+          if (s.target !== null) arrive();
+          else s.dir = s.dir === 1 ? -1 : 1;
+          setFrame(max - min < 1 ? 'stand-front' : 'turn-02');
+        } else {
+          s.dir = d > 0 ? 1 : -1;
+          s.x += Math.sign(d) * step;
+          setFrame(WALK_FRAMES[Math.floor(now / (CYCLE_MS / WALK_FRAMES.length)) % WALK_FRAMES.length]);
+        }
+      }
+      // Safe lanes use the sprite centre.
+      const x = s.x - lane.width / 2;
+      host.style.transform = `translate3d(${x.toFixed(3)}px,0,0) scaleX(${s.dir})`;
+      host.dataset.arrived = String(s.arrived);
       if (now - s.lastSave > 1000) {
         s.lastSave = now;
-        try {
-          sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ x: s.x, dir: s.dir }));
-        } catch {
-          /* 무시 */
-        }
+        try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ x: s.x, dir: s.dir })); } catch { /* optional */ }
       }
     };
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf); resize.disconnect(); mutations.disconnect();
+      window.removeEventListener('resize', invalidate); window.removeEventListener('scroll', invalidate);
+      media.removeEventListener('change', invalidate); document.fonts.removeEventListener('loadingdone', invalidate);
+    };
   }, []);
 
-  return (
-    <div className={`ntwalker${isRedesignPath(pathname) ? '' : ' ntwalker--off'}`} ref={hostRef} aria-hidden="true">
-      <div className="ntwalker__fig" ref={figRef} />
-    </div>
-  );
+  return <div className={`ntwalker ntwalker--ruler${isRedesignPath(pathname) ? '' : ' ntwalker--off'}`}
+    data-mode="ruler" ref={hostRef} aria-hidden="true"><div className="ntwalker__fig" ref={figRef} /></div>;
 };
-
 export default React.memo(SambeWalker);

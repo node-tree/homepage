@@ -167,8 +167,6 @@ const Contact: React.FC = () => {
               ))}
             </div>
           )}
-
-          <div className="src">출처 · nodetree.kr DB /api/contact</div>
           {isAuthenticated && <AdminLine page="contact" />}
         </div>
       </section>

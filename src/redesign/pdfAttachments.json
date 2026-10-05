@@ -1,0 +1,29 @@
+[
+  {
+    "id": "ediaphonic",
+    "postId": "6969e0c950e7b0f6a31e83fa",
+    "title": "유기적공명 : 에디아포닉",
+    "kind": "웹 도록",
+    "pdfUrl": "/pdf/웹도록.pdf",
+    "downloadName": "유기적공명_에디아포닉_웹도록.pdf",
+    "manifestUrl": "/pdf-pages/ediaphonic/manifest.json"
+  },
+  {
+    "id": "namminongjang",
+    "postId": "6858aaeca793089c746ee918",
+    "title": "위성악보시리즈 : 남미농장",
+    "kind": "웹 도록",
+    "pdfUrl": "/pdf/남미농장.pdf",
+    "downloadName": "위성악보시리즈_남미농장_웹도록.pdf",
+    "manifestUrl": "/pdf-pages/namminongjang/manifest.json"
+  },
+  {
+    "id": "sound-orchestra",
+    "postId": "6858a45ca793089c746ee8cb",
+    "title": "사운드 오케스트라",
+    "kind": "워크북",
+    "pdfUrl": "/pdf/sound-orchestra-workbook.pdf",
+    "downloadName": "사운드_오케스트라_워크북.pdf",
+    "manifestUrl": "/pdf-pages/sound-orchestra/manifest.json"
+  }
+]

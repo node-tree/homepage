@@ -1,3 +1,4 @@
+const { pickPostFields } = require('../models/postFields');
 const express = require('express');
 const router = express.Router();
 const Work = require('../models/Work');
@@ -130,6 +131,7 @@ router.get('/', async (req, res) => {
       }
 
       return {
+        ...pickPostFields(work),
         id: work._id.toString(),
         title: work.title || '제목 없음',
         content: work.contents || '내용 없음', // contents를 content로 매핑
@@ -208,6 +210,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
     }
 
     const newWork = new Work({
+      ...pickPostFields(req.body),
       title: title.trim(),
       contents: content.trim(), // content를 contents로 매핑
       htmlContent: htmlContent || '',
@@ -222,6 +225,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
       success: true,
       message: '글이 성공적으로 저장되었습니다.',
       data: {
+        ...pickPostFields(savedWork),
         id: savedWork._id.toString(),
         title: savedWork.title,
         content: savedWork.contents,
@@ -252,7 +256,7 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
     const { title, content, htmlContent, thumbnail, imageLayout } = req.body;
 
     // imageLayout만 업데이트하는 경우 title/content 검증 스킵
-    const isLayoutOnlyUpdate = imageLayout !== undefined && !title && !content;
+    const isLayoutOnlyUpdate = (imageLayout !== undefined || Object.keys(pickPostFields(req.body)).length > 0) && !title && !content;
 
     if (!isLayoutOnlyUpdate && (!title || !content)) {
       return res.status(400).json({
@@ -261,7 +265,7 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
       });
     }
 
-    const updateData = {};
+    const updateData = pickPostFields(req.body);
     if (title) updateData.title = title.trim();
     if (content) updateData.contents = content.trim();
     if (htmlContent !== undefined) updateData.htmlContent = htmlContent || '';
@@ -271,7 +275,7 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
     const updatedWork = await Work.findByIdAndUpdate(
       id,
       updateData,
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     if (!updatedWork) {
@@ -287,6 +291,7 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
       success: true,
       message: '글이 성공적으로 수정되었습니다.',
       data: {
+        ...pickPostFields(updatedWork),
         id: updatedWork._id.toString(),
         title: updatedWork.title,
         content: updatedWork.contents,
@@ -377,6 +382,7 @@ router.get('/:id', async (req, res) => {
     res.json({
       success: true,
       data: {
+        ...pickPostFields(work),
         id: work._id.toString(),
         title: work.title || '제목 없음',
         content: work.contents || '내용 없음',
@@ -446,7 +452,7 @@ router.post('/:id/sync-obsidian', auth, adminOnly, async (req, res) => {
           'research.syncedAt': syncedAt,
         }
       },
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     if (!updatedWork) {
@@ -490,6 +496,7 @@ router.get('/:id/research', auth, adminOnly, async (req, res) => {
       return res.json({
         success: true,
         data: {
+          ...pickPostFields(work),
           id: work._id.toString(),
           title: work.title,
           synced: false,
@@ -500,6 +507,7 @@ router.get('/:id/research', auth, adminOnly, async (req, res) => {
     res.json({
       success: true,
       data: {
+        ...pickPostFields(work),
         id: work._id.toString(),
         title: work.title,
         synced: true,

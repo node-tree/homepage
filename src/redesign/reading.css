@@ -1,0 +1,51 @@
+/* STANDARD-r2: 기존 정간·서체·밝은 내지/어두운 홈을 유지한다. */
+.nt .rich, .nt .reading-text, .nt .about .lft .rich p { color: #292929; }
+.nt .reading-text { font-size: 15px; line-height: 1.9; white-space: pre-line; overflow-wrap: anywhere; }
+.nt .rich p + p, .nt .rich div + p, .nt .rich p + div { margin-top: 1.4em; }
+.nt .lead-media { margin: 0 0 32px; }
+.nt .lead-media.rich > :first-child { margin-top: 0; }
+.nt .lead-media.rich figure img { filter: none; }
+.nt .post-lede { margin: 0 0 28px; font-size: 17px; }
+.nt .detail-heading { grid-column: 5/17; grid-row: 1; }
+.nt .detail .meta { grid-row: 1 / span 2; }
+.nt .detail .txt { grid-row: 2; min-width: 0; }
+.nt .post-note, .nt .post-quote { margin: 40px 0 0; padding-top: 24px; border-top: 1px solid var(--line); }
+.nt .post-note h2, .nt .post-credits h2 { font: 11px/1.8 var(--mono); color: var(--g2); margin-bottom: 14px; }
+.nt .post-quote blockquote { border-left: 2px solid var(--g2); padding-left: 20px; }
+.nt .post-attribution { font: 11px/1.9 var(--mono); color: var(--g2); margin-top: 16px; }
+.nt .post-credits { margin-top: 44px; border-top: 1px solid var(--line); padding-top: 24px; }
+.nt .post-credits dl > div { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 18px; margin: 8px 0; font-size: 13px; }
+.nt .post-credits dt { color: var(--g2); }
+.nt .post-credits dd { white-space: pre-line; overflow-wrap: anywhere; }
+.nt.type-16 .detail .rich, .nt.type-16 .detail .reading-text,
+.nt.type-16 .about .rich, .nt.type-16 .about .lft .rich p { font-size: 16px; line-height: 1.8; }
+.nt.type-16 .detail .post-lede { font-size: 18px; }
+.nt .gfig.absent .gwin { display: flex; align-items: flex-end; padding: 24px; background: #f1f0ed; border: 0; }
+.nt .text-tile-title { font-size: 16px; line-height: 1.65; overflow-wrap: anywhere; }
+.nt .image-error { display: grid; place-items: center; min-height: 100%; padding: 12px; background: #f1f0ed; color: var(--g1); font: 11px/1.8 var(--mono); }
+.nt .cv-section-head { display: flex; align-items: baseline; gap: 16px; margin: 40px 0 12px; padding: 12px 0; border-top: 2px solid var(--ink); font-size: 18px; line-height: 1.8; font-weight: 400; scroll-margin-top: 132px; }
+.nt .cv-section-head:first-child { margin-top: 0; }
+.nt .cv-section-head span { font: 11px/1.8 var(--mono); color: var(--g2); }
+@media (max-width: 767px) {
+  .nt .detail-heading { grid-column: 2/10; }
+  .nt .detail .meta { grid-row: 2; min-width: 0; overflow-wrap: anywhere; }
+  .nt .detail .txt { grid-row: 3; }
+  .nt .detail .sub { margin-bottom: 18px; }
+  .nt header.menu-wrap { height: 116px; grid-template-rows: 48px 68px; }
+  .nt header.menu-wrap .nav { display: grid; grid-template-columns: repeat(4, max-content); justify-content: center; align-content: center; gap: 2px 8px; height: 68px; padding: 4px 12px 10px; overflow: visible; white-space: nowrap; mask-image: none; -webkit-mask-image: none; }
+  .nt header.menu-wrap .nav a { font-size: 10px; letter-spacing: .07em; padding: 5px 6px; }
+  .nt header.menu-wrap ~ main { padding-top: 116px; }
+  .nt header.menu-wrap ~ .hero-slot { margin-top: 116px; }
+  .nt header.menu-wrap ~ .hero-slot--full { height: calc(100dvh - 116px); }
+  .nt .post-credits dl > div { grid-template-columns: 72px minmax(0, 1fr); gap: 12px; }
+  .nt .gfig.absent .gwin { padding: 14px; }
+  .nt .text-tile-title { font-size: 13px; }
+  .nt .cv-section-head { font-size: 17px; }
+}
+
+.nt .about .lft .rich p.about-lead { font-size: 20px; line-height: 1.65; margin-bottom: 32px; }
+.nt .about .about-roles { margin: 36px 0 28px; border-top: 1px solid var(--line); }
+.nt .about .about-roles > div { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+.nt .about .about-roles dt { font: 12px/1.8 var(--mono); }
+.nt .about .about-roles dd { margin: 0; font-size: 14px; line-height: 1.8; overflow-wrap: anywhere; }
+.nt .about .lft .rich p.about-links { font: 12px/1.8 var(--mono); }

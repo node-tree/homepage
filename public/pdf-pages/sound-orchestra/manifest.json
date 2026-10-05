@@ -1,0 +1,336 @@
+{
+  "version": 1,
+  "sourceSha256": "f46c1e552b73832267db2bb4192449cbe618fe53ec4398bb62429eb9843e8289",
+  "sourceBytes": 3332881,
+  "pageCount": 54,
+  "longEdge": 1600,
+  "quality": 88,
+  "previewBytes": 2973656,
+  "cover": "/pdf-pages/sound-orchestra/cover.webp",
+  "pages": [
+    {
+      "src": "/pdf-pages/sound-orchestra/p001.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 15544
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p002.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 16576
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p003.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 3518
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p004.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 26526
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p005.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 3486
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p006.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 65078
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p007.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 518726
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p008.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 465690
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p009.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 3540
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p010.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 9162
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p011.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 47128
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p012.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 54592
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p013.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 70974
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p014.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 48516
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p015.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 3564
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p016.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 8804
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p017.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 72320
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p018.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 72086
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p019.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 30314
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p020.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 49222
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p021.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 41432
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p022.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 43992
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p023.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 41054
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p024.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 47908
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p025.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 54850
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p026.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 57324
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p027.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 54896
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p028.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 43300
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p029.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 40090
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p030.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 18646
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p031.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 38038
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p032.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 38462
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p033.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 59354
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p034.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 31488
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p035.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 35376
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p036.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 59662
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p037.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 62562
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p038.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 38844
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p039.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 3690
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p040.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 9176
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p041.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 46362
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p042.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 34390
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p043.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 55878
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p044.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 38262
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p045.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 56736
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p046.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 40092
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p047.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 58710
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p048.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 61488
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p049.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 50006
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p050.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 63468
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p051.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 11872
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p052.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 24890
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p053.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 9102
+    },
+    {
+      "src": "/pdf-pages/sound-orchestra/p054.webp",
+      "width": 1152,
+      "height": 1600,
+      "bytes": 16890
+    }
+  ]
+}

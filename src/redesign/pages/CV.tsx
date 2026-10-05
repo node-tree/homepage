@@ -77,10 +77,9 @@ const CV: React.FC = () => {
   const years = sections
     .flatMap((s) => s.rows.map((r) => r.year))
     .filter(Boolean)
-    .map((y) => (y as string).slice(0, 4))
+    .flatMap((y) => (y as string).match(/(?:19|20)\d{2}/g) || [])
     .sort();
-  const span = years.length ? `${years[0]}—${years[years.length - 1]}` : '';
-  const total = sections.reduce((n, s) => n + s.rows.length, 0);
+  const span = years.length ? `${years[0]}–${years[years.length - 1]}` : '';
 
   return (
     <NtPage
@@ -144,14 +143,9 @@ const CV: React.FC = () => {
               let lastYear: string | null = null;
               return (
                 <React.Fragment key={s.anchor}>
-                  <div className="yrow head" id={s.anchor}>
-                    <span className="y">{s.rows.find((r) => r.year)?.year?.slice(0, 4) ?? '·'}</span>
-                    <span className="tag">{s.rows.length}건</span>
-                    <span className="e">
-                      <b>{s.label}</b>
-                    </span>
-                    <span className="pl absent">—</span>
-                  </div>
+                  <h2 className="cv-section-head" id={s.anchor}>
+                    {s.label}<span>{s.rows.length}건</span>
+                  </h2>
                   {s.rows.map((r, k) => {
                     const same = r.year !== null && r.year === lastYear;
                     if (r.year) lastYear = r.year;
@@ -167,7 +161,6 @@ const CV: React.FC = () => {
                 </React.Fragment>
               );
             })}
-            <div className="src">출처 · nodetree.kr DB /api/cv — {total}행. 밑줄(_)로 구분된 장소는 우단으로 옮겼다.</div>
             {isAuthenticated && <AdminLine page="cv" />}
           </div>
 

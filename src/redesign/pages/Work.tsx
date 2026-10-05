@@ -1,11 +1,11 @@
 import React, { Suspense, lazy, useState } from 'react';
-import { Link, Navigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { AdminLine, Note, State } from '../components/bits';
+import { AdminLine, State } from '../components/bits';
 import NtPage from '../components/NtPage';
-import VerticalSeal from '../components/VerticalSeal';
+import { CollectionHead, YearFilter } from '../components/CollectionHead';
 import JustifiedFeed, { FeedEntry } from '../components/JustifiedFeed';
-import { DbHeader, monoDate, usePosts, useHeader, yearOf } from '../db';
+import { DbHeader, usePosts, useHeader, postYear, yearLabel } from '../db';
 import { useEditMode } from '../edit';
 
 // 편집 가설물은 편집 모드에서만 내려받는다(dnd-kit 을 읽기 전용 방문자에게 지우지 않는다).
@@ -37,19 +37,15 @@ const Work: React.FC = () => {
   if (legacyPost) return <Navigate to={`/work/${legacyPost}`} replace />;
 
   const list = posts ?? [];
-  const years = Array.from(new Set(list.map((p) => yearOf(p.date) ?? '·')));
-  const shown = year === 'all' ? list : list.filter((p) => (yearOf(p.date) ?? '·') === year);
+  const shown = year === 'all' ? list : list.filter((p) => (postYear(p) || 'unknown') === year);
   // 도판 흐름 = 필터된 전 글(연도 필터를 같이 탄다). 원본 비율 · 글줄 정렬.
   const entries: FeedEntry[] = shown.map((p) => ({
     id: p.id,
     href: `/work/${p.id}`,
     src: p.thumbnail,
     title: p.title,
-    meta: [
-      { text: yearOf(p.date) ?? '—' },
-      { text: monoDate(p.date), dim: true },
-      { text: p.images && p.images.length ? `도판 ${p.images.length}` : '도판 —', dim: true },
-    ],
+    summary: p.summary,
+    meta: yearLabel(p) ? [{ text: yearLabel(p) }] : [],
   }));
 
   return (
@@ -59,15 +55,7 @@ const Work: React.FC = () => {
       description="NODE TREE의 사운드, 영상, 설치 작품 목록. 위성악보, 에디아포닉, 낙원식당 등."
       keywords="NODE TREE 작품, 위성악보, 에디아포닉, 낙원식당, 사운드 설치"
     >
-      <section className="pagehead">
-        <VerticalSeal place="head" mark="作品" roman="WORK" />
-        <div className="lab">
-          {header.title} · {list.length || '—'}
-        </div>
-        <h1>{header.title}</h1>
-        <Note text={header.subtitle} />
-      </section>
-      <div className="hair" />
+      <CollectionHead header={header} count={list.length} />
 
       {editing && posts && (
         <Suspense fallback={<State text="LOADING · 편집기를 불러오는 중…" />}>
@@ -83,29 +71,7 @@ const Work: React.FC = () => {
         </Suspense>
       )}
 
-      {list.length > 0 && (
-        <section className="index">
-          <div className="filt">
-            <b>연도 YEAR</b>
-            <Link to="/work" className={year === 'all' ? 'on' : undefined}>
-              ALL {list.length}
-            </Link>
-            <br />
-            {years.map((y) => (
-              <React.Fragment key={y}>
-                <Link to={`/work?yr=${y}`} className={year === y ? 'on' : undefined}>
-                  {y}
-                </Link>
-                <br />
-              </React.Fragment>
-            ))}
-            <div className="key">
-              <b>도판 PLATE</b>
-              점선 칸 · 도판 미기재
-            </div>
-          </div>
-        </section>
-      )}
+      {list.length > 0 && <YearFilter posts={list} year={year} base="/work" />}
 
       {loading && <State text="LOADING · 기록을 불러오는 중…" />}
       {error && <State text={`ERROR · ${error}`} onRetry={reload} />}
@@ -114,17 +80,13 @@ const Work: React.FC = () => {
         <State text={`ABSENT · ${year} 년에 해당하는 작품이 없습니다.`} />
       )}
 
-      {shown.length > 0 && <JustifiedFeed entries={entries} />}
+      {shown.length > 0 && <div className="collection-results"><JustifiedFeed entries={entries} /></div>}
 
       {list.length > 0 && (
         <>
           <div className="hair dae" style={{ marginTop: 64 }} />
           <section className="index">
             <div className="rows">
-              <div className="src">
-                출처 · nodetree.kr DB /api/work — {list.length}건
-                {year === 'all' ? '' : ` · 연도 ${year} ${shown.length}건`}. 도판 격자에 전량을 수록한다.
-              </div>
               {isAuthenticated && <AdminLine page="work" />}
             </div>
           </section>

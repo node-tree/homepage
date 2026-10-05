@@ -1,11 +1,11 @@
 import React, { Suspense, lazy, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { AdminLine, Note, State } from '../components/bits';
+import { AdminLine, State } from '../components/bits';
 import NtPage from '../components/NtPage';
-import VerticalSeal from '../components/VerticalSeal';
+import { CollectionHead, YearFilter } from '../components/CollectionHead';
 import JustifiedFeed, { FeedEntry } from '../components/JustifiedFeed';
-import { DbHeader, monoDate, usePosts, useHeader, yearOf } from '../db';
+import { DbHeader, usePosts, useHeader, postYear, yearLabel } from '../db';
 import { useEditMode } from '../edit';
 
 // 편집 가설물은 편집 모드에서만 내려받는다(읽기 전용 방문자에겐 dnd-kit 을 지우지 않는다).
@@ -30,7 +30,8 @@ const Commons: React.FC = () => {
   const { editing } = useEditMode();
   const [params] = useSearchParams();
   const legacyPost = params.get('post');
-  const cat = params.get('cat') ?? '전체';
+  const year = params.get('yr') ?? 'all';
+  const requestedCat = params.get('cat') ?? '전체';
   const { data: posts, error, loading, reload } = usePosts('filed');
   const dbHeader = useHeader('filed');
   const [headOverride, setHeadOverride] = useState<DbHeader | null>(null);
@@ -39,8 +40,11 @@ const Commons: React.FC = () => {
   if (legacyPost) return <Navigate to={`/commons/${legacyPost}`} replace />;
 
   const list = posts ?? [];
-  const shown = cat === '전체' ? list : list.filter((p) => p.category === cat);
   const count = (c: string) => (c === '전체' ? list.length : list.filter((p) => p.category === c).length);
+  const categories = CATEGORIES.filter((c) => c !== '전체' && count(c) > 0);
+  const cat = categories.length > 1 && categories.some((c) => c === requestedCat) ? requestedCat : '전체';
+  const categorized = cat === '전체' ? list : list.filter((p) => p.category === cat);
+  const shown = year === 'all' ? categorized : categorized.filter((p) => (postYear(p) || 'unknown') === year);
 
   return (
     <NtPage
@@ -49,15 +53,7 @@ const Commons: React.FC = () => {
       description="NODE TREE의 공유 자료 및 리소스. 마을 주민·농부·청소년이 함께 만든 창작 커먼즈의 기록."
       keywords="NODE TREE 커먼즈, 문화예술교육, 커뮤니티, 생산소"
     >
-      <section className="pagehead">
-        <VerticalSeal place="head" mark="共有地" roman="COMMONS" />
-        <div className="lab">
-          {header.title} · {list.length || '—'}
-        </div>
-        <h1>{header.title}</h1>
-        <Note text={header.subtitle} />
-      </section>
-      <div className="hair" />
+      <CollectionHead header={header} count={list.length} commons />
 
       {editing && posts && (
         <Suspense fallback={<State text="LOADING · 편집기를 불러오는 중…" />}>
@@ -73,76 +69,38 @@ const Commons: React.FC = () => {
         </Suspense>
       )}
 
-      <section className="gate">
-        <a href="https://isoartlab.com" target="_blank" rel="noopener noreferrer">
-          <div className="l">
-            <div className="kick">매개 MEDIATION · 본체는 각자의 도메인에 있다</div>
-            <div className="nm">
-              이소 異素<span className="dom">isoartlab.com</span>
-            </div>
-            <p className="desc">
-              노드트리가 충남 부여군 장암면에서 운영하는 꿈다락 토요문화학교입니다. 마을의 어린이·청소년과 주민이 함께
-              공간과 도구를 만들고, 소리와 기록으로 채우고, 세대를 건너 나눕니다. 프로그램·일정·마을일기·마을소식은
-              이소 홈페이지에 쌓입니다.
-            </p>
-            <div className="in">소개 · 프로그램 · 일정 · 마을일기 · 마을소식 · 오시는 길</div>
-          </div>
-          <span className="go">이소 홈페이지 →</span>
-        </a>
-      </section>
-
-      <section className="index">
-        <div className="filt">
-          <b>분류 CATEGORY</b>
-          {CATEGORIES.map((c) => (
-            <React.Fragment key={c}>
-              <Link to={c === '전체' ? '/commons' : `/commons?cat=${encodeURIComponent(c)}`} className={cat === c ? 'on' : undefined}>
-                {c} {count(c)}
-              </Link>
-              <br />
-            </React.Fragment>
-          ))}
-          <div className="key">
-            <b>도판 PLATE</b>
-            점선 칸 · 도판 미기재
-          </div>
-        </div>
-      </section>
+      {list.length > 0 && <YearFilter posts={categorized} year={year} base="/commons" category={cat} />}
+      {categories.length > 1 && <nav className="collection-filter collection-categories" aria-label="분류 필터">
+        {['전체', ...categories].map((c) => {
+          const query = new URLSearchParams();
+          if (c !== '전체') query.set('cat', c);
+          if (year !== 'all') query.set('yr', year);
+          return <Link key={c} to={`/commons${query.toString() ? `?${query}` : ''}`}
+            className={cat === c ? 'on' : undefined} aria-current={cat === c ? 'page' : undefined}>
+            {c} {count(c)}
+          </Link>;
+        })}
+      </nav>}
 
       {loading && <State text="LOADING · 기록을 불러오는 중…" />}
       {error && <State text={`ERROR · ${error}`} onRetry={reload} />}
       {!loading && !error && list.length === 0 && <State text="ABSENT · 아직 기록된 내용이 없습니다." />}
       {!loading && !error && list.length > 0 && shown.length === 0 && (
-        <State text={`ABSENT · '${cat}' 분류에 해당하는 글이 없습니다.`} />
+        <State text="ABSENT · 선택한 연도·분류에 해당하는 글이 없습니다." />
       )}
 
-      {shown.length > 0 && (
-        <JustifiedFeed
-          entries={shown.map(
-            (p): FeedEntry => ({
-              id: p.id,
-              href: `/commons/${p.id}`,
-              src: p.thumbnail,
-              title: p.title,
-              meta: [
-                { text: p.category ?? '분류 —', dim: !p.category },
-                { text: yearOf(p.date) ?? '—' },
-                { text: monoDate(p.date), dim: true },
-              ],
-            }),
-          )}
-        />
-      )}
+      {shown.length > 0 && <div className="collection-results"><JustifiedFeed
+        entries={shown.map((p): FeedEntry => ({
+          id: p.id, href: `/commons/${p.id}`, src: p.thumbnail, title: p.title, summary: p.summary,
+          meta: [...(yearLabel(p) ? [{ text: yearLabel(p) }] : []), ...(p.category ? [{ text: p.category }] : [])],
+        }))}
+      /></div>}
 
       {shown.length > 0 && (
         <>
           <div className="hair dae" style={{ marginTop: 64 }} />
           <section className="index">
             <div className="rows">
-              <div className="src">
-                출처 · nodetree.kr DB /api/filed — {list.length}건
-                {cat === '전체' ? '' : ` · 분류 ${cat} ${shown.length}건`}. 도판 격자에 전량을 수록한다.
-              </div>
               {isAuthenticated && <AdminLine page="commons" />}
             </div>
           </section>

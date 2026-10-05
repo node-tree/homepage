@@ -1,3 +1,4 @@
+const { pickPostFields } = require('../models/postFields');
 const express = require('express');
 const router = express.Router();
 const Filed = require('../models/Filed');
@@ -121,6 +122,7 @@ router.get('/', async (req, res) => {
       }
 
       return {
+        ...pickPostFields(filed),
         id: filed._id.toString(),
         title: filed.title || '제목 없음',
         content: filed.contents || '내용 없음', // contents를 content로 매핑
@@ -200,6 +202,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
     }
 
     const newFiled = new Filed({
+      ...pickPostFields(req.body),
       title: title.trim(),
       contents: content.trim(),
       htmlContent: htmlContent || '',
@@ -215,6 +218,7 @@ router.post('/', auth, adminOnly, async (req, res) => {
       success: true,
       message: '워크샵 글이 성공적으로 저장되었습니다.',
       data: {
+        ...pickPostFields(savedFiled),
         id: savedFiled._id.toString(),
         title: savedFiled.title,
         content: savedFiled.contents,
@@ -246,7 +250,7 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
     const { title, content, htmlContent, thumbnail, category, imageLayout } = req.body;
 
     // imageLayout만 업데이트하는 경우 title/content 검증 스킵
-    const isLayoutOnlyUpdate = imageLayout !== undefined && !title && !content;
+    const isLayoutOnlyUpdate = (imageLayout !== undefined || Object.keys(pickPostFields(req.body)).length > 0) && !title && !content;
 
     if (!isLayoutOnlyUpdate && (!title || !content)) {
       return res.status(400).json({
@@ -255,7 +259,7 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
       });
     }
 
-    const updateData = {};
+    const updateData = pickPostFields(req.body);
     if (title) updateData.title = title.trim();
     if (content) updateData.contents = content.trim();
     if (htmlContent !== undefined) updateData.htmlContent = htmlContent || '';
@@ -266,7 +270,7 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
     const updatedFiled = await Filed.findByIdAndUpdate(
       id,
       updateData,
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     if (!updatedFiled) {
@@ -282,6 +286,7 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
       success: true,
       message: '워크샵 글이 성공적으로 수정되었습니다.',
       data: {
+        ...pickPostFields(updatedFiled),
         id: updatedFiled._id.toString(),
         title: updatedFiled.title,
         content: updatedFiled.contents,
@@ -373,6 +378,7 @@ router.get('/:id', async (req, res) => {
     res.json({
       success: true,
       data: {
+        ...pickPostFields(filed),
         id: filed._id.toString(),
         title: filed.title || '제목 없음',
         content: filed.contents || '내용 없음',
