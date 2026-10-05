@@ -19,6 +19,9 @@ const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 const encode = (value) => EJSON.stringify(value, null, 2, { relaxed: false });
 const decode = (text) => EJSON.parse(text, { relaxed: false });
 const equal = (a, b) => encode(a) === encode(b);
+// MongoDB appends new $set fields in sorted order, so write verification compares with keys sorted (plain objects only; BSON values stay leaves).
+const sortKeys = (v) => Array.isArray(v) ? v.map(sortKeys) : (v && typeof v === 'object' && v.constructor === Object) ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortKeys(v[k])])) : v;
+const equalUnordered = (a, b) => encode(sortKeys(a)) === encode(sortKeys(b));
 const hash = (text) => crypto.createHash('sha256').update(text).digest('hex');
 const idOf = (doc) => String(doc._id);
 const stamp = () => new Date().toISOString().replace(/[:.]/g, '-');
@@ -271,7 +274,7 @@ async function run(argv) {
             if (!equal(original, row.original)) fail('CONCURRENT_DOCUMENT_CHANGE');
             if (Object.keys(row.changes).length) await collection.updateOne({ _id: row.original._id }, { $set: row.changes }, { session });
             const after = await collection.findOne({ _id: row.original._id }, { session, promoteValues: false, promoteLongs: false });
-            if (!equal(after, { ...row.original, ...row.changes })) fail('WRITE_VERIFICATION_FAILED');
+            if (!equalUnordered(after, { ...row.original, ...row.changes })) fail('WRITE_VERIFICATION_FAILED');
           }
         }
         await session.commitTransaction();
