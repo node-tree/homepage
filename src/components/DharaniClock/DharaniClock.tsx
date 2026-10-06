@@ -46,13 +46,11 @@ export interface DharaniClockProps {
   /** 우하 캡션(현재 전시) — 없으면 기본 문구 */
   caption?: React.ReactNode;
   className?: string;
-  /** 홈 비교본에서만 실제 순환 단위를 표시한다. */
-  homeUnits?: boolean;
 }
 
 interface ReadSlot { slot: Slot; d: number; }
 
-const DharaniClock: React.FC<DharaniClockProps> = ({ theme = 'dark', beatOverride, caption, className, homeUnits = false }) => {
+const DharaniClock: React.FC<DharaniClockProps> = ({ theme = 'dark', beatOverride, caption, className }) => {
   const readBeat = useCallback(
     () => (beatOverride == null ? beatAt() : beatAt(new Date(Date.UTC(2026, 0, 1, 15, 0, 0) + beatOverride * BEAT_SEC * 1000 + 1))),
     [beatOverride]
@@ -390,7 +388,7 @@ const DharaniClock: React.FC<DharaniClockProps> = ({ theme = 'dark', beatOverrid
       <div className="dclock__lab">
         <b>陀羅尼 時計</b>
         <br />
-        {homeUnits ? '3,029박 · 8시간 · 하루 세 번' : <>{BEATS.toLocaleString('en-US')} 拍 / 日 · 1 角 = 20 井間</>}
+        {BEATS.toLocaleString('en-US')} 拍 / 日 · 1 角 = 20 井間
         <br />
         大綱 3 · 5 · 8 · 11 · 13 · 16
         <br />
