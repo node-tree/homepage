@@ -11,7 +11,7 @@ body[data-home-palette] .nt header .nav a.on { text-decoration:underline; text-u
 .nt .home-material { margin-left:auto; }
 .nt .home-error { position:absolute; top:45%; left:10%; right:10%; font-size:13px; }
 @media(max-width:767px) {
-  .nt .home-slot { height:calc(100dvh - 92px); min-height:450px; }
+  .nt .home-slot { height:calc(100dvh - 64px); min-height:450px; }
   .nt .home-data { left:24px; right:24px; bottom:74px; font-size:10px; gap:9px; flex-wrap:wrap; }
   .nt .home-material { margin-left:14px; flex-basis:100%; }
 }

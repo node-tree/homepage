@@ -1,0 +1,287 @@
+[
+  {
+    "width": 390,
+    "page": "home",
+    "before": {
+      "headerHeight": 64,
+      "overflow": 0,
+      "button": {
+        "width": 44,
+        "height": 44
+      },
+      "walkerVisible": true,
+      "collisions": [],
+      "lane": [
+        "158.921875",
+        "319.5625"
+      ],
+      "focus": "",
+      "locked": false,
+      "panelBackground": "rgb(15, 19, 32)"
+    },
+    "opened": {
+      "headerHeight": 64,
+      "overflow": 0,
+      "button": {
+        "width": 44,
+        "height": 44
+      },
+      "walkerVisible": false,
+      "collisions": [],
+      "lane": [
+        "158.921875",
+        "319.5625"
+      ],
+      "focus": "menu-close",
+      "locked": true,
+      "panelBackground": "rgb(15, 19, 32)"
+    },
+    "interaction": "open, X, Escape, outside tap, tab cycle, scroll restore, route close/focus: passed",
+    "errors": []
+  },
+  {
+    "width": 390,
+    "page": "work",
+    "before": {
+      "headerHeight": 64,
+      "overflow": 0,
+      "button": {
+        "width": 44,
+        "height": 44
+      },
+      "walkerVisible": true,
+      "collisions": [],
+      "lane": [
+        "158.921875",
+        "319.5625"
+      ],
+      "focus": "",
+      "locked": false,
+      "panelBackground": "rgb(250, 250, 249)"
+    },
+    "opened": {
+      "headerHeight": 64,
+      "overflow": 0,
+      "button": {
+        "width": 44,
+        "height": 44
+      },
+      "walkerVisible": false,
+      "collisions": [],
+      "lane": [
+        "158.921875",
+        "319.5625"
+      ],
+      "focus": "menu-close",
+      "locked": true,
+      "panelBackground": "rgb(250, 250, 249)"
+    },
+    "interaction": "open, X, Escape, outside tap, tab cycle, scroll restore, route close/focus: passed",
+    "errors": []
+  },
+  {
+    "width": 390,
+    "page": "detail",
+    "before": {
+      "headerHeight": 64,
+      "overflow": 0,
+      "button": {
+        "width": 44,
+        "height": 44
+      },
+      "walkerVisible": true,
+      "collisions": [],
+      "lane": [
+        "158.921875",
+        "319.5625"
+      ],
+      "focus": "",
+      "locked": false,
+      "panelBackground": "rgb(250, 250, 249)"
+    },
+    "opened": {
+      "headerHeight": 64,
+      "overflow": 0,
+      "button": {
+        "width": 44,
+        "height": 44
+      },
+      "walkerVisible": false,
+      "collisions": [],
+      "lane": [
+        "158.921875",
+        "319.5625"
+      ],
+      "focus": "menu-close",
+      "locked": true,
+      "panelBackground": "rgb(250, 250, 249)"
+    },
+    "interaction": "open, X, Escape, outside tap, tab cycle, scroll restore, route close/focus: passed",
+    "errors": []
+  },
+  {
+    "width": 320,
+    "page": "home",
+    "before": {
+      "headerHeight": 64,
+      "overflow": 0,
+      "button": {
+        "width": 44,
+        "height": 44
+      },
+      "walkerVisible": false,
+      "collisions": [],
+      "lane": [
+        "143.46875",
+        "249.5625"
+      ],
+      "focus": "",
+      "locked": false,
+      "panelBackground": "rgb(15, 19, 32)"
+    },
+    "opened": {
+      "headerHeight": 64,
+      "overflow": 0,
+      "button": {
+        "width": 44,
+        "height": 44
+      },
+      "walkerVisible": false,
+      "collisions": [],
+      "lane": [
+        "143.46875",
+        "249.5625"
+      ],
+      "focus": "menu-close",
+      "locked": true,
+      "panelBackground": "rgb(15, 19, 32)"
+    },
+    "interaction": "open, X, Escape, outside tap, tab cycle, scroll restore, route close/focus: passed",
+    "errors": []
+  },
+  {
+    "width": 320,
+    "page": "work",
+    "before": {
+      "headerHeight": 64,
+      "overflow": 0,
+      "button": {
+        "width": 44,
+        "height": 44
+      },
+      "walkerVisible": false,
+      "collisions": [],
+      "lane": [
+        "143.46875",
+        "249.5625"
+      ],
+      "focus": "",
+      "locked": false,
+      "panelBackground": "rgb(250, 250, 249)"
+    },
+    "opened": {
+      "headerHeight": 64,
+      "overflow": 0,
+      "button": {
+        "width": 44,
+        "height": 44
+      },
+      "walkerVisible": false,
+      "collisions": [],
+      "lane": [
+        "143.46875",
+        "249.5625"
+      ],
+      "focus": "menu-close",
+      "locked": true,
+      "panelBackground": "rgb(250, 250, 249)"
+    },
+    "interaction": "open, X, Escape, outside tap, tab cycle, scroll restore, route close/focus: passed",
+    "errors": []
+  },
+  {
+    "width": 320,
+    "page": "detail",
+    "before": {
+      "headerHeight": 64,
+      "overflow": 0,
+      "button": {
+        "width": 44,
+        "height": 44
+      },
+      "walkerVisible": false,
+      "collisions": [],
+      "lane": [
+        "143.46875",
+        "249.5625"
+      ],
+      "focus": "",
+      "locked": false,
+      "panelBackground": "rgb(250, 250, 249)"
+    },
+    "opened": {
+      "headerHeight": 64,
+      "overflow": 0,
+      "button": {
+        "width": 44,
+        "height": 44
+      },
+      "walkerVisible": false,
+      "collisions": [],
+      "lane": [
+        "143.46875",
+        "249.5625"
+      ],
+      "focus": "menu-close",
+      "locked": true,
+      "panelBackground": "rgb(250, 250, 249)"
+    },
+    "interaction": "open, X, Escape, outside tap, tab cycle, scroll restore, route close/focus: passed",
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "page": "home",
+    "desktopGridUnchanged": true
+  },
+  {
+    "width": 1440,
+    "page": "work",
+    "desktopGridUnchanged": true
+  },
+  {
+    "width": 1440,
+    "page": "detail",
+    "desktopGridUnchanged": true
+  },
+  {
+    "width": 320,
+    "pdf": "open/render/next page/Escape/focus: passed",
+    "sticky": {
+      "header": "",
+      "offset": null,
+      "prose": "mobile-flow"
+    }
+  },
+  {
+    "width": 390,
+    "pdf": "open/render/next page/Escape/focus: passed",
+    "sticky": {
+      "header": "",
+      "offset": null,
+      "prose": "mobile-flow"
+    }
+  },
+  {
+    "width": 1440,
+    "pdf": "open/render/next page/Escape/focus: passed",
+    "sticky": {
+      "header": "56px",
+      "offset": 80,
+      "prose": "sticky"
+    }
+  },
+  {
+    "resizeAndReducedMotion": true
+  }
+]

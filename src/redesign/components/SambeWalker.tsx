@@ -53,6 +53,7 @@ function freeLane(left: number, right: number, top: number, width: number, heigh
 }
 
 function measureLane(header: HTMLElement, preferred: number): Lane | null {
+  if (header.dataset.menuOpen === 'true') return null;
   const mobile = window.innerWidth <= 767;
   const height = mobile ? 30 : 40;
   const width = height * 180 / 320;

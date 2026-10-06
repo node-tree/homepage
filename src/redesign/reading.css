@@ -31,12 +31,6 @@
   .nt .detail .meta { grid-row: 2; min-width: 0; overflow-wrap: anywhere; }
   .nt .detail .txt { grid-row: 3; }
   .nt .detail .sub { margin-bottom: 18px; }
-  .nt header.menu-wrap { height: 116px; grid-template-rows: 48px 68px; }
-  .nt header.menu-wrap .nav { display: grid; grid-template-columns: repeat(4, max-content); justify-content: center; align-content: center; gap: 2px 8px; height: 68px; padding: 4px 12px 10px; overflow: visible; white-space: nowrap; mask-image: none; -webkit-mask-image: none; }
-  .nt header.menu-wrap .nav a { font-size: 10px; letter-spacing: .07em; padding: 5px 6px; }
-  .nt header.menu-wrap ~ main { padding-top: 116px; }
-  .nt header.menu-wrap ~ .hero-slot { margin-top: 116px; }
-  .nt header.menu-wrap ~ .hero-slot--full { height: calc(100dvh - 116px); }
   .nt .post-credits dl > div { grid-template-columns: 72px minmax(0, 1fr); gap: 12px; }
   .nt .gfig.absent .gwin { padding: 14px; }
   .nt .text-tile-title { font-size: 13px; }

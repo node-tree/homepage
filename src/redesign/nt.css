@@ -508,30 +508,13 @@ body.nt-stage .nt header::after {
 /* ══════════════ 모바일 390 (목업 body.m) ══════════════ */
 @media (max-width: 767px) {
   .nt { --jeong: calc(100vw / 10); font-size: 14px; }
-  .nt header {
-    height: 92px; grid-template-columns: repeat(10, 1fr); grid-template-rows: 52px 40px; align-items: center;
-  }
-  /* 우단이 두 줄(독송/인증)이 되므로 6/11 로 넓힌다 — 좁은 폭에서 카운터가 접혀
-     인증 줄을 덮던 겹침(320 실측)을 막는다. */
-  .nt header .brand { grid-column: 1/6; grid-row: 1 / 2; padding-left: 16px; font-size: 14px; }
+  .nt header { height: 64px; grid-template-columns: 1fr 44px; grid-template-rows: 1fr; padding-right: 12px; }
+  .nt header .brand { grid-column: 1; grid-row: 1; padding-left: 16px; font-size: 14px; white-space: nowrap; }
   .nt header .brand span { font-size: 11px; margin-left: 8px; }
-  .nt header .clock {
-    grid-column: 6/11; grid-row: 1; align-self: start; padding-top: 8px; padding-bottom: 0;
-    padding-right: 16px; gap: 8px; font-size: 10px;
-  }
-  .nt header .auth {
-    grid-column: 6/11; grid-row: 1; align-self: end; padding-top: 0; padding-bottom: 6px;
-    padding-right: 16px; gap: 10px; font-size: 9.5px;
-  }
-  .nt header .nav {
-    grid-column: 1/11; grid-row: 2 / 3; justify-content: space-between; gap: clamp(14px, 1.6vw, 28px); padding: 0 16px;
-    font-size: 10px; letter-spacing: .12em; border-top: 1px solid var(--line); height: 40px; align-items: center;
-  }
-  .nt header .nav a { padding: 5px 6px 4px; }
-  .nt main { padding-top: 92px; }
-  .nt .hero-slot { margin-top: 92px; }
+  .nt main { padding-top: 64px; }
+  .nt .hero-slot { margin-top: 64px; }
   .nt .hero-slot .dclock { min-height: 0; }
-  .nt .hero-slot--full { height: calc(100vh - 92px); min-height: 360px; }
+  .nt .hero-slot--full { height: calc(100dvh - 64px); min-height: 360px; }
   .nt .pagehead { grid-template-columns: repeat(10, 1fr); padding: 36px 0 24px; }
   .nt .pagehead h1 { grid-column: 2/10; font-size: 22px; }
   .nt .pagehead h1 em { display: block; margin-left: 0; font-size: 12px; }
@@ -623,18 +606,44 @@ body.nt-stage .nt header::after {
   .nt header .nav a:active { transform: none; }
 }
 
-/* 내비 복원(7항목) — 모바일은 한 줄 가로 스크롤(햄버거 없음: 항목이 늘 노출된 계기 레일).
-   우단 결락 마스크 = 유채·그림자 없이 지(紙)로 스미어 사라지는 것으로 더 있음을 알린다. */
+/* The wrapper contributes no desktop grid box: all desktop positions stay intact. */
+.nt header .menu-panel { display: contents; }
+.nt header .menu-button, .nt header .menu-close, .nt header .menu-backdrop { display: none; }
 @media (max-width: 767px) {
-  .nt header .nav {
-    overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none;
-    gap: 12px; padding: 0 16px; justify-content: flex-start;
-    scroll-snap-type: x proximity;
-    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 26px), transparent 100%);
-            mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 26px), transparent 100%);
+  .nt header .menu-button, .nt header .menu-close {
+    display: flex; align-items: center; justify-content: center; width: 44px; height: 44px;
+    padding: 0; border: 0; background: transparent; color: var(--ink); cursor: pointer;
   }
-  .nt header .nav::-webkit-scrollbar { display: none; }
-  .nt header .nav a { scroll-snap-align: center; }
+  .nt header .menu-button { grid-column: 2; grid-row: 1; }
+  .nt header .menu-close { margin-left: auto; flex-shrink: 0; }
+  .nt header .menu-panel {
+    display: flex; position: absolute; top: 100%; left: 0; right: 0; z-index: 2;
+    flex-direction: column; padding: 8px 24px 20px; max-height: calc(100dvh - 64px);
+    overflow-y: auto; overscroll-behavior: contain; background: var(--bg); border-bottom: 1px solid var(--line);
+    visibility: hidden; opacity: 0; transform: translateY(-6px);
+    transition: opacity 150ms ease, transform 150ms ease, visibility 0s linear 150ms;
+  }
+  .nt header .menu-backdrop {
+    display: block; position: fixed; inset: 64px 0 0; z-index: 1; background: rgb(0 0 0 / .3);
+    visibility: hidden; opacity: 0; transition: opacity 150ms ease, visibility 0s linear 150ms;
+  }
+  .nt header[data-menu-open='true'] .menu-panel,
+  .nt header[data-menu-open='true'] .menu-backdrop { visibility: visible; opacity: 1; transform: none; transition-delay: 0s; }
+  .nt header .nav {
+    display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 0;
+    font-size: 12px; letter-spacing: .12em; color: var(--g2);
+  }
+  .nt header .nav a { display: flex; align-items: center; min-height: 44px; padding: 10px 8px; transition: color 150ms; }
+  .nt header .nav a::before, .nt header .nav a::after { display: none; }
+  .nt header .nav a.on { color: var(--ink); text-decoration: underline; text-underline-offset: 6px; }
+  .nt header .nav a:hover, .nt header .nav a:active { transform: none; }
+  .nt header .clock { align-self: stretch; justify-content: flex-start; padding: 20px 8px 0; margin-top: 12px; border-top: 1px solid var(--line); gap: 10px; }
+  .nt header .auth { align-self: stretch; justify-content: flex-start; flex-wrap: wrap; padding: 4px 8px 0; gap: 0 20px; color: var(--g2); overflow: visible; }
+  .nt header .auth a, .nt header .auth button { display: flex; align-items: center; min-height: 44px; }
+  .nt header button:focus-visible, .nt header a:focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nt header .menu-panel, .nt header .menu-backdrop { transition: none; }
 }
 .nt .nt-legacy-wrap { padding: 96px calc(var(--jeong) * 1) 0; }
 
