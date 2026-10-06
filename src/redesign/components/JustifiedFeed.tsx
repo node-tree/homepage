@@ -15,6 +15,7 @@ export interface FeedEntry {
   href: string;
   src?: string | null;
   title: string;
+  summary?: string;
   /** Mono 메타 조각. `dim` 이면 옅게 */
   meta: { text: string; dim?: boolean }[];
 }
@@ -91,6 +92,7 @@ export function layout(entries: (FeedEntry & { ratio: number })[], width: number
 const JustifiedFeed: React.FC<{ entries: FeedEntry[] }> = ({ entries }) => {
   const hostRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
+  const [failed, setFailed] = useState<Set<string>>(new Set());
   const [, bump] = useState(0);
 
   useLayoutEffect(() => {
@@ -120,7 +122,7 @@ const JustifiedFeed: React.FC<{ entries: FeedEntry[] }> = ({ entries }) => {
         return (
           <figure className={`gfig${e.src ? '' : ' absent'}${portrait ? ' portrait' : ''}`} key={e.id}>
             <Link to={e.href} className="gwin" aria-label={e.title}>
-              {e.src ? (
+              {e.src && !failed.has(e.src) ? (
                 <img
                   src={feedSrc(e.src)}
                   srcSet={feedSrcSet(e.src) || undefined}
@@ -128,16 +130,16 @@ const JustifiedFeed: React.FC<{ entries: FeedEntry[] }> = ({ entries }) => {
                   alt={e.title}
                   loading="lazy"
                   decoding="async"
+                  onError={() => setFailed((prev) => new Set(prev).add(e.src!))}
                   onLoad={(ev) => onImgLoad(e.src as string, ev.currentTarget)}
                 />
               ) : (
-                <span className="gabsent">ABSENT · 도판 미기재</span>
+                <span className={e.src ? "image-error" : "text-tile-title"}>{e.src ? "이미지를 불러오지 못했습니다." : e.title}</span>
               )}
             </Link>
             <figcaption>
-              <Link to={e.href} className="h">
-                {e.title}
-              </Link>
+              <Link to={e.href} className="h">{e.title}</Link>
+              <p className="card-summary">{e.summary || ''}</p>
               <span className="m">
                 {e.meta.map((m, i) => (
                   <span key={i} className={m.dim ? 't' : undefined}>

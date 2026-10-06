@@ -1,0 +1,210 @@
+{
+  "version": 1,
+  "sourceSha256": "30cf11c21d9bde8c7cee51ef1dc7e998894868e5a75708a52e853d98d098869c",
+  "sourceBytes": 8896204,
+  "pageCount": 33,
+  "longEdge": 1600,
+  "quality": 88,
+  "previewBytes": 4249396,
+  "cover": "/pdf-pages/ediaphonic/cover.webp",
+  "pages": [
+    {
+      "src": "/pdf-pages/ediaphonic/p001.webp",
+      "width": 1253,
+      "height": 1600,
+      "bytes": 564400
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p002.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 243010
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p003.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 197294
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p004.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 126960
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p005.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 290748
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p006.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 182260
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p007.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 156164
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p008.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 73036
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p009.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 120656
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p010.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 156200
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p011.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 95542
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p012.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 172614
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p013.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 96862
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p014.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 61508
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p015.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 27174
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p016.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 163244
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p017.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 63244
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p018.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 20568
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p019.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 127100
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p020.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 99600
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p021.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 85184
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p022.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 97562
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p023.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 113004
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p024.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 80608
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p025.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 98144
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p026.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 31534
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p027.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 122584
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p028.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 74748
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p029.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 70356
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p030.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 127158
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p031.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 92562
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p032.webp",
+      "width": 1600,
+      "height": 1023,
+      "bytes": 37972
+    },
+    {
+      "src": "/pdf-pages/ediaphonic/p033.webp",
+      "width": 1253,
+      "height": 1600,
+      "bytes": 179796
+    }
+  ]
+}

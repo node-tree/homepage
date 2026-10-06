@@ -74,5 +74,5 @@ export const FOOTER = {
   // 메일함 둘 — 대표(media)와 사업/기획(pmaker). 둘 다 살아 있는 주소다(2026-08-30 추가).
   contact: { b: 'Contact', texts: ['nodetreemedia@gmail.com', 'nodetree.pmaker@gmail.com'] },
   mediation: { b: 'Mediation', links: [{ href: 'https://saengsanso.com', text: 'saengsanso.com' }, { href: 'https://isoartlab.com', text: 'isoartlab.com' }] },
-  beat: { b: '讀誦', text: '1명 = 1박 · 9.508 s · 3,029 / 日' },
+  beat: { b: '讀誦', text: '1박 9.508 s · 3,029박 · 8시간 순환' },
 };

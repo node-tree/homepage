@@ -8,6 +8,7 @@ import Header from './Header';
 import '../nt.css';
 // 편집 모드 판식 — v5 청크에서만 실린다(레거시 라우트는 이 CSS 를 받지 않는다).
 import '../editor.css';
+import '../reading.css';
 
 // ════════════════════════════════════════════════════════════════════════
 // NtPage — v5 공통 판식(헤더 · 본문 · 보행로 계선 · 푸터).
@@ -53,7 +54,7 @@ const NtPage: React.FC<NtPageProps> = ({ path, title, description, keywords, ima
   }, [pathname, hash]);
 
   return (
-    <div className="nt">
+    <div className="nt type-16">
       <SeoHead
         title={title}
         description={description}

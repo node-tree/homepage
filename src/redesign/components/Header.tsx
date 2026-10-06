@@ -37,18 +37,17 @@ const Header: React.FC = () => {
   const { pathname, search } = useLocation();
   const { isAuthenticated, isLoading, logout } = useAuth();
   const edit = useEditMode();
-
   // 로그인 후에는 보던 자리로 돌려보낸다(Login 은 같은 출처 절대경로만 허용).
   const next = encodeURIComponent(`${pathname}${search}`);
 
   return (
-    <header>
+    <header className="menu-wrap">
       <div className="brand">
-        <NavLink to="/">
+        <NavLink to={'/'}>
           NODE TREE<span>노드 트리</span>
         </NavLink>
       </div>
-      <nav className="nav">
+      <nav id="nt-navigation" className="nav" aria-label="주 메뉴">
         {NAV.map((n) =>
           n.external ? (
             <a key={n.to} href={n.to} target="_blank" rel="noopener noreferrer">

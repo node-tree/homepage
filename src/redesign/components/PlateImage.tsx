@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ikUrl } from '../../utils/ikUrl';
 
 // ════════════════════════════════════════════════════════════════════════
@@ -22,6 +22,7 @@ export interface PlateImageProps {
 }
 
 const PlateImage: React.FC<PlateImageProps> = ({ src, alt, ratio = '16/9', note, w = 1200, open }) => {
+  const [failed, setFailed] = useState<string | null>(null);
   if (!src) {
     const text = note ?? 'ABSENT · 도판 미기재';
     return (
@@ -31,7 +32,8 @@ const PlateImage: React.FC<PlateImageProps> = ({ src, alt, ratio = '16/9', note,
   const url = ikUrl(src.startsWith('//') ? `https:${src}` : src, { w });
   return (
     <div className={`plate pic${open ? ' open' : ''}`} style={{ aspectRatio: ratio }}>
-      <img src={url} alt={alt} loading="lazy" decoding="async" />
+      {failed === url ? <span className="image-error" role="status">이미지를 불러오지 못했습니다.</span> :
+        <img src={url} alt={alt} loading="lazy" decoding="async" onError={() => setFailed(url)} />}
     </div>
   );
 };

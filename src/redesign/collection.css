@@ -1,0 +1,53 @@
+/* 목록 전용: 상세·sticky·PDF·split·walker의 공용 규칙에 영향을 주지 않는다. */
+.nt .collection-head { align-items: start; }
+.nt .collection-head .lab { grid-row: 1; }
+.nt .collection-head h1 { grid-row: 2; }
+.nt .collection-head .vhead { grid-row: 1 / 3; align-self: start; }
+.nt .collection-head .collection-intro { grid-row: 2; font-size: 15px; max-width: none; }
+.nt .collection-definition { min-height: 1.9em; font-weight: 500; color: var(--ink); }
+.nt .collection-support { min-height: 3.8em; }
+.nt .collection-link { min-height: 1.9em; margin-top: 12px; }
+.nt .collection-link a { border-bottom: 1px solid var(--line); font-size: .9em; }
+.nt .collection-filter {
+  display: flex; align-items: center; gap: 0; flex-wrap: nowrap;
+  margin: 16px var(--jeong) 0; overflow-x: auto;
+  font: 11px/1.8 var(--mono); letter-spacing: .04em; color: var(--g2);
+}
+.nt .collection-filter a { flex: 0 0 auto; padding: 12px 0; white-space: nowrap; }
+.nt .collection-filter a + a::before { content: '·'; display: inline-block; margin: 0 12px; color: var(--g3); }
+.nt .collection-filter a.on { color: var(--ink); font-weight: 500; }
+.nt .collection-filter a:focus-visible { outline: 1px solid var(--juseo); outline-offset: -1px; }
+.nt .collection-results > .gfeed { margin-top: 24px; }
+.nt .collection-categories { margin-top: 0; }
+.nt.type-16 .collection-head .collection-intro { font-size: 16px; line-height: 1.8; }
+.nt.type-16 .collection-definition { min-height: 1.8em; }
+.nt.type-16 .collection-support { min-height: 3.6em; }
+@media (min-width: 768px) and (max-width: 1023px) {
+  .nt .collection-definition { min-height: 3.8em; }
+  .nt .collection-support { min-height: 7.6em; }
+  .nt.type-16 .collection-definition { min-height: 3.6em; }
+  .nt.type-16 .collection-support { min-height: 7.2em; }
+}
+@media (max-width: 767px) {
+  .nt .collection-head .collection-intro { grid-row: 3; font-size: 14px; }
+  .nt .collection-definition { min-height: 3.8em; }
+  .nt .collection-support { min-height: 5.7em; }
+  .nt.type-16 .collection-definition { min-height: 3.6em; }
+  .nt.type-16 .collection-support { min-height: 5.4em; }
+  .nt .collection-filter a + a::before { margin: 0 10px; }
+}
+@media (max-width: 359px) {
+  .nt .collection-support { min-height: 7.6em; }
+  .nt.type-16 .collection-support { min-height: 7.2em; }
+}
+
+/* Both collections share image/title/summary/year rows, including absent images. */
+.nt .collection-results .gfig { display: flex; flex-direction: column; min-width: 0; }
+.nt .collection-results .gfig figcaption { display: flex; flex-direction: column; flex: 1; }
+.nt .collection-results .gfig .h { min-height: 3.3em; line-height: 1.65; }
+.nt .collection-results .card-summary {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow: hidden; overflow-wrap: anywhere; min-height: 3.6em;
+  margin: 8px 0 10px; font-size: 14px; line-height: 1.8; color: #292929;
+}
+.nt .collection-results .gfig .m { margin-top: auto; }

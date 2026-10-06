@@ -8,10 +8,6 @@ const API_BASE_URL = isNodeTreeSite
   : (process.env.REACT_APP_API_URL ||
      (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api'));
 
-// 추가된 디버깅 코드
-console.log('Current API_BASE_URL:', API_BASE_URL);
-console.log('process.env.NODE_ENV:', process.env.NODE_ENV);
-console.log('isNodeTreeSite:', isNodeTreeSite);
 
 // ============ 캐시 유틸리티 ============
 const CACHE_DURATION = 5 * 60 * 1000; // 5분 캐시

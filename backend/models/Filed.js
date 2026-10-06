@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
+const { postFields } = require('./postFields');
 
 const filedSchema = new mongoose.Schema({
+  ...postFields,
   title: {
     type: String,
     required: true

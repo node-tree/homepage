@@ -6,7 +6,7 @@ import React from 'react';
  */
 const VerticalMeta: React.FC<{ rows: { k: string; v: string }[] }> = ({ rows }) => (
   <div className="metav">
-    {rows.map((r) => (
+    {rows.filter((r) => r.v.trim() && r.v !== '—').map((r) => (
       <div key={r.k}>
         <span className="k">{r.k}</span>
         {/* 목업은 HTML 이라 연속 공백이 하나로 접힌다. JSX 는 접지 않으므로 한 칸만 둔다. */}
