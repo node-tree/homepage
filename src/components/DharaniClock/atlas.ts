@@ -40,17 +40,18 @@ export interface ClockGlyphSet {
 
 const BASE = (process.env.PUBLIC_URL || '') + '/dharani/';
 
-let cache: Promise<ClockGlyphSet> | null = null;
+const cache = new Map<string, Promise<ClockGlyphSet>>();
 
-export function loadClockGlyphs(): Promise<ClockGlyphSet> {
-  if (cache) return cache;
-  cache = (async () => {
-    const doc = await (await fetch(BASE + 'clock-glyphs.json')).json();
+export function loadClockGlyphs(variant: 'clock-glyphs' | 'home-r4/clock-glyphs' = 'clock-glyphs'): Promise<ClockGlyphSet> {
+  const cached = cache.get(variant);
+  if (cached) return cached;
+  const request: Promise<ClockGlyphSet> = (async () => {
+    const doc = await (await fetch(BASE + variant + '.json')).json();
     const image = await new Promise<HTMLImageElement>((res, rej) => {
       const im = new Image();
       im.onload = () => res(im);
       im.onerror = () => rej(new Error('clock-glyphs.png 로드 실패'));
-      im.src = BASE + 'clock-glyphs.png';
+      im.src = BASE + variant + '.png';
     });
     const [AW, AH] = doc._meta.atlas;
     if (image.naturalWidth !== AW || image.naturalHeight !== AH) {
@@ -61,7 +62,8 @@ export function loadClockGlyphs(): Promise<ClockGlyphSet> {
     }
     return { meta: doc._meta, rings: doc.rings, groups: doc.groups, image, atlasSize: [AW, AH] };
   })();
-  return cache;
+  cache.set(variant, request);
+  return request;
 }
 
 // ── 고리 배치 (목업 v5/hero-dark.html 의 수치 그대로) ─────────────────────

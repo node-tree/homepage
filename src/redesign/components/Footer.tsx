@@ -1,9 +1,12 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { FOOTER } from '../data/about';
 import VerticalSeal from './VerticalSeal';
 
 /** Footer — 목업 공통 푸터(4열). 문구 정본 = v5 목업. */
-const Footer: React.FC = () => (
+const Footer: React.FC = () => {
+  const home = useLocation().pathname === '/';
+  return (
   <footer>
     <div>
       <b>{FOOTER.brand.b}</b>
@@ -36,11 +39,12 @@ const Footer: React.FC = () => (
     </div>
     <div>
       <b>{FOOTER.beat.b}</b>
-      {FOOTER.beat.text}
+      {home ? '3,029박 · 8시간 · 하루 세 번' : FOOTER.beat.text}
     </div>
     {/* 간기(刊記) — 판을 닫는 자리. 머리의 讀誦 카운터와 짝이다. */}
     <VerticalSeal place="foot" mark="扶餘" roman="BUYEO" />
   </footer>
 );
+};
 
 export default Footer;

@@ -32,9 +32,9 @@ from scipy import ndimage as ndi
 
 Image.MAX_IMAGE_PIXELS = None
 
-LAB = os.path.expanduser('~/공생직조-lab/webgpu/wg-018-retypeset/assets')
+LAB = os.path.expanduser(os.environ.get('CLOCK_ATLAS_SOURCE', '~/공생직조-lab/webgpu/wg-018-retypeset/assets'))
 SRC_JSON = os.path.join(LAB, 'retypeset.json')
-OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'public', 'dharani')
+OUT_DIR = os.environ.get('CLOCK_ATLAS_OUTPUT', os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'public', 'dharani'))
 
 # ── 웹 전송량을 위한 세 가지 되감기(원본 규칙을 깨지 않는 선에서) ─────────────
 #  ① 여백 잘라내기: 조각 bbox 는 SDF 여백 6 판화소를 물고 있다. 가장자리 AA 에 필요한
@@ -47,8 +47,8 @@ SDF_BAND_TEXELS = float(os.environ.get('BAND', 2.0))
 #  ③ 농도 계단: 먹 루마 밴드가 110~140(30단)이라 16단이면 눈에 띄는 손실이 없다.
 GDENS_STEP = float(os.environ.get('GSTEP', 17.0))
 
-ATLAS_MAX = 2048
-PAD = 2              # 타일 사이 여백 텍셀 (선형 보간 새어나옴 방지)
+ATLAS_MAX = int(os.environ.get('CLOCK_ATLAS_MAX', 2048))
+PAD = int(os.environ.get('CLOCK_ATLAS_PAD', 2))  # 타일 사이 여백 텍셀
 LAB_SS = 3.0         # 랩 아틀라스 텍셀 / 판 화소
 RING_SCALE = float(os.environ.get('RSCALE', 1.3))   # 서브아틀라스 텍셀 / 판 화소
 SEED_SCALE = float(os.environ.get('SSCALE', 1.5))   # 중심 종자자는 크게 쓰이므로 더 촘촘히
@@ -487,8 +487,9 @@ def main():
     log(f'[write] {json_path}  {os.path.getsize(json_path)} bytes')
     log(f'[done] {time.time() - t0:.1f}s  groups={len(groups)} '
         f'rings={ {k: len(v) for k, v in rings_out.items()} }')
-    if size > 600 * 1024:
-        log(f'!! PNG {size/1024:.1f}KB > 600KB 한도')
+    limit_kb = int(os.environ.get('CLOCK_ATLAS_LIMIT_KB', 600))
+    if size > limit_kb * 1024:
+        log(f'!! PNG {size/1024:.1f}KB > {limit_kb}KB 한도')
         sys.exit(2)
 
 

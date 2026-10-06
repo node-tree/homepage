@@ -61,7 +61,7 @@ const Header: React.FC = () => {
           ),
         )}
       </nav>
-      <div className="clock" title={`讀誦 ${pad4(beat.index)} / ${BEATS} · 1명 = 1박 · 9.508 s`}>
+      <div className="clock" title={pathname === '/' ? `讀誦 ${pad4(beat.index)} / ${BEATS} · 1박 9.508 s · 8시간 순환 · 하루 세 번` : `讀誦 ${pad4(beat.index)} / ${BEATS} · 1명 = 1박 · 9.508 s`}>
         <i />
         <span>讀誦</span>
         <b>{pad4(beat.index)}</b>
