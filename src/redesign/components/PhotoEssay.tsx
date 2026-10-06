@@ -31,10 +31,15 @@ function arrange(group: HTMLElement) {
     if (portrait(fig)) {
       let end = i;
       while (end < figures.length && !figures[end].dataset.size && portrait(figures[end])) end++;
-      const count = end - i;
-      // Four portraits remain 2+2. Only an exact triplet gets three columns.
-      const span = count === 3 ? '2' : '3';
-      for (; i < end; i++) figures[i].style.setProperty('--photo-span', span);
+      // Portraits never share a row with a landscape. Pair them; a leftover
+      // single stands alone, and an odd remainder of three takes three columns.
+      let left = end - i;
+      while (left > 0) {
+        const span = left === 1 ? '6' : left === 3 ? '2' : '3';
+        const take = left === 3 ? 3 : Math.min(left, 2);
+        for (let k = 0; k < take; k++, i++) figures[i].style.setProperty('--photo-span', span);
+        left -= take;
+      }
       large = true;
     } else {
       // A final landscape pair closes the group even when the next beat is large.
