@@ -543,7 +543,7 @@ const YeokryuWalk: React.FC = () => {
             <span className="yw__stop-len">{FULL.len}</span>
           </button>
           <p className="yw__credit">
-            부여 장암면 어르신들의 구술(2026)을 허락을 받아 발췌해 한 사람의 합성 목소리로 다시 읽었습니다.
+            부여 장암면 어르신들의 구술(2026)을 허락을 받아 발췌해 한 사람의 목소리로 다시 읽었습니다.
           </p>
         </section>
 
