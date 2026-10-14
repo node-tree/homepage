@@ -214,3 +214,37 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* ── 2026-10 최신 서식: 사진 여러 장 나란히(출강확인서 2·회의록 2·결과보고서 4·검수조서 4) ── */
+.kd-forms-photos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.kd-forms-photos--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.kd-forms-photos .kd-forms-photo { margin-top: 0; min-width: 0; }
+.kd-forms-photos .kd-forms-photo-thumb { max-width: 100%; }
+/* 여러 줄 본문 칸(줄바꿈 = 한글 문단) */
+.kd-forms-textarea--tall { min-height: 160px; }
+/* 회차표 주요 내용 참고 줄 */
+.kd-forms-plan {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border: var(--kd-outline);
+  border-radius: var(--kd-radius);
+  font-family: var(--kd-font-body);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--kd-ink);
+  word-break: keep-all;
+}
+.kd-forms-plan ul { margin: 4px 0 0; padding-left: 18px; }
+.kd-forms-row-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+@media (max-width: 960px) {
+  .kd-forms-photos--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .kd-forms-photos, .kd-forms-photos--4 { grid-template-columns: 1fr; }
+}

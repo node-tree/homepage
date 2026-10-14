@@ -14,7 +14,9 @@
 
 const Anthropic = require('@anthropic-ai/sdk');
 
-const DEFAULT_MODEL = process.env.ANTHROPIC_CHAT_MODEL || 'claude-opus-5';
+// 2026-10: Opus 5.5 로 올림. Opus 5.5 는 사고(thinking)를 끌 수 없고 effort 기본값이 medium 이라
+//   effort 를 항상 명시한다(아래). thinking 파라미터는 보내지 않는다(생략 = adaptive).
+const DEFAULT_MODEL = process.env.ANTHROPIC_CHAT_MODEL || 'claude-opus-5-5';
 // 서식 초안은 정형 문서라 low 로 충분하고, 서버리스 함수 시간·비용에 유리하다.
 const DEFAULT_EFFORT = process.env.ANTHROPIC_CHAT_EFFORT || 'low';
 const TIMEOUT_MS = 50000; // Vercel 함수 상한(60s) 안쪽

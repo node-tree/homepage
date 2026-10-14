@@ -105,3 +105,52 @@ export function fileToDownscaledPng(file: File, maxWidth = 1280): Promise<PngRes
     reader.readAsDataURL(file);
   });
 }
+
+// ═══════════════════════════════════════════════════════════════
+// 2026-10: 서식 사진은 원래 비율 그대로 JPEG 로 보낸다.
+//   서버가 사진 픽셀 크기로 한글 칸 안 그림 크기를 정하므로 레터박스가 필요 없다.
+//   긴 변 maxSide(기본 1600px)로 줄이고 JPEG 품질 0.82 — 사진 4장을 보내도 요청 크기 한도(4.5MB) 안.
+//   브라우저가 그릴 때 EXIF 회전을 반영하므로 결과 JPEG 는 바로 선 사진(EXIF 없음)이다.
+// ═══════════════════════════════════════════════════════════════
+export interface JpegResult {
+  base64: string;
+  dataUrl: string;
+  width: number;
+  height: number;
+}
+
+export function fileToJpeg(file: File, maxSide = 1600, quality = 0.82): Promise<JpegResult> {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith('image/')) {
+      reject(new Error('이미지 파일만 첨부할 수 있습니다.'));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('파일을 읽지 못했습니다.'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('이미지를 디코드하지 못했습니다(HEIC 는 JPEG 로 바꿔 올려 주세요).'));
+      img.onload = () => {
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('캔버스를 사용할 수 없습니다.'));
+          return;
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        const comma = dataUrl.indexOf(',');
+        resolve({ base64: comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl, dataUrl, width: w, height: h });
+      };
+      img.src = typeof reader.result === 'string' ? reader.result : '';
+    };
+    reader.readAsDataURL(file);
+  });
+}

@@ -1,5 +1,6 @@
 const fs = require('fs');
 const JSZip = require('jszip');
+const { expandParagraphBlocks } = require('./hwpxBlocks');
 
 // ═══════════════════════════════════════════════════════════════
 // HWPX 채움 파이프라인 (순수 Node).
@@ -48,8 +49,15 @@ function escapeXmlText(value) {
 function enableTableSplitAcrossPages(xml) {
   let changed = 0;
 
+  // 칸 안에 든 표(지출결의서 안내 표 등)는 건드리지 않는다 — 최상위 표만.
+  const isNested = (offset) => {
+    const before = xml.slice(0, offset);
+    return (before.match(/<hp:tc\b/g) || []).length > (before.match(/<\/hp:tc>/g) || []).length;
+  };
+
   // ① 표 자체 — 쪽 나눔 = 셀 단위로 나눔
-  let out = xml.replace(/<hp:tbl\b[^>]*>/g, (tag) => {
+  let out = xml.replace(/<hp:tbl\b[^>]*>/g, (tag, offset) => {
+    if (isNested(offset)) return tag;
     if (/pageBreak="CELL"/.test(tag)) return tag;
     changed++;
     return /pageBreak="[^"]*"/.test(tag)
@@ -60,7 +68,13 @@ function enableTableSplitAcrossPages(xml) {
   // ② 표의 위치 속성 — 글자처럼 취급 해제.
   //   <hp:tbl> 직후엔 <hp:sz/><hp:pos/> 가 연달아 오므로, 표 태그 뒤 400자 이내의 첫 hp:pos
   //   만 대상으로 삼는다(셀 안 이미지 등 다른 hp:pos 를 건드리지 않기 위한 경계).
-  out = out.replace(/(<hp:tbl\b[^>]*>[\s\S]{0,400}?<hp:pos\b)([^>]*?)(\/>)/g, (m, head, attrs, tail) => {
+  //   (①에서 태그 길이가 바뀌었으므로 중첩 판정은 바뀐 문자열 기준으로 다시 한다)
+  const isNestedOut = (offset) => {
+    const before = out.slice(0, offset);
+    return (before.match(/<hp:tc\b/g) || []).length > (before.match(/<\/hp:tc>/g) || []).length;
+  };
+  out = out.replace(/(<hp:tbl\b[^>]*>[\s\S]{0,400}?<hp:pos\b)([^>]*?)(\/>)/g, (m, head, attrs, tail, offset) => {
+    if (isNestedOut(offset)) return m;
     if (!/treatAsChar="1"/.test(attrs)) return m;
     changed++;
     return head + attrs.replace('treatAsChar="1"', 'treatAsChar="0"') + tail;
@@ -143,6 +157,9 @@ function addManifestImage(hpfXml, { itemId, fileName, mediaType = 'image/png' })
 //       (BinData 엔트리 추가 + content.hpf manifest item 추가). 서명 이미지 등.
 //     · sectionTransforms: [(xml) => xml] — 치환 후 Contents/section*.xml 에 순서대로 적용.
 //       (서명 그림 run 삽입처럼 서식별 XML 편집을 호출부가 주입하는 통로)
+//     · blocks: { 키: 항목[] } — {{@키}} 문단을 여러 문단·사진·서명으로 펼친다(hwpxBlocks.js).
+//       글자 자리표시 치환보다 먼저 한다. styles: { 이름: charPrID } 는 항목의 style 해석용.
+//     · extraImages 항목의 mediaType(기본 image/png) — JPEG 사진은 'image/jpg'.
 async function fillHwpx(templatePath, replacements, imageReplacements = {}, options = {}) {
   if (!fs.existsSync(templatePath)) {
     throw new Error(`HWPX 템플릿을 찾을 수 없습니다: ${templatePath}`);
@@ -163,6 +180,8 @@ async function fillHwpx(templatePath, replacements, imageReplacements = {}, opti
   const sectionTransforms = Array.isArray(options.sectionTransforms)
     ? options.sectionTransforms.filter((f) => typeof f === 'function')
     : [];
+  const blocks = options.blocks && typeof options.blocks === 'object' ? options.blocks : null;
+  const styles = options.styles && typeof options.styles === 'object' ? options.styles : {};
 
   // 새 zip 을 처음부터 재구성: mimetype 을 가장 먼저(STORED), 그 외는 원순서대로 DEFLATE.
   const out = new JSZip();
@@ -170,7 +189,7 @@ async function fillHwpx(templatePath, replacements, imageReplacements = {}, opti
   // 1) mimetype 최초 엔트리 + STORED (필수)
   if (src.file('mimetype')) {
     const mimeBytes = await src.file('mimetype').async('uint8array');
-    out.file('mimetype', mimeBytes, { compression: 'STORE' });
+    out.file('mimetype', mimeBytes, { compression: 'STORE', createFolders: false });
   }
 
   // 2) 나머지 엔트리(원순서) — Contents/*.xml 치환, BinData/<key> 이미지 교체, 그 외 바이트 패스스루
@@ -193,15 +212,18 @@ async function fillHwpx(templatePath, replacements, imageReplacements = {}, opti
 
     if (imageBuf) {
       // 업로드 이미지로 교체(DEFLATE 유지). JSZip 이 local header(CRC·size)를 재계산한다.
-      out.file(name, imageBuf, { compression: 'DEFLATE' });
+      out.file(name, imageBuf, { compression: 'DEFLATE', createFolders: false });
     } else if (isContentsXml) {
       let xml = await entry.async('string'); // UTF-8 디코드
+      const isSection = /^Contents\/section\d+\.xml$/.test(name);
+      // 문단 블록을 먼저 펼친다 — 블록 글자는 이미 이스케이프돼 있고, 아래 글자 치환이 건드리지 않는다.
+      if (isSection && blocks) xml = expandParagraphBlocks(xml, blocks, styles);
       for (const key of replKeys) {
         // 주입 값만 XML 이스케이프(템플릿의 키 {{...}} 는 메타문자 없음 — find 는 그대로).
         xml = replaceAll(xml, key, escapeXmlText(replacements[key]));
       }
       // 본문 섹션의 표가 쪽 경계에서 이어지도록 보정(글자처럼 취급 해제 + 셀 단위 나눔).
-      if (/^Contents\/section\d+\.xml$/.test(name)) {
+      if (isSection) {
         xml = enableTableSplitAcrossPages(xml).xml;
         for (const t of sectionTransforms) xml = t(xml);
         // 줄배치 캐시 제거는 서식별 transform 뒤에 — transform 들이 캐시를 포함한
@@ -215,25 +237,25 @@ async function fillHwpx(templatePath, replacements, imageReplacements = {}, opti
       if (leftover && leftover.length) {
         leftoverByEntry[name] = Array.from(new Set(leftover));
       }
-      out.file(name, xml, { compression: 'DEFLATE' });
+      out.file(name, xml, { compression: 'DEFLATE', createFolders: false });
     } else if (name === 'Contents/content.hpf' && extraImages.length) {
       // 새 이미지의 manifest item 추가(그 외 내용은 그대로).
       let hpf = await entry.async('string');
       for (const img of extraImages) {
-        hpf = addManifestImage(hpf, { itemId: img.itemId, fileName: img.fileName });
+        hpf = addManifestImage(hpf, { itemId: img.itemId, fileName: img.fileName, mediaType: img.mediaType });
       }
-      out.file(name, hpf, { compression: 'DEFLATE' });
+      out.file(name, hpf, { compression: 'DEFLATE', createFolders: false });
     } else {
       // 그 외(content.hpf, 교체 안 된 BinData, 기타) — 바이트 그대로
       const bytes = await entry.async('uint8array');
-      out.file(name, bytes, { compression: 'DEFLATE' });
+      out.file(name, bytes, { compression: 'DEFLATE', createFolders: false });
     }
   }
 
   // 3) 템플릿에 없던 이미지(서명 등) 추가 — BinData 엔트리로 신규 기록.
   for (const img of extraImages) {
     if (!img.buffer || !img.fileName) continue;
-    out.file(`BinData/${img.fileName}`, img.buffer, { compression: 'DEFLATE' });
+    out.file(`BinData/${img.fileName}`, img.buffer, { compression: 'DEFLATE', createFolders: false });
   }
 
   // 미치환 토큰이 남으면 거부(한글이 토큰 텍스트를 그대로 출력하는 사고 방지)

@@ -1,134 +1,114 @@
 const path = require('path');
 const { fillHwpx, numToKorean, formatKoreanDate } = require('./hwpxFill');
+const { buildSignatureItem, linesToItems } = require('./hwpxBlocks');
 
 // ═══════════════════════════════════════════════════════════════
-// 서식11 지출결의서 — body(클라이언트 조립 값 / 집행 트랜잭션 매핑) → HWPX 채움.
-//   chulgang/hoeuirok/gyeolgwa 와 동일 패턴: 서버는 얇은 매퍼.
-//   템플릿(서식11_지출결의서.hwpx)은 제공된 정식 원본 양식을 그대로 사용하며,
-//   값 셀에만 단일run 플레이스홀더({{키}})를 심고 채우는 값은 검정(charPr 31/32/33)으로 둔다.
-//   안내문구·예산분류 나열·하단 임차물품 반납표는 원본 리터럴 그대로(토큰 아님).
-//
-//   금액은 단일 amount 에서 한글(numToKorean)·숫자(toLocaleString) 둘 다 파생 — 불일치 방지.
-//   ⚠️ amount 는 콤마·'원'·통화기호가 섞인 문자열일 수 있어 숫자만 추출해 파싱한다
-//      (Number('129,000')=NaN → 0 채움 버그 방지 — UI 정제와 이중 방어).
-//   날짜는 formatKoreanDate(UTC 게터)로 'YYYY. M. D.' — YYYY-MM-DD 가 UTC 자정 저장돼도 하루 밀림 없음.
-//   주요내용은 지출 내용 셀 '주요내용' 첫 항목에 들어가고(' - {{주요내용}}'),
-//   지출방법은 4택 체크박스 토큰(선택 1개만 '■', 나머지 '□').
-//   미치환 토큰은 fillHwpx 가 throw(누락 가드).
+// 서식11 지출결의서 (2026-10 최신판).
+//   템플릿 = 5월 지출결의서(용역비, 한컴 저장본)에서 서명·글을 뺀 것.
+//   · 결재 칸: 담당자(이한희)·결재자(이화영) 이름 + 서명 그림(제출본 자리). 서명이 없으면 회색 「(서명)」.
+//   · 지출내용: 건마다 다른 항목(□ 추 진 명 / □ 용역내용 / - 항목 / □ 필요예산 …)을 여러 줄 그대로.
+//     파란 안내 문단·빈 「 - 」·붙임 줄·뒤쪽 증빙 붙임/반납표 쪽은 제출본처럼 없다.
+//   · 금액은 amount 하나에서 한글·숫자를 함께 만든다(불일치 방지).
+//   · 지출방법 4택 체크(■/□).
 // ═══════════════════════════════════════════════════════════════
 
-// backend/lib → ../templates/forms/서식11_지출결의서.hwpx
-const TEMPLATE_PATH = path.join(
-  __dirname,
-  '..',
-  'templates',
-  'forms',
-  '서식11_지출결의서.hwpx',
-);
+const TEMPLATE_PATH = path.join(__dirname, '..', 'templates', 'forms', '서식11_지출결의서.hwpx');
 
-// 템플릿의 플레이스홀더(단일run). 누락 키는 ''(미치환 토큰 방지).
-//   주요내용: 지출 내용 셀 '주요내용' 첫 항목(' - {{주요내용}}').
-//   지출방법_*: 지출방법 셀 4개 체크박스 토큰 — 선택 1개만 '■', 나머지 '□'.
-const PLACEHOLDER_KEYS = [
-  '단체명',
-  '담당자',
-  '결제일',
-  '결의일',
-  '항',
-  '목',
-  '세',
-  '추진명',
-  '추진일시',
-  '주요내용',
-  '금액한글',
-  '금액숫자',
-  '지급처',
-  '지출방법_계좌이체',
-  '지출방법_전자계산서',
-  '지출방법_카드',
-  '지출방법_기타',
-];
+// 5월 제출본에서 잰 서명 자리(결재 칸 안)
+const SIGNATURE_PLACES = {
+  damdangja: { width: 4203, height: 1857, vertOffset: 554, horzOffset: 1108 },
+  gyeoljaeja: { width: 4136, height: 2253, vertOffset: 123, horzOffset: 988 },
+};
 
-// 지출방법 4택 → 체크박스 토큰('■' 선택 / '□' 미선택). 원본 양식 라벨 기준.
-//   계좌이체 / 계좌이체(전자(세금)계산서) / 보조금카드결제 / 기타
 const PAYMENT_METHOD_KEYS = ['계좌이체', '전자계산서', '카드', '기타'];
-
 function buildPaymentMethodBoxes(method) {
   const chosen = PAYMENT_METHOD_KEYS.includes(method) ? method : null;
   const boxes = {};
-  for (const k of PAYMENT_METHOD_KEYS) {
-    boxes[`지출방법_${k}`] = k === chosen ? '■' : '□';
-  }
+  for (const k of PAYMENT_METHOD_KEYS) boxes[`{{지출방법_${k}}}`] = k === chosen ? '■' : '□';
   return boxes;
 }
 
-// 금액 → 정수. number 면 그대로(소수 버림), 문자열이면 숫자만 추출(콤마·'원'·통화기호·전각숫자 허용).
-//   Number('129,000')=NaN 으로 금액이 0 으로 채워지던 버그의 백엔드 방어막.
+// 금액 → 정수. 문자열이면 숫자만 추출(콤마·'원'·통화기호·전각숫자 허용).
 function parseAmount(raw) {
   if (raw == null) return 0;
   if (typeof raw === 'number') return Number.isFinite(raw) ? Math.floor(Math.abs(raw)) : 0;
-  // 전각 숫자(０-９) → 반각 후 숫자 외 제거.
   const half = String(raw).replace(/[０-９]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0xfee0));
   const digits = half.replace(/[^\d]/g, '');
   return digits ? Number(digits) : 0;
 }
 
-// body → 치환맵. amount(숫자/문자열) 하나에서 금액한글/금액숫자를 함께 산출한다.
-//   날짜(결제일/결의일)는 YYYY-MM-DD 또는 빈값 허용 → 'YYYY. M. D.'.
+function fmtDate(v) {
+  if (!v) return '';
+  const s = String(v);
+  if (/^\d{4}\.\s*\d{1,2}\.\s*\d{1,2}\.?$/.test(s)) return s;
+  return formatKoreanDate(v);
+}
+
+const str = (v) => (v == null ? '' : String(v).trim());
+
+// 지출내용 여러 줄. 예전 입력(추진명·추진일시·주요내용)만 오면 그 셋으로 짠다.
+function jichulContentItems(b) {
+  if (str(b.지출내용)) return linesToItems(b.지출내용, undefined, { keepIndent: true });
+  const lines = [];
+  if (str(b.추진명)) lines.push(`□ 추 진 명: ${str(b.추진명)}`);
+  if (str(b.추진일시)) lines.push(`□ 추진일시: ${str(b.추진일시)}`);
+  if (str(b.주요내용)) lines.push('□ 주요내용', ...str(b.주요내용).split(/\r?\n/).map((l) => ` - ${l.trim()}`));
+  return lines;
+}
+
+function buildJichulBlocks(body) {
+  const b = body || {};
+  const amount = parseAmount(b.amount != null ? b.amount : b.금액);
+  const images = [];
+  const sigBlock = (role) => {
+    const sig = buildSignatureItem(role, SIGNATURE_PLACES[role], `jichul_${role}`);
+    if (!sig) return ['(서명)'];
+    images.push(sig.image);
+    return [sig.item];
+  };
+  const blocks = {
+    단체명: [b.단체명 != null ? str(b.단체명) : '노드트리'],
+    담당자: [str(b.담당자)],
+    결제일: [fmtDate(b.결제일)],
+    결의일: [fmtDate(b.결의일)],
+    관: [str(b.관) || '꿈다락 문화예술학교'],
+    항: [str(b.항)],
+    목: [str(b.목)],
+    세: [str(b.세)],
+    지출내용: jichulContentItems(b),
+    금액한글: [numToKorean(amount)],
+    금액숫자: [amount.toLocaleString('ko-KR')],
+    지급처: [str(b.지급처)],
+    서명_담당자: sigBlock('damdangja'),
+    서명_결재자: sigBlock('gyeoljaeja'),
+  };
+  return { blocks, images };
+}
+
 function buildJichulReplacements(body) {
   const b = body || {};
-
-  const amount = parseAmount(b.amount != null ? b.amount : b.금액);
-  const 금액숫자 = amount.toLocaleString('ko-KR');
-  const 금액한글 = numToKorean(amount); // 예: 100000 → '일십만'
-
-  // 날짜: 명시 포맷(이미 'YYYY. M. D.')이면 그대로, ISO/Date면 변환.
-  const fmtDate = (v) => {
-    if (!v) return '';
-    const s = String(v);
-    if (/^\d{4}\.\s*\d{1,2}\.\s*\d{1,2}\.?$/.test(s)) return s; // 이미 한글식
-    return formatKoreanDate(v);
-  };
-
-  const values = {
-    단체명: b.단체명 != null ? b.단체명 : '노드트리',
-    담당자: b.담당자 || '',
-    결제일: fmtDate(b.결제일),
-    결의일: fmtDate(b.결의일),
-    항: b.항 || '',
-    목: b.목 || '',
-    세: b.세 || '',
-    추진명: b.추진명 || '',
-    추진일시: b.추진일시 || '',
-    주요내용: b.주요내용 || '',
-    금액한글,
-    금액숫자,
-    지급처: b.지급처 || '',
+  return {
+    '{{결재담당자}}': str(b.결재담당자) || str(b.담당자),
+    '{{결재자}}': str(b.결재자) || '이화영',
     ...buildPaymentMethodBoxes(b.지출방법),
   };
-
-  const repl = {};
-  for (const key of PLACEHOLDER_KEYS) {
-    const v = values[key];
-    repl[`{{${key}}}`] = v == null ? '' : String(v);
-  }
-  return repl;
 }
 
 async function generateJichulForm(body) {
-  const replacements = buildJichulReplacements(body);
-  const buffer = await fillHwpx(TEMPLATE_PATH, replacements);
+  const { blocks, images } = buildJichulBlocks(body);
+  const buffer = await fillHwpx(TEMPLATE_PATH, buildJichulReplacements(body), {}, { blocks, extraImages: images });
   const safe = (s) => String(s || '').replace(/[\\/:*?"<>|]/g, '').slice(0, 40);
-  const titlePart = safe((body && (body.추진명 || body.목)) || '지출결의서');
-  const filenameBase = `서식11_지출결의서_${titlePart}`;
-  return { buffer, filenameBase };
+  const b = body || {};
+  const titlePart = safe(b.파일명 || b.추진명 || b.세 || b.목 || '지출결의서');
+  return { buffer, filenameBase: `서식11_지출결의서_${titlePart}` };
 }
 
 module.exports = {
   generateJichulForm,
+  buildJichulBlocks,
   buildJichulReplacements,
   buildPaymentMethodBoxes,
   parseAmount,
-  PLACEHOLDER_KEYS,
   PAYMENT_METHOD_KEYS,
+  TEMPLATE_PATH,
 };

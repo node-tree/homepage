@@ -243,6 +243,17 @@ export const kkumdarakAdminAPI = {
     return data.data || null;
   },
 
+  // GET /api/kkumdarak/forms/schedule — 최신 회차표(손의 기억 A·B형 분리). 출강확인서 자동 기입용.
+  getSchedule: async ({ signal } = {}) => {
+    const response = await fetch(`${API_BASE_URL}/kkumdarak/forms/schedule`, {
+      method: 'GET',
+      headers: authHeaders(),
+      signal,
+    });
+    const data = await parseJsonResponse(response, '회차표 조회 실패');
+    return Array.isArray(data.data) ? data.data : [];
+  },
+
   // POST /api/kkumdarak/forms/ai-draft — Claude AI 초안.
   //   body { docType, programKey, 회차?, 회차번호?, 교육주제?, 주제출처?, 회의주제?, 키워드 }.
   //   주제출처 'plan'(계획서 자동기입) 이면 서버가 그 주제를 앵커로 삼아 보강만 한다.

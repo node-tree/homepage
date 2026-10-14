@@ -24,11 +24,13 @@ interface PayRow {
   distanceKm: string; // 왕복거리
   transportPay: string; // 교통보조금(비과세)
   isRepresentative: boolean;
+  firstPayment: boolean; // 최초 지급월 → 비고에 첨부서류(서식 2-1·2-2·2-3) 자동
   note: string;
   sessions: Session[];
 }
 
 const CATEGORY_OPTIONS = [
+  '교육강사비\n(주/보조강사)',
   '교육강사비\n(주강사)',
   '교육강사비\n(보조강사)',
   '행정인력비',
@@ -44,7 +46,7 @@ const MONTHS = [5, 6, 7, 8, 9, 10, 11, 12];
 const emptySession = (): Session => ({ date: '', hours: '' });
 
 const emptyRow = (): PayRow => ({
-  category: '교육강사비\n(주강사)',
+  category: '교육강사비\n(주/보조강사)',
   name: '',
   bank: '',
   account: '',
@@ -54,6 +56,7 @@ const emptyRow = (): PayRow => ({
   distanceKm: '',
   transportPay: '',
   isRepresentative: false,
+  firstPayment: false,
   note: '',
   sessions: [emptySession()],
 });
@@ -63,7 +66,7 @@ const labelOf = (c: string) => c.replace(/\n/g, ' ');
 
 const SarebiForm: React.FC = () => {
   const { logout } = useKkumdarakAuth();
-  const [month, setMonth] = useState<number>(5);
+  const [month, setMonth] = useState<number>(() => Math.min(12, Math.max(5, new Date().getMonth() + 1)));
   const [rows, setRows] = useState<PayRow[]>([emptyRow()]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -113,6 +116,7 @@ const SarebiForm: React.FC = () => {
         distanceKm: Number(r.distanceKm) || 0,
         transportPay: Number(r.transportPay) || 0,
         isRepresentative: r.isRepresentative,
+        firstPayment: r.firstPayment,
         note: r.note,
         sessions: r.sessions.map((s) => ({ date: s.date, hours: Number(s.hours) || 0 })),
       })),
@@ -138,9 +142,10 @@ const SarebiForm: React.FC = () => {
   return (
     <div className="kd-forms kd-sarebi">
       <p className="kd-forms-hint">
-        해당 월의 사례비 지급 대상을 행으로 추가하세요. 주·보조강사는 회차별 일자·시간을 추가하면
-        한 묶음으로 합산됩니다(소득세·주민세·실지급 자동 수식). 대표는 「대표(원천징수 없음)」를
-        체크하면 소득세·주민세 0, 실지급 = 세전으로 처리됩니다. 생성된 xlsx는 엑셀에서 직접 수정할 수 있습니다.
+        해당 월의 사례비 지급 대상을 행으로 추가하세요. 회차별 일자·시간을 추가하면 한 묶음으로 합산됩니다.
+        소득세·주민세는 10원 미만을 절사합니다(8·9월 제출본과 같음). 대표는 「대표(원천징수 없음)」를 체크하면
+        세금구분이 「대표자」, 소득세·주민세 0으로 들어갑니다. 특별강의비는 시간과 관계없이 회당 단가로 계산합니다.
+        처음 지급하는 사람은 「첫 지급월」을 체크하면 비고에 첨부서류가 자동으로 적힙니다.
       </p>
 
       <div className="kd-forms-grid">
@@ -171,6 +176,14 @@ const SarebiForm: React.FC = () => {
                 onChange={(e) => setRow(i, { isRepresentative: e.target.checked })}
               />
               대표(원천징수 없음)
+            </label>
+            <label className="kd-sarebi-rep">
+              <input
+                type="checkbox"
+                checked={r.firstPayment}
+                onChange={(e) => setRow(i, { firstPayment: e.target.checked })}
+              />
+              첫 지급월(첨부서류 비고 자동)
             </label>
             <button
               type="button"
@@ -243,7 +256,7 @@ const SarebiForm: React.FC = () => {
             </label>
             <label className="kd-field kd-field-wide">
               <span className="kd-field-label">비고</span>
-              <input className="kd-field-input" value={r.note} onChange={(e) => setRow(i, { note: e.target.value })} placeholder="(최초 1회 첨부서류 등)" />
+              <input className="kd-field-input" value={r.note} onChange={(e) => setRow(i, { note: e.target.value })} placeholder="첨부서류 외에 덧붙일 말(예: 9월 활동분 익월 지급)" />
             </label>
           </div>
 

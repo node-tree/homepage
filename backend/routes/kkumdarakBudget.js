@@ -18,7 +18,8 @@ const { PERSONNEL, SETTLEMENT } = require('../data/checklistTemplates');
 const { buildProgramStats } = require('../lib/programStats');
 const { runAiDraft } = require('../lib/aiDraft');
 const { resolvePlanTopic } = require('../data/kkumdarakSessionPlan');
-const { decodePhoto } = require('../lib/photoDecode');
+const { SCHEDULE_TRACKS } = require('../data/kkumdarakSchedule');
+const { decodePhotos } = require('../lib/photoDecode');
 
 const router = express.Router();
 
@@ -695,17 +696,17 @@ function extToMime(ext) {
 }
 
 // ── POST /api/kkumdarak/forms/chulgang ───────────────────────────────────────
-//   body(클라이언트가 조립한 21개 값) + 선택 photo(base64 PNG)로 서식5 출강확인서 HWPX 다운로드.
-//   photo 있으면 BinData/chulgang_photo.png 교체. (/forms prefix — 충돌 없음)
+//   body(클라이언트가 조립한 값) + 선택 사진 2장(photo=수업, photo2=다과비 증빙, base64 PNG/JPEG)
+//   → 서식5 출강확인서 HWPX 다운로드. (/forms prefix — 충돌 없음)
 router.post('/forms/chulgang', async (req, res) => {
   try {
     const body = req.body || {};
-    const photo = decodePhoto(body.photo);
-    if (photo.error) {
-      return res.status(400).json({ success: false, message: photo.error });
+    const photos = decodePhotos({ 수업: body.photo, 다과: body.photo2 });
+    if (photos.error) {
+      return res.status(400).json({ success: false, message: photos.error });
     }
 
-    const { buffer, filenameBase } = await generateChulgangForm(body, photo.buffer);
+    const { buffer, filenameBase } = await generateChulgangForm(body, photos.buffers);
 
     // RFC5987 — ascii fallback + UTF-8 인코딩 둘 다 제공
     const asciiFallback = 'chulgang.hwpx';
@@ -732,17 +733,17 @@ router.post('/forms/chulgang', async (req, res) => {
 });
 
 // ── POST /api/kkumdarak/forms/hoeuirok ───────────────────────────────────────
-//   body(클라이언트가 조립한 21개 값) + 선택 photo(base64 PNG)로 서식7 회의록 HWPX 다운로드.
-//   photo 있으면 BinData/hoeuirok_photo.png 교체. chulgang 과 동일 패턴.
+//   body(일시·장소·참석자·주제·안건[]) + 선택 사진 2장(photo·photo2, base64 PNG/JPEG)
+//   → 서식7 회의록 HWPX 다운로드. chulgang 과 동일 패턴.
 router.post('/forms/hoeuirok', async (req, res) => {
   try {
     const body = req.body || {};
-    const photo = decodePhoto(body.photo);
-    if (photo.error) {
-      return res.status(400).json({ success: false, message: photo.error });
+    const photos = decodePhotos({ 사진1: body.photo, 사진2: body.photo2 });
+    if (photos.error) {
+      return res.status(400).json({ success: false, message: photos.error });
     }
 
-    const { buffer, filenameBase } = await generateHoeuirokForm(body, photo.buffer);
+    const { buffer, filenameBase } = await generateHoeuirokForm(body, photos.buffers);
 
     // RFC5987 — ascii fallback + UTF-8 인코딩 둘 다 제공
     const asciiFallback = 'hoeuirok.hwpx';
@@ -768,11 +769,15 @@ router.post('/forms/hoeuirok', async (req, res) => {
 });
 
 // ── POST /api/kkumdarak/forms/gyeolgwa ───────────────────────────────────────
-//   서식6 기획·개발 결과보고서 — body(32개 값) → HWPX 다운로드. (chulgang/hoeuirok 동일 패턴)
+//   서식6 기획·개발 결과보고서 — body + 선택 활동사진 4장(photo1~4, base64 PNG/JPEG) → HWPX 다운로드.
 router.post('/forms/gyeolgwa', async (req, res) => {
   try {
     const body = req.body || {};
-    const { buffer, filenameBase } = await generateGyeolgwaForm(body);
+    const photos = decodePhotos({ 사진1: body.photo1, 사진2: body.photo2, 사진3: body.photo3, 사진4: body.photo4 });
+    if (photos.error) {
+      return res.status(400).json({ success: false, message: photos.error });
+    }
+    const { buffer, filenameBase } = await generateGyeolgwaForm(body, photos.buffers);
     const utf8Name = `${filenameBase}.hwpx`;
     res.setHeader('Content-Type', 'application/haansofthwp+zip');
     res.setHeader(
@@ -844,23 +849,17 @@ router.post('/forms/jichul', async (req, res) => {
 });
 
 // ── POST /api/kkumdarak/forms/geomsu ─────────────────────────────────────────
-//   검수조서(일반용역비) — body(용역명·계약상대자·amount·검수일자·산출물링크·검수결과·검수의견)
-//   + 선택 photo1/photo2(base64 PNG) → HWPX 다운로드. jichul(텍스트)+chulgang(photo) 결합.
-//   사진 2슬롯은 BinData/geomsu_photo1.png·geomsu_photo2.png 교체. 무저장 즉시 다운로드.
-//   미치환 토큰은 fillHwpx 가 throw → 500. 잘못된 사진 → 400.
+//   검수조서(5월 제출본 형식) — body(품목[]·확인일자·담당자) + 선택 사진 4장(photo1~4, base64 PNG/JPEG)
+//   → HWPX 다운로드. 무저장 즉시 다운로드. 미치환 토큰은 fillHwpx 가 throw → 500. 잘못된 사진 → 400.
 router.post('/forms/geomsu', async (req, res) => {
   try {
     const body = req.body || {};
-    const p1 = decodePhoto(body.photo1);
-    if (p1.error) {
-      return res.status(400).json({ success: false, message: p1.error });
-    }
-    const p2 = decodePhoto(body.photo2);
-    if (p2.error) {
-      return res.status(400).json({ success: false, message: p2.error });
+    const photos = decodePhotos({ 사진1: body.photo1, 사진2: body.photo2, 사진3: body.photo3, 사진4: body.photo4 });
+    if (photos.error) {
+      return res.status(400).json({ success: false, message: photos.error });
     }
 
-    const { buffer, filenameBase } = await generateGeomsuForm(body, p1.buffer, p2.buffer);
+    const { buffer, filenameBase } = await generateGeomsuForm(body, photos.buffers);
 
     const asciiFallback = 'geomsu.hwpx';
     const utf8Name = `${filenameBase}.hwpx`;
@@ -942,6 +941,14 @@ router.get('/forms/plan-topic', (req, res) => {
     return res.status(400).json({ success: false, message: '존재하지 않는 프로그램입니다.' });
   }
   return res.json({ success: true, data: resolvePlanTopic(programKey, sessionNo) });
+});
+
+// ── GET /api/kkumdarak/forms/schedule ────────────────────────────────────────
+//   최신 회차표(손의 기억 A·B형 분리). 출강확인서 작업창이 회차를 고르면 일자·시간·강사·장소·
+//   주제를 자동 기입하는 데 쓴다(상수 — DB·AI 호출 없음).
+router.get('/forms/schedule', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  return res.json({ success: true, data: SCHEDULE_TRACKS });
 });
 
 // ═══════════════════════════════════════════════════════════════

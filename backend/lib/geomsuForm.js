@@ -1,146 +1,81 @@
 const path = require('path');
-const { fillHwpx, formatKoreanDate } = require('./hwpxFill');
+const { fillHwpx } = require('./hwpxFill');
+const { buildPhotoItem, buildSignatureItem } = require('./hwpxBlocks');
 
 // ═══════════════════════════════════════════════════════════════
-// 검수조서(일반용역비) — body(클라이언트 조립 값) → HWPX 채움.
-//   jichul(서식11)·chulgang/hoeuirok(서식5/7) 패턴 결합: 텍스트 단일run 플레이스홀더 +
-//   photo BinData 임베드(2슬롯). 서버는 얇은 매퍼.
-//   템플릿(검수조서_일반용역비.hwpx)은 제공된 빈 양식을 기반으로 값 셀에만 단일run
-//   플레이스홀더({{키}})를 심고 채우는 값은 검정(charPr 3)으로 둔다.
-//   보조사업명·수행기관·검수책임자(이화영)는 리터럴 유지(토큰 아님).
-//
-//   금액은 amount(숫자) 하나에서 toLocaleString 산출. 날짜는 formatKoreanDate(UTC) —
-//   YYYY-MM-DD 가 UTC 자정 저장돼도 하루 밀림 없음. 미치환 토큰은 fillHwpx 가 throw.
-//
-//   ── 검수의견 belt(2026-06) ──
-//   AI "자세하게" 강화로 검수의견이 2~4문장(140~260자)으로 길어져, 셀 상한(OPINION_CAP)을 둔다.
+// 검수조서 (2026-10 최신판 — 5월 제출본 형식).
+//   5월에 실제로 낸 검수조서는 「검 수 조 서」 물품 검수 형식이다:
+//   품명·규격·수량·비고 표(4행) + 사진 2×2(4장) + 「상기 물품을 정히 영수함.」 + 날짜 +
+//   「노드트리 행정실무 성명 이한희」와 서명.
+//   템플릿 = 5월 제출본(한컴 저장본)에서 사진·서명·글을 뺀 것.
 // ═══════════════════════════════════════════════════════════════
 
-// backend/lib → ../templates/forms/검수조서_일반용역비.hwpx
-const TEMPLATE_PATH = path.join(
-  __dirname,
-  '..',
-  'templates',
-  'forms',
-  '검수조서_일반용역비.hwpx',
-);
+const TEMPLATE_PATH = path.join(__dirname, '..', 'templates', 'forms', '검수조서.hwpx');
 
-// 템플릿에 박힌 더미 사진 엔트리(BinData/<이 이름>) — 업로드 시 이 바이트만 교체.
-const PHOTO_BINDATA_KEY_1 = 'geomsu_photo1.png';
-const PHOTO_BINDATA_KEY_2 = 'geomsu_photo2.png';
+const MAX_ITEMS = 4;
+const PHOTO_BOX = { maxWidth: 19956, maxHeight: 14967 };
+const SIGNATURE_PLACE = { width: 5950, height: 2629, vertOffset: 951, horzOffset: 35324 };
 
-// 템플릿의 7개 텍스트 플레이스홀더(단일run). 누락 키는 ''(미치환 토큰 방지).
-const PLACEHOLDER_KEYS = [
-  '용역명',
-  '계약상대자',
-  '계약금액',
-  '검수일자',
-  '산출물링크',
-  '검수결과',
-  '검수의견',
-];
+const str = (v) => (v == null ? '' : String(v).trim());
 
-// 검수의견 셀 상한 — 2~4문장 풍부 출력이 셀을 넘치지 않게.
-const OPINION_CAP = 320;
-
-function clampOpinion(value) {
-  const v = (value == null ? '' : String(value)).replace(/\s*[\r\n]+\s*/g, ' ').trim();
-  if (v.length <= OPINION_CAP) return v;
-  const slice = v.slice(0, OPINION_CAP);
-  const sent = Math.max(slice.lastIndexOf('다. '), slice.lastIndexOf('다.'), slice.lastIndexOf('함.'));
-  if (sent > OPINION_CAP * 0.6) return slice.slice(0, sent + 2).trim();
-  const sp = slice.lastIndexOf(' ');
-  return (sp > OPINION_CAP * 0.6 ? slice.slice(0, sp) : slice).trim() + '…';
+function normalizeItems(b) {
+  const list = Array.isArray(b.품목) ? b.품목 : [];
+  return list
+    .map((it) => ({ 품명: str(it && it.품명), 규격: str(it && it.규격), 수량: str(it && it.수량), 비고: str(it && it.비고) }))
+    .filter((it) => it.품명 || it.규격 || it.수량 || it.비고)
+    .slice(0, MAX_ITEMS);
 }
 
-// 검수결과 3택 → 체크박스 라인('■' 선택 / '□' 미선택). 라벨은 양식 원문과 동일.
-const RESULT_LABELS = {
-  pass: '합격',
-  conditional: '보완 후 합격',
-  fail: '불합격',
-};
-const RESULT_ORDER = ['pass', 'conditional', 'fail'];
-
-function buildResultLine(result) {
-  const chosen = RESULT_ORDER.includes(result) ? result : null;
-  return RESULT_ORDER.map((k) => {
-    const box = k === chosen ? '■' : '□';
-    return `${box} ${RESULT_LABELS[k]}`;
-  }).join('      ');
-}
-
-// 날짜: 이미 'YYYY. M. D.' 면 그대로, ISO/Date면 변환(jichulForm 과 동일 규칙).
-function fmtDate(v) {
-  if (!v) return '';
-  const s = String(v);
-  if (/^\d{4}\.\s*\d{1,2}\.\s*\d{1,2}\.?$/.test(s)) return s;
-  return formatKoreanDate(v);
+// photos: { 사진1..4: Buffer|null }
+function buildGeomsuBlocks(body, photos = {}) {
+  const b = body || {};
+  const images = [];
+  const items = normalizeItems(b);
+  const blocks = {};
+  for (let i = 1; i <= MAX_ITEMS; i++) {
+    const it = items[i - 1] || {};
+    for (const k of ['품명', '규격', '수량', '비고']) blocks[`${k}${i}`] = [it[k] || ''];
+  }
+  for (let i = 1; i <= 4; i++) {
+    const p = buildPhotoItem(photos[`사진${i}`], { slot: `geomsu${i}`, ...PHOTO_BOX });
+    if (p) images.push(p.image);
+    blocks[`사진${i}`] = p ? [p.item] : [''];
+  }
+  const sig = buildSignatureItem('damdangja', SIGNATURE_PLACE, 'geomsu');
+  if (sig) images.push(sig.image);
+  blocks.서명 = sig ? [sig.item] : [''];
+  return { blocks, images, items };
 }
 
 function buildGeomsuReplacements(body) {
   const b = body || {};
-  const amount = Number(b.amount != null ? b.amount : b.계약금액) || 0;
-  const 계약금액 = amount.toLocaleString('ko-KR');
-
-  // 산출물 링크: 'https://' 가 비면 빈칸이 어색 → 입력 없으면 'https://' 유지.
-  const linkRaw = (b.산출물링크 != null ? b.산출물링크 : b.link) || '';
-  const 산출물링크 = String(linkRaw).trim() || 'https://';
-
-  const values = {
-    용역명: b.용역명 || '',
-    계약상대자: b.계약상대자 || '',
-    계약금액,
-    검수일자: fmtDate(b.검수일자),
-    산출물링크,
-    검수결과: buildResultLine(b.검수결과),
-    검수의견: clampOpinion(b.검수의견),
+  return {
+    '{{확인년}}': str(b.확인년),
+    '{{확인월}}': str(b.확인월),
+    '{{확인일}}': str(b.확인일),
+    '{{담당자}}': str(b.담당자) || '이한희',
   };
-
-  const repl = {};
-  for (const key of PLACEHOLDER_KEYS) {
-    const v = values[key];
-    repl[`{{${key}}}`] = v == null ? '' : String(v);
-  }
-  return repl;
 }
 
-// 파일시스템·헤더 안전을 위해 금지문자 제거(파일명 fallback 용)
 function sanitizeForFilename(s) {
   return String(s || '')
-    .replace(/[/\\:*?"<>|]/g, '')
+    .replace(/[/\\:*?"<>|()]/g, '')
     .replace(/\s+/g, '')
-    .trim();
+    .trim()
+    .slice(0, 30);
 }
 
-function buildFilenameBase(body) {
-  const name = sanitizeForFilename((body || {}).용역명);
-  return ['검수조서', name].filter(Boolean).join('_') || '검수조서';
-}
-
-// photoBuffer1/2(선택, Buffer): 있으면 해당 BinData 교체. 없으면 더미 유지(회귀 없음).
-async function generateGeomsuForm(body, photoBuffer1, photoBuffer2) {
-  const replacements = buildGeomsuReplacements(body);
-  const imageReplacements = {};
-  if (photoBuffer1 && Buffer.isBuffer(photoBuffer1)) {
-    imageReplacements[PHOTO_BINDATA_KEY_1] = photoBuffer1;
-  }
-  if (photoBuffer2 && Buffer.isBuffer(photoBuffer2)) {
-    imageReplacements[PHOTO_BINDATA_KEY_2] = photoBuffer2;
-  }
-  const buffer = await fillHwpx(TEMPLATE_PATH, replacements, imageReplacements);
-  const filenameBase = buildFilenameBase(body);
-  return { buffer, filenameBase };
+async function generateGeomsuForm(body, photos = {}) {
+  const { blocks, images, items } = buildGeomsuBlocks(body, photos);
+  const buffer = await fillHwpx(TEMPLATE_PATH, buildGeomsuReplacements(body), {}, { blocks, extraImages: images });
+  const first = items[0] ? sanitizeForFilename(items[0].품명) : '';
+  return { buffer, filenameBase: ['검수조서', first].filter(Boolean).join('_') };
 }
 
 module.exports = {
   generateGeomsuForm,
+  buildGeomsuBlocks,
   buildGeomsuReplacements,
-  buildResultLine,
-  buildFilenameBase,
-  clampOpinion,
-  OPINION_CAP,
-  PLACEHOLDER_KEYS,
-  PHOTO_BINDATA_KEY_1,
-  PHOTO_BINDATA_KEY_2,
+  normalizeItems,
   TEMPLATE_PATH,
 };

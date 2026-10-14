@@ -1,131 +1,159 @@
 const path = require('path');
 const { fillHwpx } = require('./hwpxFill');
+const { buildPhotoItem, buildSignatureItem, linesToItems, removeTableRows } = require('./hwpxBlocks');
 
 // ═══════════════════════════════════════════════════════════════
-// 서식6 프로그램 기획·개발 결과보고서 — body(클라이언트 조립 32개 값) → HWPX 채움.
-//   chulgangForm.js / hoeuirokForm.js 와 동일 패턴: 서버는 얇은 매퍼.
-//   템플릿 경로는 __dirname 기준(서버리스 번들) — vercel.json includeFiles 로 포함.
-//   사진: 서식6 템플릿엔 더미 사진칸(BinData)이 임베드돼 있지 않으므로 photoBuffer 는
-//   현재 무시된다(없는 BinData 키는 fillHwpx 가 안전하게 무시 — 회귀 없음). 텍스트만 채움.
+// 서식6 프로그램 기획·개발 결과보고서 (2026-10 최신판).
+//   템플릿 = 9월 마을의 신호 결과보고서(한컴 저장본)에서 사진·서명·글을 뺀 것.
+//   · 제목 「(N월)」 — 보고월.
+//   · 활동 개요 회차 행: 입력한 만큼(1~5행), 남는 행은 지운다(9월 장암책정본은 3행).
+//   · 세부내용: 굵은 번호 소제목 5개 + 본문 여러 문단(입력 글의 줄바꿈 = 문단), 소제목 사이 빈 줄.
+//   · 활동사진 4장(칸 폭 9248, 세로 사진은 4:3 높이에 맞춤). 없으면 「사진삽입」 안내.
+//   · 담당자 서명: 「(인)」 위에 떠 있는 그림(제출본과 같은 자리).
 // ═══════════════════════════════════════════════════════════════
 
-// backend/lib → ../templates/forms/서식6_결과보고서.hwpx
-const TEMPLATE_PATH = path.join(
-  __dirname,
-  '..',
-  'templates',
-  'forms',
-  '서식6_결과보고서.hwpx',
-);
+const TEMPLATE_PATH = path.join(__dirname, '..', 'templates', 'forms', '서식6_결과보고서.hwpx');
 
-// 향후 서식6 에 사진칸이 임베드되면 이 키로 교체(현재 템플릿엔 미존재 — 무시됨).
-const PHOTO_BINDATA_KEY = 'gyeolgwa_photo.png';
+// 템플릿 글자 서식: 본문 12(9pt 검정), 소제목 19(9pt 굵게)
+const STYLES = { head: '19' };
+const PHOTO_BOX = { maxWidth: 9248, maxHeight: 6936 };
+const SIGNATURE_PLACE = { width: 4989, height: 2204, vertOffset: 1064, horzOffset: 25723 };
+const ROW_FIRST = 12; // 회차 1행의 표 행 번호
+const MAX_ROWS = 5;
 
-// 서식6 의 32개 플레이스홀더. body 누락 키는 ''(미치환 토큰 방지 — fillHwpx 가 throw).
-const PLACEHOLDER_KEYS = [
-  '운영기관명',
-  '교육대상',
-  '세부대상',
-  '교육인원',
-  '참여인력수',
-  '참여인력',
-  '프로그램명',
-  '장르',
-  '주요내용',
-  // 활동개요표 5행
-  '일시1', '일시2', '일시3', '일시4', '일시5',
-  '주제1', '주제2', '주제3', '주제4', '주제5',
-  '참석1', '참석2', '참석3', '참석4', '참석5',
-  // 세부내용(AI)
-  '내용_역할',
-  '내용_과정',
-  '내용_실행',
-  '내용_평가',
-  // 확인일자/담당자
-  '확인년',
-  '확인월',
-  '확인일',
-  '담당자',
+const SECTIONS = [
+  ['역할', '1. 기획개발 참여인력 역할'],
+  ['대상', '2. 대상 분석'],
+  ['과정', '3. 기획개발 과정'],
+  ['실행', '4. 프로그램 실행 계획'],
+  ['평가', '5. 평가 및 성과 계획'],
 ];
+const SECTION_CAP = 4000; // 비정상 입력 방어(9월본 소제목당 최대 약 2,100자)
 
-// 세부내용(AI) 4개 키는 단일 셀(=단일 run)이라 개행이 한글에서 렌더되지 않는다.
-//   AI/사용자 입력에 줄바꿈이 섞이면 한 줄로 뭉개지므로, 들어온 \n·\r 을 공백으로 정규화한다.
-//   (프롬프트는 이미 ○ 머리표 인라인 구분을 지시 — 이건 방어적 belt.)
-const AI_NARRATIVE_KEYS = new Set(['내용_역할', '내용_과정', '내용_실행', '내용_평가']);
+const str = (v) => (v == null ? '' : String(v).trim());
 
-// 셀 안전 상한 — "자세하게" 강화로 길어진 AI 출력이 한글 셀을 넘치지 않게 하는 2차 방어.
-//   프롬프트 가이드(과정 600~780·실행 180~280 등)가 1차 통제. 여유를 둔 hard cap.
-//   내용_과정은 ○발상/개발/관리 3단락이라 가장 크게.
-const AI_CELL_CAPS = {
-  내용_역할: 320,
-  내용_과정: 900,
-  내용_실행: 360,
-  내용_평가: 480,
-};
+// 세부내용 5칸. 예전 키(내용_역할/과정/실행/평가)도 받는다.
+function normalizeSections(b) {
+  const s = b.세부 && typeof b.세부 === 'object' ? b.세부 : {};
+  return {
+    역할: str(s.역할 != null ? s.역할 : b.내용_역할),
+    대상: str(s.대상),
+    과정: str(s.과정 != null ? s.과정 : b.내용_과정),
+    실행: str(s.실행 != null ? s.실행 : b.내용_실행),
+    평가: str(s.평가 != null ? s.평가 : b.내용_평가),
+  };
+}
 
-function normalizeCellText(key, value) {
-  let v = value == null ? '' : String(value);
-  if (AI_NARRATIVE_KEYS.has(key)) {
-    v = v.replace(/\s*[\r\n]+\s*/g, ' ').trim();
-    const cap = AI_CELL_CAPS[key];
-    if (cap && v.length > cap) {
-      const slice = v.slice(0, cap);
-      // ○ 머리표 경계 우선(○발상/개발/관리/피드백/학습성과 구조 보존) → 문장 → 공백.
-      const mark = slice.lastIndexOf('○');
-      const sent = Math.max(slice.lastIndexOf('다. '), slice.lastIndexOf('다.'));
-      if (sent > cap * 0.6) v = slice.slice(0, sent + 2).trim();
-      else if (mark > cap * 0.5) v = slice.slice(0, mark).trim();
-      else {
-        const sp = slice.lastIndexOf(' ');
-        v = (sp > cap * 0.6 ? slice.slice(0, sp) : slice).trim() + '…';
-      }
-    }
+function normalizeRows(b) {
+  let rows = [];
+  if (Array.isArray(b.회차)) {
+    rows = b.회차.map((r) => ({ 일시: str(r && r.일시), 주제: str(r && r.주제), 참석: str(r && r.참석) }));
+  } else {
+    for (let i = 1; i <= MAX_ROWS; i++) rows.push({ 일시: str(b[`일시${i}`]), 주제: str(b[`주제${i}`]), 참석: str(b[`참석${i}`]) });
   }
-  return v;
+  // 끝쪽 빈 행은 버린다(중간 빈 행은 자리 유지).
+  while (rows.length && !rows[rows.length - 1].일시 && !rows[rows.length - 1].주제 && !rows[rows.length - 1].참석) rows.pop();
+  return rows.slice(0, MAX_ROWS);
+}
+
+function sectionItems(sections) {
+  const items = [];
+  SECTIONS.forEach(([key, head], i) => {
+    if (i) items.push('');
+    items.push({ text: head, style: 'head' });
+    items.push(...linesToItems(sections[key].slice(0, SECTION_CAP)));
+  });
+  return items;
+}
+
+function buildGyeolgwaBlocks(body, photos = {}) {
+  const b = body || {};
+  const images = [];
+  const photoBlock = (buffer, slot) => {
+    const p = buildPhotoItem(buffer, { slot, ...PHOTO_BOX });
+    if (!p) return ['사진삽입'];
+    images.push(p.image);
+    return [p.item];
+  };
+  const sig = buildSignatureItem('damdangja', SIGNATURE_PLACE);
+  if (sig) images.push(sig.image);
+
+  const rows = normalizeRows(b);
+  const blocks = {
+    운영기관명: [str(b.운영기관명)],
+    교육대상: [str(b.교육대상)],
+    세부대상: linesToItems(b.세부대상),
+    교육인원: [str(b.교육인원)],
+    참여인력: linesToItems(b.참여인력),
+    프로그램명: [str(b.프로그램명)],
+    장르: [str(b.장르)],
+    주요내용: linesToItems(b.주요내용),
+    세부내용: sectionItems(normalizeSections(b)),
+    사진1: photoBlock(photos.사진1, 'activity1'),
+    사진2: photoBlock(photos.사진2, 'activity2'),
+    사진3: photoBlock(photos.사진3, 'activity3'),
+    사진4: photoBlock(photos.사진4, 'activity4'),
+    서명: sig ? [sig.item] : [''],
+  };
+  for (let i = 1; i <= MAX_ROWS; i++) {
+    const r = rows[i - 1] || { 일시: '', 주제: '', 참석: '' };
+    blocks[`일시${i}`] = [r.일시];
+    blocks[`주제${i}`] = [r.주제];
+    blocks[`참석${i}`] = [r.참석];
+  }
+  // 회차 행: 입력이 하나도 없으면 1행은 남긴다.
+  const keepRows = Math.max(1, rows.length);
+  return { blocks, images, keepRows };
 }
 
 function buildGyeolgwaReplacements(body) {
   const b = body || {};
-  const repl = {};
-  for (const key of PLACEHOLDER_KEYS) {
-    repl[`{{${key}}}`] = normalizeCellText(key, b[key]);
-  }
-  return repl;
+  return {
+    '{{보고월}}': str(b.보고월) || '0',
+    '{{참여인력수}}': str(b.참여인력수),
+    '{{확인년}}': str(b.확인년),
+    '{{확인월}}': str(b.확인월),
+    '{{확인일}}': str(b.확인일),
+    '{{담당자}}': str(b.담당자),
+  };
 }
 
-// 파일시스템·헤더 안전을 위해 금지문자 제거(파일명 fallback 용)
 function sanitizeForFilename(s) {
   return String(s || '')
-    .replace(/[/\\:*?"<>|]/g, '')
+    .replace(/[/\\:*?"<>|〈〉()（）]/g, '')
     .replace(/\s+/g, '')
     .trim();
 }
 
-// 다운로드 파일명 베이스: 결과보고서_{프로그램}
+// 다운로드 파일명: 「{프로그램} 프로그램 기획·개발 결과보고서 {N}월」(제출본 이름 규칙)
 function buildFilenameBase(body) {
-  const program = sanitizeForFilename((body || {}).프로그램명);
-  return ['결과보고서', program].filter(Boolean).join('_') || '결과보고서';
+  const b = body || {};
+  const program = sanitizeForFilename(b.프로그램명);
+  const month = str(b.보고월);
+  return [program, '프로그램 기획·개발 결과보고서', month ? `${month}월` : ''].filter(Boolean).join(' ');
 }
 
-// photoBuffer(선택): 서식6 엔 사진칸이 없어 현재 무시(없는 BinData 키 → fillHwpx 안전 무시).
-async function generateGyeolgwaForm(body, photoBuffer) {
-  const replacements = buildGyeolgwaReplacements(body);
-  const imageReplacements =
-    photoBuffer && Buffer.isBuffer(photoBuffer)
-      ? { [PHOTO_BINDATA_KEY]: photoBuffer }
-      : {};
-  const buffer = await fillHwpx(TEMPLATE_PATH, replacements, imageReplacements);
-  const filenameBase = buildFilenameBase(body);
-  return { buffer, filenameBase };
+async function generateGyeolgwaForm(body, photos = {}) {
+  const { blocks, images, keepRows } = buildGyeolgwaBlocks(body, photos);
+  const transforms = [];
+  if (keepRows < MAX_ROWS) {
+    transforms.push((xml) => removeTableRows(xml, ROW_FIRST + keepRows, ROW_FIRST + MAX_ROWS - 1));
+  }
+  const buffer = await fillHwpx(TEMPLATE_PATH, buildGyeolgwaReplacements(body), {}, {
+    blocks,
+    styles: STYLES,
+    extraImages: images,
+    sectionTransforms: transforms,
+  });
+  return { buffer, filenameBase: buildFilenameBase(body) };
 }
 
 module.exports = {
   generateGyeolgwaForm,
+  buildGyeolgwaBlocks,
   buildGyeolgwaReplacements,
   buildFilenameBase,
-  normalizeCellText,
-  AI_CELL_CAPS,
-  PLACEHOLDER_KEYS,
-  PHOTO_BINDATA_KEY,
+  normalizeSections,
+  SECTIONS,
   TEMPLATE_PATH,
 };
