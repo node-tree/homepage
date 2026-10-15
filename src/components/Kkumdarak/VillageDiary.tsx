@@ -1069,7 +1069,7 @@ const VillageDiary: React.FC = () => {
       const desktopReachY = avatarStart + progress * desktopTravel + DESKTOP_AVATAR_REACH;
       for (let i = 0; i < cardEls.current.length; i += 1) {
         const dotY = cardTopAt(i) + 24;
-        const on = desktopReachY >= dotY;
+        const on = i === 0 || desktopReachY >= dotY;   // 첫 기록은 처음부터 — 첫 화면이 빈 길만 보이지 않게
         cardEls.current[i]?.classList.toggle('is-visible', on);
         dotEls.current[i]?.classList.toggle('is-visible', on);
         connectorEls.current[i]?.classList.toggle('is-visible', on);
@@ -1080,7 +1080,7 @@ const VillageDiary: React.FC = () => {
       const mobileReachY = MOBILE_AVATAR_START + progress * mobileAvatarTravel + MOBILE_AVATAR_REACH;
       for (let i = 0; i < mobileCardEls.current.length; i += 1) {
         const dotY = (mobileCardTops[i] ?? MOBILE_FIRST_CARD_Y + i * MOBILE_CARD_GAP) + MOBILE_DOT_Y_OFFSET;
-        const on = mobileReachY >= dotY;
+        const on = i === 0 || mobileReachY >= dotY;
         mobileCardEls.current[i]?.classList.toggle('is-visible', on);
         mobileDotEls.current[i]?.classList.toggle('is-visible', on);
         mobileConnectorEls.current[i]?.classList.toggle('is-visible', on);

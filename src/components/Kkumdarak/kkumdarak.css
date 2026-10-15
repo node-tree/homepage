@@ -796,7 +796,7 @@
   .kd-feed-item:nth-child(even) .kd-feed-photo { order: 0; border-left: none; }
   .kd-feed-photo { border-right: none; border-bottom: 3px solid var(--kd-ink); }
   .kd-section { padding: 86px 20px 64px; }
-  .kd-section::after { width: 58px; height: 43px; top: 26px; right: 18px; }   /* 2026-10-15: 92px이면 마을기록 설명 글을 덮어 제목 위 여백으로 */
+  .kd-section::after { width: 58px; height: 43px; top: 74px; right: 18px; }   /* 2026-10-15: 고정 헤더(66px) 아래·설명 글(≈140px) 위, 제목 오른쪽 */
 }
 
 /* reduced motion */
@@ -2083,7 +2083,7 @@
 }
 
 .kd-diary-desktop .diary-sub {
-  top: 130px;
+  top: 138px;
 }
 
 .diary-filters {
@@ -3495,7 +3495,7 @@
 }
 
 .kd-diary-desktop h1 {
-  display: none;
+  top: 66px;   /* 2026-10-15: 다른 페이지처럼 제목을 보인다(원래 숨김) */
 }
 
 @media (max-width: 900px) {

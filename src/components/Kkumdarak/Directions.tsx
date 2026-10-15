@@ -368,7 +368,7 @@ const MAP_BOARD_CSS = `
 .kd-map-desktop .figma-map-canvas .road-v3 { top: 226px; }
 .kd-map-desktop .figma-map-canvas .road-yellow { top: 378px; }
 .kd-map-desktop .figma-map-canvas .nonghyup { top: 168px; }
-.kd-map-desktop .figma-map-canvas .office { top: 134px; }
+.kd-map-desktop .figma-map-canvas .office { top: 134px; line-height: 1.25; text-align: center; }   /* 12px 여섯 자는 77px 원에서 꺾임 → 두 줄로 */
 .kd-map-desktop .figma-map-canvas .pin-saengsanso { top: 104px; }
 .kd-map-desktop .figma-map-canvas .pin-jumin { top: 262px; }
 /* 나침반 타일(원본 "지도" 타일 자리) */
@@ -585,7 +585,7 @@ const Directions: React.FC = () => {
           <i className="road road-gray road-v3" />
           <i className="road road-yellow" />
           <div className="nonghyup">장암농협</div>
-          <div className="office">장암면사무소</div>
+          <div className="office">장암<br />면사무소</div>
           <CharacterPin className="pin-saengsanso" src="char-09.svg" label="장암 생산소" sub="석동로29번길 3" />
           <CharacterPin className="pin-jumin" src="char-18.svg" label="주민자치센터" sub="석동로 16" />
           <CompassTile />

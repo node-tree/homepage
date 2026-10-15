@@ -44,7 +44,8 @@
 .kd-results-desc { margin: 4px 0 0; font-size: 14px; line-height: 1.65; color: #6b5f55; }
 .kd-results-cta { margin-top: auto; padding-top: 14px; font: 700 14px/1 'Gothic A1', sans-serif; color: #18120e; }
 
-.kd-results-card.is-pending > div:not(.kd-results-tools) { opacity: .55; box-shadow: none; border-style: dashed; }
+/* 준비 중: 점선 테두리·그림자 없음으로만 구별하고 글자는 제 진하기 그대로(흐리면 읽히지 않음) */
+.kd-results-card.is-pending > div:not(.kd-results-tools) { box-shadow: none; border-style: dashed; }
 .kd-results-card.is-pending .kd-results-cta { color: #9a8b7d; }
 
 @media (max-width: 640px) {
