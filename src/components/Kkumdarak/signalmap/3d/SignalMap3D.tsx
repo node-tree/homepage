@@ -12,6 +12,7 @@ import { useReducedMotion } from 'framer-motion';
 import { resetBoilers, boilTick, PAPER } from './ink3';
 import { buildCity } from './buyeoCity';
 import { SIGNALS, PLACES } from '../scene';
+import { PLACES39 } from '../places39';
 import { signalMapAPI } from '../../../../services/api';
 import { imagekitAdminAPI } from '../../../../services/imagekitAdminApi';
 import { useKkumdarakAuth } from '../../KkumdarakAuthContext';
@@ -56,6 +57,48 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const isPlace = useMemo(() => PLACES.some(pl => pl.id === openId), [openId]);
   const [dots, setDots] = useState([]);
   const apiRef = useRef(null);
+  // ── 모바일 고르기: 겹친 동그라미 후보 말풍선 + 목록 서랍(좁은 화면 전용, 데스크톱 무변경) ──
+  const [pick, setPick] = useState(null);            // { x, y, ids[] } | null
+  const [listOpen, setListOpen] = useState(false);
+  const [listTab, setListTab] = useState('place');
+  const PICK_R = 28;                                  // 이 거리(px) 안의 동그라미는 겹친 것으로 본다
+  const isNarrow = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches;
+  const nameOf = (id) => (overrides[id] && overrides[id].name) || ALL.find(s => s.id === id)?.name || id;
+  // 누른 지점 기준: 히트 영역(44px)이 겹쳐 위 버튼이 가로채도 가장 가까운 동그라미가 열린다.
+  //   좁은 화면에서 PICK_R 안에 둘 이상이면 카드 대신 후보 말풍선. 키보드(Enter)는 그 버튼 그대로.
+  const onDot = (d, e) => {
+    const r = wrapRef.current?.getBoundingClientRect();
+    const kb = !e || !r || (e.clientX === 0 && e.clientY === 0);
+    const px = kb ? d.x : e.clientX - r.left, py = kb ? d.y : e.clientY - r.top;
+    const ranked = dots
+      .map(o => ({ id: o.id, x: o.x, y: o.y, r: Math.hypot(o.x - px, o.y - py) }))
+      .sort((a, b) => a.r - b.r);
+    if (!kb && isNarrow()) {
+      const near = ranked.filter(o => o.r < PICK_R);
+      if (near.length > 1) { setOpenId(null); setPick({ x: near[0].x, y: near[0].y, ids: near.slice(0, 6).map(o => o.id) }); return; }
+    }
+    const id = kb ? d.id : (ranked[0] ? ranked[0].id : d.id);
+    setPick(null);
+    setOpenId(openId === id ? null : id);
+  };
+  const choose = (id, focus) => {
+    setPick(null); setListOpen(false); setOpenId(id);
+    if (focus) apiRef.current?.focus?.(id);
+  };
+  // 목록 — 장소는 포스터 범례 번호순으로 분류를 묶고, 군부대·추가 마커는 「그 밖」
+  const placeGroups = useMemo(() => {
+    const vis = (id) => !(overrides[id] && overrides[id].hidden);
+    const groups = [];
+    for (const p of PLACES39) {
+      if (!vis(p.id)) continue;
+      const g = groups[groups.length - 1];
+      if (g && g.cat === p.cat) g.items.push(p); else groups.push({ cat: p.cat, items: [p] });
+    }
+    const etc = [...PLACES.filter(p => !PLACES39.some(q => q.id === p.id)), ...customs]
+      .filter(p => vis(p.id)).map(p => ({ id: p.id, name: p.name }));
+    if (etc.length) groups.push({ cat: '그 밖', items: etc });
+    return groups;
+  }, [overrides, customs]);
 
   useEffect(() => { signalMapAPI.get().then(setOverrides); }, []);
   useEffect(() => {                                              // 카드 전환 시 편집 폼 리셋
@@ -208,7 +251,7 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       cam.updateProjectionMatrix();
     };
     apiRef.current = {
-      toView: (v) => { preset = v; target.az = VIEWS[v].az; target.el = VIEWS[v].el;
+      toView: (v) => { preset = v; freeFocus = false; target.az = VIEWS[v].az; target.el = VIEWS[v].el;
         // 프리셋 버튼 = 프레이밍 리셋(줌 + 중심). 사용자가 줌을 만졌으면 그대로 둔다.
         if (!userZoomed) { const c = startCam(v); target.zoom = c.zoom; target.cx = c.cx; target.cz = c.cz; } },
       addCustom: null, stopAdding: null,   // 컴포넌트 본문에서 채운다(오버라이드 상태 접근)
@@ -251,7 +294,11 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       return lo <= hi ? Math.max(lo, Math.min(hi, v))    // 뷰포트 < 콘텐츠 — 콘텐츠가 화면을 덮게
                       : Math.max(hi, Math.min(lo, v));   // 뷰포트 > 콘텐츠 — 콘텐츠가 화면 안에 다 들어오게
     };
+    // 목록에서 고른 곳으로 옮길 때만 클램프를 잠깐 푼다(세로 화면은 ② XZ 클램프가 보수적이라
+    //   가장자리 장소로 중심이 못 간다 — 실측). 다음 조작(드래그·휠·프리셋)에서 다시 걸리며 부드럽게 돌아온다.
+    let freeFocus = false;
     const clampPan = () => {
+      if (freeFocus) return;
       const az = target.az, ev = Math.max(0.06, target.el);
       contentBox(az);
       const S = S0 / target.zoom;
@@ -284,7 +331,9 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       clampPan();
     };
     const down = (e) => {
-      if (e.target.closest('.smap-card, .smap-btn, .smap-back, .s3d-views')) return;
+      if (e.target.closest('.smap-card, .smap-btn, .smap-back, .s3d-views, .s3d-pick')) return;
+      setPick(null);                                              // 지도를 만지면 겹침 말풍선은 닫는다
+      freeFocus = false;
       downPt = { x: e.clientX, y: e.clientY };
       el.setPointerCapture(e.pointerId);
       ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -341,6 +390,7 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const wheel = (e) => {
       e.preventDefault();
       userZoomed = true;
+      freeFocus = false;
       target.zoom = Math.max(zoomMin(), Math.min(4.5, target.zoom * Math.exp(-e.deltaY * 0.0014)));
       clampPan();                                                 // 줌이 바뀌면 뷰포트 반범위가 바뀐다 — 즉시 재클램프
     };
@@ -364,6 +414,18 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     // ── 루프: 카메라 추적 + 보일 + 액터 + LED + 버튼 투영 ──
     let lastBoil = 0, lastDots = 0, raf = 0, running = true;
     const sigMeta = signals.map(sg => ({ ...sg, blink: (SIGNALS.find(s => s.id === sg.id)?.blink) || [800, 800] }));
+    // 목록에서 고른 곳으로 카메라를 옮긴다 — 그 지면 점을 화면 가운데로, 줌은 최소 2.2배
+    apiRef.current.focus = (id) => {
+      const hit = sigMeta.find(s => s.id === id) || places.find(p => p.id === id) || customRef.current.find(c => c.id === id);
+      if (!hit) return;
+      userZoomed = true;
+      target.zoom = Math.max(target.zoom, 2.2);
+      // 좁은 화면은 카드가 아래를 덮는다 — 시선 중심을 카메라 쪽으로 당겨 고른 곳이 화면 위쪽에 오게
+      const S = S0 / target.zoom, shift = isNarrow() ? 0.45 * S / Math.max(0.2, Math.sin(target.el)) : 0;
+      target.cx = hit.pos.x + Math.sin(target.az) * shift;
+      target.cz = hit.pos.z + Math.cos(target.az) * shift;
+      freeFocus = true;
+    };
     const v3 = new THREE.Vector3();
     const frame = (t) => {
       if (!running) return;
@@ -432,6 +494,8 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         {Object.entries(VIEWS).map(([k, v]) => (
           <button key={k} className={view === k ? 'on' : ''} onClick={() => selectView(k)}>{v.label}</button>
         ))}
+        <button className={`s3d-list-btn${listOpen ? ' on' : ''}`}
+          onClick={() => { setPick(null); setOpenId(null); setListOpen(o => !o); }}>목록</button>
         {authed && (
           <button className={adding ? 'on' : ''} onClick={() => setAdding(a => !a)}>
             {adding ? '지도를 클릭해 위치 지정…' : '+ 마커 추가'}
@@ -443,10 +507,54 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           key={d.id}
           className={`smap-btn s3d-btn${d.place ? ' s3d-btn--place' : ''}${openId === d.id ? ' is-open' : ''}`}
           style={{ left: d.x, top: d.y, '--led': `#${d.color.toString(16).padStart(6, '0')}` } as React.CSSProperties}
-          onClick={() => setOpenId(openId === d.id ? null : d.id)}
+          onClick={(e) => onDot(d, e)}
           aria-label={`${d.place ? '장소' : '신호'}: ${ALL.find(s => s.id === d.id)?.name}`}
         />
       ))}
+      {pick && (() => {
+        const W2 = wrapRef.current?.clientWidth || 390;
+        const below = pick.y < 230;                            // 위가 좁으면 손가락 아래로
+        const left = Math.max(96, Math.min(W2 - 96, pick.x));
+        return (
+          <div className={`s3d-pick${below ? ' s3d-pick--below' : ''}`} style={{ left, top: pick.y }} role="menu"
+            aria-label="겹친 동그라미 고르기">
+            {pick.ids.map(id => (
+              <button key={id} role="menuitem" onClick={() => choose(id, false)}>{nameOf(id)}</button>
+            ))}
+          </div>
+        );
+      })()}
+      {listOpen && (
+        <aside className="smap-card s3d-list" role="dialog" aria-label="신호·장소 목록">
+          <div className="smap-card-head">
+            <button className="smap-card-close" onClick={() => setListOpen(false)} aria-label="닫기">✕</button>
+            <div className="s3d-list-tabs" role="tablist">
+              <button role="tab" aria-selected={listTab === 'place'} className={listTab === 'place' ? 'on' : ''}
+                onClick={() => setListTab('place')}>장소 {PLACES39.filter(p => !(overrides[p.id] && overrides[p.id].hidden)).length}</button>
+              <button role="tab" aria-selected={listTab === 'signal'} className={listTab === 'signal' ? 'on' : ''}
+                onClick={() => setListTab('signal')}>신호 {SIGNALS.filter(s => !(overrides[s.id] && overrides[s.id].hidden)).length}</button>
+            </div>
+          </div>
+          {listTab === 'place' ? placeGroups.map(g => (
+            <section key={g.cat}>
+              <h3>{g.cat}</h3>
+              <ul>
+                {g.items.map(p => (
+                  <li key={p.id}><button onClick={() => choose(p.id, true)}>
+                    {p.n ? <span className="s3d-list-n">{p.n}</span> : null}{nameOf(p.id)}
+                  </button></li>
+                ))}
+              </ul>
+            </section>
+          )) : (
+            <ul>
+              {SIGNALS.filter(s => !(overrides[s.id] && overrides[s.id].hidden)).map(s => (
+                <li key={s.id}><button onClick={() => choose(s.id, true)}>{nameOf(s.id)}</button></li>
+              ))}
+            </ul>
+          )}
+        </aside>
+      )}
       <footer className="smap-legend">
         <span className="smap-legend-dot" style={{ background: '#1f1e1c' }} /> 동그라미 = 신호·장소 — 누르면 소개와 사진
         <em>드래그로 도시를 돌려 보세요</em>

@@ -29,8 +29,44 @@
 /* 장소(부흥여지도 39곳)는 신호(작품) 아래 층 — 겹치면 신호가 눌린다 */
 .s3d-btn--place { z-index: 3; }
 .s3d-btn--place.is-open { z-index: 5; }
+/* 모바일 고르기 — 목록 버튼(좁은 화면만) · 겹친 동그라미 말풍선 · 목록 서랍 */
+.s3d-views .s3d-list-btn { display: none; }
+.s3d-pick {
+  position: absolute; z-index: 7;
+  transform: translate(-50%, calc(-100% - 18px));
+  display: flex; flex-direction: column;
+  min-width: 150px; padding: 5px;
+  background: #fcfbf9; border: 1.5px solid #1f1e1c; border-radius: 9px;
+  box-shadow: 6px 7px 0 rgba(31, 30, 28, 0.08);
+}
+.s3d-pick--below { transform: translate(-50%, 18px); }
+.s3d-pick button {
+  font: 700 15px/1.25 'Gothic A1', sans-serif; color: #1f1e1c;
+  background: none; border: 0; border-radius: 6px;
+  padding: 10px 12px; min-height: 42px; text-align: left; white-space: nowrap; cursor: pointer;
+}
+.s3d-pick button + button { border-top: 1px solid rgba(31, 30, 28, 0.12); border-radius: 0; }
+.s3d-pick button:active { background: rgba(31, 30, 28, 0.07); }
+.s3d-list-tabs { display: flex; gap: 6px; }
+.s3d-list-tabs button {
+  font: 700 14px/1 'Gothic A1', sans-serif;
+  color: #8c8a82; background: #fcfbf9;
+  border: 1.5px solid #1f1e1c; border-radius: 9px;
+  padding: 8px 14px; cursor: pointer;
+}
+.s3d-list-tabs button.on { color: #fcfbf9; background: #1f1e1c; }
+.s3d-list h3 { margin: 16px 0 2px; font: 700 13px/1.2 'Gothic A1', sans-serif; color: #8c8a82; }
+.s3d-list ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; }
+.s3d-list section ul { margin-top: 0; }
+.s3d-list li button {
+  width: 100%; min-height: 42px; padding: 8px 0;
+  font: 500 15px/1.3 'Gothic A1', sans-serif; color: #1f1e1c; text-align: left;
+  background: none; border: 0; cursor: pointer;
+}
+.s3d-list-n { display: inline-block; min-width: 24px; font-weight: 700; color: #8c8a82; }
 @media (max-width: 760px) {
   .s3d-views { top: auto; bottom: 90px; left: 20px; flex-direction: row; }
+  .s3d-views .s3d-list-btn { display: block; }
   /* 좁은 화면: 장소 동그라미만 한 단계 작게(확대하면 풀림) */
   .s3d-btn--place { width: 30px; height: 30px; }
   .s3d-btn--place::after {
