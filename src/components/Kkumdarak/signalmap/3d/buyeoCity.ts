@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { inkLine, grayLine, cyl, ico, at, buildTrack, trackAt, inked, mergeStatics } from './ink3';
 import { BUILDERS } from './models3';
+import { PLACES39 } from '../places39';
 
 // 배치도(1440×1040) px → 월드: /8, 중심 원점
 const W = (px, py) => [px / 8 - 90, py / 8 - 65];
@@ -581,15 +582,25 @@ export function buildCity(scene) {
     return { id, obj: g, bulb, color, pos: new THREE.Vector3(x, h, z) };
   });
 
-  // ── 장소 앵커: 박물관·군부대 — 3D 표지판 없이 건물 위 높이 뜬 검정 원(DOM) ──
-  const PLACES_3D = [
-    { id: 'museum', px: [640, 180], h: 7 },
-    { id: 'military', px: [168, 946], h: 6.4 },
-  ];
-  const places = PLACES_3D.map(({ id, px, h }) => {
-    const [x, z] = W(...px);
-    return { id, pos: new THREE.Vector3(x, h, z) };
+  // ── 장소 앵커: 부흥여지도 39곳 + 군부대 — 3D 표지판 없이 건물 위에 뜬 검정 원(DOM) ──
+  //   39곳은 put(…, label) 이름표가 같은 모형들의 묶음 상자 위(여러 채면 가운데), 군부대만 고정 px.
+  scene.updateMatrixWorld(true);
+  const byLabel = {};
+  for (const { name, obj } of placed) (byLabel[name] = byLabel[name] || []).push(obj);
+  const places = PLACES39.map(({ id, label, pos }) => {
+    const objs = byLabel[label];
+    if (objs && objs.length) {
+      const box = new THREE.Box3();
+      objs.forEach(o => box.expandByObject(o));
+      return { id, pos: new THREE.Vector3((box.min.x + box.max.x) / 2, box.max.y + 1.1, (box.min.z + box.max.z) / 2) };
+    }
+    const [x, z] = W(...pos);
+    return { id, pos: new THREE.Vector3(x, 4, z) };
   });
+  {
+    const [x, z] = W(168, 946);
+    places.push({ id: 'military', pos: new THREE.Vector3(x, 6.4, z) });
+  }
 
   // ── 프레이밍용 콘텐츠 경계 ──
   //   배치물 world AABB + 마커 dot 위치. 카메라가 이 점들을 프레임 안에 넣도록 줌을 산출한다.

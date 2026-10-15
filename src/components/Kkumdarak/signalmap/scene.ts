@@ -6,6 +6,7 @@
 //     강사·참여자 확인 후 여기만 채우면 카드에 나타난다.
 // ═══════════════════════════════════════════════════════════════════════
 import type { Pt } from './wobble';
+import { PLACES39 } from './places39';
 
 export const SCENE_W = 1440;
 export const SCENE_H = 900;
@@ -174,7 +175,12 @@ export const SIGNALS: Signal[] = [
 ];
 
 // ── 장소(소개 전용 마커) — 신호(참여자 작품)와 구별. 콘텐츠 후입력 동일 ──
+//   부흥여지도 39곳(places39.ts) + 군부대. 옛 'museum'(관리자 숨김)은 39곳의 국립부여박물관으로 대체.
+//   pos는 3D 배치도 px — 2D 지도(SignalMap)는 PLACES를 쓰지 않는다.
 export const PLACES: Signal[] = [
-  { id: 'museum', name: '부여 박물관', pos: [640, 180], blink: [0, 1], draft: true },
+  ...PLACES39.map(p => ({
+    id: p.id, name: p.name, pos: p.pos, blink: [0, 1] as [number, number],
+    draft: !p.story, story: p.story || undefined,
+  })),
   { id: 'military', name: '군부대', pos: [200, 940], blink: [0, 1], draft: true },
 ];

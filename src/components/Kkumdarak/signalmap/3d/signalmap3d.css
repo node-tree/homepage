@@ -26,8 +26,17 @@
   box-shadow: 0 0 0 2px #1f1e1c, 0 0 0 6px rgba(31, 30, 28, 0.07);
 }
 .s3d-btn.is-open::after { box-shadow: 0 0 0 2px #1f1e1c, 0 0 0 9px rgba(31, 30, 28, 0.16); }
+/* 장소(부흥여지도 39곳)는 신호(작품) 아래 층 — 겹치면 신호가 눌린다 */
+.s3d-btn--place { z-index: 3; }
+.s3d-btn--place.is-open { z-index: 5; }
 @media (max-width: 760px) {
   .s3d-views { top: auto; bottom: 90px; left: 20px; flex-direction: row; }
+  /* 좁은 화면: 장소 동그라미만 한 단계 작게(확대하면 풀림) */
+  .s3d-btn--place { width: 30px; height: 30px; }
+  .s3d-btn--place::after {
+    width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-width: 2px;
+    box-shadow: 0 0 0 1.5px #1f1e1c, 0 0 0 4px rgba(31, 30, 28, 0.07);
+  }
 }
 
 
