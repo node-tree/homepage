@@ -14,7 +14,8 @@ type Period = { sm: number; sd: number; em: number; ed: number };
 const PERIODS: Array<{ name: string; period: Period; color: string; mobileColor: string }> = [
   { name: '장암 책정',      period: { sm: 5, sd: 23, em: 8, ed: 22 },  color: '#e4352b', mobileColor: '#e4352b' },
   { name: '기억순환 정류장', period: { sm: 6, sd: 18, em: 7, ed: 31 },  color: '#3ca03c', mobileColor: '#3ca03c' },
-  { name: '손의 기억',      period: { sm: 7, sd: 1,  em: 10, ed: 31 }, color: '#f2a0c0', mobileColor: '#f2a0c0' },
+  { name: '손의 기억',      period: { sm: 7, sd: 6,  em: 7, ed: 17 },  color: '#f2a0c0', mobileColor: '#f2a0c0' },
+  { name: '땅을 달래는 노래', period: { sm: 9, sd: 28, em: 10, ed: 17 }, color: '#1fb2d0', mobileColor: '#1fb2d0' },
   { name: '소리일기',       period: { sm: 6, sd: 23, em: 7, ed: 28 },  color: '#f5c518', mobileColor: '#f5c518' },
   { name: '풍경일기',       period: { sm: 5, sd: 23, em: 7, ed: 18 },  color: '#2d5be3', mobileColor: '#2d5be3' },
   { name: '마을의 신호',    period: { sm: 7, sd: 1,  em: 9, ed: 2 },   color: '#1b55e2', mobileColor: '#1b55e2' },

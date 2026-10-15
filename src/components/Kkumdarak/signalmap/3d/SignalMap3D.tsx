@@ -58,6 +58,7 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [dots, setDots] = useState([]);
   const apiRef = useRef(null);
   // ── 모바일 고르기: 겹친 동그라미 후보 말풍선 + 목록 서랍(좁은 화면 전용, 데스크톱 무변경) ──
+  const [glFailed, setGlFailed] = useState(false);   // WebGL을 못 열면 안내로 대체
   const [pick, setPick] = useState(null);            // { x, y, ids[] } | null
   const [listOpen, setListOpen] = useState(false);
   const [listTab, setListTab] = useState('place');
@@ -185,7 +186,11 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    // WebGL을 못 여는 기기(오래된 폰 · 컨텍스트 한도 · 저전력)에서 예외가 그대로 나가면 앱 전체가 흰 화면이 된다.
+    //   → 잡아서 안내 + 평면 지도 링크로(머리글·뒤로 가기는 그대로 남는다).
+    let renderer;
+    try { renderer = new THREE.WebGLRenderer({ antialias: true }); }
+    catch (e) { setGlFailed(true); return undefined; }
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     renderer.setSize(el.clientWidth, el.clientHeight);
     el.prepend(renderer.domElement);
@@ -490,6 +495,12 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         <h1>마을의 신호</h1>
       </header>
       <button className="smap-back" onClick={onBack}>← 이소 홈으로</button>
+      {glFailed && (
+        <div className="s3d-nogl" role="alert">
+          <p>이 기기에서는 3D 지도를 열 수 없어요.</p>
+          <a href="#signal-map">평면 지도로 보기</a>
+        </div>
+      )}
       <nav className="s3d-views">
         {Object.entries(VIEWS).map(([k, v]) => (
           <button key={k} className={view === k ? 'on' : ''} onClick={() => selectView(k)}>{v.label}</button>

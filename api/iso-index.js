@@ -21,6 +21,8 @@ const ISO = {
     '작은 변화와 이야기를 기록하고 사람과 사람을 잇습니다.',
   url: 'https://isoartlab.com/',
   image: 'https://isoartlab.com/iso-og-v2.png',
+  imageAlt: '문화예술학교 이소異素 · 충남 부여군 장암면',
+  keywords: '이소, 異素, isoartlab, 꿈다락 문화예술학교, 장암면, 부여, 문화예술교육, 노드트리, 장암면 주민자치회',
 };
 
 // build/index.html 후보 경로(@vercel/node 번들 / 로컬 dev 양쪽 대응).
@@ -97,6 +99,14 @@ function injectIsoOg(html) {
   out = replaceMetaByName(out, 'twitter:title', ISO.title);
   out = replaceMetaByName(out, 'twitter:description', ISO.description);
   out = replaceMetaByName(out, 'twitter:image', ISO.image);
+  // 2026-10-15 점검: 이미지 설명·키워드·파비콘이 nodetree 값(「陀羅尼 — NODE TREE」 등)으로 남아 있었다.
+  out = replaceMetaByProperty(out, 'og:image:alt', ISO.imageAlt);
+  out = replaceMetaByName(out, 'twitter:image:alt', ISO.imageAlt);
+  out = replaceMetaByName(out, 'keywords', ISO.keywords);
+  out = out.replace(/<link([^>]*?)rel="icon"([^>]*?)href="[^"]*"([^>]*?)\/?>/gi, '');
+  out = out.replace(/<link([^>]*?)rel="apple-touch-icon"([^>]*?)href="[^"]*"([^>]*?)\/?>/gi, '');
+  out = out.replace(/<\/head>/i,
+    `<link rel="icon" type="image/png" href="/iso-favicon.png"/><link rel="apple-touch-icon" href="/iso-favicon.png"/></head>`);
   // canonical 도 iso 로(있으면 교체).
   out = out.replace(
     /<link([^>]*?)rel="canonical"([^>]*?)href="[^"]*"([^>]*?)\/?>/i,

@@ -36,7 +36,7 @@
 .kd-results-card:has(.kd-results-tools) > div:not(.kd-results-tools) { padding-top: 44px; }
 .kd-results-medium {
   align-self: flex-start;
-  font: 700 11px/1 'Space Mono', monospace; letter-spacing: .1em;
+  font: 700 12px/1 'Space Mono', monospace; letter-spacing: .1em;
   color: #d64f1e; border: 1.5px solid #d64f1e; border-radius: 5px; padding: 4px 8px;
 }
 .kd-results-card h3 { margin: 8px 0 0; font-size: 20px; font-weight: 800; color: #18120e; }

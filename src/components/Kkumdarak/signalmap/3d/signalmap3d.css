@@ -29,6 +29,19 @@
 /* 장소(부흥여지도 39곳)는 신호(작품) 아래 층 — 겹치면 신호가 눌린다 */
 .s3d-btn--place { z-index: 3; }
 .s3d-btn--place.is-open { z-index: 5; }
+/* WebGL 실패 안내 */
+.s3d-nogl {
+  position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%);
+  width: min(320px, calc(100% - 40px)); padding: 22px 24px; text-align: center;
+  background: #fcfbf9; border: 1.5px solid #1f1e1c; border-radius: 12px;
+  font: 500 16px/1.5 'Gothic A1', sans-serif; color: #1f1e1c;
+}
+.s3d-nogl p { margin: 0 0 14px; }
+.s3d-nogl a {
+  display: inline-block; font: 700 14px/1 'Gothic A1', sans-serif; color: #fcfbf9; background: #1f1e1c;
+  border-radius: 9px; padding: 10px 16px; text-decoration: none;
+}
+
 /* 모바일 고르기 — 목록 버튼(좁은 화면만) · 겹친 동그라미 말풍선 · 목록 서랍 */
 .s3d-views .s3d-list-btn { display: none; }
 .s3d-pick {

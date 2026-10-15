@@ -796,7 +796,7 @@
   .kd-feed-item:nth-child(even) .kd-feed-photo { order: 0; border-left: none; }
   .kd-feed-photo { border-right: none; border-bottom: 3px solid var(--kd-ink); }
   .kd-section { padding: 86px 20px 64px; }
-  .kd-section::after { width: 70px; height: 52px; top: 92px; right: 18px; }
+  .kd-section::after { width: 58px; height: 43px; top: 26px; right: 18px; }   /* 2026-10-15: 92px이면 마을기록 설명 글을 덮어 제목 위 여백으로 */
 }
 
 /* reduced motion */
@@ -1870,7 +1870,7 @@
 /* ── Figma exact import: 일정 ──────────────────────────────── */
 .kd-figma-schedule {
   position: relative;
-  min-height: 860px;
+  min-height: 928px;
   padding-top: 80px;
   background: var(--kd-figma-paper);
   color: var(--kd-figma-ink);
@@ -1880,7 +1880,7 @@
 .kd-schedule-desktop {
   position: relative;
   width: 1440px;
-  height: 800px;
+  height: 868px;
   margin: 0 auto;
 }
 
@@ -1912,7 +1912,7 @@
   position: absolute;
   top: 220px;
   width: 2px;
-  height: 470px;
+  height: 538px;
   border-radius: 99px;
   background: var(--kd-figma-ink);
 }
@@ -1963,13 +1963,13 @@
 }
 
 .festival-label {
-  top: 658px;
+  top: 726px;
 }
 
 .schedule-fest-date {
   position: absolute;
   left: 1365px;
-  top: 673px;
+  top: 741px;
   z-index: 2;
   font-family: var(--kd-font-latin);
   font-size: 14px;
@@ -1979,7 +1979,7 @@
 .schedule-character {
   position: absolute;
   left: 1332px;
-  top: 552px;
+  top: 620px;
   z-index: 2;
   width: 87px;
   height: 111px;
@@ -2015,7 +2015,7 @@
 .schedule-sun {
   position: absolute;
   left: 1324px;
-  top: 645px;
+  top: 713px;
   z-index: 1;
   width: 104px;
   height: 78px;
@@ -2511,7 +2511,7 @@
   box-shadow: 3px 3px 0 #1a1a1a;
   transform: rotate(-45deg);
   font-family: var(--kd-font-body);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -2531,7 +2531,7 @@
   border-radius: 50%;
   background: #f18bb1;
   font-family: var(--kd-font-body);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -2580,7 +2580,7 @@
   background: #fff8e3;
   box-shadow: 2px 2px 0 #1a1a1a;
   font-family: var(--kd-font-body);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   line-height: 1.15;
   text-align: center;
@@ -3515,7 +3515,7 @@
     --kd-mp-top: 128px;   /* .mobile-program-list top */
     --kd-mp-card: 234px;  /* 카드 1장 최대 높이(기간 줄바꿈 여유 포함) */
     --kd-mp-gap: 14px;    /* .mobile-program-list gap */
-    --kd-mp-count: 7;     /* 카드 수(프로그램 6 + 축제 1) */
+    --kd-mp-count: 8;     /* 카드 수(프로그램 7 + 축제 1) — 2026-10 〈땅을 달래는 노래〉 추가 */
     --kd-mp-pad: 56px;    /* 하단 여백 */
     min-height: calc(
       var(--kd-mp-top, 128px)
@@ -3526,7 +3526,7 @@
   }
 
   .kd-figma-schedule {
-    min-height: 716px;
+    min-height: 780px;
   }
 
   .kd-program-desktop,
@@ -3553,7 +3553,7 @@
     display: block;
     position: relative;
     width: 390px;
-    height: 716px;
+    height: 780px;
     margin: 0 auto;
   }
 
@@ -3781,7 +3781,7 @@
   .kd-schedule-mobile .schedule-line {
     top: 185px;
     width: 0;
-    height: 442px;
+    height: 506px;
     background: transparent;
     border-left: 1px dashed rgba(0, 0, 0, 0.25);
     opacity: 1;
@@ -3810,13 +3810,13 @@
 
   /* polished 2026-05: tighter festival row grouping */
   .kd-schedule-mobile .festival-label {
-    top: 596px;
+    top: 660px;
     font-weight: 800;
   }
 
   .kd-schedule-mobile .schedule-character {
     left: 330px;
-    top: 552px;
+    top: 616px;
     width: 50px;
     height: 64px;
     z-index: 3;
@@ -3824,7 +3824,7 @@
 
   .kd-schedule-mobile .schedule-fest-date {
     left: 350px;
-    top: 622px;
+    top: 686px;
     font-size: 12px;
     font-weight: 800;
     z-index: 4;
@@ -3832,7 +3832,7 @@
 
   .kd-schedule-mobile .schedule-sun {
     left: 322px;
-    top: 608px;
+    top: 672px;
     width: 62px;
     height: 46px;
     filter: drop-shadow(2px 2px 0 #1a1a1a);
@@ -4093,7 +4093,7 @@
     border-radius: 6px;
     box-shadow: 2px 2px 0 #1a1a1a;
     background: #f18bb1;
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .kd-map-mobile .office {
@@ -4102,7 +4102,7 @@
     width: 50px;
     height: 50px;
     border-width: 2px;
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .kd-map-mobile .map-character-pin {
@@ -4130,7 +4130,7 @@
     padding: 2px 5px;
     border-width: 1.8px;
     box-shadow: 1.5px 1.5px 0 #1a1a1a;
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .kd-map-mobile .map-puzzle {
@@ -4239,7 +4239,7 @@
     top: 150px;
     width: 86px;
     height: 22px;
-    font-size: 10px;
+    font-size: 12px;
     border-width: 1.8px;
     transform: translate(-1px, -1px);
   }
@@ -4253,7 +4253,7 @@
     width: 64px;
     height: 46px;
     border-width: 2px;
-    font-size: 11px;
+    font-size: 12px;
     z-index: 2;
   }
 
@@ -4883,8 +4883,8 @@
   .kd-intro-desktop { transform: scale(0.71); transform-origin: top left; margin: 0; }
   .kd-intro-mobile { display: none; }
 
-  .kd-figma-schedule { overflow: hidden; padding-top: 80px; min-height: 648px; }
-  .kd-schedule-desktop { transform: scale(0.71); transform-origin: top left; height: 568px; }
+  .kd-figma-schedule { overflow: hidden; padding-top: 80px; min-height: 696px; }
+  .kd-schedule-desktop { transform: scale(0.71); transform-origin: top left; height: 616px; }
   .kd-schedule-mobile { display: none; }
 
   .kd-figma-programs { overflow: hidden; padding-top: 80px; min-height: 1507px; }
@@ -4911,8 +4911,8 @@
   .kd-intro-desktop { transform: scale(0.625); transform-origin: top left; margin: 0; }
   .kd-intro-mobile { display: none; }
 
-  .kd-figma-schedule { overflow: hidden; padding-top: 80px; min-height: 580px; }
-  .kd-schedule-desktop { transform: scale(0.625); transform-origin: top left; height: 500px; }
+  .kd-figma-schedule { overflow: hidden; padding-top: 80px; min-height: 623px; }
+  .kd-schedule-desktop { transform: scale(0.625); transform-origin: top left; height: 543px; }
   .kd-schedule-mobile { display: none; }
 
   .kd-figma-programs { overflow: hidden; padding-top: 80px; min-height: 1337px; }
@@ -4944,7 +4944,7 @@
 
   /* section 높이 조정 — scale 후 실제 점유 공간 */
   .kd-figma-programs { min-height: calc(1120px * (100vw / 390)); }
-  .kd-figma-schedule { min-height: calc(716px * (100vw / 390)); }
+  .kd-figma-schedule { min-height: calc(780px * (100vw / 390)); }
   .kd-figma-diary { min-height: calc(1620px * (100vw / 390)); }
   .kd-figma-map { min-height: calc(904px * (100vw / 390)); }
 
@@ -5479,7 +5479,7 @@
   }
 
   .kd-diary-mobile .diary-copy time {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   /* 모바일에서 중복 이미지 숨김 */
@@ -6010,7 +6010,7 @@
 .mobile-program-title-row h2 { min-width: 0; }
 .program-status-badge.is-mobile {
   padding: 2px 9px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 /* 태블릿 스케일 변형(960~1023, 901~959)에서도 편집 모드는 높이 고정을 풀어준다.
@@ -6195,4 +6195,28 @@
 
 @media (prefers-reduced-motion: reduce) {
   .kd-prog-skel { animation: none; }
+}
+
+/* ═══ 2026-10-15 점검: 901~1439px에서 1440 고정 판이 오른쪽으로 잘리던 문제 ═══
+   예전엔 960~1023(0.71)·901~959(0.625)만 transform 으로 줄여 1024~1439(1280·1366 노트북)는 잘렸다.
+   → 이 구간 전체를 화면 폭 비례 zoom(--kd-stage-zoom = clientWidth/1440, Kkumdarak.tsx)으로.
+   zoom 은 레이아웃 크기까지 줄여 판·섹션 높이가 함께 따라온다(옛 transform + 고정 높이를 덮어씀). */
+@media (min-width: 901px) and (max-width: 1439px) {
+  .kkumdarak .kd-intro-desktop,
+  .kkumdarak .kd-program-desktop,
+  .kkumdarak .kd-schedule-desktop,
+  .kkumdarak .kd-diary-desktop,
+  .kkumdarak .kd-map-desktop {
+    zoom: var(--kd-stage-zoom, 1);
+    transform: none;
+    margin: 0 auto;
+  }
+  .kkumdarak .kd-program-desktop { height: 2010px; }
+  .kkumdarak .kd-schedule-desktop { height: 868px; }
+  .kkumdarak .kd-map-desktop { height: 1154px; }   /* 1024+ 보드 높이(Directions.tsx)와 같게 — 901~1023에서 약도 아래가 잘리지 않게 */
+  .kkumdarak .kd-figma-intro,
+  .kkumdarak .kd-figma-programs,
+  .kkumdarak .kd-figma-schedule,
+  .kkumdarak .kd-figma-diary,
+  .kkumdarak .kd-figma-map { min-height: 0; }
 }

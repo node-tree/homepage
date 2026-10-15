@@ -351,7 +351,7 @@ const MAP_BOARD_CSS = `
 .kd-map-desktop .map-card-row { left: 248px; top: 800px; width: 944px; gap: 22px; z-index: 1; }
 
 /* 데스크톱 약도 라벨 보조주소 글자 */
-.kd-map-desktop .map-pin-label .pin-sub { font-size: 9px; }
+.kd-map-desktop .map-pin-label .pin-sub { font-size: 12px; }
 
 /* 보드를 담도록 데스크톱 캔버스/섹션 높이 확장 — 1024px+ 한정 */
 @media (min-width: 1024px) {
@@ -415,7 +415,7 @@ const MAP_BOARD_CSS = `
     left: 24px;
     top: 512px;
     width: 342px;
-    font-size: 11px;
+    font-size: 12px;
     gap: 7px;
   }
   .kd-map-mobile .kd-legend-item { padding: 4px 10px 4px 7px; }
@@ -444,7 +444,7 @@ const MAP_BOARD_CSS = `
   .kd-map-mobile .figma-map-canvas .mountain-tile {
     left: auto; right: 6px; top: auto; bottom: 6px; width: 50px; height: 50px;
   }
-  .kd-map-mobile .mountain-tile .nlabel { font-size: 8px; top: 5%; }
+  .kd-map-mobile .mountain-tile .nlabel { font-size: 11px; top: 5%; }
   .kd-map-mobile .mountain-tile .needle.n { border-bottom-width: 12px; border-left-width: 5px; border-right-width: 5px; }
   .kd-map-mobile .mountain-tile .needle.s { border-top-width: 12px; border-left-width: 5px; border-right-width: 5px; }
   .kd-map-mobile .map-pin-label .pin-sub { display: none; }

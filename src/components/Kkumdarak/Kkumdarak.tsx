@@ -396,6 +396,17 @@ const Kkumdarak: React.FC = () => {
   //   여기서 인증 불필요한 공개 GET(/api/village-diary)을 fire-and-forget 으로 1회
   //   쏴 두면, 콜드스타트가 사용자가 페이지를 읽고 로그인하는 동안 소진된다.
   //   에러는 조용히 무시(워밍업 자체가 목적이라 응답 데이터는 쓰지 않는다).
+  // ── 1440 고정 판 맞춤 비율 (2026-10-15 점검) ───────────────────────
+  //   901~1439px(1280·1366 노트북, 태블릿 가로)에서 1440px 판이 오른쪽으로 잘렸다.
+  //   CSS(kkumdarak.css 끝)가 이 비율로 판에 zoom 을 건다. 스크롤바를 뺀 clientWidth 기준.
+  useEffect(() => {
+    const root = document.documentElement;
+    const setZoom = () => root.style.setProperty('--kd-stage-zoom', String(Math.min(1, root.clientWidth / 1440)));
+    setZoom();
+    window.addEventListener('resize', setZoom);
+    return () => { window.removeEventListener('resize', setZoom); root.style.removeProperty('--kd-stage-zoom'); };
+  }, []);
+
   const warmedUpRef = useRef(false);
   useEffect(() => {
     if (warmedUpRef.current) return; // StrictMode 이중 마운트 등 중복 발사 방지

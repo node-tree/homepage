@@ -137,7 +137,7 @@
   display: inline-flex;
   align-items: center;
   font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.04em;
   padding: 2px 9px;
@@ -546,7 +546,7 @@
   display: inline-flex;
   align-items: center;
   font-family: var(--kd-font-head, 'Gothic A1', sans-serif);
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.04em;
   padding: 2px 8px;
