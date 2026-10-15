@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { useReducedMotion } from 'framer-motion';
 import { resetBoilers, boilTick, PAPER } from './ink3';
 import { buildCity } from './buyeoCity';
+import { GEO } from './buyeoGeo';
 import { SIGNALS, PLACES } from '../scene';
 import { PLACES39 } from '../places39';
 import { signalMapAPI } from '../../../../services/api';
@@ -204,12 +205,16 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     //   FIT_PAD = fit 대상 점이 프레임에서 떨어질 최소 거리(px). dot은 점이 아니라 지름 18px 원 +
     //   반경 15px 헤일로다 — 요구치 24px를 헤일로 기준으로도 만족시키려면 40이 필요하다(실측).
     // 프리셋 뷰에서 도시(배치물 AABB + 마커 dot)가 화면축으로 갖는 최대 반경(월드).
+    // 실제 지리판(2026-10-15)은 콘텐츠 중심이 원점이 아니다 → 배치물 AABB 가운데를 맞춤 중심으로.
+    const FC = (() => { let a = Infinity, b = -Infinity, c = Infinity, d = -Infinity;
+      for (const [x0, , z0, x1, , z1] of fit) { a = Math.min(a, x0); b = Math.max(b, x1); c = Math.min(c, z0); d = Math.max(d, z1); }
+      return [(a + b) / 2, (c + d) / 2]; })();
     const fitRadius = (v) => {
       const { az, el: ev } = VIEWS[v] || VIEWS.iso;
       const ca = Math.cos(az), sa = Math.sin(az), ce = Math.cos(ev), se = Math.sin(ev);
       let hx = 1, hy = 1;
       for (const [x0, y0, z0, x1, y1, z1] of fit) for (let i = 0; i < 8; i++) {
-        const x = (i & 1) ? x1 : x0, y = (i & 2) ? y1 : y0, z = (i & 4) ? z1 : z0;
+        const x = ((i & 1) ? x1 : x0) - FC[0], y = (i & 2) ? y1 : y0, z = ((i & 4) ? z1 : z0) - FC[1];
         const sx = x * ca - z * sa, sy = y * ce - se * (x * sa + z * ca);
         if (Math.abs(sx) > hx) hx = Math.abs(sx);
         if (Math.abs(sy) > hy) hy = Math.abs(sy);
@@ -227,13 +232,15 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     //   → 도시 투영 높이가 뷰포트의 PORTRAIT_H가 되는 줌을 하한으로 두고, 중앙 블록을 잡아
     //     나머지는 팬으로 탐색하게 한다. 가로 화면·평면도·입면은 손대지 않는다(fit 그대로).
     //   PORTRAIT_H 줌은 뷰포트 높이와 무관하다: zoom = PORTRAIT_H · S0 / hy.
-    const PORTRAIT_H = 0.55;
-    const CENTER = [880 / 8 - 90, 560 / 8 - 65];   // 중앙 블록(학교·운동장 세트) 배치도 px 880,560
+    //   실제 지리판(2026-10-15): 세로 첫 화면은 장암 신호 군집(Codex 제안)을 화면 반폭 PORTRAIT_HALF 월드로 잡는다.
+    const PORTRAIT_HALF = 30;
+    const CENTER = GEO.portraitCenter;
     const startCam = (v) => {
       const z = fitZoom(v);
-      if (v !== 'iso' || el.clientWidth >= el.clientHeight) return { zoom: z, cx: 0, cz: 0 };
-      const floor = clampZoom(PORTRAIT_H * S0 / fitRadius(v)[1]);
-      return floor > z ? { zoom: floor, cx: CENTER[0], cz: CENTER[1] } : { zoom: z, cx: 0, cz: 0 };
+      if (v !== 'iso' || el.clientWidth >= el.clientHeight) return { zoom: z, cx: FC[0], cz: FC[1] };
+      const asp = el.clientWidth / el.clientHeight;
+      const floor = clampZoom(S0 * asp / PORTRAIT_HALF);
+      return floor > z ? { zoom: floor, cx: CENTER[0], cz: CENTER[1] } : { zoom: z, cx: FC[0], cz: FC[1] };
     };
     let userZoomed = false, preset = 'iso';        // 사용자가 줌을 만졌으면 리사이즈 refit 금지
     // 궤도 상태 — 목표값으로 부드럽게 수렴(스프링 없는 지수 추적)
@@ -257,8 +264,9 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     };
     apiRef.current = {
       toView: (v) => { preset = v; freeFocus = false; target.az = VIEWS[v].az; target.el = VIEWS[v].el;
-        // 프리셋 버튼 = 프레이밍 리셋(줌 + 중심). 사용자가 줌을 만졌으면 그대로 둔다.
-        if (!userZoomed) { const c = startCam(v); target.zoom = c.zoom; target.cx = c.cx; target.cz = c.cz; } },
+        // 프리셋 버튼 = 프레이밍 리셋(줌 + 중심) — 확대·목록 이동 뒤 전체 지도로 돌아오는 길
+        userZoomed = false;
+        const c = startCam(v); target.zoom = c.zoom; target.cx = c.cx; target.cz = c.cz; },
       addCustom: null, stopAdding: null,   // 컴포넌트 본문에서 채운다(오버라이드 상태 접근)
     };
     applyCam();
