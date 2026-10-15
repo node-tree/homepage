@@ -457,7 +457,7 @@ const VillageNews: React.FC = () => {
               <p className="kdn-coming-kicker">소식지</p>
               <p className="kdn-coming-headline">소식지를 준비하고 있어요</p>
               <p className="kdn-coming-body">
-                장암면의 다음 소식을 곧 이 자리에 펼쳐 보일게요.<br />
+                장암면의 다음 소식을 곧 이 자리에 올릴게요.<br />
                 조금만 기다려 주세요.
               </p>
             </div>

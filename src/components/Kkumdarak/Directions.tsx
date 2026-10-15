@@ -531,7 +531,7 @@ const MapLegend: React.FC = () => (
         <path d="M8 1c2.8 0 5 2.1 5 4.8C13 9.3 8 15 8 15S3 9.3 3 5.8C3 3.1 5.2 1 8 1Z" stroke="currentColor" strokeWidth="1.6" />
         <circle cx="8" cy="5.6" r="1.7" fill="currentColor" />
       </svg>
-      석동로 일대 · 도보 3분권
+      석동로 일대 · 걸어서 3분
     </span>
   </div>
 );
@@ -549,7 +549,7 @@ const Directions: React.FC = () => {
   // 문의·이메일(노드트리 사무국)은 장암 생산소 카드로 통합(사용자 요청 2026-06-12).
   const firstRows: InfoRow[] = [
     ['주소', '충청남도 부여군 장암면 석동로29번길 3'],
-    ['대중교통', '부여터미널 → 장암면 버스'],
+    ['대중교통', '부여시외버스터미널에서 장암면 농어촌버스'],
     ['주차', '생산소 앞 주차 가능'],
     ['문의', '노드트리 사무국'],
     ['이메일', OFFICE_EMAIL, `mailto:${OFFICE_EMAIL}`],
@@ -557,7 +557,7 @@ const Directions: React.FC = () => {
   // 문의·이메일을 생산소로 옮긴 뒤 생기는 공백을 메우는 안내 행(현장 운영 주체 안내).
   const secondRows: InfoRow[] = [
     ['주소', '충청남도 부여군 장암면 석동로 16, 2층'],
-    ['도보', '생산소에서 석동로 따라 도보 약 3분'],
+    ['걸어서', '생산소에서 석동로 따라 약 3분'],
     ['주차', '면사무소 공용주차장 이용'],
     ['안내', '문의·예약은 장암 생산소로'],
   ];
@@ -575,7 +575,7 @@ const Directions: React.FC = () => {
         {/* 안내판 보드(머리+지도+범례+카드를 감싸는 프레임) */}
         <div className="kd-mapboard" aria-hidden="true" />
         <BoardHead text="장암마을 약도 · 오시는 길" />
-        <span className="walk-label">도보 3분 코스</span>
+        <span className="walk-label">걸어서 3분</span>
         {/* 약도 — 원본 구조(도로·건물·핀 좌표) 그대로, 스타일만 리디자인 */}
         <div className="figma-map-canvas">
           <i className="road road-pink" />
@@ -603,7 +603,7 @@ const Directions: React.FC = () => {
         <p className="map-sub">충청남도 부여군 장암면 석동로 일대</p>
         <div className="kd-mapboard" aria-hidden="true" />
         <BoardHead text="장암마을 약도" />
-        <span className="walk-label">도보 3분</span>
+        <span className="walk-label">걸어서 3분</span>
         <div className="figma-map-canvas">
           <i className="road road-pink" />
           <i className="road road-red" />
@@ -614,7 +614,7 @@ const Directions: React.FC = () => {
           <div className="nonghyup">농협</div>
           <div className="office">면사무소</div>
           <CharacterPin className="pin-saengsanso" src="char-09.svg" label="생산소" />
-          <CharacterPin className="pin-jumin" src="char-18.svg" label="주민 자치" />
+          <CharacterPin className="pin-jumin" src="char-18.svg" label="자치센터" />
           <CompassTile />
         </div>
         <MapLegend />
@@ -624,7 +624,7 @@ const Directions: React.FC = () => {
           charSrc="char-09.svg"
           rows={[
             ['주소', '부여군 장암면 석동로29번길 3'],
-            ['교통', '부여터미널 → 장암면 버스'],
+            ['교통', '부여터미널에서 장암면 버스'],
             ['주차', '생산소 앞 가능'],
             ['문의', '노드트리 사무국'],
             ['이메일', OFFICE_EMAIL, `mailto:${OFFICE_EMAIL}`],
@@ -636,7 +636,7 @@ const Directions: React.FC = () => {
           charSrc="char-18.svg"
           rows={[
             ['주소', '부여군 장암면 석동로 16, 2층'],
-            ['도보', '생산소에서 도보 약 3분'],
+            ['걸어서', '생산소에서 약 3분'],
             ['주차', '면사무소 공용주차장'],
             ['안내', '문의·예약은 장암 생산소로'],
           ]}

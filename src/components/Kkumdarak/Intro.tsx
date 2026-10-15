@@ -180,7 +180,7 @@ const Intro: React.FC = () => {
 
         {/* ② 사업 흐름 */}
         <div className="intro-flow">
-          <h2 className="intro-flow-title">사업은 이렇게 이어집니다</h2>
+          <h2 className="intro-flow-title">한 해는 이렇게 이어집니다</h2>
           <div className="intro-step-row">
             {STEPS.map((step, i) => (
               <React.Fragment key={step.key}>
@@ -198,7 +198,7 @@ const Intro: React.FC = () => {
 
         {/* ③ 사업 개요 */}
         <div className="intro-facts">
-          <h3>사업 개요</h3>
+          <h3>한눈에 보기</h3>
           <div className="intro-facts-grid">
             {OVERVIEW.map((row) => (
               <div className="intro-fact" key={row.k}>
@@ -286,7 +286,7 @@ const Intro: React.FC = () => {
           <p className="intro-motto">{motto}</p>
         </div>
 
-        <h3 className="intro-flow-title">사업은 이렇게 이어집니다</h3>
+        <h3 className="intro-flow-title">한 해는 이렇게 이어집니다</h3>
         <div className="mobile-step-list">
           {STEPS.map((step) => (
             <div className="mobile-step" key={step.key}>
@@ -302,7 +302,7 @@ const Intro: React.FC = () => {
         </div>
 
         <div className="mobile-facts">
-          <h3>사업 개요</h3>
+          <h3>한눈에 보기</h3>
           {OVERVIEW.map((row) => (
             <div className="mobile-fact" key={row.k}>
               <span>{row.k}</span>

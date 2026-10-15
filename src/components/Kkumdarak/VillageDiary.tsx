@@ -306,7 +306,7 @@ const PROGRAMS_DEFAULT: ProgramDiary[] = [
     cards: [
       { side: 'left', title: '도서관 자리를 함께 측량했어요.', date: '05.24', dot: '#259f3e' },
       { side: 'right', title: '옛 도서실을 비우고 다 같이 청소했다.', date: '06.07', dot: '#f18bb1' },
-      { side: 'left', title: '목공 — 책장의 뼈대를 세우다.', date: '07.05', dot: '#ffc90e' },
+      { side: 'left', title: '목공, 책장의 뼈대를 세우다.', date: '07.05', dot: '#ffc90e' },
       { side: 'right', title: '주민들이 책을 채우기 시작했다.', date: '08.20', dot: '#1b55e2' },
       { side: 'left', title: '〈장암 책정〉 드디어 문을 열다!', date: '09.15', dot: '#ec251f' },
     ],
@@ -1305,7 +1305,7 @@ const VillageDiary: React.FC = () => {
         style={{ height: isEditing ? 'auto' : desktopHeight, '--accent': program.accent } as React.CSSProperties}
       >
         <h1>마을일기</h1>
-        <p className="diary-sub">프로그램을 따라 마을의 기록을 걷습니다  ·  스크롤하면 캐릭터가 길을 내려갑니다</p>
+        <p className="diary-sub">프로그램마다 그날의 기록을 모았습니다  ·  아래로 내리면 캐릭터가 길을 따라 내려갑니다</p>
         <div className="diary-scroll-cue" aria-hidden="true">
           <span>스크롤</span>
           <svg width="24" height="36" viewBox="0 0 24 36" fill="none">
@@ -1390,7 +1390,7 @@ const VillageDiary: React.FC = () => {
               </div>
               <h2>{program.name}</h2>
               <p>일기를 준비하고 있어요.</p>
-              <span>곧 마을의 기록으로 채워집니다.</span>
+              <span>곧 마을의 기록으로 채워져요.</span>
               {/* 편집자 전용: placeholder 에서 바로 첫 일기 작성 진입 */}
               {authed && !isEditing && (
                 <button type="button" className="diary-empty-cta" onClick={handleEditToggle}>
@@ -1419,7 +1419,7 @@ const VillageDiary: React.FC = () => {
       >
         <div className="kd-section-rule kd-section-rule--s4" />
         <h1>마을일기</h1>
-        <p className="diary-sub">프로그램을 따라 걷는 기록</p>
+        <p className="diary-sub">프로그램마다 그날의 기록</p>
         {renderFilters(true)}
         {renderEditControls()}
 
@@ -1508,7 +1508,7 @@ const VillageDiary: React.FC = () => {
               </div>
               <h2>{program.name}</h2>
               <p>일기를 준비하고 있어요.</p>
-              <span>곧 마을의 기록으로 채워집니다.</span>
+              <span>곧 마을의 기록으로 채워져요.</span>
               {authed && !isEditing && (
                 <button type="button" className="diary-empty-cta" onClick={handleEditToggle}>
                   ✎ 첫 일기 쓰기

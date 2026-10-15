@@ -35,7 +35,7 @@ const BASE: ResultItem[] = [
   {
     id: 'signal-map',
     programId: 'maeul-signal',
-    title: '마을의 신호 — 마을지도',
+    title: '마을의 신호 · 마을지도',
     medium: 'map',
     desc: '참여자가 나무판 위에 지은 마을을 웹 위에 다시 세웠습니다. 돌려 보고, 신호를 눌러 이야기와 소리를 듣습니다.',
     href: '#signal-map-3d',

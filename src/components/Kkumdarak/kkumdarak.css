@@ -4094,7 +4094,8 @@
     border-radius: 6px;
     box-shadow: 2px 2px 0 #1a1a1a;
     background: #f18bb1;
-    font-size: 12px;
+    font-size: 11px;
+    white-space: nowrap;   /* 좁은 마름모 안 — 두 줄로 꺾이지 않게 */
   }
 
   .kd-map-mobile .office {
@@ -4103,7 +4104,9 @@
     width: 50px;
     height: 50px;
     border-width: 2px;
-    font-size: 12px;
+    font-size: 11px;
+    white-space: nowrap;   /* 50px 동그라미 안 「면사무소」 한 줄 */
+    letter-spacing: -0.02em;
   }
 
   .kd-map-mobile .map-character-pin {

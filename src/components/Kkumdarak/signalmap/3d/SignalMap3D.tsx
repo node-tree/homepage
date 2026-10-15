@@ -97,7 +97,7 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
     const etc = [...PLACES.filter(p => !PLACES39.some(q => q.id === p.id)), ...customs]
       .filter(p => vis(p.id)).map(p => ({ id: p.id, name: p.name }));
-    if (etc.length) groups.push({ cat: '그 밖', items: etc });
+    if (etc.length) groups.push({ cat: '그 밖의 곳', items: etc });
     return groups;
   }, [overrides, customs]);
 
@@ -567,7 +567,7 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         </aside>
       )}
       <footer className="smap-legend">
-        <span className="smap-legend-dot" style={{ background: '#1f1e1c' }} /> 동그라미 = 신호·장소 — 누르면 소개와 사진
+        <span className="smap-legend-dot" style={{ background: '#1f1e1c' }} /> 동그라미는 신호·장소, 누르면 소개와 사진이 열립니다
         <em>드래그로 도시를 돌려 보세요</em>
       </footer>
       {open && (

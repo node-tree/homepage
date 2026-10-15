@@ -75,7 +75,7 @@ const Schedule: React.FC = () => {
           const y = D_ROW0 + PERIODS.length * D_ROW_GAP;
           return (
             <>
-              <span className="schedule-label" style={{ top: y - 70 }}>{FESTIVAL.name} (축제)</span>
+              <span className="schedule-label" style={{ top: y - 70 }}>〈{FESTIVAL.name}〉 축제</span>
               <i
                 className="schedule-bar schedule-bar--dot"
                 style={{ left: Math.round(x) - 7, top: y - 80, width: 14, background: '#ffc90e', '--bar-delay': `${0.28 + PERIODS.length * 0.1}s` } as React.CSSProperties}
@@ -119,7 +119,7 @@ const Schedule: React.FC = () => {
           const y = M_ROW0 + PERIODS.length * M_ROW_GAP;
           return (
             <>
-              <span className="schedule-label" style={{ top: y - 2 }}>{FESTIVAL.name} (축제)</span>
+              <span className="schedule-label" style={{ top: y - 2 }}>〈{FESTIVAL.name}〉 축제</span>
               <i
                 className="schedule-bar schedule-bar--dot"
                 style={{ left: Math.round(x) - 5, top: y, width: 10, background: '#ffc90e', '--bar-delay': `${0.28 + PERIODS.length * 0.1}s` } as React.CSSProperties}

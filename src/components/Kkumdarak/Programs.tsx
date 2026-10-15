@@ -31,7 +31,7 @@ const PROGRAMS: Array<{
     name: '장암 책정',
     en: 'Jangam Library Pavilion',
     summary: '다섯 세대가 함께 짓는 마을의 정자.',
-    desc: '작은도서관·도서실을 다섯 세대가 함께 설계·목공·설치로 다시 짓는 융복합 워크숍. 마을의 새로운 정자가 됩니다.',
+    desc: '주민자치센터의 작은 도서관과 독서실을 다섯 세대가 함께 설계하고, 나무로 가구를 만들어 다시 짓습니다. 마을의 새 정자가 됩니다.',
     field: '융복합 · 건축/공예',
     meta: [['회차', '12회 · 36시수'], ['모집', '전생애 15명'], ['기간', '5.23 – 8.22']],
     brief: '전생애 15명 · 5.23-8.22',
@@ -43,8 +43,8 @@ const PROGRAMS: Array<{
   {
     name: '마을의 신호',
     en: 'Signal Village',
-    summary: '마을이라는 악기를, 청소년의 손으로.',
-    desc: 'Makey Makey·MCU 보드로 마을의 소리와 신호를 채집해, 청소년이 직접 인터랙티브 미디어 작품으로 만드는 미디어 랩입니다.',
+    summary: '마을의 소리와 신호를, 청소년의 손으로.',
+    desc: 'Makey Makey와 MCU 보드로 마을의 소리와 신호를 모아, 청소년이 빛과 소리가 나는 작은 도시를 직접 만듭니다.',
     field: '미디어 · 인터랙티브',
     meta: [['회차', '10회 · 30시수'], ['모집', '청소년 12명'], ['기간', '7.1 – 9.2']],
     brief: '청소년 12명 · 7.1-9.2',
@@ -57,8 +57,8 @@ const PROGRAMS: Array<{
     name: '기억순환 정류장',
     label: ['기억순환', '정류장'],
     en: 'Memory Circulation',
-    summary: '어르신의 기억을 청소년의 손으로.',
-    desc: '어르신의 기억이 청소년의 손을 거쳐 다음 세대로 흐르는 마을 아카이브 융복합 미디어 워크숍입니다.',
+    summary: '어르신의 기억을 아이들의 손으로.',
+    desc: '어르신의 옛이야기를 듣고, 아동·청소년이 그림과 클레이, 소리로 다시 만들어 남깁니다.',
     field: '융복합 · 아카이브',
     meta: [['회차', '10회 · 30시수'], ['모집', '아동·청소년 15명'], ['기간', '6.18 – 7.31']],
     brief: '아동·청소년 15명 · 6.18-7.31',
@@ -98,8 +98,8 @@ const PROGRAMS: Array<{
   {
     name: '소리일기',
     en: 'Sound Diary',
-    summary: '마을의 소리를 채집하다.',
-    desc: '마을 곳곳을 다니며 소리를 채집하고 기록하는 전생애 사운드 미디어 워크숍입니다.',
+    summary: '마을의 소리를 모으고, 나만의 악기를 만들다.',
+    desc: '마을 곳곳의 소리를 모아 지도에 얹고, 센서와 모터로 나만의 악기를 만듭니다.',
     field: '미디어 · 사운드',
     meta: [['회차', '6회 · 18시수'], ['모집', '전생애 6명'], ['기간', '6.23 – 7.28']],
     brief: '전생애 6명 · 6.23-7.28',
@@ -123,11 +123,11 @@ const PROGRAMS: Array<{
   },
   {
     name: '다시, 안녕',
-    en: 'Hello, Again 축제',
+    en: 'Hello, Again',
     summary: '마을이 함께 여는 축제.',
     desc: '7개 프로그램의 결과물이 한꺼번에 펼쳐지는 마을 통합 축제. 누구나 무료로 즐길 수 있습니다.',
     field: '축제 · 오픈클래스',
-    meta: [['일시', '11.7 (토)'], ['대상', '누구나'], ['관람', '무료 개방']],
+    meta: [['일시', '11.7 (토)'], ['참여', '누구나'], ['관람', '무료 개방']],
     brief: '누구나 · 11.7',
     color: '#ffffff',
     mobileMark: '#1b55e2',
@@ -952,7 +952,7 @@ const Programs: React.FC = () => {
     <section className={`kd-figma-programs${editing ? ' is-editing' : ''}`}>
       <div className={`kd-program-desktop${editing ? ' is-editing' : ''}`} data-name="프로그램 — Desktop">
         <div className="kd-section-rule kd-section-rule--s2" />
-        <p className="program-kicker">7개의 프로그램은 한 줄로 흐른다</p>
+        <p className="program-kicker">일곱 프로그램이 5월부터 11월까지 이어집니다</p>
         <h1>프로그램</h1>
         {renderEditToggle()}
         <div className="program-soft-field" />
