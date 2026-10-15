@@ -118,7 +118,6 @@ const guestbookRoutes = require('./routes/guestbook');
 const saengsansoRoutes = require('./routes/saengsanso');
 const teamEventRoutes = require('./routes/teamEvent');
 const oceanRoutes = require('./routes/ocean');
-const calendarRoutes = require('./routes/calendar');
 const villageDiaryRoutes = require('./routes/villageDiary');
 const villageNewsRoutes = require('./routes/villageNews');
 const kkumdarakBudgetRoutes = require('./routes/kkumdarakBudget');
@@ -140,7 +139,6 @@ app.use('/api/guestbook', jsonSmall, guestbookRoutes);
 app.use('/api/saengsanso', jsonUpload, saengsansoRoutes);  // 이미지 base64
 app.use('/api/team-event', jsonSmall, teamEventRoutes);
 app.use('/api/ocean', jsonSmall, oceanRoutes);
-app.use('/api/calendar', jsonSmall, calendarRoutes);
 app.use('/api/village-diary', jsonContent, villageDiaryRoutes);
 app.use('/api/village-news', jsonContent, villageNewsRoutes);
 app.use('/api/kkumdarak', jsonUpload, kkumdarakBudgetRoutes);  // 증빙 base64 + 서식 사진
