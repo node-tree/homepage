@@ -3304,7 +3304,8 @@
   text-decoration: none;
 }
 
-.program-card:nth-child(7) .program-action {
+/* 축제(〈다시, 안녕〉) 카드는 흰 바탕 버튼이라 먹색 글자 — 2026-10-15: nth-child(7) 이었으나 카드가 늘어 마지막으로 */
+.program-card:last-child .program-action {
   color: #1a1a1a;
 }
 
