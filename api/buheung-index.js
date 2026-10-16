@@ -14,8 +14,8 @@ const OG = {
   title: '부흥여지도',
   siteName: '부흥여지도',
   description: '청소년이 찾아낸 부여의 가능성 · 우리가 자주 가는 장소 39곳',
-  url: 'https://nodetree.kr/buheung',
-  image: 'https://nodetree.kr/buheung/og-v1.png',
+  url: 'https://www.nodetree.kr/buheung',          // nodetree.kr 는 www 로 넘어간다(Vercel 도메인 설정)
+  image: 'https://www.nodetree.kr/buheung/og-v1.png',
   imageAlt: '노랑 판 위 손 글씨 「부흥여지도」와 먹선으로 그린 부여 지도',
 };
 
