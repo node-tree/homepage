@@ -1,10 +1,10 @@
 // @ts-nocheck
 // ═══════════════════════════════════════════════════════════════════════
-// SignalMap3D.tsx — 마을의 신호: 작은 부여 (3D 먹선 도시)
-//   진입: /iso#signal-map-3d (2D판 #signal-map과 병존)
+// SignalMap3D.tsx — 부흥여지도 (3D 먹선 도시, 포스터 배치)
+//   진입: nodetree.kr/buheung (독립 페이지, Buheung.tsx) · /iso#signal-map-3d (이소 안, onBack 있음)
 //   조작: 드래그 = 궤도 회전(도시를 돌려 본다) · 휠/핀치 = 줌
-//         Shift+드래그 · 두 손가락 드래그 = 팬 · 버튼 = 시점 프리셋
-//   신호 8 = 다색 LED 기둥, 클릭 → 카드(소개글 + 사진 갤러리, 콘텐츠는 2D scene.ts와 공유)
+//         Shift+드래그 · 두 손가락 드래그 = 팬 · 버튼 = 시점 프리셋 · 나침반 = 북쪽 위로 / 휴대폰 방향 따라가기
+//   번호 원 39곳 = 포스터 범례 번호, 신호 11 = 아이들 작품 보드(LED). 누르면 카드(소개글 + 사진 갤러리)
 // ═══════════════════════════════════════════════════════════════════════
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -21,15 +21,33 @@ import { ikUrl } from '../../../../utils/ikUrl';
 import '../signalmap.css';
 import './signalmap3d.css';
 
-// 시점 프리셋 — 방위각(az)·고도각(el)
+// 시점 프리셋 — 방위각(az)·고도각(el). az 0 = 북쪽(포스터 위)이 화면 위.
 const VIEWS = {
-  iso: { az: 0.72, el: 0.62, label: '조감' },
-  top: { az: 0.72, el: 1.53, label: '평면도' },
-  side: { az: 0.02, el: 0.07, label: '입면' },
+  iso: { az: 0.16, el: 0.62, label: '비스듬히' },
+  top: { az: 0, el: 1.53, label: '위에서' },
+  side: { az: 0.02, el: 0.07, label: '옆에서' },
+};
+const PLACE_N = Object.fromEntries(PLACES39.map(p => [p.id, p.n]));
+const PLACE_CAT = Object.fromEntries(PLACES39.map(p => [p.id, p.cat]));
+// 각도를 (−π, π]로
+const wrapPi = (a) => a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
+
+type Props = {
+  onBack?: () => void;          // 있으면 「← 이소 홈으로」(이소 안에서 열 때)
+  title?: React.ReactNode;      // 왼쪽 위 제목 판(없으면 글자 제목)
+  actions?: React.ReactNode;    // 오른쪽 위 버튼 줄 앞에 붙는 버튼(예: 이야기)
+  openListSignal?: number;      // 값이 바뀌면 39곳 목록을 연다(이야기 패널의 「지도에서 39곳 보기」)
 };
 
-const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+const SignalMap3D: React.FC<Props> = ({ onBack, title, actions, openListSignal }) => {
   const wrapRef = useRef(null);
+  const needleRef = useRef(null);                     // 나침반 바늘 — 프레임마다 직접 돌린다(리렌더 없이)
+  const headingRef = useRef(false);                   // 휴대폰 방향 따라가기 중인지(효과 안에서 읽는다)
+  const [compass, setCompass] = useState('free');     // free | north | heading
+  const [compassTip, setCompassTip] = useState('');
+  const [touched, setTouched] = useState(false);      // 처음 만지면 안내 줄을 접는다
+  const [tags, setTags] = useState([]);               // 지명 6(포스터 팻말)
+  const [far, setFar] = useState(false);              // 멀리 볼 때(번호 원끼리 겹칠 만큼 작을 때) 번호 대신 작은 점
   const reduced = useReducedMotion();
   const [view, setView] = useState('iso');
   const [openId, setOpenId] = useState(null);
@@ -103,6 +121,10 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   }, [overrides, customs]);
 
   useEffect(() => { signalMapAPI.get().then(setOverrides); }, []);
+  useEffect(() => {
+    if (!openListSignal) return;
+    setPick(null); setOpenId(null); setListTab('place'); setListOpen(true);
+  }, [openListSignal]);
   useEffect(() => {                                              // 카드 전환 시 편집 폼 리셋
     setEditing(false);
     if (open) setForm({ name: open.name || '', story: open.story || '', makers: open.makers || '', photos: open.photos || [] });
@@ -174,7 +196,51 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
   };
 
-  const selectView = useCallback((v) => { setView(v); apiRef.current?.toView(v); }, []);
+  const selectView = useCallback((v) => { setView(v); setCompass('free'); apiRef.current?.toView(v); }, []);
+
+  // ── 나침반 ──
+  //   한 번 누르면 북쪽(포스터 위)이 화면 위로. 이미 북쪽이면, 방위 센서가 있는 휴대폰에서는
+  //   휴대폰이 향한 쪽이 화면 위가 되게 따라간다(다시 누르거나 손으로 돌리면 멈춤).
+  //   iOS는 누를 때 권한을 물어야 하고(requestPermission), 안드로이드는 deviceorientationabsolute.
+  const hasSensor = typeof window !== 'undefined' && 'DeviceOrientationEvent' in window
+    && window.matchMedia('(pointer: coarse)').matches;
+  const tipTimer = useRef(0);
+  const tip = (t) => { setCompassTip(t); window.clearTimeout(tipTimer.current); tipTimer.current = window.setTimeout(() => setCompassTip(''), 2600); };
+  const onCompass = async () => {
+    const api = apiRef.current; if (!api) return;
+    if (compass === 'heading') { headingRef.current = false; setCompass('north'); api.north(); return; }
+    if (!api.isNorth() || !hasSensor) {
+      api.north(); setCompass('north');
+      if (hasSensor) tip('한 번 더 누르면 휴대폰 방향으로 돌아가요');
+      return;
+    }
+    try {
+      const D = window.DeviceOrientationEvent;
+      if (D && typeof D.requestPermission === 'function' && (await D.requestPermission()) !== 'granted') {
+        tip('방향 센서를 쓸 수 없어요'); return;
+      }
+    } catch (e) { tip('방향 센서를 쓸 수 없어요'); return; }
+    headingRef.current = true; setCompass('heading'); tip('휴대폰이 향한 쪽이 위예요');
+  };
+  useEffect(() => {
+    if (compass !== 'heading') return undefined;
+    let got = false;
+    const onOri = (e) => {
+      if (!headingRef.current) return;
+      let deg = null;
+      if (typeof e.webkitCompassHeading === 'number') deg = e.webkitCompassHeading;           // iOS: 북에서 시계방향
+      else if (e.absolute && typeof e.alpha === 'number') deg = 360 - e.alpha;                 // 안드로이드: 반시계 alpha
+      if (deg == null) return;
+      got = true;
+      const scr = (window.screen?.orientation?.angle) || 0;                                     // 가로로 눕힌 화면 보정
+      apiRef.current?.heading(((deg + scr) % 360) * Math.PI / 180);
+    };
+    const evt = 'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation';
+    window.addEventListener(evt, onOri);
+    const t = window.setTimeout(() => { if (!got) { headingRef.current = false; setCompass('north'); tip('이 기기에서는 방향을 읽을 수 없어요'); } }, 2500);
+    return () => { window.removeEventListener(evt, onOri); window.clearTimeout(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [compass]);
   useEffect(() => {
     if (!apiRef.current) return;
     apiRef.current.addCustom = async (marker) => {
@@ -232,8 +298,9 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     //   → 도시 투영 높이가 뷰포트의 PORTRAIT_H가 되는 줌을 하한으로 두고, 중앙 블록을 잡아
     //     나머지는 팬으로 탐색하게 한다. 가로 화면·평면도·입면은 손대지 않는다(fit 그대로).
     //   PORTRAIT_H 줌은 뷰포트 높이와 무관하다: zoom = PORTRAIT_H · S0 / hy.
-    //   실제 지리판(2026-10-15): 세로 첫 화면은 장암 신호 군집(Codex 제안)을 화면 반폭 PORTRAIT_HALF 월드로 잡는다.
-    const PORTRAIT_HALF = 30;
+    //   포스터 배치판(2026-10-16): 세로 첫 화면은 39곳의 무게중심(부여읍 쪽)을 반폭 PORTRAIT_HALF 월드로 —
+    //   번호 원이 점으로 접히지 않는 가장 넓은 폭(px/월드 ≥ 4.3, 아래 far 판정).
+    const PORTRAIT_HALF = 44;
     const CENTER = GEO.portraitCenter;
     const startCam = (v) => {
       const z = fitZoom(v);
@@ -263,11 +330,16 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       cam.updateProjectionMatrix();
     };
     apiRef.current = {
-      toView: (v) => { preset = v; freeFocus = false; target.az = VIEWS[v].az; target.el = VIEWS[v].el;
+      toView: (v) => { preset = v; freeFocus = false; headingRef.current = false; target.az = VIEWS[v].az; target.el = VIEWS[v].el;
         // 프리셋 버튼 = 프레이밍 리셋(줌 + 중심) — 확대·목록 이동 뒤 전체 지도로 돌아오는 길
         userZoomed = false;
         const c = startCam(v); target.zoom = c.zoom; target.cx = c.cx; target.cz = c.cz; },
       addCustom: null, stopAdding: null,   // 컴포넌트 본문에서 채운다(오버라이드 상태 접근)
+      // 나침반: 북쪽(포스터 위)을 화면 위로 — 가까운 쪽으로 돈다
+      north: () => { headingRef.current = false; target.az = target.az - wrapPi(target.az); clampPan(); },
+      isNorth: () => Math.abs(wrapPi(st.az)) < 0.03,
+      // 휴대폰이 향한 방위(라디안, 북에서 시계방향)를 화면 위로 — az = −heading
+      heading: (h) => { target.az = target.az + wrapPi(-h - target.az); clampPan(); },
     };
     applyCam();
 
@@ -344,8 +416,9 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       clampPan();
     };
     const down = (e) => {
-      if (e.target.closest('.smap-card, .smap-btn, .smap-back, .s3d-views, .s3d-pick')) return;
+      if (e.target.closest('.smap-card, .smap-btn, .smap-back, .s3d-views, .s3d-pick, [data-ui]')) return;
       setPick(null);                                              // 지도를 만지면 겹침 말풍선은 닫는다
+      setTouched(true);
       freeFocus = false;
       downPt = { x: e.clientX, y: e.clientY };
       el.setPointerCapture(e.pointerId);
@@ -359,7 +432,8 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       const dx = cur.x - prev.x, dy = cur.y - prev.y;
       if (ptrs.size === 1) {
         if (e.shiftKey) panBy(dx, dy);
-        else {                                                    // 궤도 회전
+        else {                                                    // 궤도 회전(손으로 돌리면 방향 따라가기는 끈다)
+          if (headingRef.current) { headingRef.current = false; setCompass('free'); }
           target.az -= dx * 0.0052;
           target.el = Math.max(0.06, Math.min(1.53, target.el + dy * 0.004));
           clampPan();                                             // 시야가 돌면 허용 중심도 바뀐다
@@ -449,6 +523,8 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         if (Math.abs(d) > 1e-4) { st[k] += d * 0.16; moved = true; }
       }
       if (moved) applyCam();
+      // 나침반 바늘: 화면에서 북쪽은 위에서 시계방향으로 az만큼 돌아 있다
+      if (needleRef.current) needleRef.current.style.transform = `rotate(${st.az}rad)`;
       if (!reduced) {
         if (t - lastBoil >= 100) { lastBoil = t; boilTick(); }
         for (const tick of ticks) tick(t);
@@ -467,13 +543,19 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           }),
           ...places.map(pl => {
             v3.copy(pl.pos).project(cam);
-            return { id: pl.id, x: (v3.x * 0.5 + 0.5) * W2, y: (-v3.y * 0.5 + 0.5) * H2, color: 0x1f1e1c, place: true };
+            return { id: pl.id, x: (v3.x * 0.5 + 0.5) * W2, y: (-v3.y * 0.5 + 0.5) * H2, color: 0x1f1e1c, place: true, n: PLACE_N[pl.id] };
           }),
           ...customRef.current.map(cm => {
             v3.copy(cm.pos).project(cam);
             return { id: cm.id, x: (v3.x * 0.5 + 0.5) * W2, y: (-v3.y * 0.5 + 0.5) * H2, color: 0x1f1e1c, place: true };
           }),
         ].filter(d => !hiddenRef.current.has(d.id)));
+        // 화면 1px당 월드 거리 → 이웃 장소(≈6 월드)가 번호 원(26px)보다 가까우면 점으로
+        setFar(H2 * st.zoom / (2 * S0) < 4.3);
+        setTags((GEO.labels || []).map(({ text, pos }) => {
+          v3.set(pos[0], 0.4, pos[1]).project(cam);
+          return { text, x: (v3.x * 0.5 + 0.5) * W2, y: (-v3.y * 0.5 + 0.5) * H2 };
+        }));
       }
       renderer.render(scene, cam);
       raf = requestAnimationFrame(frame);
@@ -498,37 +580,59 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   }, [reduced]);
 
   return (
-    <div className="smap s3d" ref={wrapRef}>
-      <header className="smap-head">
-        <h1>마을의 신호</h1>
-      </header>
-      <button className="smap-back" onClick={onBack}>← 이소 홈으로</button>
+    <div className={`smap s3d${far ? ' s3d--far' : ''}`} ref={wrapRef}>
+      <div className="s3d-head" data-ui>
+        {title || <h1 className="s3d-title">부흥여지도</h1>}
+      </div>
+      <div className="s3d-actions" data-ui>
+        {onBack && <button className="s3d-act s3d-act--ghost" onClick={onBack}>← 이소 홈으로</button>}
+        {actions}
+        <button className={`s3d-act${listOpen ? ' on' : ''}`} aria-expanded={listOpen}
+          onClick={() => { setPick(null); setOpenId(null); setListOpen(o => !o); }}>목록</button>
+      </div>
       {glFailed && (
-        <div className="s3d-nogl" role="alert">
+        <div className="s3d-nogl" role="alert" data-ui>
           <p>이 기기에서는 3D 지도를 열 수 없어요.</p>
-          <a href="#signal-map">평면 지도로 보기</a>
+          <button onClick={() => setListOpen(true)}>39곳 목록 보기</button>
         </div>
       )}
-      <nav className="s3d-views">
-        {Object.entries(VIEWS).map(([k, v]) => (
-          <button key={k} className={view === k ? 'on' : ''} onClick={() => selectView(k)}>{v.label}</button>
-        ))}
-        <button className={`s3d-list-btn${listOpen ? ' on' : ''}`}
-          onClick={() => { setPick(null); setOpenId(null); setListOpen(o => !o); }}>목록</button>
-        {authed && (
-          <button className={adding ? 'on' : ''} onClick={() => setAdding(a => !a)}>
-            {adding ? '지도를 클릭해 위치 지정…' : '+ 마커 추가'}
+      <div className="s3d-dock" data-ui>
+        <div className="s3d-compass-wrap">
+          {compassTip && <span className="s3d-compass-tip" role="status">{compassTip}</span>}
+          <button className={`s3d-compass${compass === 'heading' ? ' on' : ''}`} onClick={onCompass}
+            aria-label={compass === 'heading' ? '휴대폰 방향 따라가기 끄기' : '북쪽을 위로'}
+            title={compass === 'heading' ? '휴대폰 방향 따라가기 끄기' : '북쪽을 위로'}>
+            <span className="s3d-needle" ref={needleRef} aria-hidden="true">
+              <svg viewBox="0 0 40 40" width="40" height="40">
+                <text x="20" y="8.6" textAnchor="middle" dominantBaseline="middle" fontSize="8.5" fontWeight="800" fill="currentColor">N</text>
+                <path d="M20 13 L24.6 23 L15.4 23 Z" fill="currentColor" />
+                <path d="M20 33 L24.6 23 L15.4 23 Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+              </svg>
+            </span>
           </button>
-        )}
-      </nav>
+        </div>
+        <nav className="s3d-views" aria-label="보는 방향">
+          {Object.entries(VIEWS).map(([k, v]) => (
+            <button key={k} className={view === k ? 'on' : ''} aria-pressed={view === k} onClick={() => selectView(k)}>{v.label}</button>
+          ))}
+          {authed && (
+            <button className={adding ? 'on' : ''} onClick={() => setAdding(a => !a)}>
+              {adding ? '지도를 눌러 위치 지정…' : '+ 마커'}
+            </button>
+          )}
+        </nav>
+      </div>
+      {tags.map(t => (
+        <span key={t.text} className="s3d-tag" style={{ left: t.x, top: t.y }} aria-hidden="true">{t.text}</span>
+      ))}
       {dots.map(d => (
         <button
           key={d.id}
-          className={`smap-btn s3d-btn${d.place ? ' s3d-btn--place' : ''}${openId === d.id ? ' is-open' : ''}`}
+          className={`smap-btn s3d-btn${d.place ? ' s3d-btn--place' : ''}${d.n ? ' s3d-btn--num' : ''}${openId === d.id ? ' is-open' : ''}`}
           style={{ left: d.x, top: d.y, '--led': `#${d.color.toString(16).padStart(6, '0')}` } as React.CSSProperties}
           onClick={(e) => onDot(d, e)}
-          aria-label={`${d.place ? '장소' : '신호'}: ${ALL.find(s => s.id === d.id)?.name}`}
-        />
+          aria-label={`${d.n ? `${d.n}번 ` : ''}${d.place ? '장소' : '신호'}: ${nameOf(d.id)}`}
+        >{d.n ? <span className="s3d-num" aria-hidden="true">{d.n}</span> : null}</button>
       ))}
       {pick && (() => {
         const W2 = wrapRef.current?.clientWidth || 390;
@@ -549,9 +653,9 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             <button className="smap-card-close" onClick={() => setListOpen(false)} aria-label="닫기">✕</button>
             <div className="s3d-list-tabs" role="tablist">
               <button role="tab" aria-selected={listTab === 'place'} className={listTab === 'place' ? 'on' : ''}
-                onClick={() => setListTab('place')}>장소 {PLACES39.filter(p => !(overrides[p.id] && overrides[p.id].hidden)).length}</button>
+                onClick={() => setListTab('place')}>자주 가는 곳 {PLACES39.filter(p => !(overrides[p.id] && overrides[p.id].hidden)).length}</button>
               <button role="tab" aria-selected={listTab === 'signal'} className={listTab === 'signal' ? 'on' : ''}
-                onClick={() => setListTab('signal')}>신호 {SIGNALS.filter(s => !(overrides[s.id] && overrides[s.id].hidden)).length}</button>
+                onClick={() => setListTab('signal')}>우리가 만든 신호 {SIGNALS.filter(s => !(overrides[s.id] && overrides[s.id].hidden)).length}</button>
             </div>
           </div>
           {listTab === 'place' ? placeGroups.map(g => (
@@ -574,16 +678,17 @@ const SignalMap3D: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           )}
         </aside>
       )}
-      <footer className="smap-legend">
-        <span className="smap-legend-dot" style={{ background: '#1f1e1c' }} /> 동그라미는 신호·장소, 누르면 소개와 사진이 열립니다
-        <em>드래그로 도시를 돌려 보세요</em>
+      <footer className={`s3d-hint${touched || openId || listOpen ? ' is-off' : ''}`} aria-hidden={touched}>
+        번호를 누르면 소개와 사진이 열려요 <em>끌어서 돌려 보세요</em>
       </footer>
       {open && (
         <aside className="smap-card" role="dialog" aria-label={`${open.name} 소개`}>
           {/* 카드 머리 — 사진 갤러리로 카드가 길어져도 태그·제목·닫기가 상단에 붙어 있게(sticky) */}
           <div className="smap-card-head">
             <button className="smap-card-close" onClick={() => setOpenId(null)} aria-label="닫기">✕</button>
-            <span className="smap-card-tag">{isPlace ? 'PLACE' : 'SIGNAL'} · {open.id.toUpperCase()}</span>
+            <span className="smap-card-tag">
+              {PLACE_N[open.id] ? `${PLACE_N[open.id]} · ${PLACE_CAT[open.id]}` : isPlace ? '장소' : '우리가 만든 신호'}
+            </span>
             <h2>{open.name}</h2>
           </div>
           {open.photos?.length ? (

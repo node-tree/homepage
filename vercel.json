@@ -35,6 +35,15 @@
           "build/index.html"
         ]
       }
+    },
+    {
+      "src": "api/buheung-index.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "build/index.html"
+        ]
+      }
     }
   ],
   "routes": [
@@ -102,7 +111,7 @@
       "continue": true
     },
     {
-      "src": "/(pdf|images|kkumdarak|audio|redesign)/(.*)",
+      "src": "/(pdf|images|kkumdarak|audio|redesign|buheung)/(.*)",
       "headers": {
         "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
       },
@@ -193,6 +202,26 @@
         }
       ],
       "dest": "/api/og-index.js"
+    },
+    {
+      "src": "/buheung/?",
+      "has": [
+        {
+          "type": "host",
+          "value": "nodetree.kr"
+        }
+      ],
+      "dest": "/api/buheung-index.js"
+    },
+    {
+      "src": "/buheung/?",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.nodetree.kr"
+        }
+      ],
+      "dest": "/api/buheung-index.js"
     },
     {
       "handle": "filesystem"

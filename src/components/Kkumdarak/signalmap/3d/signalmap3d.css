@@ -2,38 +2,102 @@
 .s3d { cursor: grab; }
 .s3d:active { cursor: grabbing; }
 .s3d canvas { position: absolute; inset: 0; touch-action: none; }
+/* ── 부흥여지도 판식(포스터 시안 C): 먹 #171918 · 노랑 #EBE452 · 물 #93CBE9, 굵은 먹 테 ── */
+.s3d {
+  --ink: #171918; --paper: #fcfbf9; --mute: #6b6b6b;
+  --s3d-font: 'Noto Sans KR', 'Gothic A1', sans-serif;
+  font-family: var(--s3d-font);
+}
+/* 왼쪽 위 제목 · 오른쪽 위 버튼 줄 · 오른쪽 아래 시점+나침반 — 세 자리에만 모은다 */
+.s3d-head { position: absolute; top: 24px; left: 24px; z-index: 5; }
+.s3d-title { margin: 0; font: 900 26px/1 var(--s3d-font); color: var(--ink); }
+.s3d-actions {
+  position: absolute; top: 24px; right: 24px; z-index: 5;
+  display: flex; gap: 8px; align-items: center;
+}
+.s3d-act {
+  height: 42px; padding: 0 18px;
+  font: 700 15px/1 var(--s3d-font); color: var(--ink);
+  background: var(--paper); border: 2px solid var(--ink); border-radius: 10px;
+  cursor: pointer;
+}
+.s3d-act.on, .s3d-act:active { color: var(--paper); background: var(--ink); }
+.s3d-act--ghost { border-color: transparent; background: none; color: var(--mute); padding: 0 8px; }
+.s3d-dock {
+  position: absolute; right: 24px; bottom: 24px; z-index: 5;
+  display: flex; align-items: center; gap: 10px;
+}
 .s3d-views {
-  position: absolute; top: 96px; left: 32px;
-  display: flex; flex-direction: column; gap: 6px; z-index: 5;
+  display: flex; border: 2px solid var(--ink); border-radius: 10px; overflow: hidden; background: var(--paper);
 }
 .s3d-views button {
-  font: 700 14px/1 'Gothic A1', sans-serif;
-  color: #8c8a82; background: #fcfbf9;
-  border: 1.5px solid #1f1e1c; border-radius: 9px;
-  padding: 8px 14px; cursor: pointer;
+  height: 40px; padding: 0 14px;
+  font: 700 14px/1 var(--s3d-font); color: var(--ink);
+  background: none; border: 0; cursor: pointer;
 }
-.s3d-views button.on { color: #fcfbf9; background: #1f1e1c; }
+.s3d-views button + button { border-left: 2px solid var(--ink); }
+.s3d-views button.on { color: var(--paper); background: var(--ink); }
+.s3d-compass-wrap { position: relative; }
+.s3d-compass {
+  display: grid; place-items: center;
+  width: 52px; height: 52px; padding: 0;
+  color: var(--ink); background: var(--paper);
+  border: 2px solid var(--ink); border-radius: 50%; cursor: pointer;
+}
+.s3d-compass.on { color: var(--ink); background: #ebe452; }
+.s3d-needle { display: block; width: 40px; height: 40px; will-change: transform; }
+.s3d-needle svg { display: block; }
+.s3d-compass-tip {
+  position: absolute; right: 0; bottom: calc(100% + 10px);
+  white-space: nowrap; padding: 8px 12px;
+  font: 500 14px/1.3 var(--s3d-font); color: var(--paper); background: var(--ink); border-radius: 8px;
+}
+/* 지명 6(포스터 팻말): 둥근 흰 판 — 눌리지 않는다 */
+.s3d-tag {
+  position: absolute; z-index: 2; transform: translate(-50%, -50%);
+  padding: 4px 11px 5px; white-space: nowrap; pointer-events: none;
+  font: 700 14px/1 var(--s3d-font); color: var(--ink);
+  background: #fff; border: 2px solid var(--ink); border-radius: 999px;
+}
+.s3d-hint {
+  position: absolute; left: 24px; bottom: 32px; z-index: 4; pointer-events: none;
+  font: 500 14px/1.4 var(--s3d-font); color: var(--ink);
+  transition: opacity 0.4s;
+}
+.s3d-hint em { font-style: normal; color: var(--mute); margin-left: 10px; }
+.s3d-hint.is-off { opacity: 0; }
+/* 마커: 장소 39 = 포스터 번호 원(흰 원 + 먹 테 + 번호), 신호 11 = LED 색 점 */
 .s3d-btn {
   position: absolute; z-index: 4;
   transform: translate(-50%, -50%);
 }
 .s3d-btn::after {
   content: ''; position: absolute; inset: 50% auto auto 50%;
-  width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px;
+  width: 14px; height: 14px; margin: -7px 0 0 -7px;
   border-radius: 50%;
-  background: #1f1e1c;              /* 태그는 전부 검정 동그라미 — 색은 3D LED가 말한다 */
-  border: 2.5px solid #fcfbf9;
-  box-shadow: 0 0 0 2px #1f1e1c, 0 0 0 6px rgba(31, 30, 28, 0.07);
+  background: var(--led, #171918);
+  border: 2.5px solid #fff;
+  box-shadow: 0 0 0 2px var(--ink);
 }
-.s3d-btn.is-open::after { box-shadow: 0 0 0 2px #1f1e1c, 0 0 0 9px rgba(31, 30, 28, 0.16); }
-/* 장소(부흥여지도 39곳)는 신호(작품) 아래 층 — 겹치면 신호가 눌리고, 동그라미도 한 단계 작다 */
+.s3d-btn.is-open::after { box-shadow: 0 0 0 2px var(--ink), 0 0 0 7px rgba(23, 25, 24, 0.16); }
 .s3d-btn--place { z-index: 3; }
 .s3d-btn--place.is-open { z-index: 5; }
 .s3d-btn--place::after {
   width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-width: 2px;
-  box-shadow: 0 0 0 1.5px #1f1e1c, 0 0 0 4px rgba(31, 30, 28, 0.07);
+  background: var(--ink); box-shadow: 0 0 0 1.5px var(--ink);
 }
-.s3d-btn--place.is-open::after { box-shadow: 0 0 0 1.5px #1f1e1c, 0 0 0 7px rgba(31, 30, 28, 0.16); }
+.s3d-btn--num::after { content: none; }
+.s3d-num {
+  position: absolute; inset: 50% auto auto 50%;
+  width: 26px; height: 26px; margin: -13px 0 0 -13px;
+  display: grid; place-items: center;
+  font: 700 13px/1 var(--s3d-font); color: var(--ink); font-variant-numeric: tabular-nums;
+  background: #fff; border: 2px solid var(--ink); border-radius: 50%;
+}
+.s3d-btn--num:hover .s3d-num, .s3d-btn--num.is-open .s3d-num { color: #fff; background: var(--ink); }
+.s3d .smap-card { top: 82px; right: 24px; max-height: calc(100% - 82px - 96px); border-width: 2px; border-color: var(--ink); border-radius: 14px; box-shadow: none; }
+.s3d .smap-card-tag { color: var(--mute); font-family: var(--s3d-font); font-size: 13px; letter-spacing: 0; }
+.s3d .smap-card h2 { font-family: var(--s3d-font); font-weight: 900; }
 /* WebGL 실패 안내 */
 .s3d-nogl {
   position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%);
@@ -42,13 +106,12 @@
   font: 500 16px/1.5 'Gothic A1', sans-serif; color: #1f1e1c;
 }
 .s3d-nogl p { margin: 0 0 14px; }
-.s3d-nogl a {
-  display: inline-block; font: 700 14px/1 'Gothic A1', sans-serif; color: #fcfbf9; background: #1f1e1c;
-  border-radius: 9px; padding: 10px 16px; text-decoration: none;
+.s3d-nogl a, .s3d-nogl button {
+  display: inline-block; font: 700 14px/1 var(--s3d-font); color: #fcfbf9; background: #1f1e1c;
+  border: 0; border-radius: 9px; padding: 10px 16px; text-decoration: none; cursor: pointer;
 }
 
 /* 모바일 고르기 — 목록 버튼(좁은 화면만) · 겹친 동그라미 말풍선 · 목록 서랍 */
-.s3d-views .s3d-list-btn { display: none; }
 .s3d-pick {
   position: absolute; z-index: 7;
   transform: translate(-50%, calc(-100% - 18px));
@@ -67,10 +130,10 @@
 .s3d-pick button:active { background: rgba(31, 30, 28, 0.07); }
 .s3d-list-tabs { display: flex; gap: 6px; }
 .s3d-list-tabs button {
-  font: 700 14px/1 'Gothic A1', sans-serif;
+  font: 700 14px/1 var(--s3d-font);
   color: #8c8a82; background: #fcfbf9;
-  border: 1.5px solid #1f1e1c; border-radius: 9px;
-  padding: 8px 14px; cursor: pointer;
+  border: 2px solid #171918; border-radius: 9px;
+  padding: 10px 14px; cursor: pointer;
 }
 .s3d-list-tabs button.on { color: #fcfbf9; background: #1f1e1c; }
 .s3d-list h3 { margin: 16px 0 2px; font: 700 13px/1.2 'Gothic A1', sans-serif; color: #8c8a82; }
@@ -83,10 +146,19 @@
 }
 .s3d-list-n { display: inline-block; min-width: 24px; font-weight: 700; color: #8c8a82; }
 @media (max-width: 760px) {
-  .s3d-views { top: auto; bottom: 90px; left: 20px; flex-direction: row; }
-  .s3d-views .s3d-list-btn { display: block; }
+  .s3d-head { top: 12px; left: 12px; }
+  .s3d-title { font-size: 22px; }
+  .s3d-actions { top: 12px; right: 12px; gap: 6px; }
+  .s3d-act { height: 40px; padding: 0 13px; font-size: 14px; }
+  .s3d-dock { left: 12px; right: 12px; bottom: max(14px, env(safe-area-inset-bottom)); justify-content: space-between; }
+  .s3d-views button { height: 40px; padding: 0 13px; font-size: 14px; }
+  .s3d-compass { width: 48px; height: 48px; }
+  .s3d-hint { left: 12px; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 58px); font-size: 13px; }
+  .s3d-tag { font-size: 13px; padding: 3px 9px 4px; }
   /* 좁은 화면: 장소 누름 자리도 줄여 이웃 신호를 덜 덮는다 */
   .s3d-btn--place { width: 30px; height: 30px; }
+  .s3d-num { width: 22px; height: 22px; margin: -11px 0 0 -11px; font-size: 12px; }
+  .s3d .smap-card { top: auto; right: 0; max-height: 62%; border-radius: 18px 18px 0 0; }
 }
 
 
@@ -135,3 +207,7 @@
    padding-top: 0 → 상단 패딩을 sticky 머리(.smap-card-head)가 직접 가져야
    머리가 테두리 바로 아래에 고정되고 패딩 띠로 본문이 비쳐 보이지 않는다. */
 .s3d .smap-card { z-index: 6; padding-top: 0; }
+
+/* 멀리 볼 때: 번호 원 → 작은 먹 점(번호는 가까이 가면 다시 보인다), 신호 점도 한 단계 작게 */
+.s3d--far .s3d-num { width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; font-size: 0; border-width: 2px; background: var(--ink); }
+.s3d--far .s3d-btn:not(.s3d-btn--place)::after { width: 10px; height: 10px; margin: -5px 0 0 -5px; border-width: 2px; }

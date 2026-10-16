@@ -1,10 +1,9 @@
 // @ts-nocheck
 // ═══════════════════════════════════════════════════════════════════════
-// buyeoCity.ts — 작은 부여 도시 조립 · 실제 지리판 (2026-10-15)
-//   작가 「지도의 위치가 안맞다 · 지도를 더 확장」 → 실제 부여 지리대로(규암·합정리·장암까지).
-//   위치는 buyeoGeo.ts(생성기 map/build_layout.py: OSM 위경도 → 축별 단조 압축, 읍내 0.045 월드/m ·
-//   바깥 0.5배, 북 = −z · 동 = +x)에서 읽는다. 그리는 문법(먹선 모형·다리·차량·LED·신호 보드)은 그대로.
-//   옛 심상지도 배치판은 작업 폴더 map/buyeoCity.before-geo.ts 에 보관.
+// buyeoCity.ts — 부흥여지도 도시 조립 · 포스터 배치판 (2026-10-16)
+//   작가 「위치도 포스터에 나와있는대로 배치하자」 → 부흥여지도 포스터(시안 C)의 강·길·번호 원 39곳 자리.
+//   위치는 buyeoGeo.ts(생성기 buheung-web-20261016/map/build_layout_poster.py, 북 = 포스터 위 = −z)에서 읽는다.
+//   그리는 문법(먹선 모형·다리·차량·LED·신호 보드)은 그대로. 실제 지리판(10-15)은 git 506ae66.
 // ═══════════════════════════════════════════════════════════════════════
 import * as THREE from 'three';
 import { inkLine, grayLine, cyl, ico, at, buildTrack, trackAt, inked, mergeStatics } from './ink3';
@@ -60,6 +59,16 @@ export function buildCity(scene) {
 
   // ── 백마강: 두 둑 + 흐름 눈금(실제 물길) — 가운데 점선은 길과 헷갈려 그리지 않고 배·눈금 경로로만 쓴다 ──
   for (const bank of GEO.river.banks) scene.add(line(bank.map(([x, z]) => [x, 0.03, z])));
+  // 물: 포스터의 하늘색 한 덩어리 — 두 둑 사이를 채운다(ShapeGeometry의 y → 월드 z)
+  {
+    const [wb, eb] = GEO.river.banks;
+    const shape = new THREE.Shape([...wb, ...[...eb].reverse()].map(([x, z]) => new THREE.Vector2(x, z)));
+    const geo = new THREE.ShapeGeometry(shape);
+    geo.rotateX(Math.PI / 2);
+    const water = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x93cbe9, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 }));
+    water.position.y = 0.01;
+    scene.add(water);
+  }
   const mid = GEO.river.mid;
   const riverTrack = buildTrack(mid);
   const flows = [];
@@ -140,16 +149,16 @@ export function buildCity(scene) {
     }
   }
   put('깃발', GEO.places['학교·장암초'][0] - 3, GEO.places['학교·장암초'][1] + 2.4, 0, 0.8);
-  put('축운산', GEO.signals.chugunsan[0] + 7, GEO.signals.chugunsan[1] - 4, 0, 1.6);   // 금성산 = 아이들 지도의 축운산
+  put('축운산', GEO.landmarks['축운산'][0], GEO.landmarks['축운산'][1], 0, 1.6);        // 포스터의 축운산 자리
 
-  // ── 땅 색으로 고른 채움(숲 · 논밭 · 집 · 상가 · 갈대 · 사람) ──
+  // ── 채움(포스터 그림의 빈 땅 구역만 · 집 · 비닐하우스 · 논밭 · 나무 · 갈대 · 꽃) ──
   for (const [mdl, x, z, ry, s] of GEO.fill) put(mdl, x, z, ry, s);
   // 새 · 솟대 — 강과 부소산 위
   [[0.18, 0.7], [0.42, 2.1], [0.66, 4.0]].forEach(([u, ry]) => { const p = trackAt(riverTrack, riverTrack.total * u); put('새·날갯짓', p.x + 4, p.z, ry); });
   put('솟대', GEO.signals['star-yard'][0] - 6, GEO.signals['star-yard'][1] - 4, 0);
 
-  // 전봇대 — 사비로 · 장암길(전선 스팬 5.2 간격)
-  for (const nm of ['사비로', '장암길']) {
+  // 전봇대 — 강 남쪽 가로길(전선 스팬 5.2 간격)
+  for (const nm of ['H3']) {
     const tr = GEO.tracks[nm]; if (!tr) continue;
     const t = buildTrack(offsetLine(tr, 2.2));
     for (let d = 2; d < t.total; d += 5.2) { const p = trackAt(t, d); put('전봇대', p.x, p.z, -p.ang + Math.PI / 2, 0.95); }
@@ -193,7 +202,7 @@ export function buildCity(scene) {
     ledString([[mx3 - 2.6, 2.5, mz3 + 1.5], [mx3, 2.9, mz3 + 1.7], [mx3 + 2.6, 2.5, mz3 + 1.5]], 11);
     const [ox, oz] = GEO.places['장터·부여 오일장'];
     ledString([[ox - 1.3, 1.5, oz + 0.9], [ox + 1.3, 1.5, oz + 0.9]], 6, 1);
-    const b1 = bridges.find(b => b.name === '계백로') || bridges[0];
+    const b1 = bridges.find(b => b.name === '백제교') || bridges[0];
     if (b1) for (const [side, ph] of [[-1.6, 0.7], [1.6, 1.7]]) {
       const nx = -b1.uz * side, nz = b1.ux * side;
       const A = [b1.cx - b1.ux * (b1.half - 1) + nx, 1.5, b1.cz - b1.uz * (b1.half - 1) + nz];
@@ -207,7 +216,7 @@ export function buildCity(scene) {
     bulb.material.color.set(on ? color : 0xfcfbf9);
   }));
 
-  // ── 교통: 실제 큰길을 왕복(다리 위에서는 상판 높이로) ──
+  // ── 교통: 포스터의 길을 왕복(다리 위에서는 상판 높이로) ──
   const RAMP = 2.2;
   const bridgeLift = (x, z) => {
     let lift = 0;
@@ -234,16 +243,14 @@ export function buildCity(scene) {
     return v;
   };
   const T = (nm) => buildTrack(GEO.tracks[nm]);
-  vehicle('차·주행', T('계백로'), 52000, 'shuttle', 0, 0.8);
-  vehicle('차·주행', T('계백로'), 52000, 'shuttle', 26000, -0.8);
-  vehicle('차·주행', T('대백제로'), 60000, 'shuttle', 9000, 0.8);
-  vehicle('버스', T('사비로'), 30000, 'shuttle', 0, -0.9);
-  vehicle('차·주행', T('백제문로'), 56000, 'shuttle', 14000, 0.8);
-  vehicle('경운기', T('장암길'), 64000, 'shuttle', 9000, 0.9);
+  vehicle('차·주행', T('V1'), 40000, 'shuttle', 0, 0.8);
+  vehicle('버스', T('H1'), 34000, 'shuttle', 6000, -0.9);
+  vehicle('차·주행', T('V2'), 42000, 'shuttle', 14000, -0.8);
+  vehicle('경운기', T('H3'), 64000, 'shuttle', 9000, 0.9);
   vehicle('통통배', buildTrack(mid.slice(0, Math.max(4, Math.round(mid.length * 0.45)))), 60000, 'shuttle', 0, 0);
 
   // ── 신호 11: 아이들 작품 미니어처(나무판 디오라마) — 모터는 돌고 LED는 깜빡인다 ──
-  //   자리 = Codex 구조 제안(장암 생활권 6 · 금성산 1 · 읍내 상권 2 · 궁남지 2), 보드끼리 겹침은 생성기가 풀었다.
+  //   자리 = 옛 2D 지도 자리에서 출발해 생성기가 강·길·장소·산에서 밀어낸 빈 땅.
   const SIGNALS_3D = [
     { id: 'ground',          color: 0xfe5000, model: '작품·마을의 운동장', ry: 0,     h: 5.2, anchor: [-5.55, -1.95] },
     { id: 'shop-alley',      color: 0xe2402f, model: '작품·상가 골목',     ry: 0,     h: 4.8 },

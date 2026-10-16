@@ -26,6 +26,8 @@ const TeamEvent = lazy(() => import('./components/TeamEvent'));
 const Team = lazy(() => import('./components/Team'));
 const Kkumdarak = lazy(() => import('./components/Kkumdarak/Kkumdarak'));
 const Buyeo = lazy(() => import('./components/Buyeo'));
+// 부흥여지도 독립 페이지 — 포스터 QR(nodetree.kr/buheung). 3D 지도 청크는 이 라우트에서만 받는다.
+const Buheung = lazy(() => import('./components/Buheung/Buheung'));
 const MediaAdmin = lazy(() => import('./components/MediaAdmin'));
 // [임시] 다라니 시계 검수 라우트 — 홈 히어로 편입 전까지만 유지한다
 const DharaniClockPage = lazy(() => import('./components/DharaniClockPage'));
@@ -163,6 +165,7 @@ function App() {
               {/* /kkumdarak — 구 발행 URL 호환 별칭. hash 보존해 /iso로 리다이렉트 */}
               <Route path="/kkumdarak" element={<KkumdarakRedirect />} />
               <Route path="/buyeo/:stop" element={<Buyeo />} />
+              <Route path="/buheung" element={<Buheung />} />
               <Route path="/monitor" element={<ClaudeMonitor />} />
               <Route path="/admin/media" element={<MediaAdmin />} />
               {/* [임시] 다라니 시계 검수 — /clock */}
