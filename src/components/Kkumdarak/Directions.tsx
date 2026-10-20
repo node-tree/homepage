@@ -1,5 +1,6 @@
 import React from 'react';
 import IntroChar from './IntroChar';
+import DirectionsPen, { PenLandmark } from './DirectionsPen';
 
 // ── 모바일 오시는길 캐릭터-그림자 정렬 패치 (모바일 전용) ─────────────
 // 라벨(생산소·주민 자치)은 지도 위치 기준점 → 원래 자리에 고정(라벨 이동 금지).
@@ -31,13 +32,13 @@ const MAP_MOBILE_SHADOW_CSS = `
 }
 `;
 
-// ── 오시는길 「마을 안내판」 — 리스타일(구조 보존) (2026-06-12) ─────────────
+// ── 오시는길 「마을 안내판」 · 리스타일(구조 보존) (2026-06-12) ─────────────
 //   사용자 정정: 원본 약도의 "지도 자체"(도로 구조·갈래·방향, 건물 위치·상대배치,
 //     핀 위치)는 그대로 유지하고, 디자인(시각 표현)만 새로 입힌다.
-//   → 원본 figma-map-canvas 마크업(.road-* / .nonghyup / .office / 두 캐릭터 핀)을
-//     그대로 쓰고, 좌표(구조)는 원본과 동일하게 둔다. 바꾸는 것은 스타일뿐:
-//       · 도로/건물 색·선 굵기·표면 톤(약도 종이 느낌)
-//       · 범례 색 연동 — 생산소 라벨/마커=초록, 주민자치센터=파랑(농협·면사무소는 중립)
+//   → 도로는 기존 중심선을 따라 DirectionsPen SVG로, 건물은 작은 펜 윤곽으로.
+//     두 캐릭터 핀과 건물의 기준 좌표는 그대로 둔다.
+//       · 흰 바탕, 고른 먹색 펜 선, 농협 안 빗금, 걷는 구간의 짧은 가로 획
+//       · 범례 색 연동 · 생산소 라벨/마커=초록, 주민자치센터=파랑(농협·면사무소는 중립)
 //       · 라벨 타이포/문구 재구성(주소 보조표기 추가, 겹침 없음)
 //       · 의미 없던 "지도" 타일 → 방위(나침반) 장식으로 교체
 //   안내판 보드(머리+지도+범례+카드)로 묶고 데스크톱 보드를 수평 중앙정렬.
@@ -45,14 +46,11 @@ const MAP_MOBILE_SHADOW_CSS = `
 const MAP_BOARD_CSS = `
 /* 공통 토큰(주입 스코프 한정) */
 .kd-directions {
-  --mb-board: #fffdf5;
+  --mb-board: #fff;
   --mb-ink: #1a1a1a;
   --mb-yellow: #ffba12;
   --mb-green: #259f3e;
   --mb-blue: #1b55e2;
-  --mb-road: #dcd7ca;
-  --mb-paper: #f4f2ea;
-  --mb-neutral: #d2cdbf;
   /* 정제 스케일: 테두리 위계(주 3 → 보조 2.5 → 라벨 2) · 하드섀도 절제 */
   --mb-bd-1: 3px;     /* 주 프레임 */
   --mb-bd-2: 2.5px;   /* 카드·건물 */
@@ -137,45 +135,59 @@ const MAP_BOARD_CSS = `
 }
 .kd-directions .kd-legend-tip svg { display: block; }
 
-/* ════════════ 약도 — 구조는 원본 유지, 스타일만 리디자인 ════════════ */
-/* 캔버스: 약도 종이 톤 + 옅은 격자 */
+/* ════════════ 약도 · 구조는 원본 유지, 스타일만 리디자인 ════════════ */
+/* 흰 종이 위 고른 펜 선. 그림 레이어는 클릭을 가로채지 않는다. */
 .kd-directions .figma-map-canvas {
-  background: var(--mb-paper);
-  box-shadow: var(--mb-sh-card) var(--mb-sh-card) 0 var(--mb-ink);
+  background: #fff;
+  box-shadow: none;
+  border-width: 1.5px;
 }
-.kd-directions .figma-map-canvas::before {
-  content: '';
+.kd-directions .directions-pen {
   position: absolute;
   inset: 0;
-  z-index: 0;
-  background-image:
-    linear-gradient(rgba(33,25,20,0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(33,25,20,0.035) 1px, transparent 1px);
-  background-size: 12% 16%;
+  width: 100%;
+  height: 100%;
+  color: var(--mb-ink);
+  pointer-events: none;
+}
+.kd-directions .pen-roads { stroke-width: 1.8; }
+.kd-directions .pen-walk { stroke-width: 1.4; }
+.kd-directions .directions-pen path,
+.kd-directions .pen-building path { vector-effect: non-scaling-stroke; }
+.kd-directions .figma-map-canvas .nonghyup,
+.kd-directions .figma-map-canvas .office {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  color: var(--mb-ink);
+  font-size: 16px;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.kd-directions .pen-building { flex: none; }
+.kd-directions .pen-route-label {
+  position: absolute;
+  left: 518px;
+  top: 251px;
+  margin: 0;
+  padding: 2px 5px;
+  background: #fff;
+  color: var(--mb-ink);
+  font-family: var(--kd-font-body);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
   pointer-events: none;
 }
 
-/* 도로 — 색/선만 리스타일(좌표·크기·각도는 원본 유지) */
-.kd-directions .road { background: var(--mb-road); border-color: var(--mb-ink); }
-.kd-directions .road-gray { background: var(--mb-road); border-color: var(--mb-ink); }
-.kd-directions .road-pink,
-.kd-directions .road-red,
-.kd-directions .road-yellow { background: var(--mb-road); }
-
-/* 농협(좌 다이아) — 중립 회색조(원본 위치·회전 유지) */
-.kd-directions .nonghyup {
-  background: #fff;
-  border-color: var(--mb-ink);
-  color: var(--mb-ink);
-}
-/* 면사무소(중앙 원) — 중립(원본 위치 유지) */
-.kd-directions .office {
-  background: #fff;
-  border-color: var(--mb-ink);
-  color: var(--mb-ink);
-}
-
-/* 캐릭터 핀 라벨 — 범례 색 연동(생산소=초록 / 주민자치=파랑) */
+/* 캐릭터 핀 라벨 · 범례 색 연동(생산소=초록 / 주민자치=파랑) */
 .kd-directions .pin-saengsanso > .map-pin-label {
   background: var(--mb-green);
   color: #fff;
@@ -198,7 +210,7 @@ const MAP_BOARD_CSS = `
   opacity: 0.78;
 }
 
-/* 방위 나침반 — 의미 없던 "지도" 타일을 대체(원본 타일 자리) */
+/* 방위 나침반 · 의미 없던 "지도" 타일을 대체(원본 타일 자리) */
 .kd-directions .mountain-tile {
   background: #fffdf5 !important;
   border: var(--mb-bd-2) solid var(--mb-ink) !important;
@@ -307,7 +319,7 @@ const MAP_BOARD_CSS = `
   .kd-directions .map-character-pin { transition: none; }
 }
 
-/* ════════════ 데스크톱(1440 캔버스) — 보드 수평 중앙정렬 ════════════
+/* ════════════ 데스크톱(1440 캔버스) · 보드 수평 중앙정렬 ════════════
    보드 width 1008 → left (1440-1008)/2 = 216 (좌우여백 216 대칭). */
 .kd-map-desktop .kd-mapboard {
   left: 216px;
@@ -353,22 +365,16 @@ const MAP_BOARD_CSS = `
 /* 데스크톱 약도 라벨 보조주소 글자 */
 .kd-map-desktop .map-pin-label .pin-sub { font-size: 12px; }
 
-/* 보드를 담도록 데스크톱 캔버스/섹션 높이 확장 — 1024px+ 한정 */
+/* 보드를 담도록 데스크톱 캔버스/섹션 높이 확장 · 1024px+ 한정 */
 @media (min-width: 1024px) {
   .kd-figma-map { min-height: 1224px; }
   .kd-map-desktop { height: 1154px; }
 }
 
-/* 데스크톱 캔버스 내부 약도 요소 — 원본 구조를 470 높이에 맞춰 비율 보존 재배치
+/* 데스크톱 캔버스 내부 약도 요소 · 원본 구조를 470 높이에 맞춰 비율 보존 재배치
    (좌표 비율은 원본 960×576 → 944×470 동일 환산. 도로 갈래/건물/핀 상대배치 유지) */
-.kd-map-desktop .figma-map-canvas .road-pink { top: 96px; }
-.kd-map-desktop .figma-map-canvas .road-red { top: 210px; }
-.kd-map-desktop .figma-map-canvas .road-v1 { height: 470px; }
-.kd-map-desktop .figma-map-canvas .road-v2 { height: 224px; }
-.kd-map-desktop .figma-map-canvas .road-v3 { top: 226px; }
-.kd-map-desktop .figma-map-canvas .road-yellow { top: 378px; }
 .kd-map-desktop .figma-map-canvas .nonghyup { top: 168px; }
-.kd-map-desktop .figma-map-canvas .office { top: 134px; line-height: 1.25; text-align: center; }   /* 12px 여섯 자는 77px 원에서 꺾임 → 두 줄로 */
+.kd-map-desktop .figma-map-canvas .office { top: 134px; line-height: 1.25; text-align: center; }
 .kd-map-desktop .figma-map-canvas .pin-saengsanso { top: 104px; }
 .kd-map-desktop .figma-map-canvas .pin-jumin { top: 262px; }
 /* 나침반 타일(원본 "지도" 타일 자리) */
@@ -376,7 +382,7 @@ const MAP_BOARD_CSS = `
   left: 798px; top: 360px; width: 96px; height: 96px;
 }
 
-/* ════════════ 모바일(390 캔버스) — 보드 좌우여백 12 대칭 ════════════ */
+/* ════════════ 모바일(390 캔버스) · 보드 좌우여백 12 대칭 ════════════ */
 @media (max-width: 900px) {
   .kd-map-mobile .kd-mapboard {
     left: 12px;
@@ -429,15 +435,9 @@ const MAP_BOARD_CSS = `
   .kd-map-mobile .map-info-card p { grid-template-columns: max-content 1fr; }
   .kd-map-mobile .map-info-card p span { padding: 3px 10px; }
 
-  /* 모바일 약도 내부 요소 — 원본 구조를 300 높이에 맞춰 비율 보존 재배치 */
-  .kd-map-mobile .figma-map-canvas .road-pink { top: 70px; }
-  .kd-map-mobile .figma-map-canvas .road-red { top: 132px; }
-  .kd-map-mobile .figma-map-canvas .road-v1 { height: 300px; }
-  .kd-map-mobile .figma-map-canvas .road-v2 { height: 142px; }
-  .kd-map-mobile .figma-map-canvas .road-v3 { top: 140px; }
-  .kd-map-mobile .figma-map-canvas .road-yellow { top: 240px; }
+  /* 모바일 약도 내부 요소 · 원본 구조를 300 높이에 맞춰 비율 보존 재배치 */
   .kd-map-mobile .figma-map-canvas .nonghyup { top: 49px; }
-  .kd-map-mobile .figma-map-canvas .office { top: 84px; }
+  .kd-map-mobile .figma-map-canvas .office { top: 64px; }
   .kd-map-mobile .figma-map-canvas .pin-saengsanso { top: 64px; }
   .kd-map-mobile .figma-map-canvas .pin-jumin { top: 144px; }
   /* 모바일 나침반 타일 */
@@ -453,6 +453,57 @@ const MAP_BOARD_CSS = `
   .kd-figma-map { min-height: 1162px; }
   .kd-map-mobile { height: 1162px; }
 }
+.kd-map-desktop .map-character-pin > .map-pin-label,
+.kd-map-desktop .map-pin-label .pin-sub,
+.kd-map-desktop .kd-map-legend,
+.kd-map-desktop .kd-legend-tip,
+.kd-map-desktop .walk-label,
+.kd-map-desktop .mountain-tile .nlabel { font-size: 16px; }
+.kd-map-desktop .walk-label { width: max-content; padding: 0 12px; }
+.kd-map-desktop .map-character-pin > .map-pin-label {
+  left: 50%;
+  right: auto;
+  width: max-content;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.kd-map-desktop .pin-saengsanso > .map-pin-label { left: calc(50% + 42px); }
+@media (min-width: 901px) and (max-width: 1439px) {
+  .kd-map-desktop { --pen-size: calc(16px / var(--kd-stage-zoom, 1)); }
+  .kd-map-desktop .map-sub,
+  .kd-map-desktop .kd-mapboard-head,
+  .kd-map-desktop .kd-map-legend,
+  .kd-map-desktop .kd-legend-tip,
+  .kd-map-desktop .walk-label,
+  .kd-map-desktop .figma-map-canvas .nonghyup,
+  .kd-map-desktop .figma-map-canvas .office,
+  .kd-map-desktop .figma-map-canvas .map-pin-label,
+  .kd-map-desktop .figma-map-canvas .pin-sub,
+  .kd-map-desktop .figma-map-canvas .nlabel,
+  .kd-map-desktop .figma-map-canvas .pen-route-label { font-size: var(--pen-size); }
+  .kd-map-desktop .pen-roads { stroke-width: calc(1.8px / var(--kd-stage-zoom, 1)); }
+  .kd-map-desktop .pen-walk { stroke-width: calc(1.4px / var(--kd-stage-zoom, 1)); }
+  .kd-map-desktop .pen-building { zoom: calc(1 / var(--kd-stage-zoom, 1)); }
+}
+@media (max-width: 900px) {
+  .kd-map-mobile .figma-map-canvas .nonghyup,
+  .kd-map-mobile .figma-map-canvas .office,
+  .kd-map-mobile .map-character-pin > .map-pin-label,
+  .kd-map-mobile .mountain-tile .nlabel,
+  .kd-map-mobile .kd-map-legend,
+  .kd-map-mobile .kd-mapboard-head,
+  .kd-map-mobile .walk-label { font-size: 15px; }
+  .kd-map-mobile .pen-roads { stroke-width: 1.6; }
+  .kd-map-mobile .pen-building { width: 28px; height: 28px; }
+  .kd-map-mobile .pen-route-label {
+    left: 188px;
+    top: 152px;
+    width: 66px;
+    box-sizing: border-box;
+    font-size: 15px;
+  }
+}
+
 `;
 
 // ── 오시는길 「문의 · 노드트리 사무국」 표기 ──────────────────────────
@@ -515,7 +566,7 @@ const BoardHead: React.FC<{ text: string }> = ({ text }) => (
   </div>
 );
 
-// 핀 범례 — 지도 위 핀 라벨 색(생산소 초록/주민자치 파랑)과 연동.
+// 핀 범례 · 지도 위 핀 라벨 색(생산소 초록/주민자치 파랑)과 연동.
 const MapLegend: React.FC = () => (
   <div className="kd-map-legend" aria-hidden="true">
     <span className="kd-legend-item">
@@ -536,7 +587,7 @@ const MapLegend: React.FC = () => (
   </div>
 );
 
-// 방위 나침반 — 원본 "지도" 타일 자리에 들어가는 장식(.mountain-tile 재활용).
+// 방위 나침반 · 원본 "지도" 타일 자리에 들어가는 장식(.mountain-tile 재활용).
 const CompassTile: React.FC = () => (
   <div className="mountain-tile" aria-hidden="true">
     <span className="nlabel">N</span>
@@ -564,11 +615,11 @@ const Directions: React.FC = () => {
 
   return (
     <section className="kd-figma-map kd-directions">
-      {/* 모바일 오시는길 캐릭터-그림자 정렬 패치 — 데스크톱 무영향(@media max-width:900px) */}
+      {/* 모바일 오시는길 캐릭터-그림자 정렬 패치 · 데스크톱 무영향(@media max-width:900px) */}
       <style>{MAP_MOBILE_SHADOW_CSS}</style>
-      {/* 마을 안내판 리스타일(구조 보존) — 데스크톱·모바일 양쪽 주입 */}
+      {/* 마을 안내판 리스타일(구조 보존) · 데스크톱·모바일 양쪽 주입 */}
       <style>{MAP_BOARD_CSS}</style>
-      <div className="kd-map-desktop" data-name="오시는 길 — Desktop">
+      <div className="kd-map-desktop" data-name="오시는 길 · Desktop">
         <div className="kd-section-rule kd-section-rule--s5" />
         <h1>오시는 길</h1>
         <p className="map-sub">충청남도 부여군 장암면 석동로 일대</p>
@@ -576,16 +627,12 @@ const Directions: React.FC = () => {
         <div className="kd-mapboard" aria-hidden="true" />
         <BoardHead text="장암마을 약도 · 오시는 길" />
         <span className="walk-label">걸어서 3분</span>
-        {/* 약도 — 원본 구조(도로·건물·핀 좌표) 그대로, 스타일만 리디자인 */}
+        {/* 약도 · 원본 구조(도로·건물·핀 좌표) 그대로, 스타일만 리디자인 */}
         <div className="figma-map-canvas">
-          <i className="road road-pink" />
-          <i className="road road-red" />
-          <i className="road road-gray road-v1" />
-          <i className="road road-gray road-v2" />
-          <i className="road road-gray road-v3" />
-          <i className="road road-yellow" />
-          <div className="nonghyup">장암농협</div>
-          <div className="office">장암<br />면사무소</div>
+          <DirectionsPen />
+          <PenLandmark bank label="장암농협" />
+          <PenLandmark label="장암면사무소" />
+          <p className="pen-route-label">석동로 따라 3분</p>
           <CharacterPin className="pin-saengsanso" src="char-09.svg" label="장암 생산소" sub="석동로29번길 3" />
           <CharacterPin className="pin-jumin" src="char-18.svg" label="주민자치센터" sub="석동로 16" />
           <CompassTile />
@@ -597,7 +644,7 @@ const Directions: React.FC = () => {
         </div>
       </div>
 
-      <div className="kd-map-mobile" data-name="오시는 길 — Mobile">
+      <div className="kd-map-mobile" data-name="오시는 길 · Mobile">
         <div className="kd-section-rule kd-section-rule--s5" />
         <h1>오시는 길</h1>
         <p className="map-sub">충청남도 부여군 장암면 석동로 일대</p>
@@ -605,14 +652,10 @@ const Directions: React.FC = () => {
         <BoardHead text="장암마을 약도" />
         <span className="walk-label">걸어서 3분</span>
         <div className="figma-map-canvas">
-          <i className="road road-pink" />
-          <i className="road road-red" />
-          <i className="road road-gray road-v1" />
-          <i className="road road-gray road-v2" />
-          <i className="road road-gray road-v3" />
-          <i className="road road-yellow" />
-          <div className="nonghyup">농협</div>
-          <div className="office">면사무소</div>
+          <DirectionsPen mobile />
+          <PenLandmark bank label="농협" />
+          <PenLandmark label="면사무소" />
+          <p className="pen-route-label">석동로 따라 3분</p>
           <CharacterPin className="pin-saengsanso" src="char-09.svg" label="생산소" />
           <CharacterPin className="pin-jumin" src="char-18.svg" label="자치센터" />
           <CompassTile />
