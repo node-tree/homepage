@@ -1329,6 +1329,7 @@ const VillageDiary: React.FC = () => {
   const curMonthRef = useRef<number | null>(null);
   const monthStartsRef = useRef(monthStarts);
   monthStartsRef.current = monthStarts;
+  const measureMonthRef = useRef<() => void>(() => {});
   useEffect(() => {
     let raf: number | null = null;
     const measure = () => {
@@ -1349,6 +1350,7 @@ const VillageDiary: React.FC = () => {
     const onScroll = () => {
       if (raf == null) raf = requestAnimationFrame(measure);
     };
+    measureMonthRef.current = measure;
     measure();
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll, { passive: true });
@@ -1358,6 +1360,13 @@ const VillageDiary: React.FC = () => {
       if (raf != null) cancelAnimationFrame(raf);
     };
   }, []);
+  // 일기를 받아 오거나 칩을 바꾸면(= 달 목록이 바뀌면) 다시 잰다 — 스크롤이 없어도 첫 달이 켜지고,
+  //   앞 프로그램의 달이 남지 않게 먼저 비운다(2026-10-21 디자인 검수 4회차).
+  useEffect(() => {
+    curMonthRef.current = null;
+    setCurMonth(null);
+    measureMonthRef.current();
+  }, [monthStarts]);
 
   const renderFilters = (mobile = false) => (
     <div className="diary-filters">
