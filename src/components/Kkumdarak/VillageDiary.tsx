@@ -1259,7 +1259,7 @@ const VillageDiary: React.FC = () => {
   };
 
   // ── 달 묶음 (2026-10-20) ────────────────────────────────────────
-  //   카드 순서·편집 인덱스는 그대로 두고, 달이 바뀌는 첫 카드에 길 위 표시 + 위쪽 「달 바로가기」.
+  //   카드 순서·편집 인덱스는 그대로 두고, 달이 바뀌는 첫 카드에 길 위 표시와 쪽지 바로가기.
   const monthStarts = useMemo(() => {
     const out: Array<{ month: number; index: number }> = [];
     let prev: number | null = null;
@@ -1323,11 +1323,9 @@ const VillageDiary: React.FC = () => {
   }, []);
 
   // ── 따라다니는 바로가기 (작가 2026-10-20 「스티커처럼 따라다녀야」) ─────────────
-  //   위쪽 칩·바로가기 줄이 헤더 뒤로 넘어가면 오른쪽 아래에 「프로그램 · 달 · 처음으로」 묶음을 띄운다.
-  //   지금 화면 40% 선을 넘어선 달을 칠해 「어디쯤인지」도 같이 보여 준다(rAF 로 묶어 한 프레임 한 번만 잰다).
-  const [floatOn, setFloatOn] = useState(false);
+  //   스크롤 전부터 쪽지 하나로 달 이동을 제공한다. 모바일에서는 카드 반대쪽 길에 붙인다.
+  //   지금 화면 40% 선을 넘어선 달을 빨간 글자로 표시한다(rAF 로 묶어 한 프레임 한 번만 잰다).
   const [curMonth, setCurMonth] = useState<number | null>(null);
-  const floatOnRef = useRef(false);
   const curMonthRef = useRef<number | null>(null);
   const monthStartsRef = useRef(monthStarts);
   monthStartsRef.current = monthStarts;
@@ -1335,16 +1333,6 @@ const VillageDiary: React.FC = () => {
     let raf: number | null = null;
     const measure = () => {
       raf = null;
-      const header = document.querySelector('.kd-header');
-      const headerBottom = header ? header.getBoundingClientRect().bottom : 80;
-      const filters = Array.from(document.querySelectorAll<HTMLElement>('.kd-figma-diary .diary-filters')).find(
-        (e) => e.getBoundingClientRect().height > 0,
-      );
-      const on = !!filters && filters.getBoundingClientRect().bottom < headerBottom;
-      if (on !== floatOnRef.current) {
-        floatOnRef.current = on;
-        setFloatOn(on);
-      }
       const line = window.innerHeight * 0.4;
       let cur: number | null = null;
       monthStartsRef.current.forEach(({ month, index }) => {
@@ -1389,16 +1377,6 @@ const VillageDiary: React.FC = () => {
           {p.name}
         </span>
       ))}
-      {showMonths && (
-        <div className="diary-months" role="group" aria-label="달 바로가기">
-          <span className="diary-months-label">바로가기</span>
-          {monthJumps.map(({ month, index }) => (
-            <button type="button" key={month} onClick={() => jumpToCard(index)}>
-              {month}월
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 
@@ -1695,11 +1673,12 @@ const VillageDiary: React.FC = () => {
         )}
       </div>
 
-      {floatOn && !isEditing && (
-        <div className="diary-float" role="group" aria-label="마을일기 바로가기">
-          <span className="diary-float-name" style={{ '--dot': program.accent } as React.CSSProperties}>
-            {program.name}
-          </span>
+      {!isEditing && (
+        <div
+          className={`diary-float${mobileSide === 'left' ? ' is-path-right' : ''}`}
+          role="group"
+          aria-label="마을일기 바로가기"
+        >
           {showMonths &&
             monthJumps.map(({ month, index }) => (
               <button
@@ -1718,9 +1697,6 @@ const VillageDiary: React.FC = () => {
             aria-label="처음으로"
             onClick={() => window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' })}
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-              <path d="M7 12V2M2.5 6.5L7 2l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
             <span>처음으로</span>
           </button>
         </div>
