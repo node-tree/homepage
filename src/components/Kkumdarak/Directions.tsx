@@ -150,7 +150,7 @@ const MAP_BOARD_CSS = `
   color: var(--mb-ink);
   pointer-events: none;
 }
-.kd-directions .pen-roads { stroke-width: 1.6; }
+.kd-directions .pen-roads { stroke-width: 1.8; }
 .kd-directions .pen-walk { stroke-width: 1.4; }
 .kd-directions .directions-pen path,
 .kd-directions .pen-building path { vector-effect: non-scaling-stroke; }
@@ -437,7 +437,7 @@ const MAP_BOARD_CSS = `
 
   /* 모바일 약도 내부 요소 · 원본 구조를 300 높이에 맞춰 비율 보존 재배치 */
   .kd-map-mobile .figma-map-canvas .nonghyup { top: 49px; }
-  .kd-map-mobile .figma-map-canvas .office { top: 84px; }
+  .kd-map-mobile .figma-map-canvas .office { top: 64px; }
   .kd-map-mobile .figma-map-canvas .pin-saengsanso { top: 64px; }
   .kd-map-mobile .figma-map-canvas .pin-jumin { top: 144px; }
   /* 모바일 나침반 타일 */
@@ -481,7 +481,7 @@ const MAP_BOARD_CSS = `
   .kd-map-desktop .figma-map-canvas .pin-sub,
   .kd-map-desktop .figma-map-canvas .nlabel,
   .kd-map-desktop .figma-map-canvas .pen-route-label { font-size: var(--pen-size); }
-  .kd-map-desktop .pen-roads { stroke-width: calc(1.6px / var(--kd-stage-zoom, 1)); }
+  .kd-map-desktop .pen-roads { stroke-width: calc(1.8px / var(--kd-stage-zoom, 1)); }
   .kd-map-desktop .pen-walk { stroke-width: calc(1.4px / var(--kd-stage-zoom, 1)); }
   .kd-map-desktop .pen-building { zoom: calc(1 / var(--kd-stage-zoom, 1)); }
 }
@@ -493,7 +493,15 @@ const MAP_BOARD_CSS = `
   .kd-map-mobile .kd-map-legend,
   .kd-map-mobile .kd-mapboard-head,
   .kd-map-mobile .walk-label { font-size: 15px; }
-  .kd-map-mobile .pen-route-label { left: 22px; top: 264px; font-size: 15px; }
+  .kd-map-mobile .pen-roads { stroke-width: 1.6; }
+  .kd-map-mobile .pen-building { width: 28px; height: 28px; }
+  .kd-map-mobile .pen-route-label {
+    left: 188px;
+    top: 152px;
+    width: 66px;
+    box-sizing: border-box;
+    font-size: 15px;
+  }
 }
 
 `;
