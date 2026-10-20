@@ -495,11 +495,11 @@ const MAP_BOARD_CSS = `
   .kd-map-mobile .walk-label { font-size: 15px; }
   .kd-map-mobile .pen-roads { stroke-width: 1.6; }
   .kd-map-mobile .pen-building { width: 28px; height: 28px; }
+  /* 캐릭터 오른쪽은 세로길까지 70px뿐이라 한 줄(116px)이 길을 끊는다 → 캐릭터 왼쪽 빈 자리에 한 줄로 */
   .kd-map-mobile .pen-route-label {
-    left: 188px;
-    top: 152px;
-    width: 66px;
-    box-sizing: border-box;
+    left: 14px;
+    top: 166px;
+    white-space: nowrap;
     font-size: 15px;
   }
 }
