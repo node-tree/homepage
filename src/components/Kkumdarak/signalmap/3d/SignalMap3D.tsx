@@ -1,6 +1,6 @@
 // @ts-nocheck
 // ═══════════════════════════════════════════════════════════════════════
-// SignalMap3D.tsx — 부흥여지도 (3D 먹선 도시, 포스터 배치)
+// SignalMap3D.tsx — 부흥여지도 (3D 먹선 도시, 포스터 배치) · variant='signal' 이면 이소 「마을의 신호」(실제 지리판)
 //   진입: nodetree.kr/buheung (독립 페이지, Buheung.tsx) · /iso#signal-map-3d (이소 안, onBack 있음)
 //   조작: 드래그 = 궤도 회전(도시를 돌려 본다) · 휠/핀치 = 줌
 //         Shift+드래그 · 두 손가락 드래그 = 팬 · 버튼 = 시점 프리셋 · 나침반 = 북쪽 위로 / 휴대폰 방향 따라가기
@@ -12,6 +12,7 @@ import { useReducedMotion } from 'framer-motion';
 import { resetBoilers, boilTick, PAPER } from './ink3';
 import { buildCity } from './buyeoCity';
 import { GEO } from './buyeoGeo';
+import { GEO_SIGNAL } from './buyeoGeoSignal';
 import { SIGNALS, PLACES } from '../scene';
 import { PLACES39 } from '../places39';
 import { signalMapAPI } from '../../../../services/api';
@@ -37,9 +38,14 @@ type Props = {
   title?: React.ReactNode;      // 왼쪽 위 제목 판(없으면 글자 제목)
   actions?: React.ReactNode;    // 오른쪽 위 버튼 줄 앞에 붙는 버튼(예: 이야기)
   openListSignal?: number;      // 값이 바뀌면 39곳 목록을 연다(이야기 패널의 「지도에서 39곳 보기」)
+  // 'buheung' = 부흥여지도(nodetree.kr/buheung, 포스터 배치 · 39곳) · 'signal' = 이소 「마을의 신호」
+  //   (isoartlab.com/#signal-map-3d, 실제 지리판 · 아이들 신호 11개만). 2026-10-20 작가 결정으로 갈랐다.
+  variant?: 'buheung' | 'signal';
 };
 
-const SignalMap3D: React.FC<Props> = ({ onBack, title, actions, openListSignal }) => {
+const SignalMap3D: React.FC<Props> = ({ onBack, title, actions, openListSignal, variant = 'buheung' }) => {
+  const isSignal = variant === 'signal';
+  const geo = isSignal ? GEO_SIGNAL : GEO;
   const wrapRef = useRef(null);
   const needleRef = useRef(null);                     // 나침반 바늘 — 프레임마다 직접 돌린다(리렌더 없이)
   const headingRef = useRef(false);                   // 휴대폰 방향 따라가기 중인지(효과 안에서 읽는다)
@@ -57,7 +63,7 @@ const SignalMap3D: React.FC<Props> = ({ onBack, title, actions, openListSignal }
   const [saving, setSaving] = useState(false);
   const { authed } = useKkumdarakAuth();
   const customs = useMemo(() => (overrides._custom || []), [overrides]);
-  const ALL = useMemo(() => [...SIGNALS, ...PLACES, ...customs.map(c => ({ id: c.id, name: c.name, blink: [0, 1], draft: true }))], [customs]);
+  const ALL = useMemo(() => [...SIGNALS, ...(isSignal ? [] : PLACES), ...customs.map(c => ({ id: c.id, name: c.name, blink: [0, 1], draft: true }))], [customs, isSignal]);
   const [adding, setAdding] = useState(false);
   const addingRef = useRef(false);
   useEffect(() => { addingRef.current = adding; }, [adding]);
@@ -80,7 +86,7 @@ const SignalMap3D: React.FC<Props> = ({ onBack, title, actions, openListSignal }
   const [glFailed, setGlFailed] = useState(false);   // WebGL을 못 열면 안내로 대체
   const [pick, setPick] = useState(null);            // { x, y, ids[] } | null
   const [listOpen, setListOpen] = useState(false);
-  const [listTab, setListTab] = useState('place');
+  const [listTab, setListTab] = useState(isSignal ? 'signal' : 'place');
   const PICK_R = 28;                                  // 이 거리(px) 안의 동그라미는 겹친 것으로 본다
   const isNarrow = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches;
   const nameOf = (id) => (overrides[id] && overrides[id].name) || ALL.find(s => s.id === id)?.name || id;
@@ -123,7 +129,8 @@ const SignalMap3D: React.FC<Props> = ({ onBack, title, actions, openListSignal }
   useEffect(() => { signalMapAPI.get().then(setOverrides); }, []);
   useEffect(() => {
     if (!openListSignal) return;
-    setPick(null); setOpenId(null); setListTab('place'); setListOpen(true);
+    setPick(null); setOpenId(null); setListTab(isSignal ? 'signal' : 'place'); setListOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openListSignal]);
   useEffect(() => {                                              // 카드 전환 시 편집 폼 리셋
     setEditing(false);
@@ -264,7 +271,7 @@ const SignalMap3D: React.FC<Props> = ({ onBack, title, actions, openListSignal }
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(PAPER);
     resetBoilers();
-    const { ticks, signals, places, fit } = buildCity(scene);
+    const { ticks, signals, places, fit } = buildCity(scene, geo, { places: !isSignal });
 
     const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 700);
     const S0 = 72, R = 260, FIT_PAD = 40;
@@ -301,7 +308,7 @@ const SignalMap3D: React.FC<Props> = ({ onBack, title, actions, openListSignal }
     //   포스터 배치판(2026-10-16): 세로 첫 화면은 39곳의 무게중심(부여읍 쪽)을 반폭 PORTRAIT_HALF 월드로 —
     //   번호 원이 점으로 접히지 않는 가장 넓은 폭(px/월드 ≥ 4.3, 아래 far 판정).
     const PORTRAIT_HALF = 44;
-    const CENTER = GEO.portraitCenter;
+    const CENTER = geo.portraitCenter;
     const startCam = (v) => {
       const z = fitZoom(v);
       if (v !== 'iso' || el.clientWidth >= el.clientHeight) return { zoom: z, cx: FC[0], cz: FC[1] };
@@ -552,7 +559,7 @@ const SignalMap3D: React.FC<Props> = ({ onBack, title, actions, openListSignal }
         ].filter(d => !hiddenRef.current.has(d.id)));
         // 화면 1px당 월드 거리 → 이웃 장소(≈6 월드)가 번호 원(26px)보다 가까우면 점으로
         setFar(H2 * st.zoom / (2 * S0) < 4.3);
-        setTags((GEO.labels || []).map(({ text, pos }) => {
+        setTags(((geo as any).labels || []).map(({ text, pos }) => {
           v3.set(pos[0], 0.4, pos[1]).project(cam);
           return { text, x: (v3.x * 0.5 + 0.5) * W2, y: (-v3.y * 0.5 + 0.5) * H2 };
         }));
@@ -582,7 +589,7 @@ const SignalMap3D: React.FC<Props> = ({ onBack, title, actions, openListSignal }
   return (
     <div className={`smap s3d${far ? ' s3d--far' : ''}`} ref={wrapRef}>
       <div className="s3d-head" data-ui>
-        {title || <h1 className="s3d-title">부흥여지도</h1>}
+        {title || <h1 className="s3d-title">{isSignal ? '마을의 신호' : '부흥여지도'}</h1>}
       </div>
       <div className="s3d-actions" data-ui>
         {onBack && <button className="s3d-act s3d-act--ghost" onClick={onBack}>← 이소 홈으로</button>}
@@ -593,7 +600,7 @@ const SignalMap3D: React.FC<Props> = ({ onBack, title, actions, openListSignal }
       {glFailed && (
         <div className="s3d-nogl" role="alert" data-ui>
           <p>이 기기에서는 3D 지도를 열 수 없어요.</p>
-          <button onClick={() => setListOpen(true)}>39곳 목록 보기</button>
+          <button onClick={() => setListOpen(true)}>{isSignal ? '신호 목록 보기' : '39곳 목록 보기'}</button>
         </div>
       )}
       <div className="s3d-dock" data-ui>
@@ -652,8 +659,10 @@ const SignalMap3D: React.FC<Props> = ({ onBack, title, actions, openListSignal }
           <div className="smap-card-head">
             <button className="smap-card-close" onClick={() => setListOpen(false)} aria-label="닫기">✕</button>
             <div className="s3d-list-tabs" role="tablist">
-              <button role="tab" aria-selected={listTab === 'place'} className={listTab === 'place' ? 'on' : ''}
-                onClick={() => setListTab('place')}>자주 가는 곳 {PLACES39.filter(p => !(overrides[p.id] && overrides[p.id].hidden)).length}</button>
+              {!isSignal && (
+                <button role="tab" aria-selected={listTab === 'place'} className={listTab === 'place' ? 'on' : ''}
+                  onClick={() => setListTab('place')}>자주 가는 곳 {PLACES39.filter(p => !(overrides[p.id] && overrides[p.id].hidden)).length}</button>
+              )}
               <button role="tab" aria-selected={listTab === 'signal'} className={listTab === 'signal' ? 'on' : ''}
                 onClick={() => setListTab('signal')}>우리가 만든 신호 {SIGNALS.filter(s => !(overrides[s.id] && overrides[s.id].hidden)).length}</button>
             </div>
@@ -679,7 +688,7 @@ const SignalMap3D: React.FC<Props> = ({ onBack, title, actions, openListSignal }
         </aside>
       )}
       <footer className={`s3d-hint${touched || openId || listOpen ? ' is-off' : ''}`} aria-hidden={touched}>
-        번호를 누르면 소개와 사진이 열려요 <em>끌어서 돌려 보세요</em>
+        {isSignal ? '동그라미를 누르면 작품 소개와 사진이 열려요' : '번호를 누르면 소개와 사진이 열려요'} <em>끌어서 돌려 보세요</em>
       </footer>
       {open && (
         <aside className="smap-card" role="dialog" aria-label={`${open.name} 소개`}>

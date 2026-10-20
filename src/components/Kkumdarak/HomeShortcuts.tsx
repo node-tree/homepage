@@ -5,7 +5,7 @@ import { daysUntilFestival } from './programIndex';
 // ═══════════════════════════════════════════════════════════════
 // 홈 바로가기 (2026-10-20) — 홈이 히어로만 있어 다른 화면으로 가는 길이 없었다.
 //   · 히어로 글 아래 축제 알약(FestivalPill): 첫 화면 안에서 축제를 알린다 → 아래 띠로 내려 준다.
-//   · 히어로 아래 띠(HomeShortcuts): 축제(큰 칸) · 마을일기 · 부흥여지도.
+//   · 히어로 아래 띠(HomeShortcuts): 축제(큰 칸) · 마을일기 · 마을의 신호 지도(부흥여지도는 nodetree.kr/buheung 에만, 2026-10-20).
 //   글은 사이트에 이미 있는 문장을 쓴다(축제 = 프로그램 축제 카드 문구 안, 지도 = 마을기록 설명, 일기 = 마을일기 부제).
 //   ⚠️ 해시 링크 대신 스크롤 버튼: #home-… 같은 해시는 Kkumdarak 이 모르는 섹션이라 홈 맨 위로 돌아간다.
 // ═══════════════════════════════════════════════════════════════
@@ -74,7 +74,7 @@ const HomeShortcuts: React.FC = () => {
       <div className="kd-home-way kd-home-way--map">
         <a className="kd-home-way-main" href="#signal-map-3d">
           <p className="kd-home-kicker">마을기록 · 지도</p>
-          <h2>부흥여지도</h2>
+          <h2>마을의 신호</h2>
           <p className="kd-home-text">참여자가 나무판 위에 지은 마을을 웹 위에 다시 세웠습니다.</p>
           <span className="kd-home-arrow" aria-hidden="true">→</span>
         </a>

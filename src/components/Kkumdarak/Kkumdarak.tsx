@@ -481,7 +481,8 @@ const Kkumdarak: React.FC = () => {
     return (
       <KkumdarakAuthProvider>
         <Suspense fallback={<SectionFallback />}>
-          <SignalMap3D onBack={() => go('main')} />
+          {/* 이소 안은 「마을의 신호」(실제 지리판 · 신호 11) — 부흥여지도는 nodetree.kr/buheung 에만(2026-10-20 작가 결정) */}
+          <SignalMap3D onBack={() => go('main')} variant="signal" />
         </Suspense>
       </KkumdarakAuthProvider>
     );

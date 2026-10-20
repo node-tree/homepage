@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { inkLine, grayLine, cyl, ico, at, buildTrack, trackAt, inked, mergeStatics } from './ink3';
 import { BUILDERS } from './models3';
 import { PLACES39 } from '../places39';
-import { GEO } from './buyeoGeo';
+import { GEO as POSTER_GEO } from './buyeoGeo';
 
 const line = (pts3, mat = inkLine, dash) => {
   const geo = new THREE.BufferGeometry().setFromPoints(pts3.map(p => new THREE.Vector3(...p)));
@@ -43,7 +43,11 @@ const PLACE_MODEL = {
 };
 const SHOP_ALT = ['상가 A', '상가 B·2층'];
 
-export function buildCity(scene) {
+// geo = 배치 데이터(기본 부흥여지도 포스터판, 이소 「마을의 신호」는 buyeoGeoSignal.ts 실제 지리판).
+// opts.places === false 면 부흥여지도 39곳 번호 원 앵커를 만들지 않는다(이소 「마을의 신호」).
+export function buildCity(scene, geo = POSTER_GEO, opts = {}) {
+  const GEO = geo;
+  const withPlaces = opts.places !== false;
   const ticks = [];
   const placed = [];                       // 배치 전수 감사용 기록(이름 + 오브젝트)
   //  label = 참여자(아이들)가 적어 낸 「부여 장소」 이름. 장소 앵커(동그라미)는 이 이름표 모형 위에 뜬다.
@@ -149,7 +153,9 @@ export function buildCity(scene) {
     }
   }
   put('깃발', GEO.places['학교·장암초'][0] - 3, GEO.places['학교·장암초'][1] + 2.4, 0, 0.8);
-  put('축운산', GEO.landmarks['축운산'][0], GEO.landmarks['축운산'][1], 0, 1.6);        // 포스터의 축운산 자리
+  // 축운산 — 포스터판은 landmarks, 실제 지리판은 금성산(= 아이들 지도의 축운산) 신호 곁
+  const [cx0, cz0] = GEO.landmarks ? GEO.landmarks['축운산'] : [GEO.signals.chugunsan[0] + 7, GEO.signals.chugunsan[1] - 4];
+  put('축운산', cx0, cz0, 0, 1.6);
 
   // ── 채움(포스터 그림의 빈 땅 구역만 · 집 · 비닐하우스 · 논밭 · 나무 · 갈대 · 꽃) ──
   for (const [mdl, x, z, ry, s] of GEO.fill) put(mdl, x, z, ry, s);
@@ -158,7 +164,7 @@ export function buildCity(scene) {
   put('솟대', GEO.signals['star-yard'][0] - 6, GEO.signals['star-yard'][1] - 4, 0);
 
   // 전봇대 — 강 남쪽 가로길(전선 스팬 5.2 간격)
-  for (const nm of ['H3']) {
+  for (const nm of (GEO.poleTracks || ['H3'])) {
     const tr = GEO.tracks[nm]; if (!tr) continue;
     const t = buildTrack(offsetLine(tr, 2.2));
     for (let d = 2; d < t.total; d += 5.2) { const p = trackAt(t, d); put('전봇대', p.x, p.z, -p.ang + Math.PI / 2, 0.95); }
@@ -243,10 +249,13 @@ export function buildCity(scene) {
     return v;
   };
   const T = (nm) => buildTrack(GEO.tracks[nm]);
-  vehicle('차·주행', T('V1'), 40000, 'shuttle', 0, 0.8);
-  vehicle('버스', T('H1'), 34000, 'shuttle', 6000, -0.9);
-  vehicle('차·주행', T('V2'), 42000, 'shuttle', 14000, -0.8);
-  vehicle('경운기', T('H3'), 64000, 'shuttle', 9000, 0.9);
+  const VEHICLES = GEO.vehicles || [
+    ['차·주행', 'V1', 40000, 'shuttle', 0, 0.8],
+    ['버스', 'H1', 34000, 'shuttle', 6000, -0.9],
+    ['차·주행', 'V2', 42000, 'shuttle', 14000, -0.8],
+    ['경운기', 'H3', 64000, 'shuttle', 9000, 0.9],
+  ];
+  for (const [mdl, nm, per, mode, ph, lane] of VEHICLES) if (GEO.tracks[nm]) vehicle(mdl, T(nm), per, mode, ph, lane);
   vehicle('통통배', buildTrack(mid.slice(0, Math.max(4, Math.round(mid.length * 0.45)))), 60000, 'shuttle', 0, 0);
 
   // ── 신호 11: 아이들 작품 미니어처(나무판 디오라마) — 모터는 돌고 LED는 깜빡인다 ──
@@ -293,7 +302,7 @@ export function buildCity(scene) {
   scene.updateMatrixWorld(true);
   const byLabel = {};
   for (const { name, obj } of placed) (byLabel[name] = byLabel[name] || []).push(obj);
-  const places = PLACES39.map(({ id, label }) => {
+  const places = !withPlaces ? [] : PLACES39.map(({ id, label }) => {
     const objs = byLabel[label];
     if (objs && objs.length) {
       const box = new THREE.Box3();
@@ -303,7 +312,7 @@ export function buildCity(scene) {
     const [x, z] = GEO.places[label] || [0, 0];
     return { id, pos: new THREE.Vector3(x, 4, z) };
   });
-  places.push({ id: 'military', pos: new THREE.Vector3(mx0, 6.4, mz0) });
+  if (withPlaces) places.push({ id: 'military', pos: new THREE.Vector3(mx0, 6.4, mz0) });
 
   // ── 프레이밍용 콘텐츠 경계 ── (병합 전에 재야 한다 — 병합은 원본을 visible=false로 내린다)
   scene.updateMatrixWorld(true);
