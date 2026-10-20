@@ -6487,20 +6487,26 @@ a.kd-home-way h2 {
 }
 .diary-float {
   /* 화면 아래쪽의 쪽지 한 장. 현재 달만 빨강, 그림자 없음. */
+  /* 데스크톱: 화면 아래 가운데 = 가운데 길 위(왼쪽 카드 오른끝 560 · 오른쪽 카드 왼끝 880 사이 빈 통로).
+     오른쪽 아래에 두면 오른쪽 사진 카드가 지나가며 아래쪽이 가려졌다(2026-10-20 실측). */
   position: fixed;
-  right: 24px;
+  left: 50%;
+  right: auto;
   bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   z-index: 40;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   max-width: calc(100vw - 48px);
   padding: 4px 8px;
   border: 2px solid #1a1a1a;
   background: #fff9ea;
   overflow-x: auto;
   word-break: keep-all;
-  transform: rotate(-1.5deg);
+  transform: translateX(-50%) rotate(-1.5deg);
+}
+@media (min-width: 901px) {
+  .diary-float button { min-width: 40px; }
 }
 .diary-float button {
   display: inline-flex;
@@ -6584,6 +6590,7 @@ a.kd-home-way:focus-visible,
   .diary-float {
     left: max(8px, calc((100vw - 390px) / 2 + 8px));
     right: auto;
+    transform: rotate(-1.5deg);
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     flex-direction: column;
     width: 88px;
