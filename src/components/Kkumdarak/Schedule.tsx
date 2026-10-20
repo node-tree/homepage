@@ -1,28 +1,29 @@
 import React from 'react';
 import MotionCharacter from './MotionCharacter';
+import ProgramViewToggle from './ProgramViewToggle';
+import { PROGRAM_INDEX, FESTIVAL, Period } from './programIndex';
 
 const SCHEDULE_CHARACTER = '05-character-05-yellow-signal.svg';
 
 const MONTHS = ['5월', '6월', '7월', '8월', '9월', '10월', '11월'];
 const MONTH_MOBILE = ['5', '6', '7', '8', '9', '10', '11'];
 
-// ── 권위 기간 정의 (= 프로그램 카드 표시값) ───────────────────────────
-//   막대 좌표는 아래 기간(시작 월·일 → 끝 월·일)에서 월축으로 파생 계산한다.
+// ── 막대 순서·색 (기간은 programIndex.ts 한 곳에서) ────────────────────
+//   막대 좌표는 기간(시작 월·일 → 끝 월·일)에서 월축으로 파생 계산한다.
 //   ⚠️ 사용자가 프로그램 카드 기간(programContent override)을 편집해도 이 일정 막대는
-//      자동 반영되지 않는다(하드코딩). 기간이 바뀌면 아래 PERIODS 도 함께 수정해야 한다.
-type Period = { sm: number; sd: number; em: number; ed: number };
+//      자동 반영되지 않는다. 기간이 바뀌면 programIndex.ts 를 고친다(카드 「종료」 판정도 같이 따라간다).
+const periodOf = (name: string): Period => PROGRAM_INDEX.find((p) => p.name === name)!.period;
 const PERIODS: Array<{ name: string; period: Period; color: string; mobileColor: string }> = [
-  { name: '장암 책정',      period: { sm: 5, sd: 23, em: 8, ed: 22 },  color: '#e4352b', mobileColor: '#e4352b' },
-  { name: '기억순환 정류장', period: { sm: 6, sd: 18, em: 7, ed: 31 },  color: '#3ca03c', mobileColor: '#3ca03c' },
-  { name: '손의 기억',      period: { sm: 7, sd: 6,  em: 7, ed: 17 },  color: '#f2a0c0', mobileColor: '#f2a0c0' },
-  { name: '땅을 달래는 노래', period: { sm: 9, sd: 28, em: 10, ed: 17 }, color: '#1fb2d0', mobileColor: '#1fb2d0' },
-  { name: '소리일기',       period: { sm: 6, sd: 23, em: 7, ed: 28 },  color: '#f5c518', mobileColor: '#f5c518' },
-  { name: '풍경일기',       period: { sm: 5, sd: 23, em: 7, ed: 18 },  color: '#2d5be3', mobileColor: '#2d5be3' },
-  { name: '마을의 신호',    period: { sm: 7, sd: 1,  em: 9, ed: 2 },   color: '#1b55e2', mobileColor: '#1b55e2' },
+  { name: '장암 책정',      period: periodOf('장암 책정'),       color: '#e4352b', mobileColor: '#e4352b' },
+  { name: '기억순환 정류장', period: periodOf('기억순환 정류장'), color: '#3ca03c', mobileColor: '#3ca03c' },
+  { name: '손의 기억',      period: periodOf('손의 기억'),       color: '#f2a0c0', mobileColor: '#f2a0c0' },
+  { name: '땅을 달래는 노래', period: periodOf('땅을 달래는 노래'), color: '#1fb2d0', mobileColor: '#1fb2d0' },
+  { name: '소리일기',       period: periodOf('소리일기'),        color: '#f5c518', mobileColor: '#f5c518' },
+  { name: '풍경일기',       period: periodOf('풍경일기'),        color: '#2d5be3', mobileColor: '#2d5be3' },
+  { name: '마을의 신호',    period: periodOf('마을의 신호'),     color: '#1b55e2', mobileColor: '#1b55e2' },
 ];
 
-// 〈다시, 안녕〉(축제)은 11.7 하루짜리라 막대 대신 짧은 점 마커로 표시.
-const FESTIVAL = { name: '다시, 안녕', month: 11, day: 7 };
+// 〈다시, 안녕〉(축제)은 11.7 하루짜리라 막대 대신 짧은 점 마커로 표시(FESTIVAL = programIndex.ts).
 
 // 월축 좌표 → 픽셀 환산. 월 라벨 간격(monthGap)·기준점(baseX)·한 달 길이를 받아
 //   (월·일) 한 점을 픽셀로, (시작·끝) 한 구간을 (x, width)로 변환한다. 한 달=31일 비례.
@@ -46,6 +47,7 @@ const Schedule: React.FC = () => {
       <div className="kd-schedule-desktop" data-name="일정 — Desktop">
         <div className="kd-section-rule kd-section-rule--s3" />
         <h1>일정</h1>
+        <ProgramViewToggle current="schedule" />
         <p className="schedule-date">2026. 5 - 11</p>
         {MONTHS.map((month, index) => {
           const x = D_BASE + index * D_GAP;
@@ -90,7 +92,8 @@ const Schedule: React.FC = () => {
       <div className="kd-schedule-mobile" data-name="일정 — Mobile">
         <div className="kd-section-rule kd-section-rule--s3" />
         <h1>일정</h1>
-        <p className="schedule-date">2026. 5 — 11</p>
+        <ProgramViewToggle current="schedule" />
+        <p className="schedule-date">2026. 5 - 11</p>
         {MONTH_MOBILE.map((month, index) => {
           const x = M_BASE + index * M_GAP;
           return (

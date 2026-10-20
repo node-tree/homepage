@@ -40,7 +40,9 @@ export const MOTION = {
   easeOutBack: [0.34, 1.4, 0.64, 1] as [number, number, number, number],
 };
 
-// ── 네비게이션 (5섹션) ──────────────────────────────────────────
+// ── 네비게이션 (메뉴 6칸, 2026-10-20) ─────────────────────────────
+//   일정·오시는 길은 메뉴에서만 뺐다. 화면은 그대로 열린다(포스터 QR·공유 링크 보존):
+//   일정 = 프로그램 안 「카드 | 일정」 전환, 오시는 길 = 푸터·홈·축제 카드 링크.
 export interface NavSection {
   id: string;
   label: string;
@@ -49,12 +51,16 @@ export const SECTIONS: NavSection[] = [
   { id: 'main', label: '홈' },
   { id: 'intro', label: '소개' },
   { id: 'programs', label: '프로그램' },
-  { id: 'schedule', label: '일정' },
   { id: 'diary', label: '마을일기' },
-  { id: 'news', label: '마을소식' },
   { id: 'results', label: '마을기록' },
-  { id: 'directions', label: '오시는 길' },
+  { id: 'news', label: '마을소식' },
 ];
+
+// 메뉴 밖이지만 해시로 여는 섹션 → 메뉴에서 불을 켤 상위 칸.
+export const SUB_SECTIONS: Record<string, string> = {
+  schedule: 'programs',
+  directions: 'intro',
+};
 
 // 상단 안내 띠 문구
 export const ANNOUNCE = '2026 꿈다락 문화예술학교 · 다섯 세대가 함께 짓는 마을 · 11월 7일 〈다시, 안녕〉 축제';
@@ -201,6 +207,18 @@ export const PROGRAMS: Program[] = [
     period: '2026. 6 – 10',
   },
   {
+    // 손의 기억 A형이 갈라진 프로그램(2026-09). 마을일기 칩·마을기록 카드에서도 독립(2026-10-20 작가 결정).
+    id: 'land-song',
+    name: '땅을 달래는 노래',
+    en: 'Song for the Land',
+    color: 'teal',
+    field: '음악·뮤직비디오',
+    desc: '지토리마을회관에 둘러앉은 주민들이 땅과 물, 농사의 이야기를 노랫말로 옮겨 함께 부르고, 뮤직비디오로 남깁니다.',
+    rounds: '총 6회차',
+    recruit: '12명 모집',
+    period: '2026. 9 – 10',
+  },
+  {
     id: 'sound-diary',
     name: '소리일기',
     en: 'Sound Diary',
@@ -208,7 +226,7 @@ export const PROGRAMS: Program[] = [
     field: '사운드·일상',
     desc: '하루의 소리를 일기처럼 기록하며 세대마다 다른 마을의 시간을 모읍니다.',
     rounds: '총 8회차',
-    recruit: '20명 모집',
+    recruit: '10명 모집',
     period: '2026. 7 – 10',
   },
   {

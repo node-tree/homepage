@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 // Results.tsx — 마을기록 (/iso#results)
 //   프로그램 7개가 낳은 산출물 허브. 상단 매체 필터(전체/지도/영상/기록).
+//   #results/<programId> 로 들어오면(프로그램 카드 「마을기록 →」) 그 프로그램 항목만 보여 준다.
 //   설계 정본: Figma 「웹지도 설계」 01 IA — 프로그램별 + 필터 하이브리드.
 //   ⚠️ 링크 없는 항목은 '준비 중'으로 남긴다(빈 카드를 만들지 않는다).
 //
@@ -70,6 +71,13 @@ const BASE: ResultItem[] = [
     desc: '손으로 만들고 다듬은 작업들, 몸이 기억하는 마을의 기술.',
   },
   {
+    id: 'land-song-mv',
+    programId: 'land-song',
+    title: '땅을 달래는 노래 뮤직비디오',
+    medium: 'video',
+    desc: '지토리 주민들이 땅과 물, 농사의 이야기를 노랫말로 옮겨 함께 부른 노래.',
+  },
+  {
     id: 'scape-diary',
     programId: 'scape-diary',
     title: '풍경일기 영상',
@@ -87,15 +95,34 @@ const BASE: ResultItem[] = [
 
 const EMPTY_FORM = { title: '', desc: '', href: '', medium: 'video' as Medium, programId: '' };
 
+const programFromHash = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const [sec, id] = window.location.hash.replace('#', '').split('/');
+  return sec === 'results' && id && PROGRAMS.some((p) => p.id === id) ? id : null;
+};
+
 const Results: React.FC = () => {
   const { authed } = useKkumdarakAuth();
   const [filter, setFilter] = useState<'all' | Medium>('all');
+  const [programFilter, setProgramFilter] = useState<string | null>(programFromHash);
   const [store, setStore] = useState<any>({});          // signal-map-content 전체 문서
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { signalMapAPI.get().then(setStore); }, []);
+
+  // 이미 마을기록을 보는 중에 다른 프로그램 링크를 눌러도 따라간다.
+  useEffect(() => {
+    const onHash = () => setProgramFilter(programFromHash());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
+  const clearProgramFilter = () => {
+    setProgramFilter(null);
+    window.history.replaceState(null, '', '#results');
+  };
 
   const results: ResultItem[] = useMemo(() => {
     const ov = (store._results || {}) as Record<string, Partial<ResultItem>>;
@@ -106,8 +133,11 @@ const Results: React.FC = () => {
   }, [store]);
 
   const items = useMemo(
-    () => (filter === 'all' ? results : results.filter((r) => r.medium === filter)),
-    [filter, results],
+    () =>
+      results
+        .filter((r) => !programFilter || r.programId === programFilter)
+        .filter((r) => filter === 'all' || r.medium === filter),
+    [filter, programFilter, results],
   );
   const programName = (id: string) => PROGRAMS.find((p) => p.id === id)?.name ?? '';
 
@@ -149,7 +179,8 @@ const Results: React.FC = () => {
 
   const addItem = () => {
     const id = `r-${Date.now().toString(36)}`;
-    const item: ResultItem = { id, programId: '', title: '새 기록', medium: 'video', desc: '' };
+    // 프로그램별로 보는 중이면 그 프로그램에 붙여 만든다(안 그러면 추가하자마자 목록에서 사라진다).
+    const item: ResultItem = { id, programId: programFilter ?? '', title: '새 기록', medium: 'video', desc: '' };
     const next = { ...store, _resultsAdded: [...((store._resultsAdded || []) as ResultItem[]), item] };
     setStore(next);
     startEdit(item);
@@ -167,6 +198,11 @@ const Results: React.FC = () => {
   };
 
   return (
+    <>
+    {/* 진행 막대는 다른 화면의 1440 판과 같은 자리에 — 마을기록 본문(최대 1120)과 따로 둔 판 */}
+    <div className="kd-results-rulebox" aria-hidden="true">
+      <div className="kd-section-rule kd-section-rule--s7" />
+    </div>
     <section className="kd-section kd-results">
       <header className="kd-results-head">
         <h2>마을기록</h2>
@@ -191,6 +227,13 @@ const Results: React.FC = () => {
           </button>
         )}
       </div>
+
+      {programFilter && (
+        <p className="kd-results-scope">
+          <span>〈{programName(programFilter)}〉 기록만 보는 중</span>
+          <button type="button" onClick={clearProgramFilter}>전체 보기</button>
+        </p>
+      )}
 
       <ul className="kd-results-grid">
         {items.map((r) => {
@@ -255,7 +298,13 @@ const Results: React.FC = () => {
           );
         })}
       </ul>
+      {items.length === 0 && (
+        <p className="kd-results-empty">
+          아직 여기에 열린 기록이 없습니다. 준비되는 대로 하나씩 올라옵니다.
+        </p>
+      )}
     </section>
+    </>
   );
 };
 

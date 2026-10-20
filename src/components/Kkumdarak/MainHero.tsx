@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { MOTION } from './data';
 import HeroScene from './HeroScene';
+import HomeShortcuts from './HomeShortcuts';
 
 const MainHero: React.FC = () => {
   const reduced = useReducedMotion();
@@ -16,6 +17,7 @@ const MainHero: React.FC = () => {
       >
         <HeroScene />
       </motion.div>
+      <HomeShortcuts />
     </div>
   );
 };

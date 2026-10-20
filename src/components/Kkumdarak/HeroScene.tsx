@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useFlipbookFrames } from './useDeferredFrames';
 import { flipbookSrcSet, flipbookFit, FLIPBOOK_VARIANTS } from './flipbookVariants';
+import { FestivalPill } from './HomeShortcuts';
 
 // ── 정적 이미지 베이스 ────────────────────────────────────────────
 const BASE = '/kkumdarak/hero/';
@@ -524,6 +525,7 @@ const HeroScene: React.FC = () => {
             장암의 흙, 물길, 바위, 잎이 서로의 감각을 받아 적고<br />
             다음 세대의 문화로 이어지는 생활문화 거점입니다.
           </p>
+          <FestivalPill className="hero-fest-pill" />
 
         </div>{/* kd-hero-desktop-inner */}
       </div>
@@ -627,6 +629,7 @@ const HeroScene: React.FC = () => {
             받아 적고 다음 세대의 문화로 이어지는<br />
             생활문화 거점입니다.
           </p>
+          <FestivalPill className="hero-fest-pill is-mobile" />
 
         </div>{/* kd-hero-mobile-inner */}
       </div>

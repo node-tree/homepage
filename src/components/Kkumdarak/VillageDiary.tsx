@@ -296,7 +296,7 @@ const DIARY_DESKTOP_CSS = `
 }
 `;
 
-// ── 7개 프로그램 — 장암책정만 콘텐츠, 나머지는 추후 제공(빈 배열) ──
+// ── 프로그램 칩 8개(축제 포함) — 기본 카드는 장암 책정만, 나머지는 DB(village-diary)가 채운다 ──
 const PROGRAMS_DEFAULT: ProgramDiary[] = [
   {
     id: 'jangam-chaekjeong',
@@ -330,6 +330,14 @@ const PROGRAMS_DEFAULT: ProgramDiary[] = [
     name: '손의 기억',
     accent: '#F2A0C0',
     character: 'char-12.svg',
+    cards: [],
+  },
+  {
+    // 손의 기억 A형에서 갈라진 프로그램 — 2026-10-20 독립 칩(작가 결정). 촬영분은 편집으로 채운다.
+    id: 'land-song',
+    name: '땅을 달래는 노래',
+    accent: '#1FB2D0',
+    character: 'char-13.svg',
     cards: [],
   },
   {
@@ -390,6 +398,20 @@ function mergePrograms(saved: Record<string, DiaryCardData[]>): ProgramDiary[] {
   );
 }
 
+// 주소 #diary/<programId> 로 들어오면 그 프로그램 칩부터 연다(프로그램 카드 「마을일기 →」 링크).
+const diaryIdFromHash = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const [sec, id] = window.location.hash.replace('#', '').split('/');
+  return sec === 'diary' && id && PROGRAMS_DEFAULT.some((p) => p.id === id) ? id : null;
+};
+
+// 카드 날짜(MM.DD)의 달. 형식이 다르면(편집 중 'MM.DD' 자리표시 등) null.
+const monthOf = (date: string): number | null => {
+  const m = /^(\d{1,2})[./]/.exec((date || '').trim());
+  const n = m ? Number(m[1]) : NaN;
+  return n >= 1 && n <= 12 ? n : null;
+};
+
 // ── 레이아웃 상수(데스크톱) ──────────────────────────────────────
 const PATH_TOP = 320;
 const FIRST_CARD_Y = 482;
@@ -409,7 +431,10 @@ const AVATAR_TRAVEL_PAD = 40;
 //   카드가 6개 이상이면 컨테이너 높이(=스크롤 길이)만 늘고 아바타 이동거리는 그대로여서
 //   ① 뒤쪽 카드가 끝까지 등장하지 않고 ② 앞쪽 카드는 화면 위로 지나간 뒤에야 등장했다.
 //   → mobileCardTops → mobileAvatarTravel / mobilePathHeight 로 파생(데스크톱과 동일한 방식).
-const MOBILE_FIRST_CARD_Y = 333;
+// 2026-10-20: 칩이 8개(〈땅을 달래는 노래〉)가 되어 모바일 칩이 세 줄이 되고, 그 아래 「달 바로가기」 줄이 생겼다.
+//   → 모바일 길·캐릭터·카드 시작점을 한꺼번에 이만큼 내린다. 길 top 은 JSX 인라인으로 MOBILE_PATH_TOP 을 따른다.
+const MOBILE_HEAD_SHIFT = 80;
+const MOBILE_FIRST_CARD_Y = 333 + MOBILE_HEAD_SHIFT;
 const MOBILE_CARD_GAP = 210;
 // 실측 카드 높이가 gap 을 위협할 때 확보할 최소 카드 간 여백(겹침 가드).
 //   현재 콘텐츠 최대 높이 203 + 8 = 211 > 210 이 되지 않도록 8 로 둔다 → 현행 배치는 그대로 유지되고,
@@ -423,8 +448,8 @@ const MOBILE_PATH_CENTER_X = 48;
 //   connector top = y + 54 (dot 중심) - 2.5(connector 두께 5/2) ≈ y + 51
 const MOBILE_DOT_Y_OFFSET = 43;
 const MOBILE_CONNECTOR_Y_OFFSET = 51;
-const MOBILE_AVATAR_START = 236;
-const MOBILE_PATH_TOP = 260;
+const MOBILE_AVATAR_START = 236 + MOBILE_HEAD_SHIFT;
+const MOBILE_PATH_TOP = 260 + MOBILE_HEAD_SHIFT;
 // path 바닥은 아바타 종료 지점 아래로 캐릭터 높이(≈87) + 여백 20 만큼 더 내려간다(구 상수와 동일 관계).
 const MOBILE_AVATAR_FOOT = 87 + 20;
 // path 는 마지막 dot 보다 최소 이만큼 아래까지 이어진다(길이 끊긴 느낌 방지 — 구 값 1270-1216-22 ≈ 32 계열).
@@ -688,8 +713,10 @@ const VillageDiary: React.FC = () => {
   // 편집 중 임시 카드 데이터 (완료 버튼 클릭 시 저장)
   const [draftCards, setDraftCards] = useState<Record<string, DiaryCardData[]>>({});
 
-  const [selected, setSelected] = useState<string>(PROGRAMS_DEFAULT[0].id);
+  const [selected, setSelected] = useState<string>(() => diaryIdFromHash() ?? PROGRAMS_DEFAULT[0].id);
   const reduced = usePrefersReducedMotion();
+  // 「달 바로가기」로 건너뛴 카드까지는 캐릭터가 아직 안 닿았어도 보이게 둔다(칩을 바꾸면 초기화).
+  const forceRevealRef = useRef(-1);
 
   // 저장 base = 백엔드 오버라이드(단일 진실 소스). 초기값은 localStorage 캐시로 시드 —
   // GET 미완료/실패(레이스·오프라인) 구간에 {} 면 다른 프로그램 오버라이드가 PUT 으로 삭제되므로 방지.
@@ -1004,6 +1031,7 @@ const VillageDiary: React.FC = () => {
         [id]: (newPrograms.find((p) => p.id === id)?.cards ?? []).map((c) => ({ ...c })),
       }));
     }
+    forceRevealRef.current = -1;
     setSelected(id);
   };
 
@@ -1069,7 +1097,7 @@ const VillageDiary: React.FC = () => {
       const desktopReachY = avatarStart + progress * desktopTravel + DESKTOP_AVATAR_REACH;
       for (let i = 0; i < cardEls.current.length; i += 1) {
         const dotY = cardTopAt(i) + 24;
-        const on = i === 0 || desktopReachY >= dotY;   // 첫 기록은 처음부터 — 첫 화면이 빈 길만 보이지 않게
+        const on = i === 0 || i <= forceRevealRef.current || desktopReachY >= dotY;   // 첫 기록은 처음부터 — 첫 화면이 빈 길만 보이지 않게
         cardEls.current[i]?.classList.toggle('is-visible', on);
         dotEls.current[i]?.classList.toggle('is-visible', on);
         connectorEls.current[i]?.classList.toggle('is-visible', on);
@@ -1080,7 +1108,7 @@ const VillageDiary: React.FC = () => {
       const mobileReachY = MOBILE_AVATAR_START + progress * mobileAvatarTravel + MOBILE_AVATAR_REACH;
       for (let i = 0; i < mobileCardEls.current.length; i += 1) {
         const dotY = (mobileCardTops[i] ?? MOBILE_FIRST_CARD_Y + i * MOBILE_CARD_GAP) + MOBILE_DOT_Y_OFFSET;
-        const on = i === 0 || mobileReachY >= dotY;
+        const on = i === 0 || i <= forceRevealRef.current || mobileReachY >= dotY;
         mobileCardEls.current[i]?.classList.toggle('is-visible', on);
         mobileDotEls.current[i]?.classList.toggle('is-visible', on);
         mobileConnectorEls.current[i]?.classList.toggle('is-visible', on);
@@ -1230,6 +1258,86 @@ const VillageDiary: React.FC = () => {
     mobileConnectorEls.current[i] = el;
   };
 
+  // ── 달 묶음 (2026-10-20) ────────────────────────────────────────
+  //   카드 순서·편집 인덱스는 그대로 두고, 달이 바뀌는 첫 카드에 길 위 표시 + 위쪽 「달 바로가기」.
+  const monthStarts = useMemo(() => {
+    const out: Array<{ month: number; index: number }> = [];
+    let prev: number | null = null;
+    cards.forEach((c, i) => {
+      const m = monthOf(c.date);
+      if (m !== null && m !== prev) out.push({ month: m, index: i });
+      if (m !== null) prev = m;
+    });
+    return out;
+  }, [cards]);
+  // 바로가기 줄은 달마다 한 번(카드 순서가 달을 오가도 첫 등장만).
+  const monthJumps = useMemo(
+    () => monthStarts.filter((m, i) => monthStarts.findIndex((x) => x.month === m.month) === i),
+    [monthStarts],
+  );
+  const showMonths = hasContent && !isEditing && monthJumps.length > 1;
+
+  // 그 달 첫 카드로 스크롤. 901~1439px 판은 zoom 이 걸려 있어 상수 좌표 대신 보이는 카드의 실측 좌표를 쓴다.
+  const jumpToCard = (index: number) => {
+    forceRevealRef.current = Math.max(forceRevealRef.current, index);
+    [cardEls, dotEls, connectorEls, mobileCardEls, mobileDotEls, mobileConnectorEls].forEach((r) => {
+      for (let i = 0; i <= index; i += 1) r.current[i]?.classList.add('is-visible');
+    });
+    // 기준 = 그 달 표시(움직이지 않음). 막 리빌된 카드는 등장 애니메이션(translate) 중이라 좌표가 흔들린다.
+    const mark = Array.from(document.querySelectorAll<HTMLElement>(`.diary-month-mark[data-idx="${index}"]`)).find(
+      (e) => e.getBoundingClientRect().height > 0,
+    );
+    const card = [cardEls.current[index], mobileCardEls.current[index]].find(
+      (e) => e && e.getBoundingClientRect().height > 0,
+    );
+    const el = mark ?? card;
+    if (!el) return;
+    const header = document.querySelector('.kd-header');
+    const headerH = header ? header.getBoundingClientRect().height : 80;
+    const top = el.getBoundingClientRect().top + window.scrollY - headerH - (mark ? 20 : 72);
+    window.scrollTo({ top: Math.max(0, top), behavior: reduced ? 'auto' : 'smooth' });
+  };
+
+  // 칩을 고르면 주소도 #diary/<id> 로 — 그대로 복사해 보내면 그 프로그램 일기가 열린다.
+  const selectProgram = (id: string) => {
+    handleTabChange(id);
+    if (typeof window !== 'undefined') window.history.replaceState(null, '', `#diary/${id}`);
+  };
+
+  // 이미 마을일기를 보고 있을 때 다른 프로그램 링크(#diary/<id>)를 누르면 칩만 바꾼다.
+  //   초안 보존이 걸린 handleTabChange 를 거치도록 최신 함수를 ref 로 잡는다.
+  const tabChangeRef = useRef(handleTabChange);
+  tabChangeRef.current = handleTabChange;
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
+  useEffect(() => {
+    const onHash = () => {
+      const id = diaryIdFromHash();
+      if (id && id !== selectedRef.current) {
+        tabChangeRef.current(id);
+        window.scrollTo({ top: 0, behavior: 'auto' });
+      }
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
+  // 두 화면 넘게 내려가면 「처음으로」(칩·달 바로가기로 복귀).
+  const [showTop, setShowTop] = useState(false);
+  const showTopRef = useRef(false);
+  useEffect(() => {
+    const onScroll = () => {
+      const next = window.scrollY > (window.innerHeight || 800) * 2;
+      if (next !== showTopRef.current) {
+        showTopRef.current = next;
+        setShowTop(next);
+      }
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   const renderFilters = (mobile = false) => (
     <div className="diary-filters">
       {programs.map((p) => (
@@ -1239,17 +1347,27 @@ const VillageDiary: React.FC = () => {
           tabIndex={0}
           className={p.id === selected ? 'active' : ''}
           style={p.id === selected ? ({ background: p.accent } as React.CSSProperties) : undefined}
-          onClick={() => handleTabChange(p.id)}
+          onClick={() => selectProgram(p.id)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
-              handleTabChange(p.id);
+              selectProgram(p.id);
             }
           }}
         >
-          {mobile && p.name === '기억순환 정류장' ? '기억순환' : p.name}
+          {p.name}
         </span>
       ))}
+      {showMonths && (
+        <div className="diary-months" role="group" aria-label="달 바로가기">
+          <span className="diary-months-label">바로가기</span>
+          {monthJumps.map(({ month, index }) => (
+            <button type="button" key={month} onClick={() => jumpToCard(index)}>
+              {month}월
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 
@@ -1327,6 +1445,12 @@ const VillageDiary: React.FC = () => {
                 <DiaryCharacter src={program.character} name={program.name} />
               </div>
             </div>
+            {/* 첫 달은 위 바로가기 줄로 충분 — 길 위 표시는 달이 바뀌는 자리부터(첫 카드 옆은 캐릭터가 서 있다) */}
+            {monthStarts.filter((m) => m.index > 0).map(({ month, index }) => (
+              <span key={`m-${index}`} className="diary-month-mark" data-idx={index} style={{ top: cardTopAt(index) - 44 }}>
+                {month}월
+              </span>
+            ))}
           </>
         )}
 
@@ -1431,11 +1555,26 @@ const VillageDiary: React.FC = () => {
                 <div
                   className="diary-path"
                   style={{
+                    top: MOBILE_PATH_TOP,
                     height: mobilePathHeight,
                     borderLeftColor: program.accent,
                     borderRightColor: program.accent,
                   }}
                 />
+                {monthStarts.filter((m) => m.index > 0).map(({ month, index }) => (
+                  <span
+                    key={`mm-${index}`}
+                    data-idx={index}
+                    className={`diary-month-mark${mobileSide === 'left' ? ' is-right' : ''}`}
+                    style={
+                      mobileSide === 'left'
+                        ? { top: (mobileCardTops[index] ?? MOBILE_FIRST_CARD_Y) - 30, right: MOBILE_PATH_CENTER_X }
+                        : { top: (mobileCardTops[index] ?? MOBILE_FIRST_CARD_Y) - 30, left: MOBILE_PATH_CENTER_X }
+                    }
+                  >
+                    {month}월
+                  </span>
+                ))}
                 <div
                   className="diary-avatar"
                   ref={mobileAvatarRef}
@@ -1524,6 +1663,19 @@ const VillageDiary: React.FC = () => {
           </>
         )}
       </div>
+
+      {showTop && !isEditing && (
+        <button
+          type="button"
+          className="diary-to-top"
+          onClick={() => window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' })}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+            <path d="M7 12V2M2.5 6.5L7 2l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          처음으로
+        </button>
+      )}
     </section>
   );
 };

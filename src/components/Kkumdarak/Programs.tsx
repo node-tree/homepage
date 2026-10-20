@@ -5,6 +5,8 @@ import ProgramCharacterPng, { characterPngForName } from './programCharacters';
 import { useKkumdarakAuth } from './KkumdarakAuthContext';
 import { kkumdarakSettingsAPI } from '../../services/api';
 import { lsGet, lsSet } from '../../utils/lsCache';
+import ProgramViewToggle from './ProgramViewToggle';
+import { isProgramEnded, programIdForName } from './programIndex';
 
 // ── 캐시 우선 시드(이전 내용 플래시 제거) ─────────────────────────────
 //   재방문 시 마지막으로 본 '현재' 내용(programs/programContent)을 첫 페인트부터 즉시 렌더해
@@ -101,8 +103,8 @@ const PROGRAMS: Array<{
     summary: '마을의 소리를 모으고, 나만의 악기를 만들다.',
     desc: '마을 곳곳의 소리를 모아 지도에 얹고, 센서와 모터로 나만의 악기를 만듭니다.',
     field: '미디어 · 사운드',
-    meta: [['회차', '6회 · 18시수'], ['모집', '전생애 6명'], ['기간', '6.23 – 7.28']],
-    brief: '전생애 6명 · 6.23-7.28',
+    meta: [['회차', '6회 · 18시수'], ['모집', '전생애 10명'], ['기간', '6.23 – 7.28']],
+    brief: '전생애 10명 · 6.23-7.28',
     color: '#f5c518',
     mobileMark: '#ffc90e',
     action: '신청하기 →',
@@ -258,8 +260,8 @@ const resolveProgram = (program: Program, content?: ProgramContent): Program => 
     summary: pick(content.summary, program.summary),
     desc: pick(content.desc, program.desc),
     meta,
-    // 모바일 brief: 회차/모집/기간 중 모집·기간 오버라이드가 있으면 재구성, 없으면 기본 brief.
-    brief: buildBrief(content.recruit ?? '', content.period ?? '', program.brief),
+    // 모바일 brief = 실효 '모집 · 기간'. 오버라이드 원문을 넘기면 기간만 저장된 카드에서 모집이 빠졌다(2026-10-20 수정).
+    brief: buildBrief(recruit, period, program.brief),
     // label 은 줄바꿈용 보조 표기 — name 을 편집하면 더 이상 유효하지 않으므로
     //   오버라이드가 name 을 바꾼 경우 label 을 떨어뜨려 새 name 한 줄로 렌더한다.
     label: name === program.name ? program.label : undefined,
@@ -296,6 +298,59 @@ const resolvePhaseStatus = (content?: ProgramContent): PhaseStatus => {
   const legacy = content?.status as string | undefined;
   if (legacy === 'recruiting') return 'recruiting';
   return 'ongoing';
+};
+
+//   ③ 날짜가 이긴다(2026-10-20): programIndex.ts 기간의 마지막 날이 지나면 저장값과 상관없이 「종료」.
+//      편집자가 끝난 프로그램 배지를 바꾸지 않아도 「진행중」으로 남지 않는다. 기간 전·중에는 저장값 그대로.
+const effectivePhase = (baseName: string, content?: ProgramContent): PhaseStatus =>
+  isProgramEnded(baseName) ? 'closed' : resolvePhaseStatus(content);
+
+// 밝은 프로그램 색(분홍·노랑·하늘) 위에는 흰 글자가 묻힌다 → 먹색 글자.
+const inkOn = (hex: string): string => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return '#ffffff';
+  const n = parseInt(m[1], 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#1a1a1a' : '#ffffff';
+};
+
+// ── 끝난 프로그램 카드: 신청 버튼 자리에 「마을일기 / 마을기록」 두 갈래 ─────────
+//   해시 링크(#diary/<id> · #results/<id>) — Kkumdarak 이 섹션을 바꾸고 각 섹션이 id 를 읽는다.
+const ProgramLinks: React.FC<{ baseName: string; className: string; accent: string }> = ({ baseName, className, accent }) => {
+  const id = programIdForName(baseName);
+  if (!id) return null;
+  return (
+    <div className={className}>
+      <a className="program-link is-primary" href={`#diary/${id}`} style={{ '--link-ink': inkOn(accent) } as React.CSSProperties}>
+        마을일기 →
+      </a>
+      <a className="program-link" href={`#results/${id}`}>마을기록 →</a>
+    </div>
+  );
+};
+
+// 카드 아래 행동: 축제 = 오시는 길 · 끝난 프로그램 = 일기/기록 · 그 밖 = 신청 버튼(기존).
+const CardAction: React.FC<{
+  baseProgram: Program;
+  program: Program;
+  setting?: ProgramSetting;
+  closed: boolean;
+  variant: 'desktop' | 'mobile';
+}> = ({ baseProgram, program, setting, closed, variant }) => {
+  const actionClass = variant === 'desktop' ? 'program-action' : 'mobile-program-action';
+  if (program.festival) {
+    return <a className={actionClass} href="#directions">오시는 길 →</a>;
+  }
+  if (isProgramEnded(baseProgram.name)) {
+    return (
+      <ProgramLinks
+        baseName={baseProgram.name}
+        accent={program.color}
+        className={variant === 'desktop' ? 'program-links' : 'program-links is-mobile'}
+      />
+    );
+  }
+  return <ApplyButton program={program} setting={setting} closed={closed} className={actionClass} />;
 };
 
 // 공개 표시용 모집 단계 배지 (진행중 / 신청중 / 종료). 축제 카드는 신청 개념이 없어 렌더하지 않는다.
@@ -560,6 +615,9 @@ const ContentEditPanel: React.FC<{
               ))}
             </div>
           </div>
+          <p className="program-content-edit-hint">
+            기간 마지막 날이 지나면 배지는 저장값과 상관없이 「종료」로 보입니다.
+          </p>
           <div className="program-edit-field program-status-field" role="group" aria-label="신청 버튼 상태">
             <span>신청 버튼</span>
             <div className="program-status-options">
@@ -683,7 +741,7 @@ const ProgramCard: React.FC<{
   onSaveContent: (name: string, next: ProgramContent) => void;
 }> = ({ baseProgram, program, walkPhase, setting, content, authed, saving, locked, onSaveSetting, onSaveContent }) => {
   const labelLines = program.label ?? [program.name];
-  const phase = resolvePhaseStatus(content);
+  const phase = effectivePhase(baseProgram.name, content);
   const closed = resolveApplyStatus(content, setting) === 'closed';
   return (
     <article className="program-card" style={{ '--accent': program.color } as React.CSSProperties}>
@@ -706,7 +764,7 @@ const ProgramCard: React.FC<{
           <p key={key}><span>{key}</span><b>{value}</b></p>
         ))}
       </div>
-      <ApplyButton program={program} setting={setting} closed={closed} className="program-action" />
+      <CardAction baseProgram={baseProgram} program={program} setting={setting} closed={closed} variant="desktop" />
       {authed && (
         <>
           <ContentEditPanel
@@ -735,7 +793,7 @@ const MobileProgramCard: React.FC<{
   onSaveSetting: (name: string, next: ProgramSetting) => void;
   onSaveContent: (name: string, next: ProgramContent) => void;
 }> = ({ baseProgram, program, setting, content, authed, saving, locked, onSaveSetting, onSaveContent }) => {
-  const phase = resolvePhaseStatus(content);
+  const phase = effectivePhase(baseProgram.name, content);
   const closed = resolveApplyStatus(content, setting) === 'closed';
   return (
   <article className="mobile-program-card" style={{ '--accent': program.color, '--mark': program.mobileMark } as React.CSSProperties}>
@@ -758,7 +816,7 @@ const MobileProgramCard: React.FC<{
       <span>{program.field}</span>
       <b>{program.brief}</b>
     </div>
-    <ApplyButton program={program} setting={setting} closed={closed} className="mobile-program-action" />
+    <CardAction baseProgram={baseProgram} program={program} setting={setting} closed={closed} variant="mobile" />
     {authed && (
       <>
         <ContentEditPanel
@@ -954,6 +1012,7 @@ const Programs: React.FC = () => {
         <div className="kd-section-rule kd-section-rule--s2" />
         <p className="program-kicker">일곱 프로그램이 5월부터 11월까지 이어집니다</p>
         <h1>프로그램</h1>
+        <ProgramViewToggle current="programs" />
         {renderEditToggle()}
         <div className="program-soft-field" />
         <div className="program-grid">
@@ -982,6 +1041,7 @@ const Programs: React.FC = () => {
       <div className={`kd-program-mobile${editing ? ' is-editing' : ''}`} data-name="프로그램 — Mobile">
         <div className="kd-section-rule kd-section-rule--s2" />
         <h1>프로그램</h1>
+        <ProgramViewToggle current="programs" />
         {renderEditToggle()}
         <div className="mobile-program-list">
           {PROGRAMS.map((base) =>

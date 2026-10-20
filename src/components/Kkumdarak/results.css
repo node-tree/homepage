@@ -49,7 +49,7 @@
 .kd-results-card.is-pending .kd-results-cta { color: #9a8b7d; }
 
 @media (max-width: 640px) {
-  .kd-results { padding: 92px 18px 72px; }
+  .kd-results { padding: 112px 18px 72px; }   /* 2026-10-20 진행 막대(top 88) 아래로 제목을 내림 — 92 면 막대가 제목을 가로질렀다 */
   .kd-results-grid { grid-template-columns: 1fr; }
 }
 
@@ -88,3 +88,37 @@
   background: #18120e; color: #fdf6ec;
 }
 .kd-results-formrow button:last-child { background: #fffdf8; color: #18120e; }
+
+/* ── 2026-10-20 진행 막대 · 프로그램별 보기 · 빈 상태 ─────────────────
+   막대 판: 다른 섹션의 1440 판과 같은 좌표계(데스크톱 left 120 · 헤더 아래 top 94).
+   901~1439 는 다른 판과 같이 화면 폭 비례 zoom, 모바일은 390 판(left 20 · top 88 = 마을소식과 같음). */
+.kd-results-rulebox { position: relative; z-index: 1; width: 1440px; height: 0; margin: 0 auto; }
+.kd-results-rulebox .kd-section-rule { top: 94px; }
+@media (min-width: 901px) and (max-width: 1439px) {
+  .kkumdarak .kd-results-rulebox { zoom: var(--kd-stage-zoom, 1); }
+  /* 다른 판은 섹션 padding 80(축소 안 됨) 아래에서 시작한다 → 같은 자리(80 + 14×비율)가 되게 되돌려 잡는다 */
+  .kkumdarak .kd-results-rulebox .kd-section-rule { top: calc(80px / var(--kd-stage-zoom, 1) + 14px); }
+}
+@media (max-width: 900px) {
+  .kd-results-rulebox { width: 100%; max-width: 390px; overflow: hidden; height: 100px; margin-bottom: -100px; }
+  .kd-results-rulebox .kd-section-rule { top: 88px; }
+  /* 공통 스티커(.kd-section::after, 모바일 top 74)가 진행 막대 끝을 덮지 않게 제목 줄로 */
+  .kd-results.kd-section::after { top: 104px; }
+}
+
+.kd-results-scope {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  margin: -8px 0 22px; font-size: 16px; font-weight: 800; color: #18120e;
+}
+.kd-results-scope button {
+  height: 34px; padding: 0 16px; border: 2px solid #18120e; border-radius: 999px;
+  background: #fff; color: #18120e; font: inherit; font-size: 15px; cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.kd-results-scope button:hover { transform: translateY(-1px); }
+.kd-results-scope button:active { transform: translateY(1px); }
+
+.kd-results-empty {
+  margin: 4px 0 0; padding: 28px 24px; border: 2px dashed #b9ad9f; border-radius: 16px;
+  color: #6b5f55; font-size: 16px; line-height: 1.6;
+}

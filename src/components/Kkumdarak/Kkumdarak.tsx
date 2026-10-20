@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import './kkumdarak.css';
-import { SECTIONS, ANNOUNCE, MOTION } from './data';
+import { SECTIONS, SUB_SECTIONS, ANNOUNCE, MOTION } from './data';
 import MainHero from './MainHero';
 import { KkumdarakAuthProvider, useKkumdarakAuth } from './KkumdarakAuthContext';
 import { villageDiaryAPI } from '../../services/api';
@@ -49,7 +49,11 @@ const getInitialKkumdarakSection = () => {
   if (section === 'signal-map-3d') return 'signal-map-3d';
   if (section === 'sound-map') return 'sound-map';
   if (section === 'signal-map' || section.startsWith('signal-map/')) return 'signal-map';
-  return SECTIONS.some((item) => item.id === section) ? section : 'main';
+  // #diary/<programId> · #results/<programId> 딥링크 — 섹션은 앞부분, id 는 각 섹션이 읽는다.
+  const base = section.split('/')[0];
+  if (SECTIONS.some((item) => item.id === base)) return base;
+  // 메뉴 밖 섹션(일정·오시는 길) — 옛 링크·포스터 QR 이 계속 열리도록 허용 목록을 메뉴와 따로 둔다.
+  return base in SUB_SECTIONS ? base : 'main';
 };
 
 // Google Fonts 로드: Figma 디자인 파일의 Jua / Gothic A1 / Fredoka 조합.
@@ -389,6 +393,10 @@ const Kkumdarak: React.FC = () => {
   const reduced = useReducedMotion();
   const [section, setSection] = useState<string>(getInitialKkumdarakSection);
   const [menuOpen, setMenuOpen] = useState(false);
+  // 메뉴 불: 일정은 「프로그램」, 오시는 길은 「소개」 칸에 켠다.
+  const navActive = SUB_SECTIONS[section] ?? section;
+  const sectionRef = useRef(section);
+  sectionRef.current = section;
 
   // ── 백엔드 콜드스타트 선제 워밍업 (마운트 1회) ───────────────────────
   //   Render 가 idle 로 잠들면 첫 요청이 15~20초 지연된다. 특히 토큰이 살아있는
@@ -422,7 +430,13 @@ const Kkumdarak: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const onHashChange = () => setSection(getInitialKkumdarakSection());
+    // 본문 링크(#diary/<id> · #directions 등)로 섹션이 바뀌면 go() 처럼 맨 위에서 시작.
+    //   같은 섹션 안에서 id 만 바뀌는 경우(#diary/a → #diary/b)는 그 섹션이 스스로 처리한다.
+    const onHashChange = () => {
+      const next = getInitialKkumdarakSection();
+      if (next !== sectionRef.current) window.scrollTo({ top: 0, behavior: 'auto' });
+      setSection(next);
+    };
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
@@ -521,7 +535,7 @@ const Kkumdarak: React.FC = () => {
             {SECTIONS.map((s) => (
               <button
                 key={s.id}
-                className={`kd-pill${section === s.id ? ' active' : ''}`}
+                className={`kd-pill${navActive === s.id ? ' active' : ''}`}
                 onClick={() => go(s.id)}
               >
                 {s.label}
@@ -533,7 +547,7 @@ const Kkumdarak: React.FC = () => {
               variant="desktop"
               onNavigate={() => go(ADMIN_SECTION)}
             />
-            {/* "오시는 길" 옆 — 꿈다락 편집 로그인 도형 버튼 */}
+            {/* 메뉴 끝 — 꿈다락 편집 로그인 도형 버튼 */}
             <NavAuthButton variant="desktop" />
             {/* 이소異素 인스타그램 바로가기 (데스크톱 헤더) */}
             <NavInstagram variant="desktop" />
@@ -559,7 +573,7 @@ const Kkumdarak: React.FC = () => {
               {SECTIONS.map((s, i) => (
                 <motion.button
                   key={s.id}
-                  className={`kd-pill${section === s.id ? ' active' : ''}`}
+                  className={`kd-pill${navActive === s.id ? ' active' : ''}`}
                   onClick={() => go(s.id)}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -580,7 +594,7 @@ const Kkumdarak: React.FC = () => {
                   onNavigate={() => go(ADMIN_SECTION)}
                 />
               </motion.div>
-              {/* "오시는 길" 옆 — 꿈다락 편집 로그인 도형 버튼 (모바일). 누르면 메뉴 닫기. */}
+              {/* 메뉴 끝 — 꿈다락 편집 로그인 도형 버튼 (모바일). 누르면 메뉴 닫기. */}
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -615,6 +629,11 @@ const Kkumdarak: React.FC = () => {
             </Suspense>
 
             <footer className="kd-footer">
+              {/* 오시는 길은 메뉴에서 빠졌다 — 모든 화면 아래에서 한 번에 찾게 한다. */}
+              <a className="kd-footer-way" href="#directions">
+                <span>장암 생산소 · 충남 부여군 장암면 석동로29번길 3</span>
+                <b>오시는 길 →</b>
+              </a>
               <div className="kd-footer-logo">꿈다락</div>
               <div>꿈다락 문화예술학교 · 2026 생활거점형 · 충남 부여군 장암면</div>
               <div>

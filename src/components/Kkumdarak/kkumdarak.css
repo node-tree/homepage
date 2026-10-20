@@ -2767,11 +2767,11 @@
   display: none;
 }
 
-/* ── 공통 섹션 상단 강조선 (6칸 분할 진행 바) ──────────────────────
-   전 섹션(소개·프로그램·일정·마을일기·마을소식·오시는길 = 6개) 통일 규격.
-   바를 6개 검정 세그먼트로 나누고(마을소식 신설로 6칸), 현재 섹션 칸만 빨강으로
-   덮어 "6칸 중 N번째" 진행도를 표시한다(--rule-offset = 현재 칸 시작 x).
-   데스크톱: 세그먼트 180 / pitch 204 (gap 24) → 0·204·408·612·816·1020, 끝 1200.
+/* ── 공통 섹션 상단 강조선 (5칸 분할 진행 바) ──────────────────────
+   메뉴 6칸(2026-10-20) 중 홈을 뺀 5섹션 = 소개·프로그램·마을일기·마을기록·마을소식.
+   일정은 프로그램 칸, 오시는 길은 소개 칸에 불을 켠다(메뉴 불과 같은 규칙).
+   현재 섹션 칸만 빨강으로 덮어 "5칸 중 N번째"를 표시한다(--rule-offset = 현재 칸 시작 x).
+   데스크톱: 세그먼트 216 / pitch 246 (gap 30) → 0·246·492·738·984, 끝 1200.
    빨강 색값은 --kd-figma-red(#f02e1f) 로 일원화.                          */
 .kd-section-rule {
   position: absolute;
@@ -2781,8 +2781,8 @@
   height: 4px;
   background: repeating-linear-gradient(
     to right,
-    #1a1a1a 0 180px,
-    transparent 180px 204px
+    #1a1a1a 0 216px,
+    transparent 216px 246px
   );
   --rule-offset: 0px;
 }
@@ -2791,18 +2791,19 @@
   position: absolute;
   top: 0;
   left: var(--rule-offset);
-  width: 180px;
+  width: 216px;
   height: 4px;
   background: var(--kd-figma-red);
 }
-/* 내비 순서 6단계 빨강 토막 오프셋 (0~1020, 균등) — 마을소식 신설로 재배분.
-   소개·프로그램·일정·마을일기·마을소식·오시는길 = 6단계 길찾기 모티프. */
+/* 빨강 토막 오프셋 — 클래스 번호는 옛 6칸 이름 그대로 두고 칸만 다시 배정했다.
+   소개·프로그램·마을일기·마을기록·마을소식 = 5단계 길찾기 모티프. */
 .kd-section-rule--s1 { --rule-offset: 0px; }     /* 소개 */
-.kd-section-rule--s2 { --rule-offset: 204px; }   /* 프로그램 */
-.kd-section-rule--s3 { --rule-offset: 408px; }   /* 일정 */
-.kd-section-rule--s4 { --rule-offset: 612px; }   /* 마을일기 */
-.kd-section-rule--s5 { --rule-offset: 1020px; }  /* 오시는 길 */
-.kd-section-rule--s6 { --rule-offset: 816px; }   /* 마을소식 */
+.kd-section-rule--s5 { --rule-offset: 0px; }     /* 오시는 길 → 소개 칸 */
+.kd-section-rule--s2 { --rule-offset: 246px; }   /* 프로그램 */
+.kd-section-rule--s3 { --rule-offset: 246px; }   /* 일정 → 프로그램 칸 */
+.kd-section-rule--s4 { --rule-offset: 492px; }   /* 마을일기 */
+.kd-section-rule--s7 { --rule-offset: 738px; }   /* 마을기록 */
+.kd-section-rule--s6 { --rule-offset: 984px; }   /* 마을소식 */
 
 /* 소개 섹션 전용 위치 보정 (데스크톱: 기본 그리드와 동일, 모바일: 별도 처리) */
 .kd-intro-rule { top: 14px; }
@@ -3579,28 +3580,28 @@
     top: 58px;
   }
 
-  /* 모바일 공통 섹션 강조선: 폭 350(좌20), 빨강 토막 90px, 6단계 0~260 균등.
-     마을소식 신설로 데스크톱과 동일하게 6칸 분할. 모바일: 세그먼트 50 / pitch 60(gap 10)
-     → 0·60·120·180·240·300, 끝 350. nav 매핑: s5(오시는길)=6번째=끝(300), s6(마을소식)=5번째=240. */
+  /* 모바일 공통 섹션 강조선: 폭 350(좌20), 5칸. 세그먼트 62 / pitch 72(gap 10)
+     → 0·72·144·216·288, 끝 350. 칸 배정은 데스크톱과 같다. */
   .kd-section-rule {
     left: 20px;
     top: 22px;
     width: 350px;
     background: repeating-linear-gradient(
       to right,
-      #1a1a1a 0 50px,
-      transparent 50px 60px
+      #1a1a1a 0 62px,
+      transparent 62px 72px
     );
   }
   .kd-section-rule::after {
-    width: 50px;
+    width: 62px;
   }
-  .kd-section-rule--s1 { --rule-offset: 0px; }
-  .kd-section-rule--s2 { --rule-offset: 60px; }
-  .kd-section-rule--s3 { --rule-offset: 120px; }
-  .kd-section-rule--s4 { --rule-offset: 180px; }
-  .kd-section-rule--s5 { --rule-offset: 300px; }
-  .kd-section-rule--s6 { --rule-offset: 240px; }
+  .kd-section-rule--s1,
+  .kd-section-rule--s5 { --rule-offset: 0px; }
+  .kd-section-rule--s2,
+  .kd-section-rule--s3 { --rule-offset: 72px; }
+  .kd-section-rule--s4 { --rule-offset: 144px; }
+  .kd-section-rule--s7 { --rule-offset: 216px; }
+  .kd-section-rule--s6 { --rule-offset: 288px; }
 
   .kd-program-mobile h1 {
     font-size: 40px;
@@ -6223,4 +6224,396 @@
   .kkumdarak .kd-figma-schedule,
   .kkumdarak .kd-figma-diary,
   .kkumdarak .kd-figma-map { min-height: 0; }
+}
+
+/* ═══ 2026-10-20 정보 구조 1차 ═══════════════════════════════════════
+   메뉴 6칸 · 프로그램 「카드 | 일정」 · 끝난 프로그램 카드 연결 · 홈 바로가기 · 일기 달 묶음 · 푸터 오시는 길.
+   모두 기존 언어(먹선 3~4px · 알약 · 3px 그림자 · Jua 제목)를 따른다. 정본 기록:
+   ~/.nodetree-collab/work/claude/isoartlab-ia-20261020/PLAN-r1.md */
+
+/* ── 프로그램 「카드 | 일정」 — 1440 판 안, h1 줄 오른쪽(판이 헤더 아래에서 시작해 가림 없음) ── */
+.kd-view-toggle {
+  position: absolute;
+  right: 120px;
+  top: 84px;
+  z-index: 11;
+  display: inline-flex;
+  overflow: hidden;
+  border: 3px solid #1a1a1a;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 3px 3px 0 #1a1a1a;
+}
+.kd-view-toggle a {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 22px;
+  color: #1a1a1a;
+  font-family: var(--kd-font-body);
+  font-size: 16px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+.kd-view-toggle a + a { border-left: 3px solid #1a1a1a; }
+.kd-view-toggle a.is-on { background: #1a1a1a; color: #ffffff; }
+.kd-view-toggle a:not(.is-on):hover { background: #fff3c4; }
+/* 편집 버튼(로그인 시)은 전환 알약 아래로 비켜 둔다 */
+.kd-program-desktop .kd-program-edit-btn { top: 146px; }
+
+/* ── 끝난 프로그램 카드: 「마을일기 / 마을기록」 두 알약 ── */
+.program-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  margin-top: auto;
+}
+.program-link {
+  display: grid;
+  place-items: center;
+  padding: 11px 0;
+  border: 3px solid #1a1a1a;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 3px 3px 0 #1a1a1a;
+  color: #1a1a1a;
+  font-family: var(--kd-font-body);
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.program-link.is-primary { background: var(--accent); color: var(--link-ink, #ffffff); }
+.program-link:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #1a1a1a; }
+.program-link:active { transform: translate(1px, 1px); box-shadow: 2px 2px 0 #1a1a1a; }
+
+/* ── 첫 화면 축제 알약 (히어로 글 아래) ── */
+.hero-fest-pill {
+  position: absolute;
+  left: 90px;
+  top: 336px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 18px 0 7px;
+  border: 3px solid #1a1a1a;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 3px 3px 0 #1a1a1a;
+  color: #1a1a1a;
+  font-family: var(--kd-font-body);
+  font-size: 17px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.hero-fest-pill b {
+  display: inline-grid;
+  place-items: center;
+  height: 32px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: #e4352b;
+  color: #ffffff;
+  font-size: 15px;
+}
+/* 히어로 판의 `.kd-hero-stage svg { position:absolute; inset:0; 100% }` 가 알약 화살표까지 펴지 않게 */
+.kd-hero-stage .hero-fest-pill svg { position: static; inset: auto; width: 12px; height: 12px; flex: none; }
+.hero-fest-pill:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #1a1a1a; }
+.hero-fest-pill:active { transform: translate(1px, 1px); box-shadow: 2px 2px 0 #1a1a1a; }
+.hero-fest-pill.is-mobile {
+  /* 제목 위(kicker top 46 앞). 본문 아래(669~)에 두면 360×740·375×667 폰에서 첫 화면 밖으로 밀린다. */
+  left: 26px;
+  top: 4px;
+  height: 36px;
+  gap: 7px;
+  padding: 0 14px 0 5px;
+  border-width: 2px;
+  box-shadow: 2px 2px 0 #1a1a1a;
+  font-size: 14px;
+}
+.hero-fest-pill.is-mobile b { height: 26px; padding: 0 9px; font-size: 13px; }
+
+/* ── 홈 바로가기 띠 (히어로 아래) — 축제 큰 칸 + 일기·지도 ── */
+.kd-home-ways {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px 96px;
+}
+.kd-home-way {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 28px 30px 30px;
+  border: 4px solid #1a1a1a;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 5px 5px 0 #1a1a1a;
+  color: #1a1a1a;
+  text-decoration: none;
+}
+a.kd-home-way,
+.kd-home-way-main { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+a.kd-home-way:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 #1a1a1a; }
+a.kd-home-way:active { transform: translate(1px, 1px); box-shadow: 3px 3px 0 #1a1a1a; }
+.kd-home-way--fest { grid-row: span 2; padding: 36px 40px 40px; overflow: hidden; }
+.kd-home-way--diary { background: #fff9ea; }
+.kd-home-way--map { padding: 0; background: #cbefe4; }
+.kd-home-way-main {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  padding: 28px 30px 10px;
+  color: inherit;
+  text-decoration: none;
+}
+.kd-home-way-main:hover h2,
+a.kd-home-way:hover h2 { text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 3px; }
+.kd-home-kicker {
+  margin: 0;
+  word-break: keep-all;
+  color: #e4352b;
+  font-family: var(--kd-font-body);
+  font-size: 16px;
+  font-weight: 800;
+}
+.kd-home-way h2 {
+  margin: 0;
+  word-break: keep-all;
+  font-family: var(--kd-font-head);
+  font-size: 34px;
+  font-weight: 400;
+  line-height: 1.2;
+  color: #1a1a1a;
+}
+.kd-home-way--fest h2 { font-size: 52px; }
+.kd-home-text {
+  max-width: 30em;
+  margin: 0;
+  word-break: keep-all;
+  color: #231b13;
+  font-family: var(--kd-font-body);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.kd-home-way--fest .kd-home-text { max-width: 25em; font-size: 19px; }
+.kd-home-fest-head { display: flex; align-items: center; gap: 14px; }
+.kd-home-dday {
+  display: inline-grid;
+  place-items: center;
+  min-width: 74px;
+  height: 74px;
+  padding: 0 8px;
+  border: 3px solid #1a1a1a;
+  border-radius: 50%;
+  background: #e4352b;
+  box-shadow: 3px 3px 0 #1a1a1a;
+  color: #ffffff;
+  font-family: var(--kd-font-latin, var(--kd-font-body));
+  font-size: 22px;
+  font-weight: 800;
+  transform: rotate(-6deg);
+}
+.kd-home-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 22px;
+}
+.kd-home-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 52px;
+  padding: 0 26px;
+  border: 3px solid #1a1a1a;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 3px 3px 0 #1a1a1a;
+  color: #1a1a1a;
+  font-family: var(--kd-font-body);
+  font-size: 18px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.kd-home-btn.is-primary { background: #e4352b; color: #ffffff; }
+.kd-home-btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #1a1a1a; }
+.kd-home-btn:active { transform: translate(1px, 1px); box-shadow: 2px 2px 0 #1a1a1a; }
+.kd-home-fest-char {
+  position: absolute;
+  right: 36px;
+  bottom: 28px;
+  width: 128px;
+  height: 128px;
+  pointer-events: none;
+}
+.kd-home-fest-char .motion-character { width: 100%; height: 100%; }
+.kd-home-arrow {
+  /* 오른쪽 위(머리표 줄) — 아래에 두면 본문 끝과 겹쳤다 */
+  position: absolute;
+  right: 26px;
+  top: 20px;
+  font-family: var(--kd-font-body);
+  font-size: 28px;
+  font-weight: 800;
+}
+.kd-home-sub {
+  align-self: flex-start;
+  margin: 0 30px 24px;
+  border-bottom: 2px solid #1a1a1a;
+  color: #1a1a1a;
+  font-family: var(--kd-font-body);
+  font-size: 16px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.kd-home-sub:hover { color: #e4352b; border-color: #e4352b; }
+
+/* ── 푸터: 오시는 길 (메뉴에서 빠진 대신 모든 화면 아래) ── */
+.kd-footer-way {
+  word-break: keep-all;
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px 14px;
+  margin: 0 auto 26px;
+  padding: 12px 24px;
+  border: 3px solid #1a1a1a;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 3px 3px 0 #1a1a1a;
+  color: #1a1a1a;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.kd-footer-way b { color: #e4352b; font-weight: 800; }
+.kd-footer-way:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #1a1a1a; }
+
+/* ── 마을일기: 달 바로가기 줄(칩 바로 아래, 칩 줄 수와 상관없이 따라온다) · 길 위 달 표시 · 처음으로 ── */
+.diary-filters .diary-months {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+.diary-filters .diary-months .diary-months-label {
+  height: auto;
+  padding: 0 4px 0 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: #4a4a4a;
+  cursor: default;
+  font-size: 15px;
+}
+.diary-months button {
+  height: 36px;
+  padding: 0 15px;
+  border: 2px solid #1a1a1a;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1a1a1a;
+  font-family: var(--kd-font-body);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.diary-months button:hover { background: #fff3c4; transform: translateY(-1px); }
+.diary-months button:active { transform: translateY(1px); }
+.diary-month-mark {
+  position: absolute;
+  left: 720px;
+  z-index: 2;
+  padding: 4px 13px;
+  border: 3px solid #1a1a1a;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1a1a1a;
+  font-family: var(--kd-font-body);
+  font-size: 16px;
+  font-weight: 800;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.diary-to-top {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 20px;
+  border: 3px solid #1a1a1a;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 3px 3px 0 #1a1a1a;
+  color: #1a1a1a;
+  font-family: var(--kd-font-body);
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.diary-to-top:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #1a1a1a; }
+
+@media (max-width: 900px) {
+  /* 390 판이 360 폭 폰에서 오른쪽이 잘리는 기존 구조(카드도 같음) — 전환 알약만은 화면 안에 들어오게 */
+  .kd-view-toggle { right: calc(20px + max(0px, 390px - 100vw)); top: 64px; border-width: 2px; box-shadow: 2px 2px 0 #1a1a1a; }
+  .kd-view-toggle a { height: 34px; padding: 0 15px; font-size: 15px; }
+  .kd-view-toggle a + a { border-left-width: 2px; }
+  .kd-program-mobile .kd-program-edit-btn { top: 104px; }
+
+  .program-links.is-mobile { margin-top: 12px; }
+  .program-links.is-mobile .program-link { padding: 10px 0; font-size: 15px; }
+
+  .kd-home-ways { grid-template-columns: 1fr; gap: 18px; padding: 24px 16px 64px; }
+  .kd-home-way--fest { grid-row: auto; padding: 26px 22px 26px; }
+  .kd-home-way--fest h2 { font-size: 36px; }
+  .kd-home-way h2 { font-size: 28px; }
+  .kd-home-way { padding: 22px 22px 24px; }
+  .kd-home-way-main { padding: 22px 22px 8px; }
+  .kd-home-sub { margin: 0 22px 20px; font-size: 15px; }
+  .kd-home-text,
+  .kd-home-way--fest .kd-home-text { font-size: 16px; }
+  .kd-home-dday { min-width: 60px; height: 60px; font-size: 18px; }
+  .kd-home-btn { height: 46px; padding: 0 20px; font-size: 16px; }
+  /* 캐릭터는 아래 오른쪽(세로로 쌓인 버튼 옆) — 위에 두면 머리표가 「장/암면」으로 끊겼다 */
+  .kd-home-fest-char { right: 16px; bottom: 22px; width: 84px; height: 84px; }
+  .kd-home-way--map { padding: 0; }
+
+  .kd-footer-way { border-radius: 20px; font-size: 14px; padding: 10px 18px; }
+
+  .kd-diary-mobile .diary-filters .diary-months { gap: 6px; }
+  .kd-diary-mobile .diary-filters .diary-months .diary-months-label { font-size: 13px; }
+  .kd-diary-mobile .diary-months button { height: 30px; padding: 0 11px; font-size: 13px; }
+  .kd-diary-mobile .diary-month-mark { padding: 2px 9px; border-width: 2px; font-size: 13px; }
+  .kd-diary-mobile .diary-month-mark.is-right { transform: translateX(50%); }
+  .kd-diary-mobile .diary-empty.diary-empty-mobile { top: 300px; }
+  .diary-to-top { right: 16px; bottom: 16px; height: 42px; padding: 0 16px; font-size: 14px; }
 }
