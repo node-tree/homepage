@@ -1324,7 +1324,7 @@ const VillageDiary: React.FC = () => {
 
   // ── 따라다니는 바로가기 (작가 2026-10-20 「스티커처럼 따라다녀야」) ─────────────
   //   위쪽 칩·바로가기 줄이 헤더 뒤로 넘어가면 오른쪽 아래에 「프로그램 · 달 · 처음으로」 묶음을 띄운다.
-  //   지금 화면 40% 선을 넘어선 달을 칠해 「어디쯤인지」도 같이 보여 준다(rAF 로 묶어 한 프레임 한 번만 잰다).
+  //   지금 화면 40% 선을 넘어선 달을 빨간 글자로 표시한다(rAF 로 묶어 한 프레임 한 번만 잰다).
   const [floatOn, setFloatOn] = useState(false);
   const [curMonth, setCurMonth] = useState<number | null>(null);
   const floatOnRef = useRef(false);
@@ -1697,7 +1697,7 @@ const VillageDiary: React.FC = () => {
 
       {floatOn && !isEditing && (
         <div className="diary-float" role="group" aria-label="마을일기 바로가기">
-          <span className="diary-float-name" style={{ '--dot': program.accent } as React.CSSProperties}>
+          <span className="diary-float-name">
             {program.name}
           </span>
           {showMonths &&
@@ -1718,9 +1718,6 @@ const VillageDiary: React.FC = () => {
             aria-label="처음으로"
             onClick={() => window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' })}
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-              <path d="M7 12V2M2.5 6.5L7 2l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
             <span>처음으로</span>
           </button>
         </div>

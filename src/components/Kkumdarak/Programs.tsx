@@ -305,33 +305,17 @@ const resolvePhaseStatus = (content?: ProgramContent): PhaseStatus => {
 const effectivePhase = (baseName: string, content?: ProgramContent): PhaseStatus =>
   isProgramEnded(baseName) ? 'closed' : resolvePhaseStatus(content);
 
-// 프로그램 색 위 글자색 — 흰색과 먹색 중 대비(WCAG)가 더 큰 쪽.
-//   분홍·노랑·청록·초록은 먹색, 빨강·파랑은 흰색이 된다(청록 위 흰 글자 2.5:1 → 먹색 6.9:1).
-const INK = '#1a1a1a';
-const luminance = (hex: string): number => {
-  const n = parseInt(hex.replace('#', ''), 16);
-  const lin = (c: number) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
-  return 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
-};
-const inkOn = (hex: string): string => {
-  if (!/^#?[0-9a-f]{6}$/i.test(hex)) return '#ffffff';
-  const L = luminance(hex);
-  const onWhite = 1.05 / (L + 0.05);
-  const onInk = (L + 0.05) / (luminance(INK) + 0.05);
-  return onInk > onWhite ? INK : '#ffffff';
-};
-
 // ── 끝난 프로그램 카드: 신청 버튼 자리에 「마을일기 / 마을기록」 두 갈래 ─────────
 //   해시 링크(#diary/<id> · #results/<id>) — Kkumdarak 이 섹션을 바꾸고 각 섹션이 id 를 읽는다.
-const ProgramLinks: React.FC<{ baseName: string; className: string; accent: string }> = ({ baseName, className, accent }) => {
+const ProgramLinks: React.FC<{ baseName: string; className: string }> = ({ baseName, className }) => {
   const id = programIdForName(baseName);
   if (!id) return null;
   return (
     <div className={className}>
-      <a className="program-link is-primary" href={`#diary/${id}`} style={{ '--link-ink': inkOn(accent) } as React.CSSProperties}>
-        마을일기 →
+      <a className="program-link is-primary" href={`#diary/${id}`}>
+        마을일기
       </a>
-      <a className="program-link" href={`#results/${id}`}>마을기록 →</a>
+      <a className="program-link" href={`#results/${id}`}>마을기록</a>
     </div>
   );
 };
@@ -346,13 +330,16 @@ const CardAction: React.FC<{
 }> = ({ baseProgram, program, setting, closed, variant }) => {
   const actionClass = variant === 'desktop' ? 'program-action' : 'mobile-program-action';
   if (program.festival) {
-    return <a className={actionClass} href="#directions">오시는 길 →</a>;
+    return (
+      <div className={variant === 'desktop' ? 'program-links' : 'program-links is-mobile'}>
+        <a className="program-link" href="#directions">오시는 길</a>
+      </div>
+    );
   }
   if (isProgramEnded(baseProgram.name)) {
     return (
       <ProgramLinks
         baseName={baseProgram.name}
-        accent={program.color}
         className={variant === 'desktop' ? 'program-links' : 'program-links is-mobile'}
       />
     );
