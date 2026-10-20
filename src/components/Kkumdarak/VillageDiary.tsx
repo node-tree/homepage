@@ -1322,20 +1322,51 @@ const VillageDiary: React.FC = () => {
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  // 두 화면 넘게 내려가면 「처음으로」(칩·달 바로가기로 복귀).
-  const [showTop, setShowTop] = useState(false);
-  const showTopRef = useRef(false);
+  // ── 따라다니는 바로가기 (작가 2026-10-20 「스티커처럼 따라다녀야」) ─────────────
+  //   위쪽 칩·바로가기 줄이 헤더 뒤로 넘어가면 오른쪽 아래에 「프로그램 · 달 · 처음으로」 묶음을 띄운다.
+  //   지금 화면 40% 선을 넘어선 달을 칠해 「어디쯤인지」도 같이 보여 준다(rAF 로 묶어 한 프레임 한 번만 잰다).
+  const [floatOn, setFloatOn] = useState(false);
+  const [curMonth, setCurMonth] = useState<number | null>(null);
+  const floatOnRef = useRef(false);
+  const curMonthRef = useRef<number | null>(null);
+  const monthStartsRef = useRef(monthStarts);
+  monthStartsRef.current = monthStarts;
   useEffect(() => {
-    const onScroll = () => {
-      const next = window.scrollY > (window.innerHeight || 800) * 2;
-      if (next !== showTopRef.current) {
-        showTopRef.current = next;
-        setShowTop(next);
+    let raf: number | null = null;
+    const measure = () => {
+      raf = null;
+      const header = document.querySelector('.kd-header');
+      const headerBottom = header ? header.getBoundingClientRect().bottom : 80;
+      const filters = Array.from(document.querySelectorAll<HTMLElement>('.kd-figma-diary .diary-filters')).find(
+        (e) => e.getBoundingClientRect().height > 0,
+      );
+      const on = !!filters && filters.getBoundingClientRect().bottom < headerBottom;
+      if (on !== floatOnRef.current) {
+        floatOnRef.current = on;
+        setFloatOn(on);
+      }
+      const line = window.innerHeight * 0.4;
+      let cur: number | null = null;
+      monthStartsRef.current.forEach(({ month, index }) => {
+        const el = [cardEls.current[index], mobileCardEls.current[index]].find((e) => e && e.getBoundingClientRect().height > 0);
+        if (el && el.getBoundingClientRect().top < line) cur = month;
+      });
+      if (cur !== curMonthRef.current) {
+        curMonthRef.current = cur;
+        setCurMonth(cur);
       }
     };
-    onScroll();
+    const onScroll = () => {
+      if (raf == null) raf = requestAnimationFrame(measure);
+    };
+    measure();
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    window.addEventListener('resize', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (raf != null) cancelAnimationFrame(raf);
+    };
   }, []);
 
   const renderFilters = (mobile = false) => (
@@ -1664,17 +1695,35 @@ const VillageDiary: React.FC = () => {
         )}
       </div>
 
-      {showTop && !isEditing && (
-        <button
-          type="button"
-          className="diary-to-top"
-          onClick={() => window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' })}
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-            <path d="M7 12V2M2.5 6.5L7 2l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          처음으로
-        </button>
+      {floatOn && !isEditing && (
+        <div className="diary-float" role="group" aria-label="마을일기 바로가기">
+          <span className="diary-float-name" style={{ '--dot': program.accent } as React.CSSProperties}>
+            {program.name}
+          </span>
+          {showMonths &&
+            monthJumps.map(({ month, index }) => (
+              <button
+                type="button"
+                key={month}
+                className={curMonth === month ? 'is-on' : ''}
+                aria-current={curMonth === month ? 'true' : undefined}
+                onClick={() => jumpToCard(index)}
+              >
+                {month}월
+              </button>
+            ))}
+          <button
+            type="button"
+            className="diary-float-top"
+            aria-label="처음으로"
+            onClick={() => window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' })}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+              <path d="M7 12V2M2.5 6.5L7 2l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span>처음으로</span>
+          </button>
+        </div>
       )}
     </section>
   );

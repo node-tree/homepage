@@ -6559,28 +6559,56 @@ a.kd-home-way:hover h2 { text-decoration: underline; text-underline-offset: 6px;
   transform: translateX(-50%);
   pointer-events: none;
 }
-.diary-to-top {
+.diary-float {
+  /* 따라다니는 바로가기 — 오른쪽 아래(고정 헤더와 겹치지 않게 아래쪽). 모양은 바로가기 디자인 시안에서 다시 정한다 */
   position: fixed;
   right: 24px;
   bottom: 24px;
   z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: calc(100vw - 48px);
+  padding: 6px;
+  border: 2px solid #1a1a1a;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(26, 26, 26, 0.12);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.diary-float::-webkit-scrollbar { display: none; }
+.diary-float-name {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 48px;
-  padding: 0 20px;
-  border: 3px solid #1a1a1a;
-  border-radius: 999px;
-  background: #ffffff;
-  box-shadow: 3px 3px 0 #1a1a1a;
+  padding: 0 12px 0 10px;
   color: #1a1a1a;
   font-family: var(--kd-font-body);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
 }
-.diary-to-top:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #1a1a1a; }
+.diary-float-name::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--dot, #e4352b); }
+.diary-float button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #1a1a1a;
+  font-family: var(--kd-font-body);
+  font-size: 15px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.diary-float button:hover { background: #f3efe6; }
+.diary-float button.is-on { background: #1a1a1a; color: #ffffff; }
+.diary-float-top { border-left: 2px solid #e6e0d4 !important; border-radius: 0 999px 999px 0 !important; }
 
 @media (max-width: 900px) {
   /* 390 판이 360 폭 폰에서 오른쪽이 잘리는 기존 구조(카드도 같음) — 전환 알약만은 화면 안에 들어오게 */
@@ -6616,5 +6644,8 @@ a.kd-home-way:hover h2 { text-decoration: underline; text-underline-offset: 6px;
   /* 길이 오른쪽인 프로그램: 인라인 right 만 들어오므로 공통 left:720 을 풀어야 화면 안에 붙는다 */
   .kd-diary-mobile .diary-month-mark.is-right { left: auto; transform: translateX(50%); }
   .kd-diary-mobile .diary-empty.diary-empty-mobile { top: 300px; }
-  .diary-to-top { right: 16px; bottom: 16px; height: 42px; padding: 0 16px; font-size: 14px; }
+  .diary-float { right: 12px; bottom: 12px; max-width: calc(100vw - 24px); padding: 4px; }
+  .diary-float-name { display: none; }
+  .diary-float button { height: 34px; padding: 0 11px; font-size: 15px; }
+  .diary-float-top span { display: none; }
 }
