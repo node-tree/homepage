@@ -23,7 +23,7 @@ const PERIODS: Array<{ name: string; period: Period; color: string; mobileColor:
   { name: '마을의 신호',    period: periodOf('마을의 신호'),     color: '#1b55e2', mobileColor: '#1b55e2' },
 ];
 
-// 〈다시, 안녕〉(축제)은 11.7 하루짜리라 막대 대신 짧은 점 마커로 표시(FESTIVAL = programIndex.ts).
+// 〈다시, 안녕〉(축제)은 11.13 하루짜리라 막대 대신 짧은 점 마커로 표시(FESTIVAL = programIndex.ts).
 
 // 월축 좌표 → 픽셀 환산. 월 라벨 간격(monthGap)·기준점(baseX)·한 달 길이를 받아
 //   (월·일) 한 점을 픽셀로, (시작·끝) 한 구간을 (x, width)로 변환한다. 한 달=31일 비례.
@@ -71,7 +71,7 @@ const Schedule: React.FC = () => {
             </React.Fragment>
           );
         })}
-        {/* 〈다시, 안녕〉 축제 — 11.7 짧은 점 마커 */}
+        {/* 〈다시, 안녕〉 축제 — 11.13 짧은 점 마커 */}
         {(() => {
           const x = dayToX(FESTIVAL.month, FESTIVAL.day, D_BASE, D_GAP);
           const y = D_ROW0 + PERIODS.length * D_ROW_GAP;
@@ -86,7 +86,7 @@ const Schedule: React.FC = () => {
           );
         })()}
         <MotionCharacter src={SCHEDULE_CHARACTER} alt="" className="schedule-character" />
-        <span className="schedule-fest-date">11.7</span>
+        <span className="schedule-fest-date">11.13</span>
       </div>
 
       <div className="kd-schedule-mobile" data-name="일정 — Mobile">
@@ -116,7 +116,7 @@ const Schedule: React.FC = () => {
             </React.Fragment>
           );
         })}
-        {/* 〈다시, 안녕〉 축제 — 11.7 짧은 점 마커 */}
+        {/* 〈다시, 안녕〉 축제 — 11.13 짧은 점 마커 */}
         {(() => {
           const x = dayToX(FESTIVAL.month, FESTIVAL.day, M_BASE, M_GAP);
           const y = M_ROW0 + PERIODS.length * M_ROW_GAP;
@@ -131,7 +131,7 @@ const Schedule: React.FC = () => {
           );
         })()}
         <MotionCharacter src={SCHEDULE_CHARACTER} alt="" className="schedule-character" />
-        <span className="schedule-fest-date">11.7</span>
+        <span className="schedule-fest-date">11.13</span>
       </div>
     </section>
   );

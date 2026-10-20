@@ -25,8 +25,8 @@ export const PROGRAM_INDEX: ProgramIndexEntry[] = [
   { id: 'scape-diary',       name: '풍경일기',         period: { sm: 5, sd: 23, em: 7, ed: 18 } },
 ];
 
-// 〈다시, 안녕〉 축제 — 11.7 하루.
-export const FESTIVAL = { id: 'goodbye-again', name: '다시, 안녕', month: 11, day: 7 };
+// 〈다시, 안녕〉 축제 — 11.13(금) 10:00~14:00 · 장암면 주민자치센터 하루(2026-10-20 작가 확정, 정본 03-프로그램의 11.7 토 · 세 곳에서 바뀜).
+export const FESTIVAL = { id: 'goodbye-again', name: '다시, 안녕', month: 11, day: 13 };
 
 const YEAR = 2026;
 // 판정은 한국 시간(UTC+9) 기준 — 방문자 기기 시간대에 따라 배지가 달라지지 않게.

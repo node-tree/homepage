@@ -63,7 +63,7 @@ export const SUB_SECTIONS: Record<string, string> = {
 };
 
 // 상단 안내 띠 문구
-export const ANNOUNCE = '2026 꿈다락 문화예술학교 · 다섯 세대가 함께 짓는 마을 · 11월 7일 〈다시, 안녕〉 축제';
+export const ANNOUNCE = '2026 꿈다락 문화예술학교 · 다섯 세대가 함께 짓는 마을 · 11월 13일 〈다시, 안녕〉 축제';
 
 // ── 4단계 흐름 (소개) ───────────────────────────────────────────
 export const FLOW_STEPS = [
@@ -249,9 +249,9 @@ export const PROGRAMS: Program[] = [
     desc: '한 해 동안 만든 기록·소리·풍경을 모아 모든 세대가 함께 여는 마을 축제입니다.',
     rounds: '1일 축제',
     recruit: '전체 개방',
-    period: '2026. 11. 7',
+    period: '2026. 11. 13',
     festival: true,
-    date: '2026. 11. 7',
+    date: '2026. 11. 13',
   },
 ];
 
