@@ -10,6 +10,7 @@ const DATA = {"bounds":[-99.0,-133.56,76.15,121.01],"river":{"banks":[[[55.21,-1
 
 export const GEO_SIGNAL = {
   ...DATA,
+  waterFill: false,   // 10-15 판처럼 둑 선만(포스터판의 물 칠은 이 둑 모양에서 도시를 덮는다)
   poleTracks: ['사비로', '장암길'],
   // [모형, 길 이름, 왕복 주기(ms), 방식, 시작 위상, 차선]
   vehicles: [

@@ -64,7 +64,8 @@ export function buildCity(scene, geo = POSTER_GEO, opts = {}) {
   // ── 백마강: 두 둑 + 흐름 눈금(실제 물길) — 가운데 점선은 길과 헷갈려 그리지 않고 배·눈금 경로로만 쓴다 ──
   for (const bank of GEO.river.banks) scene.add(line(bank.map(([x, z]) => [x, 0.03, z])));
   // 물: 포스터의 하늘색 한 덩어리 — 두 둑 사이를 채운다(ShapeGeometry의 y → 월드 z)
-  {
+  //   실제 지리판(이소 「마을의 신호」)은 둑 선이 단순한 띠가 아니라 이 칠이 도시 대부분을 덮는다 → waterFill:false 로 끈다.
+  if (GEO.waterFill !== false) {
     const [wb, eb] = GEO.river.banks;
     const shape = new THREE.Shape([...wb, ...[...eb].reverse()].map(([x, z]) => new THREE.Vector2(x, z)));
     const geo = new THREE.ShapeGeometry(shape);
