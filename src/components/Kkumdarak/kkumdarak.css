@@ -6299,7 +6299,7 @@
 .hero-fest-pill {
   position: absolute;
   left: 90px;
-  top: 336px;
+  top: 345px;
   z-index: 5;
   display: inline-flex;
   align-items: center;
@@ -6310,24 +6310,24 @@
   background: transparent;
   color: #1a1a1a;
   font-family: var(--kd-font-body);
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 800;
   line-height: 1.3;
   word-break: keep-all;
   cursor: pointer;
 }
-.hero-fest-pill b { font-size: inherit; font-weight: 800; }
+.hero-fest-pill b { color: #e6352b; font-size: inherit; font-weight: 800; }
 .hero-fest-pill span {
   text-decoration: underline;
   text-decoration-thickness: 2px;
-  text-underline-offset: 5px;
+  text-underline-offset: 6px;
 }
 .hero-fest-pill.is-mobile {
   left: 26px;
   top: 4px;
   height: 44px;
   gap: 8px;
-  font-size: 15px;
+  font-size: 20px;
 }
 
 /* 홈 바로가기: 먹선으로 나눈 안내, 캐릭터는 축제 링크 옆에 둔다. */
@@ -6360,6 +6360,8 @@
   color: inherit;
   text-decoration: none;
 }
+.kd-home-way h2 a { color: inherit; }
+.kd-home-way h2 a,
 .kd-home-way-main h2,
 a.kd-home-way h2 {
   text-decoration: underline;
@@ -6410,9 +6412,9 @@ a.kd-home-way h2 {
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 8px 24px;
-  min-height: 148px;
-  margin-top: auto;
-  padding: 20px 148px 0 0;
+  min-height: 44px;
+  margin-top: 20px;
+  padding: 0 120px 0 0;
 }
 .kd-home-btn,
 .kd-home-sub {
@@ -6432,9 +6434,9 @@ a.kd-home-way h2 {
 .kd-home-fest-char {
   position: absolute;
   right: 0;
-  bottom: 24px;
-  width: 128px;
-  height: 128px;
+  bottom: 0;
+  width: 96px;
+  height: 96px;
   pointer-events: none;
 }
 .kd-home-fest-char .motion-character { width: 100%; height: 100%; }
@@ -6464,49 +6466,16 @@ a.kd-home-way h2 {
   text-underline-offset: 5px;
 }
 
-/* 달 바로가기는 글자 줄, 길 위 달은 먹선 표지로 선택 칩과 구분한다. */
-.diary-filters .diary-months {
-  display: flex;
-  flex-basis: 100%;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-  margin-top: 2px;
-  word-break: keep-all;
-}
-.diary-filters .diary-months .diary-months-label {
-  height: auto;
-  padding: 0;
-  border: 0;
-  background: none;
-  box-shadow: none;
-  color: #4a4a4a;
-  cursor: default;
-  font-size: 16px;
-}
-.diary-months button {
-  min-width: 44px;
-  height: 44px;
-  padding: 0 4px;
-  border: 0;
-  background: transparent;
-  color: #1a1a1a;
-  font-family: var(--kd-font-body);
-  font-size: 18px;
-  font-weight: 800;
-  word-break: keep-all;
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 5px;
-  cursor: pointer;
-}
+/* 길 위 달은 글자 폭의 밑줄과 크림 바탕으로 길을 잠시 비운다. */
 .diary-month-mark {
   position: absolute;
   left: 720px;
   z-index: 2;
-  padding: 2px 8px;
-  border-bottom: 2px solid #1a1a1a;
-  background: var(--kd-figma-paper, #ffffff);
+  padding: 4px;
+  background: #fff9ea;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
   color: #1a1a1a;
   font-family: var(--kd-font-body);
   font-size: 18px;
@@ -6517,7 +6486,7 @@ a.kd-home-way h2 {
   pointer-events: none;
 }
 .diary-float {
-  /* 화면 아래쪽의 쪽지 한 장. 현재 달만 빨강, 칠과 그림자 없음. */
+  /* 화면 아래쪽의 쪽지 한 장. 현재 달만 빨강, 그림자 없음. */
   position: fixed;
   right: 24px;
   bottom: calc(24px + env(safe-area-inset-bottom, 0px));
@@ -6527,18 +6496,11 @@ a.kd-home-way h2 {
   gap: 4px;
   max-width: calc(100vw - 48px);
   padding: 4px 8px;
-  border: 1px solid #1a1a1a;
+  border: 2px solid #1a1a1a;
   background: #fff9ea;
   overflow-x: auto;
   word-break: keep-all;
-}
-.diary-float-name {
-  padding: 0 16px 0 8px;
-  color: #1a1a1a;
-  font-family: var(--kd-font-body);
-  font-size: 16px;
-  font-weight: 800;
-  white-space: nowrap;
+  transform: rotate(-1.5deg);
 }
 .diary-float button {
   display: inline-flex;
@@ -6562,32 +6524,31 @@ a.kd-home-way h2 {
 }
 .diary-float button.is-on { color: #e4352b; }
 .diary-float button:hover { text-decoration-thickness: 3px; }
-.diary-float .diary-float-top { margin-left: 8px; border-left: 1px solid #1a1a1a; padding-left: 20px; }
+.diary-float .diary-float-top { color: #666; font-size: 16px; font-weight: 400; text-decoration: none; }
 
 .program-link:hover,
 .hero-fest-pill:hover,
 .kd-home-btn:hover,
 .kd-home-sub:hover,
+.kd-home-way h2 a:hover,
 .kd-home-way-main:hover h2,
 a.kd-home-way:hover h2,
-.kd-footer-way:hover b,
-.diary-months button:hover { color: #e4352b; }
+.kd-footer-way:hover b { color: #e4352b; }
 
 .program-link:focus-visible,
 .hero-fest-pill:focus-visible,
 .kd-home-btn:focus-visible,
 .kd-home-sub:focus-visible,
+.kd-home-way h2 a:focus-visible,
 .kd-home-way-main:focus-visible,
 a.kd-home-way:focus-visible,
 .kd-footer-way:focus-visible,
-.diary-months button:focus-visible,
 .diary-float button:focus-visible { outline: 2px solid #1a1a1a; outline-offset: 2px; }
 
 .program-link:active,
 .hero-fest-pill:active,
 .kd-home-btn:active,
 .kd-home-sub:active,
-.diary-months button:active,
 .diary-float button:active { transform: translateY(1px); }
 
 @media (max-width: 900px) {
@@ -6611,20 +6572,27 @@ a.kd-home-way:focus-visible,
   .kd-home-dday { font-size: 18px; }
   .kd-home-btn { font-size: 16px; }
   .kd-home-sub { font-size: 15px; }
-  .kd-home-actions { min-height: 104px; padding-right: 104px; }
-  .kd-home-fest-char { bottom: 24px; width: 84px; height: 84px; }
+  .kd-home-actions { flex-direction: column; align-items: flex-start; padding-right: 120px; }
 
   .kd-footer-way { font-size: 15px; padding: 10px 0; }
 
-  .kd-diary-mobile .diary-filters .diary-months { gap: 6px 12px; }
-  .kd-diary-mobile .diary-filters .diary-months .diary-months-label { font-size: 15px; }
-  .kd-diary-mobile .diary-months button { font-size: 16px; }
-  .kd-diary-mobile .diary-month-mark { padding: 2px 8px; font-size: 15px; }
+  .kd-diary-mobile .diary-month-mark { font-size: 15px; }
   /* 길이 오른쪽인 프로그램: 인라인 right 만 들어오므로 공통 left:720 을 풀어야 화면 안에 붙는다 */
   .kd-diary-mobile .diary-month-mark.is-right { left: auto; transform: translateX(50%); }
   .kd-diary-mobile .diary-empty.diary-empty-mobile { top: 300px; }
-  .diary-float { right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); max-width: calc(100vw - 24px); padding: 4px; }
-  .diary-float-name { display: none; }
-  .diary-float button { padding: 0 10px; font-size: 15px; }
-  .diary-float .diary-float-top { margin-left: 4px; padding-left: 14px; }
+  /* 390 판의 카드 반대편 여백에 세로로 붙인다. 좁은 화면에서도 카드·그림자를 침범하지 않는다. */
+  .diary-float {
+    left: max(8px, calc((100vw - 390px) / 2 + 8px));
+    right: auto;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    flex-direction: column;
+    width: 88px;
+    box-sizing: border-box;
+    max-height: calc(100dvh - 180px);
+    overflow-y: auto;
+    padding: 4px 0;
+  }
+  .diary-float.is-path-right { left: auto; right: max(8px, calc((100vw - 390px) / 2 + 8px)); }
+  .diary-float button { padding: 0 4px; font-size: 18px; }
+  .diary-float .diary-float-top { font-size: 16px; }
 }

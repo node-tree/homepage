@@ -44,7 +44,7 @@ const HomeShortcuts: React.FC = () => {
           {!past && <span className="kd-home-dday">{dayLabel(d)}</span>}
           <p className="kd-home-kicker">{past ? '11월 7일에 열렸습니다' : '11월 7일 토요일 · 장암면'}</p>
         </div>
-        <h2>〈다시, 안녕〉 축제</h2>
+        <h2><a href="#programs">〈다시, 안녕〉 축제</a></h2>
         <p className="kd-home-text">
           일곱 프로그램에서 만든 가구와 그림, 소리와 영상을 하루에 펼치는 마을 축제입니다. 누구나 무료로 올 수 있습니다.
         </p>
@@ -55,9 +55,9 @@ const HomeShortcuts: React.FC = () => {
             <a className="kd-home-btn is-primary" href="#programs">프로그램 보기</a>
           )}
           <a className="kd-home-btn" href="#directions">오시는 길</a>
-        </div>
-        <div className="kd-home-fest-char" aria-hidden="true">
-          <MotionCharacter src={FEST_CHARACTER} alt="" className="kd-home-char" />
+          <div className="kd-home-fest-char" aria-hidden="true">
+            <MotionCharacter src={FEST_CHARACTER} alt="" className="kd-home-char" />
+          </div>
         </div>
       </article>
 

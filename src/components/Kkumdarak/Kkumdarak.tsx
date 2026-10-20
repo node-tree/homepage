@@ -636,7 +636,7 @@ const Kkumdarak: React.FC = () => {
               {/* 오시는 길은 메뉴에서 빠졌다 — 모든 화면 아래에서 한 번에 찾게 한다. */}
               <a className="kd-footer-way" href="#directions">
                 <span>장암 생산소 · 충남 부여군 장암면 석동로29번길 3</span>
-                <b>오시는 길 →</b>
+                <b>오시는 길</b>
               </a>
               <div className="kd-footer-logo">꿈다락</div>
               <div>꿈다락 문화예술학교 · 2026 생활거점형 · 충남 부여군 장암면</div>
