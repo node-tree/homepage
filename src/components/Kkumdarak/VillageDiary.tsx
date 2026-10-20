@@ -1339,6 +1339,8 @@ const VillageDiary: React.FC = () => {
         const el = [cardEls.current[index], mobileCardEls.current[index]].find((e) => e && e.getBoundingClientRect().height > 0);
         if (el && el.getBoundingClientRect().top < line) cur = month;
       });
+      // 맨 위(아직 40% 선을 넘은 달이 없을 때)는 첫 달을 켠다
+      if (cur === null && monthStartsRef.current.length) cur = monthStartsRef.current[0].month;
       if (cur !== curMonthRef.current) {
         curMonthRef.current = cur;
         setCurMonth(cur);

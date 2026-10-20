@@ -86,7 +86,8 @@ const Schedule: React.FC = () => {
           );
         })()}
         <MotionCharacter src={SCHEDULE_CHARACTER} alt="" className="schedule-character" />
-        <span className="schedule-fest-date">11.13</span>
+        {/* 날짜 글자는 점 x 에서 계산(고정 좌표면 날짜가 바뀔 때 점이 글자를 덮는다 — 11.7→11.13 때 실제로 겹쳤다) */}
+        <span className="schedule-fest-date" style={{ left: Math.round(dayToX(FESTIVAL.month, FESTIVAL.day, D_BASE, D_GAP)) + 14 }}>11.13</span>
       </div>
 
       <div className="kd-schedule-mobile" data-name="일정 — Mobile">

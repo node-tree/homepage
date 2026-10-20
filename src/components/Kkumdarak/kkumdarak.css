@@ -3825,9 +3825,9 @@
   }
 
   .kd-schedule-mobile .schedule-fest-date {
-    left: 350px;
-    top: 686px;
-    font-size: 12px;
+    left: 340px;
+    top: 694px;        /* 15px 로 키우며 점(위)과 겹치지 않게 8px 내림 */
+    font-size: 15px;   /* 2026-10-20 작은 글자 금지(12 → 15) */
     font-weight: 800;
     z-index: 4;
   }
@@ -6399,7 +6399,7 @@ a.kd-home-way h2 {
 .kd-home-way--fest .kd-home-text { max-width: 25em; font-size: 19px; }
 .kd-home-fest-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
 .kd-home-dday {
-  color: #1a1a1a;
+  color: #e6352b;   /* 첫 화면 D-day 와 같은 빨강 */
   font-family: var(--kd-font-latin, var(--kd-font-body));
   font-size: 22px;
   font-weight: 800;
