@@ -29,20 +29,25 @@ export const PROGRAM_INDEX: ProgramIndexEntry[] = [
 export const FESTIVAL = { id: 'goodbye-again', name: '다시, 안녕', month: 11, day: 7 };
 
 const YEAR = 2026;
+// 판정은 한국 시간(UTC+9) 기준 — 방문자 기기 시간대에 따라 배지가 달라지지 않게.
+const KST_OFFSET_MS = 9 * 3600 * 1000;
+// 한국 날짜 y·m·d 의 그 시각을 UTC 밀리초로.
+const kstTime = (m: number, d: number, h = 0, min = 0, s = 0) => Date.UTC(YEAR, m - 1, d, h, min, s) - KST_OFFSET_MS;
 
 export const programIdForName = (name: string): string | undefined =>
   name === FESTIVAL.name ? FESTIVAL.id : PROGRAM_INDEX.find((p) => p.name === name)?.id;
 
-// 기간 마지막 날 자정이 지나면 끝난 것으로 본다(방문자 기기 시간 기준).
+// 기간 마지막 날 한국 시간 23:59:59 가 지나면 끝난 것으로 본다.
 export const isProgramEnded = (name: string, now: Date = new Date()): boolean => {
   const p = PROGRAM_INDEX.find((e) => e.name === name);
   if (!p) return false;
-  return now.getTime() > new Date(YEAR, p.period.em - 1, p.period.ed, 23, 59, 59).getTime();
+  return now.getTime() > kstTime(p.period.em, p.period.ed, 23, 59, 59);
 };
 
-// 축제까지 남은 날(당일 0, 지나면 음수).
+// 축제까지 남은 날(한국 날짜 기준, 당일 0, 지나면 음수).
 export const daysUntilFestival = (now: Date = new Date()): number => {
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const fest = new Date(YEAR, FESTIVAL.month - 1, FESTIVAL.day).getTime();
+  const k = new Date(now.getTime() + KST_OFFSET_MS); // UTC 필드로 읽으면 한국 날짜
+  const today = Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), k.getUTCDate());
+  const fest = Date.UTC(YEAR, FESTIVAL.month - 1, FESTIVAL.day);
   return Math.round((fest - today) / 86400000);
 };

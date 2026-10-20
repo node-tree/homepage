@@ -305,13 +305,20 @@ const resolvePhaseStatus = (content?: ProgramContent): PhaseStatus => {
 const effectivePhase = (baseName: string, content?: ProgramContent): PhaseStatus =>
   isProgramEnded(baseName) ? 'closed' : resolvePhaseStatus(content);
 
-// 밝은 프로그램 색(분홍·노랑·하늘) 위에는 흰 글자가 묻힌다 → 먹색 글자.
+// 프로그램 색 위 글자색 — 흰색과 먹색 중 대비(WCAG)가 더 큰 쪽.
+//   분홍·노랑·청록·초록은 먹색, 빨강·파랑은 흰색이 된다(청록 위 흰 글자 2.5:1 → 먹색 6.9:1).
+const INK = '#1a1a1a';
+const luminance = (hex: string): number => {
+  const n = parseInt(hex.replace('#', ''), 16);
+  const lin = (c: number) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  return 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+};
 const inkOn = (hex: string): string => {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
-  if (!m) return '#ffffff';
-  const n = parseInt(m[1], 16);
-  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#1a1a1a' : '#ffffff';
+  if (!/^#?[0-9a-f]{6}$/i.test(hex)) return '#ffffff';
+  const L = luminance(hex);
+  const onWhite = 1.05 / (L + 0.05);
+  const onInk = (L + 0.05) / (luminance(INK) + 0.05);
+  return onInk > onWhite ? INK : '#ffffff';
 };
 
 // ── 끝난 프로그램 카드: 신청 버튼 자리에 「마을일기 / 마을기록」 두 갈래 ─────────

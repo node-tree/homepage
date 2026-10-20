@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import './kkumdarak.css';
 import { SECTIONS, SUB_SECTIONS, ANNOUNCE, MOTION } from './data';
+import { KD_NAVIGATE } from './navEvents';
 import MainHero from './MainHero';
 import { KkumdarakAuthProvider, useKkumdarakAuth } from './KkumdarakAuthContext';
 import { villageDiaryAPI } from '../../services/api';
@@ -426,6 +427,9 @@ const Kkumdarak: React.FC = () => {
     setSection(id);
     setMenuOpen(false);
     window.history.replaceState(null, '', id === 'main' ? window.location.pathname : `#${id}`);
+    // replaceState 는 hashchange 를 안 낸다 → #results/<id> 를 보다가 메뉴 「마을기록」을 누르면
+    //   주소만 #results 가 되고 걸러 보기가 남았다. 섹션 안 딥링크 상태가 따라오도록 전용 이벤트로 알린다(navEvents.ts).
+    window.dispatchEvent(new Event(KD_NAVIGATE));
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, []);
 

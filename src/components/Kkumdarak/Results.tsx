@@ -13,6 +13,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { PROGRAMS } from './data';
 import { signalMapAPI } from '../../services/api';
 import { useKkumdarakAuth } from './KkumdarakAuthContext';
+import { KD_NAVIGATE } from './navEvents';
 import './results.css';
 
 type Medium = 'map' | 'video' | 'archive';
@@ -112,11 +113,15 @@ const Results: React.FC = () => {
 
   useEffect(() => { signalMapAPI.get().then(setStore); }, []);
 
-  // 이미 마을기록을 보는 중에 다른 프로그램 링크를 눌러도 따라간다.
+  // 이미 마을기록을 보는 중에 다른 프로그램 링크를 누르거나(hashchange) 메뉴 「마을기록」을 다시 눌러도(KD_NAVIGATE) 주소를 따라간다.
   useEffect(() => {
     const onHash = () => setProgramFilter(programFromHash());
     window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
+    window.addEventListener(KD_NAVIGATE, onHash);
+    return () => {
+      window.removeEventListener('hashchange', onHash);
+      window.removeEventListener(KD_NAVIGATE, onHash);
+    };
   }, []);
 
   const clearProgramFilter = () => {

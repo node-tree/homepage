@@ -6337,7 +6337,7 @@
   box-shadow: 2px 2px 0 #1a1a1a;
   font-size: 14px;
 }
-.hero-fest-pill.is-mobile b { height: 26px; padding: 0 9px; font-size: 13px; }
+.hero-fest-pill.is-mobile b { height: 26px; padding: 0 9px; font-size: 14px; }
 
 /* ── 홈 바로가기 띠 (히어로 아래) — 축제 큰 칸 + 일기·지도 ── */
 .kd-home-ways {
@@ -6610,10 +6610,11 @@ a.kd-home-way:hover h2 { text-decoration: underline; text-underline-offset: 6px;
   .kd-footer-way { border-radius: 20px; font-size: 14px; padding: 10px 18px; }
 
   .kd-diary-mobile .diary-filters .diary-months { gap: 6px; }
-  .kd-diary-mobile .diary-filters .diary-months .diary-months-label { font-size: 13px; }
-  .kd-diary-mobile .diary-months button { height: 30px; padding: 0 11px; font-size: 13px; }
-  .kd-diary-mobile .diary-month-mark { padding: 2px 9px; border-width: 2px; font-size: 13px; }
-  .kd-diary-mobile .diary-month-mark.is-right { transform: translateX(50%); }
+  .kd-diary-mobile .diary-filters .diary-months .diary-months-label { font-size: 15px; }
+  .kd-diary-mobile .diary-months button { height: 32px; padding: 0 12px; font-size: 15px; }
+  .kd-diary-mobile .diary-month-mark { padding: 2px 10px; border-width: 2px; font-size: 15px; }
+  /* 길이 오른쪽인 프로그램: 인라인 right 만 들어오므로 공통 left:720 을 풀어야 화면 안에 붙는다 */
+  .kd-diary-mobile .diary-month-mark.is-right { left: auto; transform: translateX(50%); }
   .kd-diary-mobile .diary-empty.diary-empty-mobile { top: 300px; }
   .diary-to-top { right: 16px; bottom: 16px; height: 42px; padding: 0 16px; font-size: 14px; }
 }
