@@ -11,6 +11,8 @@ const postFields = {
   artistNote: { type: { text: String, by: String, _id: false }, default: undefined },
   quote: { type: { text: String, author: String, title: String, source: String, year: String, excerpt: Boolean, _id: false }, default: undefined },
   credits: { type: [{ k: String, v: String, _id: false }], default: undefined },
+  // 하위 작업: 작업마다 제목 · 재료와 형식 · 글 (포트폴리오 사진 장과 같은 글, 2026-10-22 글 기준 r1)
+  subworks: { type: [{ title: String, materials: String, text: String, _id: false }], default: undefined },
   audience: String,
   partners: { type: [{ name: String, role: String, _id: false }], default: undefined },
 };

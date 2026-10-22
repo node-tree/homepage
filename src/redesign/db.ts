@@ -29,6 +29,7 @@ export interface DbPost {
   artistNote?: { text: string; by?: string };
   quote?: { text: string; author?: string; title?: string; source?: string; year?: string; excerpt?: boolean };
   credits?: { k: string; v: string }[];
+  subworks?: { title?: string; materials?: string; text?: string }[];
   audience?: string;
   partners?: { name: string; role?: string }[];
 }

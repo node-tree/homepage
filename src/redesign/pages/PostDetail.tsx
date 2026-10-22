@@ -97,6 +97,14 @@ const PostDetail: React.FC<PostDetailProps> = ({ kind, base, label }) => {
               </section>}
               <PhotoEssay key={post.id} hero={media.hero} title={post.title}
                 lede={post.lede} body={media.body} photoHtml={media.photos} imageLayout={post.imageLayout}>
+                {post.subworks?.some((s) => s.text) && <section className="post-parts" aria-label="구성">
+                  <h2>구성</h2>
+                  {post.subworks.filter((s) => s.text).map((s, k) => <article className="post-part" key={k}>
+                    {s.title && <h3>{s.title}</h3>}
+                    {s.materials && <p className="post-part-meta">{s.materials}</p>}
+                    <p className="reading-text">{s.text}</p>
+                  </article>)}
+                </section>}
                 {post.artistNote?.text && <section className="post-note reading-text" aria-label="작가의 말">
                   <h2>작가의 말</h2><p>{post.artistNote.text}</p>
                   {post.artistNote.by && <div className="post-attribution">{post.artistNote.by}</div>}

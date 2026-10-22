@@ -57,6 +57,15 @@ test('legacy fields and actual workshop collection preserve omitted values and o
   assert.equal(Object.hasOwn(rows[0].changes, 'title'), false);
 });
 
+test('subworks are planned as a text field and leave the body untouched', () => {
+  const snapshot = empty();
+  snapshot.work = [{ _id: id, title: 'Work', contents: '<p>old</p><img src="a">', credits: [{ k: '형식', v: '설치' }] }];
+  const subworks = [{ title: '〈지연된 신호〉', materials: '철가루, 캔버스 77점, 2026', text: '입자가 스스로 신호가 된다.' }];
+  const rows = buildPlan(snapshot, { work: { [String(id)]: { subworks } }, filed: {} });
+  assert.equal(rows[0].status, 'READY');
+  assert.deepEqual(rows[0].changes, { subworks });
+});
+
 test('one missing or unsafe document is skipped while valid entries remain planned', () => {
   const snapshot = empty();
   snapshot.work = [{ _id: id, title: 'Work', contents: 'old' }];

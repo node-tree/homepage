@@ -13,7 +13,7 @@ const dotenv = require('dotenv');
 const { EJSON } = mongoose.mongo.BSON;
 const ROOT = path.join(os.homedir(), 'Desktop/etx/web/nodetreeHome/_workspace/12_text_layout');
 const COLLECTIONS = ['work', 'workshop', 'about', 'work_header', 'filed_header'];
-const FIELDS = ['title', 'yearStart', 'yearEnd', 'status', 'venue', 'city', 'medium', 'summary', 'lede', 'artistNote', 'quote', 'credits', 'audience', 'partners'];
+const FIELDS = ['title', 'yearStart', 'yearEnd', 'status', 'venue', 'city', 'medium', 'summary', 'lede', 'artistNote', 'quote', 'credits', 'subworks', 'audience', 'partners'];
 const MEDIA = 'img,iframe,video,audio,object,embed,picture,source,track,svg,canvas';
 const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 const encode = (value) => EJSON.stringify(value, null, 2, { relaxed: false });

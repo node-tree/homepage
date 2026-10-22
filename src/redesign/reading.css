@@ -10,7 +10,12 @@
 .nt .detail .meta { grid-row: 1 / span 2; }
 .nt .detail .txt { grid-row: 2; min-width: 0; }
 .nt .post-note, .nt .post-quote { margin: 40px 0 0; padding-top: 24px; border-top: 1px solid var(--line); }
-.nt .post-note h2, .nt .post-credits h2 { font: 11px/1.8 var(--mono); color: var(--g2); margin-bottom: 14px; }
+.nt .post-note h2, .nt .post-credits h2, .nt .post-parts h2 { font: 11px/1.8 var(--mono); color: var(--g2); margin-bottom: 14px; }
+.nt .post-parts { margin: 40px 0 0; padding-top: 24px; border-top: 1px solid var(--line); }
+.nt .post-part + .post-part { margin-top: 32px; }
+.nt .post-part h3 { margin: 0; padding-bottom: 0; border-bottom: 0; font-size: 16px; line-height: 1.7; font-weight: 600; }
+.nt .post-part-meta { margin: 4px 0 0; font-size: 13px; line-height: 1.7; color: var(--g2); white-space: pre-line; }
+.nt .post-part .post-part-meta + p { margin-top: 12px; }
 .nt .post-quote blockquote { border-left: 2px solid var(--g2); padding-left: 20px; }
 .nt .post-attribution { font: 11px/1.9 var(--mono); color: var(--g2); margin-top: 16px; }
 .nt .post-credits { margin-top: 44px; border-top: 1px solid var(--line); padding-top: 24px; }
